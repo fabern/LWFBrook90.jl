@@ -1,9 +1,24 @@
+name = "LWFBrook90Julia"
+uuid = "b8a0143a-685d-44fd-ad44-5c707d8c31e2"
+authors = ["Fabian Bernhard"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
+
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DataFramesMeta = "1313f7d8-7da2-5740-9ea0-a2ca25f37964"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
+PkgTemplates = "14b8a8f1-9102-5b29-a752-f990bacb7fe1"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
