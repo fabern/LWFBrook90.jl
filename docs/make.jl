@@ -18,4 +18,5 @@ makedocs(;
 
 deploydocs(;
     repo="github.com/fabern/LWFBrook90Julia.jl",
+    devbranch = "main"
 )
