@@ -221,12 +221,9 @@ function SOILPAR_MvG(p_RHOWG,p_THICK,p_THETAF,p_THSAT,p_STONEF,p_BEXP,
     #     # if u_aux_PSIM[i] > 0
     #     #     error("matrix psi must be negative or zero")
     #     # else
-    #     #     u_aux_WETNES[i] = FWETNES_MvG(u_aux_PSIM[i],
-    #     #                                              p_MvGα[i], p_MvGn[i],
-    #     #                                              p_WETfc[i], p_WET∞[i], p_BEXP[i], p_PSIF[i], p_CHm[i], p_CHn[i],
-    #     #                                              IMODEL)
+    #     #     u_aux_WETNES[i] = FWETNES_MvG(u_aux_PSIM[i], p_MvGα[i], p_MvGn[i])
     #     # end
-    #     # u_aux_SWATI[i] = FTheta_MvG(u_aux_WETNES[i], p_THSAT[i], p_θr[i], IMODEL) * p_SWATMX[i]/p_THSAT[i]
+    #     # u_aux_SWATI[i] = FTheta_MvG(u_aux_WETNES[i], p_THSAT[i], p_θr[i]) * p_SWATMX[i]/p_THSAT[i]
     # end
     p_CHm, p_CHn = (NaN, NaN)
     return (p_ψg, p_SWATMX, p_WETfc, p_CHm, p_CHn, p_Ksat, p_PSIF, p_THETAF)#, u_aux_WETNES, u_aux_SWATI)

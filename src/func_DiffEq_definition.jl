@@ -1,6 +1,67 @@
+""" define_DiffEq_ODE()\n 
+    Generates and ODEProblem from DiffEq.jl.\n\n 
+    # An ODE problem which consists of 
+    #   - definition of right-hand-side (RHS) function f 
+    #   - definition of callback function cb
+    #   - initial condition of states
+    #   - definition of simulation time span
+    #   - parameters
+"""
+function define_DiffEq_ODE(u0, tspan, p, Reset)
+
+    # Define callback functions
+    operator_splitting_cb = PeriodicCallback(LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!, 1.0;
+                                            initial_affect = true);
+    # swcheck_cb = ContinuousCallback()    #TODO(bernhard) Implement swchek as ContinuousCallback
+    # Reset_cb = FunctionCallingCallback() #TODO(bernhard) low priority: implement Reset==1
+    
+    # Define ODE problem
+    ode = ODEProblem((du,u,p,t) -> f_LWFBrook90R(du,u,p,t; Reset = Reset),
+                     u0,tspan,p,callback=operator_splitting_cb)
+
+    return ode
+end
+
+""" define_DiffEq_u0()\n 
+    Generates vector u0 needed for ODE() problem in DiffEq.jl package."""
+function define_DiffEq_u0(u_GWAT_init, 
+                            u_INTS_init, 
+                            u_INTR_init, 
+                            u_SNOW_init, 
+                            u_CC_init, 
+                            u_SNOWLQ_init, 
+                            u_SWATIinit, 
+                            compute_intermediate_quantities)
+
+    if compute_intermediate_quantities
+    # TODO(bernhard): are these store somewhere else than input_siteparam and pfile_param
+        u0 = [u_GWAT_init;
+            u_INTS_init;
+            u_INTR_init;
+            u_SNOW_init;
+            u_CC_init;
+            u_SNOWLQ_init;
+            u_SWATIinit;
+            # accumulation variables:
+            0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;
+            0;0;0;0;0;0]
+    else
+        u0 = [u_GWAT_init;
+                u_INTS_init;
+                u_INTR_init;
+                u_SNOW_init;
+                u_CC_init;
+                u_SNOWLQ_init;
+                u_SWATIinit]
+    end
+
+    return u0
+end
+
+
 """ define_diff_eq_parameters(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset,
     pfile_meteo, pfile_siteparam, pfile_param, pfile_soil, pfile_pdur)\n 
-    Generates vector p needed for ODE() probelm in DiffEq.jl package."""
+    Generates vector p needed for ODE() problem in DiffEq.jl package."""
 function define_DiffEq_parameters(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset,
     pfile_meteo, pfile_siteparam, pfile_param, pfile_soil, pfile_pdur)
 
@@ -134,6 +195,7 @@ function define_DiffEq_parameters(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Re
     p_ILAYER = pfile_param["ILAYER"] # number of layers over which infiltration is distributed
     p_INFEXP = pfile_param["INFEXP"]
     p_INFRAC = LWFBrook90Julia.WAT.INFPAR(p_INFEXP, p_ILAYER, p_THICK, NLAYER)
+
 
     # soil water parameters
     (p_PSIG,             # gravity potential (kPa),
