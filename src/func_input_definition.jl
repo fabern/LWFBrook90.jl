@@ -4,11 +4,10 @@ using CSV#: read, File
 using DataFrames#: rename, select
 using DataFramesMeta
 using Dates: DateTime, Millisecond, Day, month, value, dayofyear
-# using Infiltrator
 
 """
 read_KAUFENRING_inputData(folder::String, prefix::String)\n
-Intent: load different input files for LWFBrook90\n 
+Intent: load different input files for LWFBrook90\n
 - climveg
 - param
 - siteparam
@@ -16,7 +15,7 @@ Intent: load different input files for LWFBrook90\n
 - soil_materials.csv
 - soil_nodes.csv
 \n\n
-Currently: loads different hardcoded input files of KAUFENRING example data set from 
+Currently: loads different hardcoded input files of KAUFENRING example data set from
 https://doi.org/10.1016/j.agrformet.2020.108023.
 """
 function read_KAUFENRING_inputData(folder::String)
@@ -49,23 +48,22 @@ function read_KAUFENRING_inputData(folder::String)
     # Stopping date: earliest among the input data
     starting_date = maximum(minimum,[input_meteo[:,"dates"]])
     stopping_date = minimum(maximum,[input_meteo[:,"dates"]])
-    
+
     input_meteo = @linq input_meteo |>
         where(:dates .>= starting_date, :dates .<= stopping_date)
 
     # Transform times from DateTimes to simulation time (Float of Days)
     reference_date = starting_date
-    
+
     input_meteo = @linq input_meteo |>
         transform(dates = DateTime2RelativeDaysFloat.(:dates, reference_date)) |>
         DataFrames.rename(Dict(:dates => :days))
-    
 
     ## C) Load other parameters
     # Load model input parameters
     #' @param param A numeric vector of model input parameters. Order (derived from param_to_rlwfbrook90()):
     input_param = DataFrame(CSV.File(path_param; types=[Float64], strict=true))
-    input_param = @transform(input_param, param_id  = 
+    input_param = @transform(input_param, param_id  =
                               ["ndays","0_heat","eslope","aspect","alb","albsn","c1","c2",
                                "c3","wndrat","fetch","z0w","zw","lwidth","obsheight_x_czs",
                                "z0s","lpc","cs","czs","czr","hs","hr","zminh","rhotp","nn",
@@ -92,7 +90,9 @@ function read_KAUFENRING_inputData(folder::String)
     #' @param precdat A matrix of precipitation interval data with 6 columns:
     #'                   year, month, day, interval-number (1:precint), prec, mesflp.
     input_precdat = DataFrame(a = Nothing, b = Nothing)
-
+    # TODO(bernhard): currently not implemented.
+    #                 Only using PRECIN (resolution daily).
+    #                 PRECDAT would allow to have smaller resolution (would require changes).
     # unused: input_precdat = CSV.read(path_precdat, DataFrame;
     # unused:           missingstring = "-999",
     # unused:           datarow=2, header=["year","month","day","interval_number","prec","mesflp"], delim=',',
@@ -112,14 +112,14 @@ function read_KAUFENRING_inputData(folder::String)
     #'                             mat, thsat, thetaf, psif (kPa), bexp, kf (mm d-1), wetinf (-), stonef (-).
     input_soil_materials = DataFrame(CSV.File(path_soil_materials;
                                      types=[Int64, Float64, Float64, Float64, Float64, Float64, Float64, Float64],
-                                     datarow=2, header=["mat","ths","thr","alpha","npar","ksat","tort","gravel"], 
+                                     datarow=2, header=["mat","ths","thr","alpha","npar","ksat","tort","gravel"],
                                      delim=','))# ignorerepeated=true
 
     #' @param soil_nodes A matrix of the soil model layers with columns
     #'                   nl (layer number), layer midpoint (m), thickness (mm), mat, psiini (kPa), rootden (-).
     input_soil_nodes = DataFrame(CSV.File(path_soil_nodes;
                                  types=[Int64,Float64, Float64, Int64, Float64, Float64],
-                                 datarow=2, header=["layer","midpoint","thick","mat","psiini","rootden"], 
+                                 datarow=2, header=["layer","midpoint","thick","mat","psiini","rootden"],
                                  delim=','))# ignorerepeated=true
 
     return (input_meteo,
@@ -128,8 +128,9 @@ function read_KAUFENRING_inputData(folder::String)
             input_precdat,
             input_pdur,
             input_soil_materials,
-            input_soil_nodes)
-end 
+            input_soil_nodes,
+            reference_date)
+end
 
 
 ######################
@@ -150,7 +151,7 @@ function p_MONTHN(t::Float64, reference::DateTime)
 end
 
 # Subset input data and transform dates into floats relative to reference_date
-# """ subset_standardize(data::DataFrame, start::DateTime, stop::DateTime, reference::DateTime)\n 
+# """ subset_standardize(data::DataFrame, start::DateTime, stop::DateTime, reference::DateTime)\n
 # Returns DataFrame `data` that is subset between `start` and `stop` and colum `dates` transformed to simulation time."""
 # function subset_standardize(data::DataFrame, start::DateTime, stop::DateTime, reference::DateTime)
 #     @linq data |>

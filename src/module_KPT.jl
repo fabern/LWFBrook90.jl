@@ -7,7 +7,7 @@ export SOILPAR
 using Roots # to find wetness for a given hydraulic conductivity
 
  # SOIL WATER PROPERTIES
- 
+
 # Ecoshift-KPT:
 # This section describes the soil water properties in BROOK90, and the four routines used to
 # calculate their values. The section also discusses the concept of field capacity, and how
@@ -25,7 +25,7 @@ using Roots # to find wetness for a given hydraulic conductivity
 # and hydraulic conductivity, K, are required for any simulation that moves water through
 # the soil. There is a rather vast literature on this subject, though much of it emphasizes
 # agricultural soils rather than natural soils, which are less disturbed and higher in
-# organic matter. 
+# organic matter.
 
 ###   Clapp Hornberger (IMODEL=0) see: http://www.ecoshift.net/brook/kpt.html
 # BROOK90 uses a modification of the Campbell (1974) expressions with the near-saturation
@@ -95,15 +95,15 @@ function SOILPAR(p_RHOWG,
                  NLAYER, IMODEL)
 
     if IMODEL == 0
-        (p_ψg, p_SWATMX, p_WETfc, p_CHm, p_CHn, p_Ksat, p_PSIF, p_THETAF) = 
+        (p_ψg, p_SWATMX, p_WETfc, p_CHm, p_CHn, p_Ksat, p_PSIF, p_THETAF) =
             SOILPAR_CH(p_RHOWG,p_THICK,p_THETAF,p_THSAT,p_STONEF,p_BEXP,
-                                          p_KF,p_PSIF,p_WET∞,p_Kθfc,p_PSICR,p_Ksat, 
+                                          p_KF,p_PSIF,p_WET∞,p_Kθfc,p_PSICR,p_Ksat,
                                           p_MvGl, p_MvGn, p_MvGα, p_θr,
                                           NLAYER)
     elseif IMODEL == 1
-        (p_ψg, p_SWATMX, p_WETfc, p_CHm, p_CHn, p_Ksat, p_PSIF, p_THETAF) = 
+        (p_ψg, p_SWATMX, p_WETfc, p_CHm, p_CHn, p_Ksat, p_PSIF, p_THETAF) =
             SOILPAR_MvG(p_RHOWG,p_THICK,p_THETAF,p_THSAT,p_STONEF,p_BEXP,
-                                          p_KF,p_PSIF,p_WET∞,p_Kθfc,p_PSICR,p_Ksat, 
+                                          p_KF,p_PSIF,p_WET∞,p_Kθfc,p_PSICR,p_Ksat,
                                           p_MvGl, p_MvGn, p_MvGα, p_θr,
                                           NLAYER)
     else
@@ -115,7 +115,7 @@ end
 
 function SOILPAR_CH(p_RHOWG,p_THICK,p_THETAF,p_THSAT,p_STONEF,p_BEXP,
                                           p_KF,p_PSIF,p_WET∞,
-                                          p_Kθfc,p_PSICR,p_Ksat, 
+                                          p_Kθfc,p_PSICR,p_Ksat,
                                           p_MvGl, p_MvGn, p_MvGα, p_θr,
                                           NLAYER)
     # Clapp and Hornberger:
@@ -133,8 +133,8 @@ function SOILPAR_CH(p_RHOWG,p_THICK,p_THETAF,p_THSAT,p_STONEF,p_BEXP,
     # using as inputs: p_RHOWG, p_THICK, p_THETAF, p_THSAT
     # using as inputs: p_THSAT, p_STONEF, p_BEXP,
     #                  p_THETAF, p_KF, p_PSIF
-    #                  p_WET∞,    
-    
+    #                  p_WET∞,
+
     # state variables:
     # u_aux_WETNES    # wetness, fraction of saturation
     # u_aux_SWATI     # water volume in layer, mm
@@ -171,7 +171,7 @@ function SOILPAR_CH(p_RHOWG,p_THICK,p_THETAF,p_THSAT,p_STONEF,p_BEXP,
 end
 
 function SOILPAR_MvG(p_RHOWG,p_THICK,p_THETAF,p_THSAT,p_STONEF,p_BEXP,
-                                          p_KF,p_PSIF,p_WET∞,p_Kθfc,p_PSICR,p_Ksat, 
+                                          p_KF,p_PSIF,p_WET∞,p_Kθfc,p_PSICR,p_Ksat,
                                           p_MvGl, p_MvGn, p_MvGα, p_θr,
                                           NLAYER)
     # For Mualem-van Genuchten
@@ -196,8 +196,8 @@ function SOILPAR_MvG(p_RHOWG,p_THICK,p_THETAF,p_THSAT,p_STONEF,p_BEXP,
 
         # Find wetness at field capacity based on hydraulic conductivity
         # using a nonlinear solver for: find θ such that: K(θ) - p_Kθfc = 0
-        # plot(-0.15:0.01:1.0, LWFBrook90_MvG_FK.(-0.15:0.01:1.0, p_Ksat[i], p_MvGl[i], p_MvGn[i]))
-        f(x) = LWFBrook90_MvG_FK(x, p_Ksat[i], p_MvGl[i], p_MvGn[i]) - p_Kθfc[i];
+        # plot(-0.15:0.01:1.0, FK_MvG.(-0.15:0.01:1.0, p_Ksat[i], p_MvGl[i], p_MvGn[i]))
+        f(x) = FK_MvG(x, p_Ksat[i], p_MvGl[i], p_MvGn[i]) - p_Kθfc[i];
         p_WETfc[i] = find_zero(f, (0.0, 1.0), Bisection())
         # p_WETfc[i] = FWETK(p_Kθfc[i], p_THSAT[i]) #FB: wetness at field capacity
         # if p_WETfc[i] == -99999.
@@ -205,7 +205,7 @@ function SOILPAR_MvG(p_RHOWG,p_THICK,p_THETAF,p_THSAT,p_STONEF,p_BEXP,
         # end
 
         p_SWATMX[i] = p_THICK[i] * p_THSAT[i] * (1.0 - p_STONEF[i])
-        p_PSIF[i]   = FPSIMF_MvG(p_WETfc[i], p_MvGα[i], p_MvGn[i]) #FB: matrix potential at field capacity, kPa
+        p_PSIF[i]   = FPSIM_MvG(p_WETfc[i], p_MvGα[i], p_MvGn[i]) #FB: matrix potential at field capacity, kPa
         p_THETAF[i] = FTheta_MvG(p_WETfc[i], p_THSAT[i], p_θr[i])  #FB: soil moisture at field capacity (mm)
         p_WETc[i]   = FWETNES_MvG(1000 * p_PSICR, p_MvGα[i], p_MvGn[i])
     end
@@ -229,14 +229,118 @@ function SOILPAR_MvG(p_RHOWG,p_THICK,p_THETAF,p_THSAT,p_STONEF,p_BEXP,
     return (p_ψg, p_SWATMX, p_WETfc, p_CHm, p_CHn, p_Ksat, p_PSIF, p_THETAF)#, u_aux_WETNES, u_aux_SWATI)
 end
 
-# TODO(bernhard): rename LWFBrook90_MvG_FK() to FK_MvG()
-""" LWFBrook90_MvG_FK(WETNES, KSAT, MvGl, MvGn)\n Computes hydraulic conductivity from
-wetness for the Mualem van Genuchten parametrization.\n\n 
+function SOILVAR_CH(NLAYER,      # number of soil layers
+                    u_aux_PSIM,   # matric soil water potential for layer, kPa
+                    p_PSIG,       # gravity potential, kPa
+                    u_aux_WETNES, # wetness, fraction of saturation
+                    p_KF,         # hydraulic conductivity at field capacity, mm/d
+                    p_WETF,       # wetness at field capacity, dimensionless
+                    p_BEXP)       # exponent for psi-theta relation
+    # computes PSITI: total potential ψt = ψm + ψg (sum of matrix potential and gravity potential)
+    # computes KK:    unsaturated hydraulic conductivity: K(Se) a.k.a. K(W)
+    PSITI=fill(NaN, NLAYER)
+    KK   =fill(NaN, NLAYER)
+    for i = 1:NLAYER
+        PSITI[i] = u_aux_PSIM[i] + p_PSIG[i]
+        if u_aux_WETNES[i] > 0.00010
+            KK[i] = p_KF[i] * (u_aux_WETNES[i] / p_WETF[i]) ^ (2 * p_BEXP[i] + 3)
+        else
+            # extremely dry
+            KK[i] = 1E-10
+        end
 
-Computes unsaturated hydraulic conductivity: K(Se) a.k.a. K(W) using MvG equation 8)   
+    end
+    return(PSITI, KK)
+end
+function SOILVAR_MvG(NLAYER,      # number of soil layers
+                    u_aux_PSIM,   # matric soil water potential for layer, kPa
+                    p_PSIG,       # gravity potential, kPa
+                    u_aux_WETNES, # wetness, fraction of saturation
+                    p_Ksat,
+                    p_MvGl,
+                    p_MvGn)#,        # parameterization of hydraulic functions
+    # computes PSITI: total potential ψt = ψm + ψg (sum of matrix potential and gravity potential)
+    # computes KK:    unsaturated hydraulic conductivity: K(Se) a.k.a. K(W)
+    PSITI=fill(NaN, NLAYER)
+    KK   =fill(NaN, NLAYER)
+    for i = 1:NLAYER
+        PSITI[i] = u_aux_PSIM[i] + p_PSIG[i]
+        KK[i] = FK_MvG(u_aux_WETNES[i], p_Ksat[i], p_MvGl[i], p_MvGn[i])
+    end
+    return(PSITI, KK)
+end
+
+
+
+""" LWFBrook90_derive_auxiliary_states(u_SWATI,  p_SWATMX, p_THSAT, p_θr,
+                        p_PSIF, p_BEXP, p_WETINF, p_WETF,
+                        p_CHM, p_CHN, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
+                        p_KF, p_PSIG, IMODEL, NLAYER)\n
+Derives alternative representations of soil water status.
+I.e. based on the state u_SWATI it returns (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, p_fu_KK)"""
+# TODO(bernhard): delete wrapper function LWFBrook90_derive_auxiliary_states()
+function LWFBrook90_derive_auxiliary_states(u_SWATI,  p_SWATMX, p_THSAT, p_θr,
+                        p_PSIF, p_BEXP, p_WETINF, p_WETF,
+                        p_CHM, p_CHN, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
+                        p_KF, p_PSIG, IMODEL, NLAYER)
+    if IMODEL == 0
+        return deriveAuxiliaryStates_CH(u_SWATI,  p_SWATMX,
+                        p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN,
+                        p_KF, p_PSIG, NLAYER)
+    elseif IMODEL == 1
+        return deriveAuxiliaryStates_MvG(u_SWATI,  p_SWATMX, p_THSAT, p_θr,
+                        p_MvGα, p_MvGn, p_MvGl, p_Ksat,
+                        p_PSIG, NLAYER)
+    else
+        error("Error in LWFBrook90_derive_auxiliary_states(), unexpected input IMODEL: $IMODEL. Valid values ar 0 or 1.")
+    end
+end
+function deriveAuxiliaryStates_MvG(u_SWATI,  p_SWATMX,
+                                   p_THSAT, p_θr, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
+                                   p_PSIG, NLAYER)
+    # Case where IMODEL == 1
+    u_aux_WETNES = fill(NaN, NLAYER)
+    for i = 1:NLAYER
+        u_aux_WETNES[i] = (p_THSAT[i] * u_SWATI[i] / p_SWATMX[i] -p_θr[i]) / (p_THSAT[i] - p_θr[i])
+
+        u_aux_WETNES[i] = min(1, u_aux_WETNES[i])
+    end
+
+    u_aux_PSIM = fill(NaN, NLAYER)
+    for i = 1:NLAYER
+        u_aux_PSIM[i]        = FPSIM_MvG(u_aux_WETNES[i], p_MvGα[i], p_MvGn[i])
+    end
+
+    u_aux_PSITI, p_fu_KK =  SOILVAR_MvG(NLAYER,u_aux_PSIM,p_PSIG,u_aux_WETNES,p_Ksat,p_MvGl,p_MvGn)
+
+    return (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, p_fu_KK)
+end
+function deriveAuxiliaryStates_CH(u_SWATI,  p_SWATMX,
+                                  p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_KF,
+                                  p_PSIG, NLAYER)
+    # Case where IMODEL == 0
+    u_aux_WETNES = u_SWATI./p_SWATMX
+
+    u_aux_PSIM = fill(NaN, NLAYER)
+    for i = 1:NLAYER
+        u_aux_PSIM[i] = FPSIMF_CH(u_aux_WETNES[i],
+                                       p_PSIF[i], p_BEXP[i], p_WETINF[i], p_WETF[i], p_CHM[i], p_CHN[i])
+    end
+
+    u_aux_PSITI, p_fu_KK =  SOILVAR_CH(NLAYER,u_aux_PSIM,p_PSIG,u_aux_WETNES,p_KF,p_WETF,p_BEXP)
+
+    return (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, p_fu_KK)
+end
+
+
+# TODO(bernhard): remove remark that I renamed LWFBrook90_MvG_FK() to FK_MvG()
+""" FK_MvG(WETNES, KSAT, MvGl, MvGn)\n Computes hydraulic conductivity from
+wetness for the Mualem van Genuchten parametrization.\n\n
+
+Computes unsaturated hydraulic conductivity: K(Se) a.k.a. K(W) using MvG equation 8)
 K = Ks*W^l*[ 1 - (1-W^(1/m))^m ]^2 using m = 1-1/n yields: K = Ks*W^l*[ 1 - (1-W^(n/(n-1)))^(1-1/n) ]^2
 """
-function LWFBrook90_MvG_FK(WETNES, KSAT, MvGl, MvGn)
+function FK_MvG(WETNES, KSAT, MvGl, MvGn)
     eps = 1.e-6
     AWET = max(WETNES, eps)
 
@@ -247,21 +351,21 @@ end
 """ FPSIMF_CH(u_aux_WETNES,p_PSIF, p_BEXP, p_WET∞, p_WETF, p_CHM, p_CHN)\n Computes ψ(Se) = h(Se) a.k.a ψ(W) = h(W)
 """
 
-""" FPSIMF_MvG(u_aux_WETNES, p_MvGα, p_MvGn)\n Computes ψ(Se) = h(Se) a.k.a ψ(W) = h(W)
+""" FPSIM_MvG(u_aux_WETNES, p_MvGα, p_MvGn)\n Computes ψ(Se) = h(Se) a.k.a ψ(W) = h(W)
 """
-#TODO(bernhard): check correct usage in LWFBrook90_derive_auxiliary_states() i.e. split in FPSIMF_MvG() and FPSIMF_CH
+#TODO(bernhard): check correct usage in LWFBrook90_derive_auxiliary_states() i.e. split in FPSIM_MvG() and FPSIMF_CH
 # old definition: TODO: remove function LWFBrook90_MvG_FPSIMF(u_aux_WETNES,
 # old definition: TODO: remove                                p_PSIF, p_BEXP, p_WET∞, p_WETF, p_CHM, p_CHN,
 # old definition: TODO: remove                                p_MvGα, p_MvGn,
 # old definition: TODO: remove                                iModel)
 # old definition: TODO: replace by (for iModel = 0): FPSIMF_CH(u_aux_WETNES,p_PSIF, p_BEXP, p_WET∞, p_WETF, p_CHM, p_CHN)
-# old definition: TODO: replace by (for iModel = 1): FPSIMF_MvG(u_aux_WETNES, p_MvGα, p_MvGn)
+# old definition: TODO: replace by (for iModel = 1): FPSIM_MvG(u_aux_WETNES, p_MvGα, p_MvGn)
 function FPSIMF_CH(u_aux_WETNES,p_PSIF, p_BEXP, p_WET∞, p_WETF, p_CHM, p_CHN)
     # Computes ψ(Se) = h(Se) a.k.a ψ(W) = h(W)
     #
     # iModel == 0 (Clapp + Hornberger)
     # FPSIM obtains Ψi from Wi for one layer using equation (7) in the clearly
-    # unsaturated region and equation (4) in the near-saturation region.    
+    # unsaturated region and equation (4) in the near-saturation region.
     if u_aux_WETNES <= 0.
         ψM = -10000000000
     elseif u_aux_WETNES < p_WET∞
@@ -276,7 +380,7 @@ function FPSIMF_CH(u_aux_WETNES,p_PSIF, p_BEXP, p_WET∞, p_WETF, p_CHM, p_CHN)
     end
     return ψM
 end
-function FPSIMF_MvG(u_aux_WETNES, p_MvGα, p_MvGn)
+function FPSIM_MvG(u_aux_WETNES, p_MvGα, p_MvGn)
     # iModel == 1 (Mualem - van Genuchten)
     # ...
     eps = 1.e-6

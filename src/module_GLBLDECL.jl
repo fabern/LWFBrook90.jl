@@ -5,6 +5,7 @@ module GLBLDECL
 using DataFrames
 using Interpolations: interpolate, BSpline, Constant, scale, extrapolate
 using DataFramesMeta
+using Dates: DateTime
 
 export define_Globals_ParametersAndVariables
 export derive_params_from_input
@@ -32,9 +33,10 @@ function derive_params_from_input(input_meteo::DataFrame,
                                   input_precdat::DataFrame,
                                   input_pdur::DataFrame,
                                   input_soil_materials::DataFrame,
-                                  input_soil_nodes::DataFrame)
+                                  input_soil_nodes::DataFrame,
+                                  input_reference_date::DateTime)
 
-    pfile_meteo = derive_params_from_input_meteo(input_meteo)
+    pfile_meteo = derive_params_from_input_meteo(input_meteo, input_reference_date)
     # Defines: pfile_meteo["p_GLOBRAD"], pfile_meteo["p_TMAX"], pfile_meteo["p_TMIN"], pfile_meteo["p_VAPPRES"], pfile_meteo["p_WIND"], pfile_meteo["p_PRECIN"], pfile_meteo["p_MESFL"], pfile_meteo["p_DENSEF"], pfile_meteo["p_HEIGHT"], pfile_meteo["p_LAI"], pfile_meteo["p_SAI"], pfile_meteo["p_AGE"]
     pfile_param = derive_params_from_input_param(input_param)
     # Defines: pfile_param["ILAYER"], pfile_param["NDAYS"], pfile_param["HEAT"], pfile_param["ESLOPE"], pfile_param["ASPECT"], pfile_param["ALB"], pfile_param["ALBSN"], pfile_param["C1"], pfile_param["C2"], pfile_param["C3"], pfile_param["WNDRAT"], pfile_param["FETCH"], pfile_param["Z0W"], pfile_param["ZW"], pfile_param["LWIDTH"], pfile_param["Z0G"], pfile_param["Z0S"], pfile_param["LPC"], pfile_param["CS"], pfile_param["CZS"], pfile_param["CZR"], pfile_param["HS"], pfile_param["HR"], pfile_param["ZMINH"], pfile_param["RHOTP"], pfile_param["NN"], pfile_param["RSTEMP"], pfile_param["INTR_init"], pfile_param["INTS_init"], pfile_param["FRINTL"], pfile_param["FSINTL"], pfile_param["FRINTS"], pfile_param["FSINTS"], pfile_param["CINTRL"], pfile_param["CINTRS"], pfile_param["CINTSL"], pfile_param["CINTSS"], pfile_param["MELFAC"], pfile_param["CCFAC"], pfile_param["LAIMLT"], pfile_param["SAIMLT"], pfile_param["GRDMLT"], pfile_param["MAXLQF"], pfile_param["KSNVP"], pfile_param["SNODEN"], pfile_param["GLMAX"], pfile_param["CR"], pfile_param["GLMIN"], pfile_param["RM"], pfile_param["R5"], pfile_param["CVPD"], pfile_param["TL"], pfile_param["T1"], pfile_param["T2"], pfile_param["TH"], pfile_param["MXKPL"], pfile_param["MXRTLN"], pfile_param["inirlen"], pfile_param["inirdep"], pfile_param["rgroper"], pfile_param["FXYLEM"], pfile_param["PSICR"], pfile_param["RTRAD"], pfile_param["NOOUTF"], pfile_param["FXYLEM"], pfile_param["inirlen"], pfile_param["NLAYER"], pfile_param["ILAYER"], pfile_param["QLAYER"], pfile_param["IMODEL"], pfile_param["RSSA"], pfile_param["RSSB"], pfile_param["INFEXP"], pfile_param["BYPAR"], pfile_param["QFPAR"], pfile_param["QFFC"], pfile_param["IMPERV"], pfile_param["DSLOPE"], pfile_param["LENGTH"], pfile_param["DRAIN"], pfile_param["GSC"], pfile_param["GSP"], pfile_param["DTIMAX"], pfile_param["DSWMAX"], pfile_param["DPSIMX"], )
@@ -44,18 +46,18 @@ function derive_params_from_input(input_meteo::DataFrame,
     # Defines pfile_precdat
     pfile_pdur = derive_params_from_input_pdur(input_pdur)
     # Defines: pfile_pdur["DURATN"]
-    pfile_soil = derive_params_from_input_soil(input_soil_materials, 
-                                               input_soil_nodes, 
-                                               pfile_param["IMODEL"],#IMODEL, 
-                                               pfile_param["ILAYER"],#ILAYER, 
-                                               pfile_param["QLAYER"],#QLAYER, 
-                                               pfile_param["NLAYER"],#NLAYER, 
+    pfile_soil = derive_params_from_input_soil(input_soil_materials,
+                                               input_soil_nodes,
+                                               pfile_param["IMODEL"],#IMODEL,
+                                               pfile_param["ILAYER"],#ILAYER,
+                                               pfile_param["QLAYER"],#QLAYER,
+                                               pfile_param["NLAYER"],#NLAYER,
                                                pfile_param["HEAT"],#HEAT,
                                                pfile_param["nmat"],#nmat)
                                                pfile_param["inirdep"],
                                                pfile_param["rgrorate"])
-    # Defines: pfile_soil["THICK"],pfile_soil["PSIM_init"],pfile_soil["frelden"],pfile_soil["PAR"],pfile_soil["STONEF"],pfile_soil["tini"],pfile_soil["HeatCapOld"],pfile_soil["TopInfT"], 
-    
+    # Defines: pfile_soil["THICK"],pfile_soil["PSIM_init"],pfile_soil["frelden"],pfile_soil["PAR"],pfile_soil["STONEF"],pfile_soil["tini"],pfile_soil["HeatCapOld"],pfile_soil["TopInfT"],
+
     return (pfile_meteo, pfile_param, pfile_siteparam, pfile_precdat, pfile_pdur, pfile_soil)
 end
 
@@ -68,7 +70,7 @@ end
 derive_params_from_input_meteo(input_meteo::DataFrame)\n
 Takes climate and vegetation parameters in `input_meteo` and generates continuous parameters.
 """
-function derive_params_from_input_meteo(input_meteo::DataFrame)
+function derive_params_from_input_meteo(input_meteo::DataFrame, input_reference_date::DateTime)
 
     function interpolate_uniform(data, minScale, maxScale)
     @linq data |>
@@ -109,7 +111,8 @@ function derive_params_from_input_meteo(input_meteo::DataFrame)
                  ("p_HEIGHT",p_HEIGHT),
                  ("p_LAI",p_LAI),
                  ("p_SAI",p_SAI),
-                 ("p_AGE",p_AGE)])
+                 ("p_AGE",p_AGE),
+                 ("input_reference_date", input_reference_date)])
 end
 
 """derive_params_from_input_pdur(input_pdur)\n Function that defines constant parameters from input_pdur. TO BE REDEFINED
@@ -124,7 +127,15 @@ end
 """
 function derive_params_from_input_siteparam(input_siteparam)
     p_LAT  = input_siteparam[1,3]/57.296
-    return Dict([("p_LAT",p_LAT)])
+
+    u_GWAT_init = input_siteparam[1,5]
+    u_SNOW_init = input_siteparam[1,4]
+    p_NPINT = input_siteparam[1,6] # was precip_interval
+
+    return Dict([("p_LAT",p_LAT),
+                 ("u_GWAT_init",u_GWAT_init),
+                 ("u_SNOW_init",u_SNOW_init),
+                 ("p_NPINT",p_NPINT)])
 end
 
 """derive_params_from_input_soil(input_soil_materials, input_soil_nodes, IMODEL, ILAYER, QLAYER, NLAYER)\n Function that defines constant parameters from input_pdur. TO BE REDEFINED
@@ -216,7 +227,7 @@ function derive_params_from_input_soil(input_soil_materials, input_soil_nodes, I
         end
     end
     depmax = dep[1] - THICK[1] / 1000.
-    
+
     #..from material-specific to layer-specific parameter values
     PAR    = fill(NaN, (NLAYER, 10)) # MPAR=10
     STONEF = fill(NaN, (NLAYER))
@@ -290,7 +301,7 @@ function derive_params_from_input_soil(input_soil_materials, input_soil_nodes, I
     # C         volumetric heat capacities for solid, water and organic -- transfer from [MJ m-2 mm-1 K-1] to [J mm-3 K-1]
     #         TPar[7,I) = p_CVSOL   # To define in module_CONSTANTS.jl: p_CVSOL = ?  # CVSOL  - volumetric heat capacity of solid (MJ m-2 mm-1 K-1)
     #         TPar[8,I) = p_CVORG   # To define in module_CONSTANTS.jl: p_CVORG = ?  # volumetric heat capacity of organic material (MJ m-2 mm-1 K-1) (hillel98)
-    #         TPar[9,I) = p_CVLQ    # To define in module_CONSTANTS.jl: p_ThDis = ?  # Longitudinal thermal dispersivity (m)
+    #         TPar[9,I) = LWFBrook90Julia.CONSTANTS.p_CVLQ
     # 208    CONTINUE
     #        READ (12,*) C
     #       end
@@ -314,8 +325,8 @@ function derive_params_from_input_soil(input_soil_materials, input_soil_nodes, I
                 ("PAR",PAR),
                 ("STONEF",STONEF),
                 ("tini",tini),
-                # 
-                ("HeatCapOld",HeatCapOld), 
+                #
+                ("HeatCapOld",HeatCapOld),
                 ("TopInfT", TopInfT)])
 end
 
@@ -420,7 +431,7 @@ function derive_params_from_input_param(input_param)
     ILAYER = Int( input_param[67,1] )
     QLAYER = Int( input_param[68,1] )
     IMODEL = Int( input_param[69,1] )
-    
+
     RSSA = input_param[70,1]
     RSSB = input_param[71,1]
 
