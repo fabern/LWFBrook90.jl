@@ -76,15 +76,11 @@
         #u_SNOWLQ   = u[6]
         u_SWATI    = u[7:(7+NLAYER-1)]
 
-        if IMODEL == 0
-            u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, p_fu_KK, u_aux_θ =
-                LWFBrook90Julia.KPT.deriveAuxiliaryStates_CH(u_SWATI,  p_SWATMX, p_THSAT,p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN,p_KF, p_PSIG, NLAYER)
-        elseif IMODEL == 1
-            u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, p_fu_KK, u_aux_θ =
-                LWFBrook90Julia.KPT.deriveAuxiliaryStates_MvG(u_SWATI,  p_SWATMX, p_THSAT, p_θr, p_MvGα, p_MvGn, p_MvGl, p_Ksat, p_PSIG, NLAYER)
-        else
-            error("Error in LWFBrook90_derive_auxiliary_states(), unexpected input IMODEL: $IMODEL. Valid values ar 0 or 1.")
-        end
+        (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+            LWFBrook90Julia.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_SWATMX, p_THSAT,
+                 p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_KF,
+                 p_θr, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
+                 p_PSIG, NLAYER, IMODEL)
 
         ##################
         # Update soil limited boundary flows during iteration loop
@@ -296,18 +292,12 @@ function define_DiffEq_cb()
         u_SNOWLQ   = integrator.u[6]
         u_SWATI    = integrator.u[7:(7+NLAYER-1)]
 
-        # Derive u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, p_fu_KK from u_SWATI
-        if IMODEL == 0
-            u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, p_fu_KK =
-            LWFBrook90Julia.KPT.deriveAuxiliaryStates_CH(u_SWATI,  p_SWATMX, p_THSAT,
-                            p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN,
-                            p_KF, p_PSIG, NLAYER)
-        else # IMODEL == 1
-            u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, p_fu_KK =
-            LWFBrook90Julia.KPT.deriveAuxiliaryStates_MvG(u_SWATI,  p_SWATMX, p_THSAT, p_θr,
-                            p_MvGα, p_MvGn, p_MvGl, p_Ksat,
-                            p_PSIG, NLAYER)
-        end
+        # Derive (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) from u_SWATI
+        (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+            LWFBrook90Julia.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_SWATMX, p_THSAT,
+                 p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_KF,
+                 p_θr, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
+                 p_PSIG, NLAYER, IMODEL)
 
         IDAY = floor(integrator.t) # TODO(bernhard) is just for debug, remove again after
 
@@ -740,17 +730,6 @@ function define_DiffEq_parameters(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Re
     #    evapotranspiration , Hammel, 2001 (p_PsiCrit = f(ThCrit) = FPSIM(ThCrit))
     #    use: if (PsiM < PsiCrit) TRANI = 0 # no transpiration
     #    use: if (PsiM < PsiCrit) SLVP = 0  # no soil evaporation # TODO(bernhard): this seems incorrect
-
-    # TODO(bernhard): replace SOILVAR() with deriveAuxiliaryStates_CH and deriveAuxiliaryStates_MvG()
-    # TODO: this is not needed anymore: if (IMODEL == 0)
-    # TODO: this is not needed anymore:     PSITI, KK =  SOILVAR_CH(NLAYER,u_aux_PSIM,p_PSIG,u_aux_WETNES,p_KF,p_WETF,p_BEXP)
-    # TODO: this is not needed anymore:     # u_aux_PSITI, p_fu_KK =  SOILVAR_CH(NLAYER,u_aux_PSIM,p_PSIG,u_aux_WETNES,p_KF,p_WETF,p_BEXP)
-    # TODO: this is not needed anymore: elseif (IMODEL == 1)
-    # TODO: this is not needed anymore:     PSITI, KK =  SOILVAR_MvG(NLAYER,u_aux_PSIM,p_PSIG,u_aux_WETNES,p_Ksat,p_MvGl,p_MvGn)
-    # TODO: this is not needed anymore:     # u_aux_PSITI, p_fu_KK =  SOILVAR_MvG(NLAYER,u_aux_PSIM,p_PSIG,u_aux_WETNES,p_Ksat,p_MvGl,p_MvGn)
-    # TODO: this is not needed anymore: else
-    # TODO: this is not needed anymore:     error("Unknown IMODEL!")
-    # TODO: this is not needed anymore: end
 
     # source area parameters SRFPAR()
     p_QLAYER = # number of soil layers for SRFL
