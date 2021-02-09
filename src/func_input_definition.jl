@@ -3,7 +3,7 @@
 using CSV#: read, File
 using DataFrames#: rename, select
 using DataFramesMeta
-using Dates: DateTime, Millisecond, Day, month, value, dayofyear
+using Dates: DateTime, Millisecond, Second, Day, month, value, dayofyear
 
 """
 read_KAUFENRING_inputData(folder::String, prefix::String)\n
@@ -140,6 +140,13 @@ end
 function DateTime2RelativeDaysFloat(x::DateTime, reference::DateTime)
     ms2days = 1.0/(24.0*3600.0*1000.0) # to convert milliseconds to days
     ms2days*value(convert(Millisecond, x-reference))
+end
+""" RelativeDaysFloat2DateTime(t,
+        reference_DateTime)\n Transforms simulation time t to DateTimes `dt` """
+function RelativeDaysFloat2DateTime(t::Float64, reference::DateTime)
+    # reference + Day(floor(t))
+    t_sec = 60*60*24*t # t is in days, t_sec in seconds
+    reference + Second(floor(t_sec))
 end
 """ p_DOY(t::Float64, reference::DateTime)\n Get DOY (Day Of Year) from simulation time"""
 function p_DOY(t::Float64, reference::DateTime)

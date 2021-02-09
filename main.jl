@@ -41,11 +41,12 @@ NOOUTF    = 1 == pfile_param["NOOUTF"] # 1 if no outflow allowed from roots, oth
 Reset     = 0 # currently only Reset = 0 implemented
 
 constant_dt_solver = 1 # [days]
+
+compute_intermediate_quantities = true # Flag whether ODE containes additional quantities than only states
 ####################
 
 ####################
 # Define parameters for differential equation
-compute_intermediate_quantities = false # Flag whether ODE containes additional quantities than only states
 p = LWFBrook90Julia.define_DiffEq_parameters(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, compute_intermediate_quantities,
                                              pfile_meteo,
                                              pfile_siteparam,
@@ -120,11 +121,30 @@ tspan = (0.,  100.) # simulate 100 days
 ode_LWFBrook90Julia = LWFBrook90Julia.define_DiffEq_ODE(u0, tspan, p)
 sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true)
 
-using Plots
-plot(sol_LWFBrook90Julia; vars = [1, 2, 3, 4, 5, 6],label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
-# plot(sol_LWFBrook90Julia; vars = 6 .+ (1:NLAYER),label="SWATI " .* string.(1:NLAYER))
+## Benchmarking
+# @time solve(ode_LWFBrook90Julia, progress = true)
+# using BenchmarkTools # for benchmarking
+# @btime solve(ode_LWFBrook90Julia, Euler(), dt=1/12); # Instability detected aborting
+# @btime solve(ode_LWFBrook90Julia, Euler(), dt=1/24); # Instability detected aborting
+# @btime solve(ode_LWFBrook90Julia, dt=1/24); # uses DiffEq.jl adaptive timestepping, but initial dt of 1/24
+# @btime solve(ode_LWFBrook90Julia);
 
-plot(sol_LWFBrook90Julia; vars = [1, 2, 3, 4, 5, 6],label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
+## Plotting
+# 1) very basic
+# using Plots
+# # Plot 1
+# plot(sol_LWFBrook90Julia; vars = [1, 2, 3, 4, 5, 6],label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
+# # Plot 2
+# # http://docs.juliaplots.org/latest/generated/gr/#gr-ref43
+# x = LWFBrook90Julia.RelativeDaysFloat2DateTime.(sol_LWFBrook90Julia.t, input_reference_date)
+# y = cumsum(pfile_soil["THICK"])
+# z = sol_LWFBrook90Julia[6 .+ (1:NLAYER), :]./pfile_soil["THICK"] # TODO(bernhard): check is this really θ?
+# heatmap(x, y, z, yflip = true,
+#         xlabel = "Date",
+#         ylabel = "Depth",
+#         colorbar_title = "θ")
 
-@time solve(ode_LWFBrook90Julia, progress = true)
+# 2) compare KAUFENRING data with LWFBrook90R
+include("compare_LWFBrook90R_visually.jl")
+
 ####################
