@@ -238,88 +238,91 @@ function SOILPAR_MvG(p_RHOWG,p_THICK,p_THETAF,p_THSAT,p_STONEF,p_BEXP,
     return (p_ψg, p_SWATMX, p_WETfc, p_CHm, p_CHn, p_Ksat, p_PSIF, p_THETAF)#, u_aux_WETNES, u_aux_SWATI)
 end
 
-function SOILVAR_CH(NLAYER,      # number of soil layers
-                    u_aux_PSIM,   # matric soil water potential for layer, kPa
-                    p_PSIG,       # gravity potential, kPa
-                    u_aux_WETNES, # wetness, fraction of saturation
-                    p_KF,         # hydraulic conductivity at field capacity, mm/d
-                    p_WETF,       # wetness at field capacity, dimensionless
-                    p_BEXP)       # exponent for psi-theta relation
-    # computes PSITI: total potential ψt = ψm + ψg (sum of matrix potential and gravity potential)
-    # computes KK:    unsaturated hydraulic conductivity: K(Se) a.k.a. K(W)
-    PSITI=fill(NaN, NLAYER)
-    KK   =fill(NaN, NLAYER)
-    for i = 1:NLAYER
-        PSITI[i] = u_aux_PSIM[i] + p_PSIG[i]
-        if u_aux_WETNES[i] > 0.00010
-            KK[i] = p_KF[i] * (u_aux_WETNES[i] / p_WETF[i]) ^ (2 * p_BEXP[i] + 3)
-        else
-            # extremely dry
-            KK[i] = 1E-10
-        end
-
-    end
-    return(PSITI, KK)
-end
-function SOILVAR_MvG(NLAYER,      # number of soil layers
-                    u_aux_PSIM,   # matric soil water potential for layer, kPa
-                    p_PSIG,       # gravity potential, kPa
-                    u_aux_WETNES, # wetness, fraction of saturation
-                    p_Ksat,
-                    p_MvGl,
-                    p_MvGn)#,        # parameterization of hydraulic functions
-    # computes PSITI: total potential ψt = ψm + ψg (sum of matrix potential and gravity potential)
-    # computes KK:    unsaturated hydraulic conductivity: K(Se) a.k.a. K(W)
-    PSITI=fill(NaN, NLAYER)
-    KK   =fill(NaN, NLAYER)
-    for i = 1:NLAYER
-        PSITI[i] = u_aux_PSIM[i] + p_PSIG[i]
-        KK[i]    = FK_MvG(u_aux_WETNES[i], p_Ksat[i], p_MvGl[i], p_MvGn[i])
-    end
-    return(PSITI, KK)
-end
-
-
-
-""" LWFBrook90_derive_auxiliary_states(u_SWATI,  p_SWATMX, p_THSAT, p_θr,
-                        p_PSIF, p_BEXP, p_WETINF, p_WETF,
-                        p_CHM, p_CHN, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
-                        p_KF, p_PSIG, IMODEL, NLAYER)\n
+""" derive_auxiliary_SOILVAR(u_SWATI, p_SWATMX, p_THSAT,
+                 p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_KF,
+                 p_θr, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
+                 p_PSIG, NLAYER, IMODEL)\n
 Derives alternative representations of soil water status.
 I.e. based on the state u_SWATI it returns (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, p_fu_KK)"""
-function deriveAuxiliaryStates_MvG(u_SWATI,  p_SWATMX,
+function derive_auxiliary_SOILVAR(u_SWATI, p_SWATMX, p_THSAT,
+                 p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_KF,
+                 p_θr, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
+                 p_PSIG, NLAYER, IMODEL)
+        if IMODEL == 0
+            u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK =
+            LWFBrook90Julia.KPT.SOILVAR_CH(u_SWATI, p_SWATMX, p_THSAT,
+                            p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_KF,
+                            p_PSIG, NLAYER)
+        else # IMODEL == 1
+            u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK =
+            LWFBrook90Julia.KPT.SOILVAR_MvG(u_SWATI, p_SWATMX, p_THSAT,
+                            p_θr, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
+                            p_PSIG, NLAYER)
+        end
+    return (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
+end
+function SOILVAR_MvG(u_SWATI,  p_SWATMX,
                                    p_THSAT, p_θr, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
                                    p_PSIG, NLAYER)
     # Case where IMODEL == 1
     u_aux_WETNES = fill(NaN, NLAYER)
     u_aux_PSIM   = fill(NaN, NLAYER)
     u_aux_θ      = fill(NaN, NLAYER)
+    u_aux_PSITI  = fill(NaN, NLAYER)
+    p_fu_KK      = fill(NaN, NLAYER)
+
     for i = 1:NLAYER
         u_aux_WETNES[i] = (p_THSAT[i] * u_SWATI[i] / p_SWATMX[i] -p_θr[i]) / (p_THSAT[i] - p_θr[i])
         u_aux_WETNES[i] = min(1, u_aux_WETNES[i])
+
         u_aux_PSIM[i]   = FPSIM_MvG(u_aux_WETNES[i], p_MvGα[i], p_MvGn[i])
         u_aux_θ[i]      = FTheta_MvG(u_aux_WETNES[i], p_THSAT[i], p_θr[i])
+        KK[i]           = FK_MvG(u_aux_WETNES[i], p_Ksat[i], p_MvGl[i], p_MvGn[i])
+
+        PSITI[i]        = u_aux_PSIM[i] + p_PSIG[i]
     end
 
-    u_aux_PSITI, p_fu_KK =  SOILVAR_MvG(NLAYER,u_aux_PSIM,p_PSIG,u_aux_WETNES,p_Ksat,p_MvGl,p_MvGn)
-    return (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, p_fu_KK, u_aux_θ)
+    # u_aux_WETNES: wetness, fraction of saturation
+    # u_aux_PSIM:   matric soil water potential for layer, kPa
+    # p_PSIG:       gravity potential, kPa
+    # PSITI: total potential ψt = ψm + ψg (sum of matrix potential and gravity potential)
+    # KK:    unsaturated hydraulic conductivity: K(Se) a.k.a. K(W)
+    return (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
 end
-function deriveAuxiliaryStates_CH(u_SWATI,  p_SWATMX,
+function SOILVAR_CH(u_SWATI,  p_SWATMX,
                                   p_THSAT, p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_KF,
                                   p_PSIG, NLAYER)
+    # p_KF,         # hydraulic conductivity at field capacity, mm/d
+    # p_WETF,       # wetness at field capacity, dimensionless
+    # p_BEXP.       # exponent for psi-theta relation
+
     # Case where IMODEL == 0
     u_aux_WETNES = u_SWATI./p_SWATMX
 
     u_aux_PSIM = fill(NaN, NLAYER)
     u_aux_θ = fill(NaN, NLAYER)
+
+    u_aux_PSITI=fill(NaN, NLAYER)
+    p_fu_KK   =fill(NaN, NLAYER)
+
     for i = 1:NLAYER
         u_aux_PSIM[i] = FPSIMF_CH(u_aux_WETNES[i],
                                        p_PSIF[i], p_BEXP[i], p_WETINF[i], p_WETF[i], p_CHM[i], p_CHN[i])
         u_aux_θ[i]    = FTheta_CH(u_aux_WETNES[i], p_THSAT[i])
-    end
-    u_aux_PSITI, p_fu_KK =  SOILVAR_CH(NLAYER,u_aux_PSIM,p_PSIG,u_aux_WETNES,p_KF,p_WETF,p_BEXP)
 
-    return (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, p_fu_KK, u_aux_θ)
+        u_aux_PSITI[i] = u_aux_PSIM[i] + p_PSIG[i]
+        if u_aux_WETNES[i] > 0.00010
+            p_fu_KK[i] = p_KF[i] * (u_aux_WETNES[i] / p_WETF[i]) ^ (2 * p_BEXP[i] + 3)
+        else
+            # extremely dry
+            p_fu_KK[i] = 1E-10
+        end
+    end
+
+    # u_aux_WETNES, # wetness, fraction of saturation
+    # u_aux_PSIM,   # matric soil water potential for layer, kPa
+    # p_PSIG,       # gravity potential, kPa
+    return (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
 end
 
 
@@ -343,7 +346,7 @@ end
 
 """ FPSIM_MvG(u_aux_WETNES, p_MvGα, p_MvGn)\n Computes ψ(Se) = h(Se) a.k.a ψ(W) = h(W)
 """
-#TODO(bernhard): check correct usage in LWFBrook90_derive_auxiliary_states() i.e. split in FPSIM_MvG() and FPSIMF_CH
+#TODO(bernhard): check correct usage in SOILVAR() i.e. split in FPSIM_MvG() and FPSIMF_CH
 # old definition: TODO: remove function LWFBrook90_MvG_FPSIMF(u_aux_WETNES,
 # old definition: TODO: remove                                p_PSIF, p_BEXP, p_WET∞, p_WETF, p_CHM, p_CHN,
 # old definition: TODO: remove                                p_MvGα, p_MvGn,
