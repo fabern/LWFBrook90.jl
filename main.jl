@@ -110,20 +110,21 @@ u0 = LWFBrook90Julia.define_DiffEq_u0(u_GWAT_init,
 #   - p:      parameters
 
 # Define simulation time span:
-tspan = (0.,  100.) # simulate 100 days
 tspan = (0.,  5.) # simulate 5 days
+tspan = (0.,  100.) # simulate 100 days
 # tspan = (minimum(input_meteo[:,"days"]),
 #          maximum(input_meteo[:,"days"])) # simulate all available days
 # tspan = (LWFBrook90Julia.DateTime2RelativeDaysFloat(DateTime(1980,1,1), reference_date),
-#          LWFBrook90Julia.DateTime2RelativeDaysFloat(DateTime(1980,1,1), reference_date)) # simulates selected period
+#          LWFBrook90Julia.DateTime2RelativeDaysFloat(DateTime(1985,1,1), reference_date)) # simulates selected period
 
 ode_LWFBrook90Julia = LWFBrook90Julia.define_DiffEq_ODE(u0, tspan, p)
 sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true)
 
-# using Plots
-# plot(sol_LWFBrook90Julia; vars = [1, 2, 3, 4, 5, 6],label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
-# plot(sol_LWFBrook90Julia; vars = 6+1:NLAYER,label="SWATI " .* string.(1:NLAYER))
+using Plots
+plot(sol_LWFBrook90Julia; vars = [1, 2, 3, 4, 5, 6],label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
+# plot(sol_LWFBrook90Julia; vars = 6 .+ (1:NLAYER),label="SWATI " .* string.(1:NLAYER))
 
+plot(sol_LWFBrook90Julia; vars = [1, 2, 3, 4, 5, 6],label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
 
-# @time solve(ode_LWFBrook90Julia, progress = true)
+@time solve(ode_LWFBrook90Julia, progress = true)
 ####################

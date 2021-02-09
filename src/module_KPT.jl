@@ -143,7 +143,11 @@ function SOILPAR_CH(p_RHOWG,p_THICK,p_THETAF,p_THSAT,p_STONEF,p_BEXP,
     # Fill layer by layer
     for i = 1:NLAYER
         # compute p_ψg (gravity potential) as negative down from surface
-        p_ψg[i] = p_ψg[i - 1] - p_RHOWG * ((p_THICK[i - 1] + p_THICK[i]) / 2)
+        if i == 1
+            p_ψg[1] = -p_RHOWG * p_THICK[1] / 2
+        else
+            p_ψg[i] = p_ψg[i - 1] - p_RHOWG * ((p_THICK[i - 1] + p_THICK[i]) / 2)
+        end
 
         ### constant parameters:
         p_SWATMX[i] = p_THICK[i] * p_THSAT[i] * (1 - p_STONEF[i])
@@ -191,7 +195,12 @@ function SOILPAR_MvG(p_RHOWG,p_THICK,p_THETAF,p_THSAT,p_STONEF,p_BEXP,
     # Fill layer by layer
     for i = 1:NLAYER
         # compute p_ψg (gravity potential) as negative down from surface
-        p_ψg[1] = -p_RHOWG * p_THICK[1] / 2
+        if i == 1
+            p_ψg[1] = -p_RHOWG * p_THICK[1] / 2
+        else
+            p_ψg[i] = p_ψg[i - 1] - p_RHOWG * ((p_THICK[i - 1] + p_THICK[i]) / 2)
+        end
+
         ### constant parameters:
 
         # Find wetness at field capacity based on hydraulic conductivity
@@ -265,7 +274,7 @@ function SOILVAR_MvG(NLAYER,      # number of soil layers
     KK   =fill(NaN, NLAYER)
     for i = 1:NLAYER
         PSITI[i] = u_aux_PSIM[i] + p_PSIG[i]
-        KK[i] = FK_MvG(u_aux_WETNES[i], p_Ksat[i], p_MvGl[i], p_MvGn[i])
+        KK[i]    = FK_MvG(u_aux_WETNES[i], p_Ksat[i], p_MvGl[i], p_MvGn[i])
     end
     return(PSITI, KK)
 end
@@ -278,58 +287,39 @@ end
                         p_KF, p_PSIG, IMODEL, NLAYER)\n
 Derives alternative representations of soil water status.
 I.e. based on the state u_SWATI it returns (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, p_fu_KK)"""
-# TODO(bernhard): delete wrapper function LWFBrook90_derive_auxiliary_states()
-function LWFBrook90_derive_auxiliary_states(u_SWATI,  p_SWATMX, p_THSAT, p_θr,
-                        p_PSIF, p_BEXP, p_WETINF, p_WETF,
-                        p_CHM, p_CHN, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
-                        p_KF, p_PSIG, IMODEL, NLAYER)
-    if IMODEL == 0
-        return deriveAuxiliaryStates_CH(u_SWATI,  p_SWATMX,
-                        p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN,
-                        p_KF, p_PSIG, NLAYER)
-    elseif IMODEL == 1
-        return deriveAuxiliaryStates_MvG(u_SWATI,  p_SWATMX, p_THSAT, p_θr,
-                        p_MvGα, p_MvGn, p_MvGl, p_Ksat,
-                        p_PSIG, NLAYER)
-    else
-        error("Error in LWFBrook90_derive_auxiliary_states(), unexpected input IMODEL: $IMODEL. Valid values ar 0 or 1.")
-    end
-end
 function deriveAuxiliaryStates_MvG(u_SWATI,  p_SWATMX,
                                    p_THSAT, p_θr, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
                                    p_PSIG, NLAYER)
     # Case where IMODEL == 1
     u_aux_WETNES = fill(NaN, NLAYER)
+    u_aux_PSIM   = fill(NaN, NLAYER)
+    u_aux_θ      = fill(NaN, NLAYER)
     for i = 1:NLAYER
         u_aux_WETNES[i] = (p_THSAT[i] * u_SWATI[i] / p_SWATMX[i] -p_θr[i]) / (p_THSAT[i] - p_θr[i])
-
         u_aux_WETNES[i] = min(1, u_aux_WETNES[i])
-    end
-
-    u_aux_PSIM = fill(NaN, NLAYER)
-    for i = 1:NLAYER
-        u_aux_PSIM[i]        = FPSIM_MvG(u_aux_WETNES[i], p_MvGα[i], p_MvGn[i])
+        u_aux_PSIM[i]   = FPSIM_MvG(u_aux_WETNES[i], p_MvGα[i], p_MvGn[i])
+        u_aux_θ[i]      = FTheta_MvG(u_aux_WETNES[i], p_THSAT[i], p_θr[i])
     end
 
     u_aux_PSITI, p_fu_KK =  SOILVAR_MvG(NLAYER,u_aux_PSIM,p_PSIG,u_aux_WETNES,p_Ksat,p_MvGl,p_MvGn)
-
-    return (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, p_fu_KK)
+    return (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, p_fu_KK, u_aux_θ)
 end
 function deriveAuxiliaryStates_CH(u_SWATI,  p_SWATMX,
-                                  p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_KF,
+                                  p_THSAT, p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_KF,
                                   p_PSIG, NLAYER)
     # Case where IMODEL == 0
     u_aux_WETNES = u_SWATI./p_SWATMX
 
     u_aux_PSIM = fill(NaN, NLAYER)
+    u_aux_θ = fill(NaN, NLAYER)
     for i = 1:NLAYER
         u_aux_PSIM[i] = FPSIMF_CH(u_aux_WETNES[i],
                                        p_PSIF[i], p_BEXP[i], p_WETINF[i], p_WETF[i], p_CHM[i], p_CHN[i])
+        u_aux_θ[i]    = FTheta_CH(u_aux_WETNES[i], p_THSAT[i])
     end
-
     u_aux_PSITI, p_fu_KK =  SOILVAR_CH(NLAYER,u_aux_PSIM,p_PSIG,u_aux_WETNES,p_KF,p_WETF,p_BEXP)
 
-    return (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, p_fu_KK)
+    return (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, p_fu_KK, u_aux_θ)
 end
 
 
@@ -342,7 +332,7 @@ K = Ks*W^l*[ 1 - (1-W^(1/m))^m ]^2 using m = 1-1/n yields: K = Ks*W^l*[ 1 - (1-W
 """
 function FK_MvG(WETNES, KSAT, MvGl, MvGn)
     eps = 1.e-6
-    AWET = max(WETNES, eps)
+    AWET = max.(WETNES, eps)
 
     # return: hydraulic conductivity, mm/d
     return KSAT*AWET^MvGl*(1 - (1-AWET^(MvGn/(MvGn-1)) )^(1-1/MvGn) )^2
@@ -385,11 +375,64 @@ function FPSIM_MvG(u_aux_WETNES, p_MvGα, p_MvGn)
     # ...
     eps = 1.e-6
     # MvGm = 1-1/MvGn
-    AWET = max(u_aux_WETNES, eps)
+    AWET = max.(u_aux_WETNES, eps)
     ψM = (-1/p_MvGα)*(AWET^(-1/(1-1/p_MvGn))-1)^(1/p_MvGn)
     ψM = ψM * 9.81 # 9.81 conversion from m to kPa #TODO define and use const
 
     return ψM
+end
+
+
+"""
+Ecoshift:
+FDPSIDW returns dψi/dWi for one layer, which is needed for the selection of iteration
+time-step. Differentiation of (7) and (4) leads to
+dψi / dWi = ( -b ψf / Wf ) ( Wi / Wf )-b-1
+in the unsaturated range,
+dψi / dWi= m ( 2 Wi - n - 1 )
+in the near saturation range, and
+dψi / dWi = 0
+when the soil is saturated (Wi = 1).
+"""
+
+function FDPSIDWF_CH(u_aux_WETNES, p_WET∞, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN)
+    # FDPSIDW returns dΨi/dWi for one layer, which is needed for the selection of iteration time-step.
+
+    dψδW = zeros(size(u_aux_WETNES))
+    for i = 1:length(u_aux_WETNES)
+        if u_aux_WETNES[i] < p_WET∞[i]
+            # in clearly unsaturated range (eq. 7)
+            dψδW[i] = (-p_BEXP[i] * p_PSIF[i] / p_WETF[i]) * (u_aux_WETNES[i] / p_WETF[i]) ^ (-p_BEXP[i] - 1)
+            # TODO(bernhard): slightly faster: dψδW[i] = p_PSIF[i]*p_WETF[i]^p_BEXP[i] * -p_BEXP[i]*u_aux_WETNES[i]^(-p_BEXP[i]-1)
+        elseif u_aux_WETNES[i] < 1.0
+            # in near-saturated range (eq. 4)
+            dψδW[i] = p_CHM[i] * (2 * u_aux_WETNES[i] - p_CHN[i] - 1)
+        else
+            # saturated
+            dψδW[i] = 0.0
+        end
+    end
+    return dψδW # d PSI/d WETNES, kPa
+end
+
+function FDPSIDWF_MvG(u_aux_WETNES, α, n)
+    eps = 1.e-6
+    m = 1 .- 1 ./ n
+    dψδW = zeros(size(u_aux_WETNES))
+    for i = 1:length(u_aux_WETNES)
+        if (u_aux_WETNES[i] <= eps)
+            dψδW[i] = (-1/α[i])*(1/n[i])*(            eps^(-1/(m[i]))-1)^(1/n[i]-1)*(-1/(m[i]))*            eps^(-1/(m[i])-1)
+        end
+        if ((u_aux_WETNES[i] > eps) && (u_aux_WETNES[i] < 1.0))
+            dψδW[i] = (-1/α[i])*(1/n[i])*(u_aux_WETNES[i]^(-1/(m[i]))-1)^(1/n[i]-1)*(-1/(m[i]))*u_aux_WETNES[i]^(-1/(m[i])-1)
+        end
+        if (u_aux_WETNES[i] > 1.0)
+            dψδW[i] = 0.0
+        end
+    end
+
+    return dψδW = dψδW * 9.81 # # 9.81 conversion from m to kPa #TODO define and use const
+                              # d PSI/d WETNES, kPa
 end
 
 # TODO(bernhard): remove remark that I renamed LWFBrook90_MvG_FTheta() to FTheta_MvG()

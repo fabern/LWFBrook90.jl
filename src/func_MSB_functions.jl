@@ -349,3 +349,121 @@ function MSBPREINT(#arguments:
             # compute updated states:
             u_SNOW, u_CC, u_SNOWLQ)
 end
+
+
+function MSBITERATE(IMODEL, p_QLAYER,
+                    # for SRFLFR:
+                    u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC,
+                    #
+                    p_IMPERV, p_fu_RNET, aux_du_SMLT, NLAYER,
+                    p_LENGTH, p_DSLOPE,
+                    # for DSLOP:
+                    p_RHOWG, u_aux_PSIM, p_THICK, p_STONEF, p_fu_KK,
+                    #
+                    u_aux_PSITI, p_DPSIMX,
+                    # for VERT:
+                    p_KSAT,
+                    #
+                    p_DRAIN, DTRI, p_DTIMAX,
+                    # for INFLOW:
+                    p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP, p_SWATMX,
+                    # for FDPSIDW:
+                    u_aux_WETNES, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN, p_MvGα, p_MvGn,
+                    # for ITER:
+                    p_DSWMAX, p_THSAT, p_θr, u_aux_θ,
+                    # for GWATER:
+                    u_GWAT, p_GSC, p_GSP, p_DT)
+
+    ## On soil surface, partition incoming rain (RNET) and melt water (SMLT)
+    # into either above ground source area flow (streamflow, SRFL) or
+    # below ground ("infiltrated") input to soil (SLFL)
+    # source area flow rate
+    if (p_QLAYER > 0)
+        SAFRAC=LWFBrook90Julia.WAT.SRFLFR(p_QLAYER, u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC)
+    else
+        SAFRAC = 0.
+    end
+    p_fu_SRFL = min(1., (p_IMPERV + SAFRAC)) * (p_fu_RNET + aux_du_SMLT)
+
+    # water supply rate to soil surface:
+    p_fu_SLFL = p_fu_RNET + aux_du_SMLT - p_fu_SRFL
+
+    ## Within soil compute flows from layers:
+    #  a) vertical flux between layers VRFLI,
+    #  b) downslope flow from the layers DSFLI
+    aux_du_VRFLI = fill(NaN, NLAYER)
+    aux_du_DSFLI = fill(NaN, NLAYER)
+
+    for i = NLAYER:-1:1
+            # downslope flow rates
+            if( p_LENGTH == 0 || p_DSLOPE == 0)
+                # added in Version 4
+                aux_du_DSFLI[i] = 0
+            else
+                aux_du_DSFLI[i] = LWFBrook90Julia.WAT.DSLOP(p_DSLOPE, p_LENGTH, p_THICK[i], p_STONEF[i], u_aux_PSIM[i], p_RHOWG, p_fu_KK[i])
+            end
+            # vertical flow rates
+            if (i < NLAYER)
+                if (abs(u_aux_PSITI[i] - u_aux_PSITI[i+1]) < p_DPSIMX)
+                    aux_du_VRFLI[i] = 0
+                else
+                    aux_du_VRFLI[i] =
+                        LWFBrook90Julia.WAT.VERT(p_fu_KK[i],     p_fu_KK[i+1],
+                                                p_KSAT[i],      p_KSAT[i+1],
+                                                p_THICK[i],     p_THICK[i+1],
+                                                u_aux_PSITI[i], u_aux_PSITI[i+1],
+                                                p_STONEF[i],    p_STONEF[i+1],
+                                                p_RHOWG)
+                end
+            else
+            # bottom layer i == NLAYER
+                if (p_DRAIN > 0.00001)
+                # gravity drainage only
+                    aux_du_VRFLI[NLAYER] = p_DRAIN * p_fu_KK[NLAYER] * (1 - p_STONEF[NLAYER])
+                else
+                # bottom of profile sealed
+                    aux_du_VRFLI[NLAYER] = 0
+                end
+            end
+            # if (IDAY >= 6 && i==NLAYER) # TODO(bernhard): this seemed like a no effect snippet
+            #     p_DRAIN=p_DRAIN         # TODO(bernhard): this seemed like a no effect snippet
+            # end                         # TODO(bernhard): this seemed like a no effect snippet
+    end
+
+    # first approximation on aux_du_VRFLI
+    aux_du_VRFLI_1st_approx = aux_du_VRFLI
+
+    # first approximation for iteration time step,time remaining or DTIMAX
+    DTI = min(DTRI, p_DTIMAX)
+    # net inflow to each layer including E and T withdrawal adjusted for interception
+    aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
+        LWFBrook90Julia.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
+                                    aux_du_SLVP, p_SWATMX, u_SWATI,
+                                    aux_du_VRFLI_1st_approx)
+
+    if IMODEL == 0
+        DPSIDW = LWFBrook90Julia.KPT.FDPSIDWF_CH(u_aux_WETNES, p_WET∞, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN)
+    else # IMODEL == 1
+        DPSIDW = LWFBrook90Julia.KPT.FDPSIDWF_MvG(u_aux_WETNES, p_MvGα, p_MvGn)
+    end
+    # limit step size
+    #   ITER computes DTI so that the potential difference (due to aux_du_VRFLI)
+    #   between adjacent layers does not change sign during the iteration time step
+    DTINEW=LWFBrook90Julia.WAT.ITER(IMODEL, NLAYER, DTI, LWFBrook90Julia.CONSTANTS.p_DTIMIN, DPSIDW,
+                                    du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMX, p_THICK, p_STONEF, p_THSAT, p_θr)
+    # recompute step
+    if (DTINEW < DTI)
+        # recalculate flow rates with new DTI
+        DTI = DTINEW
+        aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
+            LWFBrook90Julia.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
+                                        aux_du_SLVP, p_SWATMX, u_SWATI,
+                                        aux_du_VRFLI_1st_approx)
+    end
+
+    # groundwater flow and seepage loss
+    du_GWFL, du_SEEP = LWFBrook90Julia.WAT.GWATER(u_GWAT, p_GSC, p_GSP, p_DT, aux_du_VRFLI[NLAYER])
+
+
+    return (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, DTI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI, du_GWFL, du_SEEP)
+end

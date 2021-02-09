@@ -24,11 +24,11 @@ const p_PI     = 3.1416         # PI  pi
 # from LWFBrook90R
 const p_ThCrit = 1.E-4  # minimal fraction of water content above residual water content to allow water supply for evapotranspiration
                         # p_PsiCrit is derived from p_ThCrit
+const p_DTIMIN = 1.e-9  # minimum time step for iteration interval, d
 
 # from LWFBrook90R: additionally:
 # integer, dimension(12), parameter :: DAYMO = (/31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31/) ! day of the
 #           real(kind=8), parameter :: DT = 1.d0           ! DT  time step for DFILE interval,  must be 1 d
-#           real(kind=8), parameter :: DTIMIN = 1.e-9       ! minimum time step for iteration interval, d
 #           real(kind=8), parameter :: ThCrit = 1.e-4       ! * minimal fraction of water content above residual water content to allow water supply for evapotranspiration
 
 # from LWFBrook90R: heat flow:
