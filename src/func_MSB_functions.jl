@@ -428,7 +428,7 @@ function MSBITERATE(IMODEL, p_QLAYER,
     # limit step size
     #   ITER computes DTI so that the potential difference (due to aux_du_VRFLI)
     #   between adjacent layers does not change sign during the iteration time step
-    if (true) # NOTE: when using DiffEq.jl the integrator time step is determined by solve(). Therefore the adaptive time step control of LWFBrook can be deactivated.
+    if (false) # NOTE: when using DiffEq.jl the integrator time step is determined by solve(). Therefore the adaptive time step control of LWFBrook can be deactivated.
         DTINEW=LWFBrook90Julia.WAT.ITER(IMODEL, NLAYER, DTI, LWFBrook90Julia.CONSTANTS.p_DTIMIN,
                                         du_NTFLI, u_aux_PSITI, u_aux_θ,
                                         u_aux_WETNES,
