@@ -409,7 +409,7 @@ function MSBITERATE(IMODEL, p_QLAYER,
     # NOTE(bernhard): originally Brook90 and LWFBrook90R used the first approximation from
     #                 VRFLI() for both calls to INFLOW()
     #                 i.e. calling INFLOW(..., aux_du_VRFLI_1st_approx) weith DTI and DTINEW
-    #aux_du_VRFLI_1st_approx = aux_du_VRFLI
+    aux_du_VRFLI_1st_approx = aux_du_VRFLI
 
     # first approximation for iteration time step,time remaining or DTIMAX
     DTRI = p_DTP
@@ -423,12 +423,12 @@ function MSBITERATE(IMODEL, p_QLAYER,
     aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
         LWFBrook90Julia.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
                                     aux_du_SLVP, p_SWATMX, u_SWATI,
-                                    aux_du_VRFLI)
+                                    aux_du_VRFLI_1st_approx)
 
     # limit step size
     #   ITER computes DTI so that the potential difference (due to aux_du_VRFLI)
     #   between adjacent layers does not change sign during the iteration time step
-    if (false) # NOTE: when using DiffEq.jl the integrator time step is determined by solve(). Therefore the adaptive time step control of LWFBrook can be deactivated.
+    if (true) # NOTE: when using DiffEq.jl the integrator time step is determined by solve(). Therefore the adaptive time step control of LWFBrook can be deactivated.
         DTINEW=LWFBrook90Julia.WAT.ITER(IMODEL, NLAYER, DTI, LWFBrook90Julia.CONSTANTS.p_DTIMIN,
                                         du_NTFLI, u_aux_PSITI, u_aux_θ,
                                         u_aux_WETNES,
@@ -457,7 +457,7 @@ function MSBITERATE(IMODEL, p_QLAYER,
             aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
                 LWFBrook90Julia.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
                                             aux_du_SLVP, p_SWATMX, u_SWATI,
-                                            aux_du_VRFLI)
+                                            aux_du_VRFLI_1st_approx)
         end
     end
 

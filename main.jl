@@ -140,7 +140,7 @@ sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true)
 # @btime sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, Euler(), dt=1/12); # Instability detected aborting
 # @btime solve(ode_LWFBrook90Julia, Euler(), dt=1/24); # Instability detected aborting
 # @btime solve(ode_LWFBrook90Julia, dt=1/24); # uses DiffEq.jl adaptive timestepping, but initial dt of 1/24
-# @btime solve(ode_LWFBrook90Julia);
+# sol_LWFBrook90Julia = @btime solve(ode_LWFBrook90Julia);
 
 ## Plotting
 # 1) very basic
