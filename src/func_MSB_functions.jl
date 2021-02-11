@@ -364,13 +364,12 @@ function MSBITERATE(IMODEL, p_QLAYER,
                     # for VERT:
                     p_KSAT,
                     #
-                    p_DRAIN, DTRI, p_DTIMAX,
+                    p_DRAIN, p_DTP, p_DTIMAX,
                     # for INFLOW:
                     p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP, p_SWATMX,
-                    # for FDPSIDW:
-                    u_aux_WETNES, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN, p_MvGα, p_MvGn,
                     # for ITER:
-                    p_DSWMAX, p_THSAT, p_θr, u_aux_θ,
+                    u_aux_θ, u_aux_WETNES,
+                    p_DSWMAX, p_THSAT, p_θr, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN, p_WETINF, p_MvGα, p_MvGn,
                     # for GWATER:
                     u_GWAT, p_GSC, p_GSP, p_DT)
 
@@ -394,76 +393,76 @@ function MSBITERATE(IMODEL, p_QLAYER,
     aux_du_VRFLI = fill(NaN, NLAYER)
     aux_du_DSFLI = fill(NaN, NLAYER)
 
+    # downslope flow rates
     for i = NLAYER:-1:1
-            # downslope flow rates
-            if( p_LENGTH == 0 || p_DSLOPE == 0)
-                # added in Version 4
-                aux_du_DSFLI[i] = 0
-            else
-                aux_du_DSFLI[i] = LWFBrook90Julia.WAT.DSLOP(p_DSLOPE, p_LENGTH, p_THICK[i], p_STONEF[i], u_aux_PSIM[i], p_RHOWG, p_fu_KK[i])
-            end
-            # vertical flow rates
-            if (i < NLAYER)
-                if (abs(u_aux_PSITI[i] - u_aux_PSITI[i+1]) < p_DPSIMX)
-                    aux_du_VRFLI[i] = 0
-                else
-                    aux_du_VRFLI[i] =
-                        LWFBrook90Julia.WAT.VERT(p_fu_KK[i],     p_fu_KK[i+1],
-                                                p_KSAT[i],      p_KSAT[i+1],
-                                                p_THICK[i],     p_THICK[i+1],
-                                                u_aux_PSITI[i], u_aux_PSITI[i+1],
-                                                p_STONEF[i],    p_STONEF[i+1],
-                                                p_RHOWG)
-                end
-            else
-            # bottom layer i == NLAYER
-                if (p_DRAIN > 0.00001)
-                # gravity drainage only
-                    aux_du_VRFLI[NLAYER] = p_DRAIN * p_fu_KK[NLAYER] * (1 - p_STONEF[NLAYER])
-                else
-                # bottom of profile sealed
-                    aux_du_VRFLI[NLAYER] = 0
-                end
-            end
-            # if (IDAY >= 6 && i==NLAYER) # TODO(bernhard): this seemed like a no effect snippet
-            #     p_DRAIN=p_DRAIN         # TODO(bernhard): this seemed like a no effect snippet
-            # end                         # TODO(bernhard): this seemed like a no effect snippet
+        aux_du_DSFLI[i] = LWFBrook90Julia.WAT.DSLOP(u_aux_PSIM[i], p_fu_KK[i], p_DSLOPE, p_LENGTH, p_THICK[i], p_STONEF[i], p_RHOWG, )
     end
 
-    # first approximation on aux_du_VRFLI
-    aux_du_VRFLI_1st_approx = aux_du_VRFLI
+    ### vertical flow rates
+
+    # vertical flow rates
+    # 1) first approximation on aux_du_VRFLI
+    for i = NLAYER:-1:1
+        aux_du_VRFLI[i] = LWFBrook90Julia.WAT.VRFLI(i, NLAYER, u_aux_PSITI, p_fu_KK, p_KSAT, p_THICK, p_STONEF, p_RHOWG, p_DRAIN, p_DPSIMX)
+    end
+
+    # NOTE(bernhard): originally Brook90 and LWFBrook90R used the first approximation from
+    #                 VRFLI() for both calls to INFLOW()
+    #                 i.e. calling INFLOW(..., aux_du_VRFLI_1st_approx) weith DTI and DTINEW
+    #aux_du_VRFLI_1st_approx = aux_du_VRFLI
 
     # first approximation for iteration time step,time remaining or DTIMAX
-    DTI = min(DTRI, p_DTIMAX)
+    DTRI = p_DTP
+    DTI  = min(DTRI, p_DTIMAX)
+
+    # vertical flow rates
+    # second approximation on aux_du_VRFLI
+    # correct aux_du_VRFLI and compute aux_du_INFLI, aux_du_BYFLI, du_NTFLI
+
     # net inflow to each layer including E and T withdrawal adjusted for interception
     aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
         LWFBrook90Julia.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
                                     aux_du_SLVP, p_SWATMX, u_SWATI,
-                                    aux_du_VRFLI_1st_approx)
+                                    aux_du_VRFLI)
 
-    if IMODEL == 0
-        DPSIDW = LWFBrook90Julia.KPT.FDPSIDWF_CH(u_aux_WETNES, p_WET∞, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN)
-    else # IMODEL == 1
-        DPSIDW = LWFBrook90Julia.KPT.FDPSIDWF_MvG(u_aux_WETNES, p_MvGα, p_MvGn)
-    end
     # limit step size
     #   ITER computes DTI so that the potential difference (due to aux_du_VRFLI)
     #   between adjacent layers does not change sign during the iteration time step
-    DTINEW=LWFBrook90Julia.WAT.ITER(IMODEL, NLAYER, DTI, LWFBrook90Julia.CONSTANTS.p_DTIMIN, DPSIDW,
-                                    du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMX, p_THICK, p_STONEF, p_THSAT, p_θr)
+    DTINEW=LWFBrook90Julia.WAT.ITER(IMODEL, NLAYER, DTI, LWFBrook90Julia.CONSTANTS.p_DTIMIN,
+                                    du_NTFLI, u_aux_PSITI, u_aux_θ,
+                                    u_aux_WETNES,
+                                    LWFBrook90Julia.KPT.FDPSIDWF_CH, LWFBrook90Julia.KPT.FDPSIDWF_MvG,
+                                    p_WETINF, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN,
+                                    p_MvGα, p_MvGn,
+                                    p_DSWMAX, p_DPSIMX, p_THICK, p_STONEF, p_THSAT, p_θr)
+                                    # TODO(bernhard): we compute DTINEW and it is used for computation of fluxes: aux_dU_VRFLI, ...
+                                    #                 but it is not passed to DiffEq.jl.solve() to modify the step
+                                    #                 Alternatively:
+                                    #                 1) we could use a DiffEq.jl callback if the solution leaves a specified domain:
+                                    #                 https://diffeq.sciml.ai/stable/features/callback_library/#PositiveDomain
+                                    #                 https://diffeq.sciml.ai/stable/features/callback_library/#GeneralDomain
+                                    #                 2) we could use a DiffEq.jl callback to compute DTINEW and set it in DiffEq.jl using
+                                    #                 https://diffeq.sciml.ai/stable/basics/integrator/#DiffEqBase.set_proposed_dt!
+                                    #                 However, this only affects the next time step and not the ongoing one as it does in LWFBrook90
+
     # recompute step
     if (DTINEW < DTI)
         # recalculate flow rates with new DTI
+
+        # vertical flow rates
+        # third approximation on aux_du_VRFLI
+        # correct aux_du_VRFLI and compute aux_du_INFLI, aux_du_BYFLI, du_NTFLI
         DTI = DTINEW
         aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
             LWFBrook90Julia.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
                                         aux_du_SLVP, p_SWATMX, u_SWATI,
-                                        aux_du_VRFLI_1st_approx)
+                                        aux_du_VRFLI)
     end
+
+    ###
 
     # groundwater flow and seepage loss
     du_GWFL, du_SEEP = LWFBrook90Julia.WAT.GWATER(u_GWAT, p_GSC, p_GSP, p_DT, aux_du_VRFLI[NLAYER])
 
-
-    return (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, DTI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI, du_GWFL, du_SEEP)
+    return (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI, du_GWFL, du_SEEP)
 end

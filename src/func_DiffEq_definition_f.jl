@@ -49,8 +49,6 @@
                    Reading PRECDAT should result in PREINT (precipitation amount per interval)")
         end
 
-        DTRI = p_DTP
-
         ## C) state dependent parameters:
         # Calculate parameters:
         #  - solar parameters depending on DOY
@@ -96,7 +94,7 @@
                       NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_WETF)
 
         # Water movement through soil
-        (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, DTI, aux_du_INFLI, aux_du_BYFLI,
+        (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI,
         du_NTFLI, du_GWFL, du_SEEP) =
             MSBITERATE(IMODEL, p_QLAYER,
                     # for SRFLFR:
@@ -111,13 +109,12 @@
                     # for VERT:
                     p_KSAT,
                     #
-                    p_DRAIN, DTRI, p_DTIMAX,
+                    p_DRAIN, p_DTP, p_DTIMAX,
                     # for INFLOW:
                     p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP, p_SWATMX,
-                    # for FDPSIDW:
-                    u_aux_WETNES, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN, p_MvGα, p_MvGn,
                     # for ITER:
-                    p_DSWMAX, p_THSAT, p_θr, u_aux_θ,
+                    u_aux_θ, u_aux_WETNES,
+                    p_DSWMAX, p_THSAT, p_θr, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN, p_WETINF, p_MvGα, p_MvGn,
                     # for GWATER:
                     u_GWAT, p_GSC, p_GSP, p_DT)
 

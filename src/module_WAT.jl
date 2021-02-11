@@ -207,19 +207,55 @@ end
 
 """ DSLOP() downslope flow rate from layer
 """
-function DSLOP(p_DSLOPE, p_LENGTH, p_THICK_i, p_STONEF_i, u_aux_PSIM_i, p_RHOWG, p_fu_KK_i)
+function DSLOP(u_aux_PSIM_i, p_fu_KK_i, p_DSLOPE, p_LENGTH, p_THICK_i, p_STONEF_i, p_RHOWG)
+    if( p_LENGTH == 0 || p_DSLOPE == 0)
+            # added in Version 4
+            return 0
+    else
+        LL = 1000 * p_LENGTH
+        GRAD = p_RHOWG * sin(p_DSLOPE) + (2 * u_aux_PSIM_i / LL) * cos(p_DSLOPE)
+        ARATIO = p_THICK_i * (1 - p_STONEF_i) * cos(p_DSLOPE) / LL
 
-    LL = 1000 * p_LENGTH
-    GRAD = p_RHOWG * sin(p_DSLOPE) + (2 * u_aux_PSIM_i / LL) * cos(p_DSLOPE)
-    ARATIO = p_THICK_i * (1 - p_STONEF_i) * cos(p_DSLOPE) / LL
+        aux_du_DSFLI_i = p_fu_KK_i * ARATIO * GRAD / p_RHOWG
 
-    aux_du_DSFLI = p_fu_KK_i * ARATIO * GRAD / p_RHOWG
-
-    # no water uptake into dry soil because no free water at outflow face
-    if (aux_du_DSFLI < 0)
-        aux_du_DSFLI = 0
+        # no water uptake into dry soil because no free water at outflow face
+        if (aux_du_DSFLI_i < 0)
+            aux_du_DSFLI_i = 0
+        end
+        return aux_du_DSFLI_i
     end
-    return aux_du_DSFLI
+end
+
+""" VRFLI() vertical flow rate
+"""
+function VRFLI(i, NLAYER, u_aux_PSITI, p_fu_KK, p_KSAT, p_THICK, p_STONEF, p_RHOWG, p_DRAIN, p_DPSIMX)
+    # out_of_place: allocates a new aux_du_VRFLI_i
+
+    if (i < NLAYER)
+        if (abs(u_aux_PSITI[i] - u_aux_PSITI[i+1]) < p_DPSIMX)
+            # TODO(bernhard): put this in domain control. However, in the current position it affects
+            aux_du_VRFLI_i = 0
+        else
+            aux_du_VRFLI_i =
+                VERT(p_fu_KK[i],    p_fu_KK[i+1],
+                    p_KSAT[i],      p_KSAT[i+1],
+                    p_THICK[i],     p_THICK[i+1],
+                    u_aux_PSITI[i], u_aux_PSITI[i+1],
+                    p_STONEF[i],    p_STONEF[i+1],
+                    p_RHOWG)
+        end
+    else
+    # bottom layer i == NLAYER
+        if (p_DRAIN > 0.00001)
+        # gravity drainage only
+            aux_du_VRFLI_i = p_DRAIN * p_fu_KK[NLAYER] * (1 - p_STONEF[NLAYER])
+        else
+        # bottom of profile sealed
+            aux_du_VRFLI_i = 0
+        end
+    end
+
+    return aux_du_VRFLI_i
 end
 
 """ VERT() vertical flow rate
@@ -389,7 +425,7 @@ function INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
     #    prior estimates accordingly.
     #    For layer i, relevant incoming fluxes are: VRFLi[i-1], BYFLI[i], and INFLI[i]
     #    Therefore VRFLI exiting last layer (VRFLi[NLAYER]) is only outgoing flux
-    #    and cannot saturet any other soil layer. It is therefore accepted as-is:
+    #    and cannot sature any other soil layer. It is therefore accepted as-is:
     VRFLI_posterior[NLAYER] = VRFLI_prior[NLAYER]
 
     # Now going through all layers bottom up and prevent oversaturation.
@@ -503,8 +539,12 @@ function SRFLFR(p_QLAYER, u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC)
     return SAFRAC
 end
 
-function ITER(IMODEL, NLAYER, DTI, DTIMIN, DPSIDW,
-    du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMX, p_THICK, p_STONEF, p_THSAT, p_θr)
+function ITER(IMODEL, NLAYER, DTI, DTIMIN,
+    du_NTFLI, u_aux_PSITI, u_aux_θ,
+    u_aux_WETNES, fdpsidwf_ch, fdpsidwf_mvg,
+    p_WET∞, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN,
+    p_MvGα, p_MvGn,
+    p_DSWMAX, p_DPSIMX, p_THICK, p_STONEF, p_THSAT, p_θr)
     # ITER() is a step size limiter
 
     # DTI       ! time step for iteration interval, d
@@ -518,6 +558,12 @@ function ITER(IMODEL, NLAYER, DTI, DTIMIN, DPSIDW,
     # p_THICK   ! soil layer thicknesses, mm
     # p_THSAT   ! θ at saturation == matrix porosity (-)
     # unused: p_SWATMX   maximum water storage for layer, mm
+
+    if IMODEL == 0
+        DPSIDW = fdpsidwf_ch(u_aux_WETNES, p_WET∞, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN)
+    else # IMODEL == 1
+        DPSIDW = fdpsidwf_mvg(u_aux_WETNES, p_MvGα, p_MvGn)
+    end
 
     A = zeros(NLAYER)
     temp = zeros(NLAYER)
@@ -590,15 +636,18 @@ end
 
 """calculates groundwater flow and seepage loss
 """
-function GWATER(u_GWAT, p_GSC, p_GSP, p_DT, aux_du_VRFLIN)
+function GWATER(u_GWAT, p_GSC, p_GSP, p_DT, aux_du_VRFLI_N)
     if (p_GSC < 1.0e-8)
         # no groundwater
-        du_SEEP = p_GSP * aux_du_VRFLIN
-        du_GWFL = aux_du_VRFLIN - du_SEEP
+        du_SEEP = p_GSP * aux_du_VRFLI_N
+        du_GWFL = aux_du_VRFLI_N - du_SEEP
     else
         du_SEEP = u_GWAT * p_GSC * p_GSP
         du_GWFL = u_GWAT * p_GSC * (1. - p_GSP)
+
         # prevent negative GWAT
+        # TODO(bernhard): put this in domain control
+        #                 Actually no, as this has no feedback on any other variable
         if (u_GWAT - (du_GWFL + du_SEEP)*p_DT < 0)
             # if groundwater would be more than emptied
             # reduce fluxes so that it is just emptied completely during p_DT
