@@ -542,7 +542,7 @@ end
 function ITER(IMODEL, NLAYER, DTI, DTIMIN,
     du_NTFLI, u_aux_PSITI, u_aux_θ,
     u_aux_WETNES, fdpsidwf_ch, fdpsidwf_mvg,
-    p_WET∞, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN,
+    p_WETINF, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN,
     p_MvGα, p_MvGn,
     p_DSWMAX, p_DPSIMX, p_THICK, p_STONEF, p_THSAT, p_θr)
     # ITER() is a step size limiter
@@ -560,7 +560,7 @@ function ITER(IMODEL, NLAYER, DTI, DTIMIN,
     # unused: p_SWATMX   maximum water storage for layer, mm
 
     if IMODEL == 0
-        DPSIDW = fdpsidwf_ch(u_aux_WETNES, p_WET∞, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN)
+        DPSIDW = fdpsidwf_ch(u_aux_WETNES, p_WETINF, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN)
     else # IMODEL == 1
         DPSIDW = fdpsidwf_mvg(u_aux_WETNES, p_MvGα, p_MvGn)
     end
@@ -589,20 +589,20 @@ function ITER(IMODEL, NLAYER, DTI, DTIMIN,
     DTINEW = DTI
 
     for i = 1:NLAYER
-        # prevent too large a change in water content
+        # 1) prevent too large a change in water content, reduce DTI to keep change below p_DSWMAX
         # DTINEW = min(DTINEW, 0.01 * p_DSWMAX * p_SWATMX[i] / max(0.000001, abs(du_NTFLI[i])))
-        DTINEW = min(DTINEW,
-                     0.01 * p_DSWMAX * p_THICK[i] * p_THSAT[i] * (1 - p_STONEF[i]) / max(0.000001, abs(du_NTFLI[i])))
+        DTINEW = min(DTINEW,   0.01 * p_DSWMAX * p_THICK[i] * p_THSAT[i] * (1 - p_STONEF[i]) / max(0.000001, abs(du_NTFLI[i])))
+        # TODO(bernhard): shouldn't here also be checked that DTINEW=max(DTIMIN, DTINEW) ?
 
-        # prevent a change in water content larger than total available water
-        if (IMODEL == 0)
-            available_water = (0.0     - u_aux_θ[i]) * p_THICK[i] # TODO(bernhard): is ther no STONEF in IMODEL==0. Bug?
-        else # IMODEL == 1
-            available_water = (p_θr[i] - u_aux_θ[i]) * p_THICK[i] # TODO(bernhard): is ther no STONEF in IMODEL==1. Bug?
-        end
-
-        # If water is flowing out of cell: du_NTFLI < 0
+        # 2) If water is flowing out of cell (du_NTFLI < 0), prevent
+        #    a change in water content larger than total available water
         if (du_NTFLI[i] < 0)
+            if (IMODEL == 0)
+                available_water = (0.0     - u_aux_θ[i]) * p_THICK[i] # TODO(bernhard): is ther no STONEF in IMODEL==0. Bug?
+            else # IMODEL == 1
+                available_water = (p_θr[i] - u_aux_θ[i]) * p_THICK[i] # TODO(bernhard): is ther no STONEF in IMODEL==1. Bug?
+            end
+
             DTINEW = min(DTINEW, available_water/du_NTFLI[i]/1.30)
             if (DTINEW < DTIMIN)
                 # Bernhard: if debug: LWFBrook90R printed here full state vector
@@ -614,9 +614,12 @@ function ITER(IMODEL, NLAYER, DTI, DTIMIN,
                 # if (i == 1)
                 #     SLVP=0   # TODO(Benrhard): should this change leak out into main program? (side effect)
                 # end
+                # This TRANI and SLVP correction violates the mass balance.
+                @warn "Reduced DTI was lower than DTIMIN. DTI was increased to DTIMIN. Warning: original Brook set TRANI and SLVP to zero in these cases. This is not done anymore."
             end
         end
-        # prevent oscillation of potential gradient
+
+        # 3) prevent oscillation of gradient in soil water potential
         if (IMODEL == 0)
             if (i < NLAYER)
                 # total potential difference at beginning of iteration
@@ -631,7 +634,11 @@ function ITER(IMODEL, NLAYER, DTI, DTIMIN,
         end
     end
 
-    return DTINEW # second estimate of DTI
+    if (DTINEW < DTI)
+        @info("DTI reduced from $DTI to $DTINEW.")
+    end
+
+    return DTINEW # return second estimate of DTI
 end
 
 """calculates groundwater flow and seepage loss
