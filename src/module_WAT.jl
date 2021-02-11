@@ -614,7 +614,7 @@ function ITER(IMODEL, NLAYER, DTI, DTIMIN,
                 # if (i == 1)
                 #     SLVP=0   # TODO(Benrhard): should this change leak out into main program? (side effect)
                 # end
-                # This TRANI and SLVP correction violates the mass balance.
+                # NOTE: This original TRANI and SLVP correction violates the mass balance.
                 @warn "Reduced DTI was lower than DTIMIN. DTI was increased to DTIMIN. Warning: original Brook set TRANI and SLVP to zero in these cases. This is not done anymore."
             end
         end
@@ -634,9 +634,9 @@ function ITER(IMODEL, NLAYER, DTI, DTIMIN,
         end
     end
 
-    if (DTINEW < DTI)
-        @info("DTI reduced from $DTI to $DTINEW.")
-    end
+    # if (DTINEW < DTI)
+    #     @info("DTI reduced from $DTI to $DTINEW.")
+    # end
 
     return DTINEW # return second estimate of DTI
 end

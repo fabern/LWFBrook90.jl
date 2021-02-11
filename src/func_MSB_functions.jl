@@ -428,35 +428,37 @@ function MSBITERATE(IMODEL, p_QLAYER,
     # limit step size
     #   ITER computes DTI so that the potential difference (due to aux_du_VRFLI)
     #   between adjacent layers does not change sign during the iteration time step
-    DTINEW=LWFBrook90Julia.WAT.ITER(IMODEL, NLAYER, DTI, LWFBrook90Julia.CONSTANTS.p_DTIMIN,
-                                    du_NTFLI, u_aux_PSITI, u_aux_θ,
-                                    u_aux_WETNES,
-                                    LWFBrook90Julia.KPT.FDPSIDWF_CH, LWFBrook90Julia.KPT.FDPSIDWF_MvG,
-                                    p_WETINF, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN,
-                                    p_MvGα, p_MvGn,
-                                    p_DSWMAX, p_DPSIMX, p_THICK, p_STONEF, p_THSAT, p_θr)
-                                    # TODO(bernhard): we compute DTINEW and it is used for computation of fluxes: aux_dU_VRFLI, ...
-                                    #                 but it is not passed to DiffEq.jl.solve() to modify the step
-                                    #                 Alternatively:
-                                    #                 1) we could use a DiffEq.jl callback if the solution leaves a specified domain:
-                                    #                 https://diffeq.sciml.ai/stable/features/callback_library/#PositiveDomain
-                                    #                 https://diffeq.sciml.ai/stable/features/callback_library/#GeneralDomain
-                                    #                 2) we could use a DiffEq.jl callback to compute DTINEW and set it in DiffEq.jl using
-                                    #                 https://diffeq.sciml.ai/stable/basics/integrator/#DiffEqBase.set_proposed_dt!
-                                    #                 However, this only affects the next time step and not the ongoing one as it does in LWFBrook90
+    if (true) # NOTE: when using DiffEq.jl the integrator time step is determined by solve(). Therefore the adaptive time step control of LWFBrook can be deactivated.
+        DTINEW=LWFBrook90Julia.WAT.ITER(IMODEL, NLAYER, DTI, LWFBrook90Julia.CONSTANTS.p_DTIMIN,
+                                        du_NTFLI, u_aux_PSITI, u_aux_θ,
+                                        u_aux_WETNES,
+                                        LWFBrook90Julia.KPT.FDPSIDWF_CH, LWFBrook90Julia.KPT.FDPSIDWF_MvG,
+                                        p_WETINF, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN,
+                                        p_MvGα, p_MvGn,
+                                        p_DSWMAX, p_DPSIMX, p_THICK, p_STONEF, p_THSAT, p_θr)
+                                        # TODO(bernhard): we compute DTINEW and it is used for computation of fluxes: aux_dU_VRFLI, ...
+                                        #                 but it is not passed to DiffEq.jl.solve() to modify the step
+                                        #                 Alternatively:
+                                        #                 1) we could use a DiffEq.jl callback if the solution leaves a specified domain:
+                                        #                 https://diffeq.sciml.ai/stable/features/callback_library/#PositiveDomain
+                                        #                 https://diffeq.sciml.ai/stable/features/callback_library/#GeneralDomain
+                                        #                 2) we could use a DiffEq.jl callback to compute DTINEW and set it in DiffEq.jl using
+                                        #                 https://diffeq.sciml.ai/stable/basics/integrator/#DiffEqBase.set_proposed_dt!
+                                        #                 However, this only affects the next time step and not the ongoing one as it does in LWFBrook90
 
-    # recompute step
-    if (DTINEW < DTI)
-        # recalculate flow rates with new DTI
+        # recompute step
+        if (DTINEW < DTI)
+            # recalculate flow rates with new DTI
 
-        # vertical flow rates
-        # third approximation on aux_du_VRFLI
-        # correct aux_du_VRFLI and compute aux_du_INFLI, aux_du_BYFLI, du_NTFLI
-        DTI = DTINEW
-        aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
-            LWFBrook90Julia.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
-                                        aux_du_SLVP, p_SWATMX, u_SWATI,
-                                        aux_du_VRFLI)
+            # vertical flow rates
+            # third approximation on aux_du_VRFLI
+            # correct aux_du_VRFLI and compute aux_du_INFLI, aux_du_BYFLI, du_NTFLI
+            DTI = DTINEW
+            aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
+                LWFBrook90Julia.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
+                                            aux_du_SLVP, p_SWATMX, u_SWATI,
+                                            aux_du_VRFLI)
+        end
     end
 
     ###

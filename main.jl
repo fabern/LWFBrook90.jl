@@ -146,7 +146,12 @@ sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true)
 # 1) very basic
 # using Plots
 # # Plot 1
-# plot(sol_LWFBrook90Julia; vars = [1, 2, 3, 4, 5, 6],label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
+# Plots.plot(sol_LWFBrook90Julia; vars = [1, 2, 3, 4, 5, 6],label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
+# scatter!(sol_LWFBrook90Julia.t,
+#       ones(length(sol_LWFBrook90Julia.t)),
+#       label = "evaluated time steps")
+# # xlims!((0,20))
+
 # # Plot 2
 # # http://docs.juliaplots.org/latest/generated/gr/#gr-ref43
 # x = LWFBrook90Julia.RelativeDaysFloat2DateTime.(sol_LWFBrook90Julia.t, input_reference_date)
