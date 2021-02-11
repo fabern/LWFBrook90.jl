@@ -9,12 +9,22 @@ greet()
 (input_meteo,
     input_param,
     input_siteparam,
-    input_precdat,    #TODO(benhard): input_precdat is unused
+    input_precdat,    #TODO(bernhard): input_precdat is unused
     input_pdur,
     input_soil_materials,
     input_soil_nodes,
 
-    input_reference_date) = read_KAUFENRING_inputData("../Brook90_Julia/Input_data_KAU/evergreen/")
+    input_reference_date) = read_LWFBrook90R_inputData("../../../LWF-Sites-Data-Download/TODO__2021-01-02_generate_2010-2021_LWFBrook_dataset/test-script/SW-2020_fig_1_INPUT-evergreen-input", "SW-2020_fig_1_INPUT-evergreen")
+
+(input_meteo,
+    input_param,
+    input_siteparam,
+    input_precdat,    #TODO(bernhard): input_precdat is unused
+    input_pdur,
+    input_soil_materials,
+    input_soil_nodes,
+
+    input_reference_date) = read_LWFBrook90R_inputData("../../../LWF-Sites-Data-Download/TODO__2021-01-02_generate_2010-2021_LWFBrook_dataset/test-script/ALV8101_sen2-input", "ALV8101_sen2")
 
 # 1b) Here posibility to modify dataframes
 # TODO
@@ -124,7 +134,7 @@ sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true)
 ## Benchmarking
 # @time solve(ode_LWFBrook90Julia, progress = true)
 # using BenchmarkTools # for benchmarking
-# @btime solve(ode_LWFBrook90Julia, Euler(), dt=1/12); # Instability detected aborting
+# @btime sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, Euler(), dt=1/12); # Instability detected aborting
 # @btime solve(ode_LWFBrook90Julia, Euler(), dt=1/24); # Instability detected aborting
 # @btime solve(ode_LWFBrook90Julia, dt=1/24); # uses DiffEq.jl adaptive timestepping, but initial dt of 1/24
 # @btime solve(ode_LWFBrook90Julia);

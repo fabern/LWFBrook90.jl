@@ -14,7 +14,7 @@ include("module_PET.jl");        # to bring into scope: using .PET
 include("module_SNO.jl");        # to bring into scope: using .SNO
 include("module_EVP.jl");        # to bring into scope: using .SNO
 
-export greet, read_KAUFENRING_inputData, derive_params_from_input_meteo
+export greet, read_LWFBrook90R_inputData, derive_params_from_input_meteo
 export my_f
 
 include("func_input_definition.jl")

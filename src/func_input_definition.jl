@@ -18,30 +18,26 @@ Intent: load different input files for LWFBrook90\n
 Currently: loads different hardcoded input files of KAUFENRING example data set from
 https://doi.org/10.1016/j.agrformet.2020.108023.
 """
-function read_KAUFENRING_inputData(folder::String)
+function read_LWFBrook90R_inputData(folder::String, prefix::String)
 
     ## A) Define paths of all input files
     # TODO(bernhard): prepend path_
-    path_meteo          = joinpath(folder, "SW-2020_fig_1_INPUT-evergreen_climveg.csv")
-    path_param          = joinpath(folder, "SW-2020_fig_1_INPUT-evergreen_param.csv")
-    path_siteparam      = joinpath(folder, "SW-2020_fig_1_INPUT-evergreen_siteparam.csv")
-    # unused path_precdat=joinpath(folder, "SW-2020_fig_1_INPUT-evergreen_precdat.csv")
-    path_pdur           = joinpath(folder, "SW-2020_fig_1_INPUT-evergreen_pdur.csv")
-    path_soil_materials = joinpath(folder, "SW-2020_fig_1_INPUT-evergreen_soil_materials.csv")
-    path_soil_nodes     = joinpath(folder, "SW-2020_fig_1_INPUT-evergreen_soil_nodes.csv")
+    path_meteo          = joinpath(folder, prefix*"_climveg.csv")
+    path_param          = joinpath(folder, prefix*"_param.csv")
+    path_siteparam      = joinpath(folder, prefix*"_siteparam.csv")
+    # unused path_precdat=joinpath(folder, prefix*"_precdat.csv")
+    path_pdur           = joinpath(folder, prefix*"_pdur.csv")
+    path_soil_materials = joinpath(folder, prefix*"_soil_materials.csv")
+    path_soil_nodes     = joinpath(folder, prefix*"_soil_nodes.csv")
 
     ## B) Load input data (time- and/or space-varying parameters)
     # Load meteo
-    DataFrame(CSV.File(path_meteo))
     input_meteo = @linq CSV.read(path_meteo, DataFrame;
                             datarow=2, delim=',', ignorerepeated=true,
-                            header=["YY","MM","DD","GLOBRAD","TMAX","TMIN","VAPPRES","WIND",
+                            header=["dates", #"YY","MM","DD",
+                                    "GLOBRAD","TMAX","TMIN","VAPPRES","WIND",
                                     "PRECIN","MESFL","DENSEF","HEIGHT","LAI","SAI","AGE"]) |>
-        # Compute date in a single column
-        transform(dates = DateTime.(:YY, :MM, :DD)) |>
-        DataFrames.select(Not(:YY)) |>
-        DataFrames.select(Not(:MM)) |>
-        DataFrames.select(Not(:DD))
+        transform(dates = DateTime.(:dates))
 
     # Identify period of interest
     # Starting date: latest among the input data
