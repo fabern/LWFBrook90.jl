@@ -19,9 +19,14 @@ function define_DiffEq_u0(u_GWAT_init,
             u_SNOWLQ_init;
             u_SWATIinit;
             # accumulation variables:
+<<<<<<< HEAD
             0;0;0;0;0;0;0;0;0;0;
             0;0;0;0;0;0;0;0;0;0;
             0;0;0;0;0]
+=======
+            0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;
+            0;0;0;0;0;0] #;0 for storage, once we implement that
+>>>>>>> Reorganize f() and cb() outputs
     else
         u0 = [u_GWAT_init;
                 u_INTS_init;

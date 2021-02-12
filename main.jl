@@ -55,7 +55,7 @@ Reset     = 0 # currently only Reset = 0 implemented
 
 constant_dt_solver = 1 # [days]
 
-compute_intermediate_quantities = true # Flag whether ODE containes additional quantities than only states
+compute_intermediate_quantities = true # Flag whether ODE containes additional quantities just the minimum (i.e. states)
 ####################
 
 ####################
@@ -135,7 +135,7 @@ ode_LWFBrook90Julia = LWFBrook90Julia.define_DiffEq_ODE(u0, tspan, p)
 sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true)
 
 ## Benchmarking
-# @time solve(ode_LWFBrook90Julia, progress = true)
+@time sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true);
 # using BenchmarkTools # for benchmarking
 # @btime sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, Euler(), dt=1/12); # Instability detected aborting
 # @btime solve(ode_LWFBrook90Julia, Euler(), dt=1/24); # Instability detected aborting

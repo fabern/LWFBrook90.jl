@@ -149,6 +149,7 @@
         # the evolution of the system.
         if compute_intermediate_quantities
             # 1) Either set daily sum if rate is constant throughout precipitation interval: p_DTP*(...)
+<<<<<<< HEAD
             # 2) or then set daily sum to zero and use ODE to accumulate flow.
             du[7+NLAYER+0] = 0 # cum_d_prec, was computed in callback
             du[7+NLAYER+1] = 0 # cum_d_rfal, was computed in callback
@@ -188,6 +189,44 @@
 
             # TODO(bernhard): use SavingCallback() for all quantities that have du=0
             #                 only keep du=... for quantities for which we compute cumulative sums
+=======
+            #    (u's defined in cb())
+            # 2) or then reset daily sum to zero and use ODE (du's defined in f()) to accumulate flow.
+
+            # 1) TODO(bernhard): use of SavingCallback() might be more efficient for quantities under 1)
+            #                    https://diffeq.sciml.ai/stable/features/callback_library/#saving_callback
+            du[7+NLAYER+0] = 0 # was computed in callback         # a.k.a. prec
+            du[7+NLAYER+1] = 0 # was computed in callback         # a.k.a. evp
+            du[7+NLAYER+3] = 0 # was computed in callback         # a.k.a. rnet
+            du[7+NLAYER+4] = 0 # was computed in callback         # a.k.a. irvp
+            du[7+NLAYER+5] = 0 # was computed in callback         # a.k.a. isvp
+            du[7+NLAYER+6] = 0 # was computed in callback         # a.k.a. ptran
+            du[7+NLAYER+7] = 0 # was computed in callback         # a.k.a. pint
+            du[7+NLAYER+8] = 0 # was computed in callback         # a.k.a. snvp
+            du[7+NLAYER+9] = 0 # was computed in callback         # a.k.a. slvp
+            du[7+NLAYER+10]= 0 # was computed in callback         # a.k.a. trand
+            du[7+NLAYER+11]= 0 # was computed in callback         # a.k.a. mesfld
+            du[7+NLAYER+12]= 0 # was computed in callback         # a.k.a. smltd
+            du[7+NLAYER+14]= 0 # was computed in callback         # a.k.a. rfald
+            du[7+NLAYER+15]= 0 # was computed in callback         # a.k.a. sfald
+            du[7+NLAYER+16]= 0 # was computed in callback         # a.k.a. sintd
+            du[7+NLAYER+17]= 0 # was computed in callback         # a.k.a. rintd
+            du[7+NLAYER+18]= 0 # was computed in callback         # a.k.a. cum_d_rthr
+            du[7+NLAYER+19]= 0 # was computed in callback         # a.k.a. cum_d_sthr
+            du[7+NLAYER+20]= 0 # was computed in callback         # a.k.a. rsnod
+
+            # 2)
+            du[7+NLAYER+2] = p_fu_SRFL + sum(aux_du_BYFLI) + sum(aux_du_DSFLI) + du_GWFL # SRFLD + BYFLD + DSFLD + GWFLD # a.k.a. flow
+            du[7+NLAYER+13]= p_fu_SLFL                            # a.k.a. slfld
+            du[7+NLAYER+21]= p_fu_SRFL                            # a.k.a. SRFLD
+            du[7+NLAYER+22]= du_SEEP                              # a.k.a. SEEP
+            du[7+NLAYER+23]= du_GWFL                              # a.k.a. GWFL
+            du[7+NLAYER+24]= aux_du_VRFLI[NLAYER]                 # a.k.a. VRFLN
+            du[7+NLAYER+25]= sum(aux_du_BYFLI)                    # a.k.a. BYFLD
+            du[7+NLAYER+26]= sum(aux_du_DSFLI)                    # a.k.a. DSFLD
+            # Daily sums for entire storage: (u_GWAT + u_INTR + u_INTS + u_SNOW + sum(u[7:(7+(NLAYER-1))]) )
+            #du[7+NLAYER+27]=
+>>>>>>> Reorganize f() and cb() outputs
         end
 
         return

@@ -227,6 +227,7 @@ function define_DiffEq_cb()
         # the evolution of the system.
         if compute_intermediate_quantities
             # 1) Either set daily sum if rate is constant throughout precipitation interval: p_DTP*(...)
+<<<<<<< HEAD
             # 2) or then set daily sum to zero and use ODE to accumulate flow.
             integrator.u[7+NLAYER+0] = p_DTP*(p_fT_RFAL + p_fT_SFAL)                 # RFALD + SFALD        # cum_d_prec
             integrator.u[7+NLAYER+1] = p_DTP*(p_fT_RFAL)                                                    # cum_d_rfal
@@ -263,6 +264,44 @@ function define_DiffEq_cb()
 
             # TODO(bernhard): use SavingCallback() for all quantities that have u=... and du=0
             #                 only keep du=... for quantities for which we compute cumulative sums
+=======
+            #    (u's defined in cb())
+            # 2) or then reset daily sum to zero and use ODE (du's defined in f()) to accumulate flow.
+
+            # 1) TODO(bernhard): use of SavingCallback() might be more efficient for quantities under 1)
+            #                    https://diffeq.sciml.ai/stable/features/callback_library/#saving_callback
+            integrator.u[7+NLAYER+0] = p_DTP*(p_fT_RFAL + p_fT_SFAL)   # RFALD + SFALD                                   # a.k.a. prec
+            integrator.u[7+NLAYER+1] = p_DTP*(aux_du_IRVP + aux_du_ISVP + aux_du_SNVP + aux_du_SLVP + sum(aux_du_TRANI)) # a.k.a. evp
+            integrator.u[7+NLAYER+3] = p_DTP*(p_fT_RFAL - aux_du_RINT - aux_du_RSNO) # cum_d_RTHR - RSNOD                # a.k.a. rnet
+            integrator.u[7+NLAYER+4] = p_DTP*(aux_du_IRVP)                                                               # a.k.a. irvp
+            integrator.u[7+NLAYER+5] = p_DTP*(aux_du_ISVP)                                                               # a.k.a. isvp
+            integrator.u[7+NLAYER+6] = p_DTP*(p_fu_PTRAN)                                                                # a.k.a. ptran
+            integrator.u[7+NLAYER+7] = p_DTP*(p_fu_PINT)                                                                 # a.k.a. pint
+            integrator.u[7+NLAYER+8] = p_DTP*(aux_du_SNVP)                                                               # a.k.a. snvp
+            integrator.u[7+NLAYER+9] = p_DTP*(aux_du_SLVP)                                                               # a.k.a. slvp
+            integrator.u[7+NLAYER+10]= p_DTP*(sum(aux_du_TRANI))                                                         # a.k.a. trand
+            integrator.u[7+NLAYER+11]= p_DTP*(p_MESFL(integrator.t))                                                     # a.k.a. mesfld
+            integrator.u[7+NLAYER+12]= p_DTP*(aux_du_SMLT)                                                               # a.k.a. smltd
+            integrator.u[7+NLAYER+14]= p_DTP*(p_fT_RFAL)                                                                 # a.k.a. rfald
+            integrator.u[7+NLAYER+15]= p_DTP*(p_fT_SFAL)                                                                 # a.k.a. sfald
+            integrator.u[7+NLAYER+16]= p_DTP*(aux_du_SINT)                                                               # a.k.a. sintd
+            integrator.u[7+NLAYER+17]= p_DTP*(aux_du_RINT)                                                               # a.k.a. rintd
+            integrator.u[7+NLAYER+18]= p_DTP*(p_fT_RFAL - aux_du_RINT)                                                   # a.k.a. cum_d_rthr
+            integrator.u[7+NLAYER+19]= p_DTP*(p_fT_SFAL - aux_du_SINT)                                                   # a.k.a. cum_d_sthr
+            integrator.u[7+NLAYER+20]= p_DTP*(aux_du_RSNO)                                                               # a.k.a. rsnod
+
+            # 2)
+            integrator.u[7+NLAYER+2] = 0 # du/dt = p_fu_SRFL + sum(aux_du_BYFLI) + sum(aux_du_DSFLI) + du_GWFL
+            integrator.u[7+NLAYER+13]= 0 # du/dt = p_fu_SLFL
+            integrator.u[7+NLAYER+21]= 0 # du/dt = p_fu_SRFL
+            integrator.u[7+NLAYER+22]= 0 # du/dt = du_SEEP
+            integrator.u[7+NLAYER+23]= 0 # du/dt = du_GWFL
+            integrator.u[7+NLAYER+24]= 0 # du/dt = aux_du_VRFLI[NLAYER]
+            integrator.u[7+NLAYER+25]= 0 # du/dt = sum(aux_du_BYFLI)
+            integrator.u[7+NLAYER+26]= 0 # du/dt = sum(aux_du_DSFLI)
+            # Daily sums for entire storage: (u_GWAT + u_INTR + u_INTS + u_SNOW + sum(u[7:(7+(NLAYER-1))]) )
+            #integrator.u[7+NLAYER+27]= 0 # du/dt =
+>>>>>>> Reorganize f() and cb() outputs
         end
         ##########################################
     end
