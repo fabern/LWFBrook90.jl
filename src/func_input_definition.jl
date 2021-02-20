@@ -6,7 +6,7 @@ using DataFramesMeta
 using Dates: DateTime, Millisecond, Second, Day, month, value, dayofyear
 
 """
-read_KAUFENRING_inputData(folder::String, prefix::String)\n
+read_LWFBrook90R_inputData(folder::String, prefix::String)\n
 Intent: load different input files for LWFBrook90\n
 - climveg
 - param
@@ -15,8 +15,9 @@ Intent: load different input files for LWFBrook90\n
 - soil_materials.csv
 - soil_nodes.csv
 \n\n
-Currently: loads different hardcoded input files of KAUFENRING example data set from
-https://doi.org/10.1016/j.agrformet.2020.108023.
+These files were created with an R script `generate_LWFBrook90Julia_Input.R` that
+takes the same arguements as the R funciton LWFBrook90R::run_LWFB90() and generates
+the corresponding Julia input functions.
 """
 function read_LWFBrook90R_inputData(folder::String, prefix::String)
 
@@ -58,22 +59,7 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
     ## C) Load other parameters
     # Load model input parameters
     #' @param param A numeric vector of model input parameters. Order (derived from param_to_rlwfbrook90()):
-    input_param = DataFrame(CSV.File(path_param; types=[Float64], strict=true))
-    input_param = @transform(input_param, param_id  =
-                              ["ndays","0_heat","eslope","aspect","alb","albsn","c1","c2",
-                               "c3","wndrat","fetch","z0w","zw","lwidth","obsheight_x_czs",
-                               "z0s","lpc","cs","czs","czr","hs","hr","zminh","rhotp","nn",
-                               "rstemp","intrainini","intsnowini","frintlai","fsintlai",
-                               "frintsai","fsintsai","cintrl","cintrs","cintsl","cintss",
-                               "melfac","ccfac","laimlt","saimlt","grdmlt","maxlqf","ksnvp",
-                               "snoden","glmax","radex","glmin","rm","r5","cvpd","tl","t1",
-                               "t2","th","mxkpl","maxrlen","initrlen","initrdep","rgrorate",
-                               "rgroper","fxylem","psicr","rrad","nooutf","N_soil_nodes",
-                               "N_soil_materials","ilayer","qlayer","is_MvG_aka_iModel",
-                               "rssa","rssb","infexp","bypar","qfpar","qffc","imperv",
-                               "dslope","slopelen","drain","gsc","gsp","dtimax","dswmax",
-                               "dpsimax"])
-                               # TODO(bernhard): transform this to named vector? Dict?
+    input_param = DataFrame(CSV.File(path_param; types=[Float64, String], strict=true))
 
     # Load site parameters
     #' @param siteparam A [1,6] matrix with site level information:

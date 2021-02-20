@@ -6,6 +6,20 @@ greet()
 
 
 # 1a) Read in input data
+input_prefix = "BEA2016-reset-FALSE"
+input_path = "example/"*input_prefix*"-input/"
+
+# input_prefix = "SW-2020_fig_1_INPUT-evergreen"
+# input_path = "../../../LWF-Sites-Data-Download/TODO__2021-01-02_generate_2010-2021_LWFBrook_dataset/test-script/SW-2020_fig_1_INPUT-evergreen-input"
+# input_prefix = "SW-2020_fig_1_evergreen-reset-FALSE"
+# input_prefix = "SW-2020_fig_1_evergreen-reset-TRUE"
+# input_prefix = "ALV8101_sen2-reset-FALSE"
+# input_prefix = "ALV8101_sen2-reset-TRUE"
+# input_prefix = "BEA2016-reset-FALSE"
+# input_prefix = "BEA2016-reset-TRUE"
+# input_path = "../../../LWF-Sites-Data-Download/TODO__2021-01-02_generate_2010-2021_LWFBrook_dataset/test-script/"*input_prefix*"-input/"
+
+
 (input_meteo,
     input_param,
     input_siteparam,
@@ -13,23 +27,12 @@ greet()
     input_pdur,
     input_soil_materials,
     input_soil_nodes,
+    input_reference_date) = read_LWFBrook90R_inputData(input_path, input_prefix)
 
-    input_reference_date) = read_LWFBrook90R_inputData("../../../LWF-Sites-Data-Download/TODO__2021-01-02_generate_2010-2021_LWFBrook_dataset/test-script/SW-2020_fig_1_INPUT-evergreen-input", "SW-2020_fig_1_INPUT-evergreen")
-
-(input_meteo,
-    input_param,
-    input_siteparam,
-    input_precdat,    #TODO(bernhard): input_precdat is unused
-    input_pdur,
-    input_soil_materials,
-    input_soil_nodes,
-
-    input_reference_date) = read_LWFBrook90R_inputData("../../../LWF-Sites-Data-Download/TODO__2021-01-02_generate_2010-2021_LWFBrook_dataset/test-script/ALV8101_sen2-input", "ALV8101_sen2")
-
-# 1b) Here posibility to modify dataframes
+# 1b) Here posibility to modify dataframes input_[...] manually
 # TODO
 
-# 1c) Parse loaded input files
+# 1c) Parse loaded/redefined input files
 (pfile_meteo, pfile_param, pfile_siteparam, pfile_precdat, pfile_pdur, pfile_soil) =
     LWFBrook90Julia.GLBLDECL.derive_params_from_input(input_meteo,
                                                       input_param,
@@ -123,8 +126,8 @@ u0 = LWFBrook90Julia.define_DiffEq_u0(u_GWAT_init,
 # Define simulation time span:
 tspan = (0.,  5.) # simulate 5 days
 tspan = (0.,  100.) # simulate 100 days
-# tspan = (minimum(input_meteo[:,"days"]),
-#          maximum(input_meteo[:,"days"])) # simulate all available days
+tspan = (minimum(input_meteo[:,"days"]),
+         maximum(input_meteo[:,"days"])) # simulate all available days
 # tspan = (LWFBrook90Julia.DateTime2RelativeDaysFloat(DateTime(1980,1,1), reference_date),
 #          LWFBrook90Julia.DateTime2RelativeDaysFloat(DateTime(1985,1,1), reference_date)) # simulates selected period
 
@@ -153,8 +156,5 @@ sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true)
 #         xlabel = "Date",
 #         ylabel = "Depth",
 #         colorbar_title = "θ")
-
-# 2) compare KAUFENRING data with LWFBrook90R
-include("compare_LWFBrook90R_visually.jl")
-
+include("main_plot_advanced.jl")
 ####################

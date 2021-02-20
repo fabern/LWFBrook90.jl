@@ -335,6 +335,7 @@ end
 function derive_params_from_input_param(input_param)
     # from LWFBrook90R:PFILE.h
 
+    # TODO(bernhard): modify this to make use of param names instead of numbers will be more robust
 
     # output specifications -------
     NDAYS = Int( input_param[ 1,1] )
