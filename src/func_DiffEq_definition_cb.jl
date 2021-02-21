@@ -228,37 +228,38 @@ function define_DiffEq_cb()
         if compute_intermediate_quantities
             # 1) Either set daily sum if rate is constant throughout precipitation interval: p_DTP*(...)
             # 2) or then set daily sum to zero and use ODE to accumulate flow.
-            integrator.u[7+NLAYER+0] = p_DTP*(p_fT_RFAL + p_fT_SFAL)   # RFALD + SFALD
-            integrator.u[7+NLAYER+1] = p_DTP*(aux_du_IRVP + aux_du_ISVP + aux_du_SNVP + aux_du_SLVP + sum(aux_du_TRANI))
-            integrator.u[7+NLAYER+2] = 0 # du/dt = p_fu_SRFL + sum(aux_du_BYFLI) + sum(aux_du_DSFLI) + du_GWFL
-            integrator.u[7+NLAYER+3] = p_DTP*(p_fT_RFAL - aux_du_RINT - aux_du_RSNO) # cum_d_RTHR - RSNOD
-            integrator.u[7+NLAYER+4] = p_DTP*(aux_du_IRVP)
-            integrator.u[7+NLAYER+5] = p_DTP*(aux_du_ISVP)
-            integrator.u[7+NLAYER+6] = p_DTP*(p_fu_PTRAN)
-            integrator.u[7+NLAYER+7] = p_DTP*(p_fu_PINT)
-            integrator.u[7+NLAYER+8] = p_DTP*(aux_du_SNVP)
-            integrator.u[7+NLAYER+9] = p_DTP*(aux_du_SLVP)
-            integrator.u[7+NLAYER+10]= p_DTP*(sum(aux_du_TRANI))
-            integrator.u[7+NLAYER+11]= p_DTP*(p_MESFL(integrator.t))
-            integrator.u[7+NLAYER+12]= p_DTP*(aux_du_SMLT)
-            integrator.u[7+NLAYER+13]= 0 # du/dt = p_fu_SLFL
-            integrator.u[7+NLAYER+14]= p_DTP*(p_fT_RFAL)
-            integrator.u[7+NLAYER+15]= p_DTP*(p_fT_SFAL)
-            #timeseries_awat[IDAY]=AWAT # TODO(bernhard): AWAT and ADEF are never overwritten and remain NaN as initialized
-            #timeseries_adef[IDAY]=ADEF # TODO(bernhard): AWAT and ADEF are never overwritten and remain NaN as initialized
-            integrator.u[7+NLAYER+16]= p_DTP*(aux_du_SINT)
-            integrator.u[7+NLAYER+17]= p_DTP*(aux_du_RINT)
-            integrator.u[7+NLAYER+18]= p_DTP*(p_fT_RFAL - aux_du_RINT)
-            integrator.u[7+NLAYER+19]= p_DTP*(p_fT_SFAL - aux_du_SINT)
-            integrator.u[7+NLAYER+20]= p_DTP*(aux_du_RSNO)
+            integrator.u[7+NLAYER+0] = p_DTP*(p_fT_RFAL + p_fT_SFAL)                 # RFALD + SFALD        # cum_d_prec
+            integrator.u[7+NLAYER+1] = p_DTP*(p_fT_RFAL)                                                    # cum_d_rfal
+            integrator.u[7+NLAYER+2] = p_DTP*(p_fT_SFAL)                                                    # cum_d_sfal
+            integrator.u[7+NLAYER+3] = p_DTP*(aux_du_RINT)                                                  # cum_d_rint
+            integrator.u[7+NLAYER+4] = p_DTP*(aux_du_SINT)                                                  # cum_d_sint
+            integrator.u[7+NLAYER+5] = p_DTP*(aux_du_RSNO)                                                  # cum_d_rsno
+            integrator.u[7+NLAYER+6] = p_DTP*(p_fT_RFAL - aux_du_RINT - aux_du_RSNO) # cum_d_RTHR - RSNOD   # cum_d_rnet
+            integrator.u[7+NLAYER+7] = p_DTP*(aux_du_SMLT)                                                  # cum_d_smlt
+
+            integrator.u[7+NLAYER+ 8] = p_DTP*(aux_du_IRVP + aux_du_ISVP + aux_du_SNVP + aux_du_SLVP + sum(aux_du_TRANI))  # cum_d_evap
+            integrator.u[7+NLAYER+ 9] = p_DTP*(sum(aux_du_TRANI))                                                          # cum_d_tran
+            integrator.u[7+NLAYER+10] = p_DTP*(aux_du_IRVP)                                                                # cum_d_irvp
+            integrator.u[7+NLAYER+11] = p_DTP*(aux_du_ISVP)                                                                # cum_d_isvp
+            integrator.u[7+NLAYER+12] = p_DTP*(aux_du_SLVP)                                                                # cum_d_slvp
+            integrator.u[7+NLAYER+13] = p_DTP*(aux_du_SNVP)                                                                # cum_d_snvp
+            integrator.u[7+NLAYER+14] = p_DTP*(p_fu_PINT)                                                                  # cum_d_pint
+            integrator.u[7+NLAYER+15] = p_DTP*(p_fu_PTRAN)                                                                 # cum_d_ptran
+            integrator.u[7+NLAYER+16] = p_DTP*(p_fu_PSLVP)                                                                 # cum_d_pslvp
+
+            integrator.u[7+NLAYER+17] = 0 # flow,  is computed in ODE
+            integrator.u[7+NLAYER+18] = 0 # seep,  is computed in ODE
+            integrator.u[7+NLAYER+19] = 0 # srfl,  is computed in ODE
+            integrator.u[7+NLAYER+20] = 0 # slfl,  is computed in ODE
+            integrator.u[7+NLAYER+21] = 0 # byfl,  is computed in ODE
+            integrator.u[7+NLAYER+22] = 0 # dsfl,  is computed in ODE
+            integrator.u[7+NLAYER+23] = 0 # gwfl,  is computed in ODE
+            integrator.u[7+NLAYER+24] = 0 # vrfln, is computed in ODE
+
+            # integrator.u[7+NLAYER+25] = p_DTP*(p_fT_RFAL - aux_du_RINT) # cum_d_rthr
+            # integrator.u[7+NLAYER+26] = p_DTP*(p_fT_SFAL - aux_du_SINT) # cum_d_sthr
+            # integrator.u[7+NLAYER+26] = p_DTP*(p_MESFL(integrator.t))   # ?
             # timeseries_balerd[IDAY]=BALERD
-            integrator.u[7+NLAYER+21]= 0 # du/dt = p_fu_SRFL
-            integrator.u[7+NLAYER+22]= 0 # du/dt = du_SEEP
-            integrator.u[7+NLAYER+23]= 0 # du/dt = du_GWFL
-            integrator.u[7+NLAYER+24]= 0 # du/dt = aux_du_VRFLI[NLAYER]
-            integrator.u[7+NLAYER+25]= 0 # du/dt = sum(aux_du_BYFLI)
-            integrator.u[7+NLAYER+26]= 0 # du/dt = sum(aux_du_DSFLI)
-            integrator.u[7+NLAYER+27]= p_DTP*(p_fu_PSLVP)
 
             # TODO(bernhard): use SavingCallback() for all quantities that have u=... and du=0
             #                 only keep du=... for quantities for which we compute cumulative sums

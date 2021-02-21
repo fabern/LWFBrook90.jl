@@ -153,38 +153,41 @@
         if compute_intermediate_quantities
             # 1) Either set daily sum if rate is constant throughout precipitation interval: p_DTP*(...)
             # 2) or then set daily sum to zero and use ODE to accumulate flow.
-            du[7+NLAYER+0] = 0 # was computed in callback         # was timeseries_prec
-            du[7+NLAYER+1] = 0 # was computed in callback         # was timeseries_evp
-            du[7+NLAYER+2] = p_fu_SRFL + sum(aux_du_BYFLI) + sum(aux_du_DSFLI) + du_GWFL # SRFLD + BYFLD + DSFLD + GWFLD # was timeseries_flow
-            du[7+NLAYER+3] = 0 # was computed in callback         # was timeseries_rnet
-            du[7+NLAYER+4] = 0 # was computed in callback         # was timeseries_irvp
-            du[7+NLAYER+5] = 0 # was computed in callback         # was timeseries_isvp
-            du[7+NLAYER+6] = 0 # was computed in callback         # was timeseries_ptran
-            du[7+NLAYER+7] = 0 # was computed in callback         # was timeseries_pint
-            du[7+NLAYER+8] = 0 # was computed in callback         # was timeseries_snvp
-            du[7+NLAYER+9] = 0 # was computed in callback         # was timeseries_slvp
-            du[7+NLAYER+10]= 0 # was computed in callback         # was timeseries_trand
-            du[7+NLAYER+11]= 0 # was computed in callback         # was timeseries_mesfld
-            du[7+NLAYER+12]= 0 # was computed in callback         # was timeseries_smltd
-            du[7+NLAYER+13]= p_fu_SLFL                            # was timeseries_slfld
-            du[7+NLAYER+14]= 0 # was computed in callback         # was timeseries_rfald
-            du[7+NLAYER+15]= 0 # was computed in callback         # was timeseries_sfald
-            #awat[IDAY]=AWAT # TODO(bernhard): AWAT and ADEF are never overwritten and remain NaN as initialized
-            #adef[IDAY]=ADEF # TODO(bernhard): AWAT and ADEF are never overwritten and remain NaN as initialized
-            du[7+NLAYER+16]= 0 # was computed in callback         # was timeseries_sintd
-            du[7+NLAYER+17]= 0 # was computed in callback         # was timeseries_rintd
-            du[7+NLAYER+18]= 0 # was computed in callback         # was timeseries_cum_d_rthr
-            du[7+NLAYER+19]= 0 # was computed in callback         # was timeseries_cum_d_sthr
-            du[7+NLAYER+20]= 0 # was computed in callback         # was timeseries_rsnod
-            # balerd[IDAY]=BALERD
+            du[7+NLAYER+0] = 0 # cum_d_prec, was computed in callback
+            du[7+NLAYER+1] = 0 # cum_d_rfal, was computed in callback
+            du[7+NLAYER+2] = 0 # cum_d_sfal, was computed in callback
+            du[7+NLAYER+3] = 0 # cum_d_rint, was computed in callback
+            du[7+NLAYER+4] = 0 # cum_d_sint, was computed in callback
+            du[7+NLAYER+5] = 0 # cum_d_rsno, was computed in callback
+            du[7+NLAYER+6] = 0 # cum_d_rnet, was computed in callback
+            du[7+NLAYER+7] = 0 # cum_d_smlt, was computed in callback
 
-            du[7+NLAYER+21]= p_fu_SRFL                            # was timeseries_SRFLD
-            du[7+NLAYER+22]= du_SEEP                              # was timeseries_SEEP
-            du[7+NLAYER+23]= du_GWFL                              # was timeseries_GWFL
-            du[7+NLAYER+24]= aux_du_VRFLI[NLAYER]                 # was timeseries_VRFLN
-            du[7+NLAYER+25]= sum(aux_du_BYFLI)                    # was timeseries_BYFLD
-            du[7+NLAYER+26]= sum(aux_du_DSFLI)                    # was timeseries_DSFLD
-            du[7+NLAYER+27]= 0 # was computed in callback         # was timeseries_pslvp
+            du[7+NLAYER+ 8] = 0 # cum_d_evap,  was computed in callback
+            du[7+NLAYER+ 9] = 0 # cum_d_tran,  was computed in callback
+            du[7+NLAYER+10] = 0 # cum_d_irvp,  was computed in callback
+            du[7+NLAYER+11] = 0 # cum_d_isvp,  was computed in callback
+            du[7+NLAYER+12] = 0 # cum_d_slvp,  was computed in callback
+            du[7+NLAYER+13] = 0 # cum_d_snvp,  was computed in callback
+            du[7+NLAYER+14] = 0 # cum_d_pint,  was computed in callback
+            du[7+NLAYER+15] = 0 # cum_d_ptran, was computed in callback
+            du[7+NLAYER+16] = 0 # cum_d_pslvp, was computed in callback
+
+            du[7+NLAYER+17] = p_fu_SRFL +
+                              sum(aux_du_BYFLI) +
+                              sum(aux_du_DSFLI) +
+                              du_GWFL # SRFLD + BYFLD + DSFLD + GWFLD # flow
+            du[7+NLAYER+18] = du_SEEP                                 # seep
+            du[7+NLAYER+19] = p_fu_SRFL                               # srfl
+            du[7+NLAYER+20] = p_fu_SLFL                               # slfl
+            du[7+NLAYER+21] = sum(aux_du_BYFLI)                       # byfl
+            du[7+NLAYER+22] = sum(aux_du_DSFLI)                       # dsfl
+            du[7+NLAYER+23] = du_GWFL                                 # gwfl
+            du[7+NLAYER+24] = aux_du_VRFLI[NLAYER]                    # vrfln
+
+            # du[7+NLAYER+25]= 0 # cum_d_rthr, was computed in callback
+            # du[7+NLAYER+26]= 0 # cum_d_sthr, was computed in callback
+            # du[7+NLAYER+27]= 0 # mesfl, was computed in callback
+            # balerd[IDAY]=BALERD
 
             # TODO(bernhard): use SavingCallback() for all quantities that have du=0
             #                 only keep du=... for quantities for which we compute cumulative sums
