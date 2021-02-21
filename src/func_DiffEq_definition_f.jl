@@ -184,6 +184,7 @@
             du[7+NLAYER+24]= aux_du_VRFLI[NLAYER]                 # was timeseries_VRFLN
             du[7+NLAYER+25]= sum(aux_du_BYFLI)                    # was timeseries_BYFLD
             du[7+NLAYER+26]= sum(aux_du_DSFLI)                    # was timeseries_DSFLD
+            du[7+NLAYER+27]= 0 # was computed in callback         # was timeseries_pslvp
 
             # TODO(bernhard): use SavingCallback() for all quantities that have du=0
             #                 only keep du=... for quantities for which we compute cumulative sums

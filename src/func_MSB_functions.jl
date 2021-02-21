@@ -257,7 +257,7 @@ function MSBDAYNIGHT_postprocess(IMODEL, NLAYER,
             p_fu_GEVP,  # average ground evaporation for day (mm/d)
             p_fu_PINT,  # average potential interception for day (mm/d)
             p_fu_GIVP,  # average ground evaporation for day with interception (mm/d)
-            p_fu_PSLVP, # ??? TODO(bernhard) find out what this is... using LWFBrook90
+            p_fu_PSLVP, # average potential evaporation rate from soil for day (mm/d) TODO(bernhard) seems unused further on
             aux_du_TRANI) # average transpiration rate for day from layer (mm/d)
 end
 

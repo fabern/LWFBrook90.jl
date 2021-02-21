@@ -258,6 +258,7 @@ function define_DiffEq_cb()
             integrator.u[7+NLAYER+24]= 0 # du/dt = aux_du_VRFLI[NLAYER]
             integrator.u[7+NLAYER+25]= 0 # du/dt = sum(aux_du_BYFLI)
             integrator.u[7+NLAYER+26]= 0 # du/dt = sum(aux_du_DSFLI)
+            integrator.u[7+NLAYER+27]= p_DTP*(p_fu_PSLVP)
 
             # TODO(bernhard): use SavingCallback() for all quantities that have u=... and du=0
             #                 only keep du=... for quantities for which we compute cumulative sums
