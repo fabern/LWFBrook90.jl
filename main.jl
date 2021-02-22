@@ -51,10 +51,9 @@ NLAYER = pfile_param["NLAYER"]
 
 # Define solver options
 NOOUTF    = 1 == pfile_param["NOOUTF"] # 1 if no outflow allowed from roots, otherwise 0
-Reset     = 0 # currently only Reset = 0 implemented
+Reset     = ifelse(contains(input_prefix, "reset-TRUE"), 1, 0)
 
 constant_dt_solver = 1 # [days]
-
 compute_intermediate_quantities = true # Flag whether ODE containes additional quantities just the minimum (i.e. states)
 ####################
 
