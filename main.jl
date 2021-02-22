@@ -15,9 +15,9 @@ input_path = "example/"*input_prefix*"-input/"
 # input_prefix = "SW-2020_fig_1_evergreen-reset-TRUE"
 # input_prefix = "ALV8101_sen2-reset-FALSE"
 # input_prefix = "ALV8101_sen2-reset-TRUE"
-# input_prefix = "BEA2016-reset-FALSE"
+input_prefix = "BEA2016-reset-FALSE"
 # input_prefix = "BEA2016-reset-TRUE"
-# input_path = "../../../LWF-Sites-Data-Download/TODO__2021-01-02_generate_2010-2021_LWFBrook_dataset/test-script/"*input_prefix*"-input/"
+input_path = "../../../LWF-Sites-Data-Download/TODO__2021-01-02_generate_2010-2021_LWFBrook_dataset/test-script/"*input_prefix*"-input/"
 
 
 (input_meteo,
@@ -124,18 +124,18 @@ u0 = LWFBrook90Julia.define_DiffEq_u0(u_GWAT_init,
 #   - p:      parameters
 
 # Define simulation time span:
-tspan = (0.,  5.) # simulate 5 days
-tspan = (0.,  100.) # simulate 100 days
+# tspan = (0.,  1.) # simulate 5 days
+# tspan = (0.,  100.) # simulate 100 days
 tspan = (minimum(input_meteo[:,"days"]),
          maximum(input_meteo[:,"days"])) # simulate all available days
 # tspan = (LWFBrook90Julia.DateTime2RelativeDaysFloat(DateTime(1980,1,1), reference_date),
 #          LWFBrook90Julia.DateTime2RelativeDaysFloat(DateTime(1985,1,1), reference_date)) # simulates selected period
 
 ode_LWFBrook90Julia = LWFBrook90Julia.define_DiffEq_ODE(u0, tspan, p)
-sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true)
+sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true; dt=0.0000001)
 
 ## Benchmarking
-@time sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true);
+# @time sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true);
 # using BenchmarkTools # for benchmarking
 # @btime sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, Euler(), dt=1/12); # Instability detected aborting
 # @btime solve(ode_LWFBrook90Julia, Euler(), dt=1/24); # Instability detected aborting
@@ -163,3 +163,4 @@ sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true)
 #         colorbar_title = "θ")
 include("main_plot_advanced.jl")
 ####################
+

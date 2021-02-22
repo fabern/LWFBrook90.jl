@@ -286,8 +286,10 @@ function define_DiffEq_parameters(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Re
     #     can temporarily be saved in the parameter vector to avoid computing them twice
 
     # Initialize placeholder for parameters that depend on solution and are computed
-    p_fu = [NaN, NaN, fill(NaN, NLAYER), NaN] # Use array instead of tuple to be able to mutate
+    # Use array instead of tuple to be able to mutate
+    p_fu = [NaN, NaN, fill(NaN, NLAYER), NaN]
+    p_fu2= [NaN, NaN, NaN, NaN, NaN, fill(NaN, NLAYER), fill(NaN, NLAYER), fill(NaN, NLAYER)]
 
     # 3) Return different types of parameters as a single object
-    return (p_cst, p_fT, p_fu)
+    return (p_cst, p_fT, p_fu, p_fu2)
 end

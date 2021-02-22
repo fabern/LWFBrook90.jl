@@ -292,7 +292,6 @@ function VERT(KK_i, KK_iplus1,
     #LWFBROOK90R (2021-02-22):
     GRAD = (PSITI_i - PSITI_iplus1) / ((THICK_i + THICK_iplus1) / 2)
 
-
     VRFLI = (GRAD * KKMEAN / p_RHOWG) * (1 - (STONEF_i + STONEF_iplus1) / 2)
 
     return(VRFLI)

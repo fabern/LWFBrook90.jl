@@ -4,7 +4,7 @@
     once per day. This operator splitting (daily vs continuous update of ODEs) is
     implemented by using this callback function which is called once per day.
 """
-function define_DiffEq_cb()
+function define_DiffEq_daily_cb()
     # A) Define updating function
     function LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         # NOTE: we can make use of those:
@@ -13,7 +13,7 @@ function define_DiffEq_cb()
         # integrator.u
 
         ############
-        ### Compute parameters
+        # Parse parameters
         ## A) constant parameters:
         (p_DT, NLAYER, IMODEL, compute_intermediate_quantities, Reset,
         p_SWATMX, p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_PSIG, p_KF,
@@ -256,9 +256,11 @@ function define_DiffEq_cb()
             integrator.u[7+NLAYER+23] = 0 # gwfl,  is computed in ODE
             integrator.u[7+NLAYER+24] = 0 # vrfln, is computed in ODE
 
-            # integrator.u[7+NLAYER+25] = p_DTP*(p_fT_RFAL - aux_du_RINT) # cum_d_rthr
-            # integrator.u[7+NLAYER+26] = p_DTP*(p_fT_SFAL - aux_du_SINT) # cum_d_sthr
-            # integrator.u[7+NLAYER+26] = p_DTP*(p_MESFL(integrator.t))   # ?
+            integrator.u[7+NLAYER+25] = 0 # nits,  is computed in ODE
+
+            # integrator.u[7+NLAYER+27] = p_DTP*(p_fT_RFAL - aux_du_RINT) # cum_d_rthr
+            # integrator.u[7+NLAYER+28] = p_DTP*(p_fT_SFAL - aux_du_SINT) # cum_d_sthr
+            # integrator.u[7+NLAYER+29] = p_DTP*(p_MESFL(integrator.t))   # ?
             # timeseries_balerd[IDAY]=BALERD
 
             # TODO(bernhard): use SavingCallback() for all quantities that have u=... and du=0

@@ -1,14 +1,10 @@
-""" define_DiffEq_f()\n
-    Generates function f (right-hand-side of ODEs) needed for ODE() probelm in DiffEq.jl package.
-"""
-# function define_DiffEq_f()
-    function f_LWFBrook90R(du,u,p,t)
-        # computes right hand side (du) of states: u_GWAT, u_SWATI
-
-        # NOTE: Within the ufnction we can make use of:
-        # t
-        # p
-        # u
+function define_DiffEq_timestep_cb()
+    # A) Define updating function
+    function LWFBrook90R_compute_RHS_and_timestep!(u,t,integrator)
+        # NOTE: we can make use of those:
+        # integrator.t
+        # integrator.p
+        # integrator.u
 
         ##################
         # Parse parameters
@@ -23,13 +19,13 @@
         p_KSAT, p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX,
         p_GSC, p_GSP, p_THICK, p_STONEF,
 
-        p_BYPAR) = p[1][1]
+        p_BYPAR) = integrator.p[1][1]
 
-        # unused are the constant parameters saved in: = p[1][2]
+        # unused are the constant parameters saved in: = integrator.p[1][2]
 
         ## B) time dependent parameters
         (p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PRECIN, p_DTP, p_NPINT, p_MESFL,
-        _, _, _, _, _) = p[2]
+        _, _, _, _, _) = integrator.p[2]
 
         # Compute rate of rain (mm/day)
         # TODO(bernhard): a) Do this outside of integration loop in define_DiffEq_parameters()
@@ -61,18 +57,18 @@
 
         # These were computed in the callback and are kept constant in between two
         # callbacks.
-        p_fu_RNET, aux_du_SMLT, aux_du_TRANI, aux_du_SLVP = p[3]
+        p_fu_RNET, aux_du_SMLT, aux_du_TRANI, aux_du_SLVP = integrator.p[3]
 
 
         ##################
         # Parse states
-        u_GWAT     = u[1]
-        #u_INTS     = u[2]
-        #u_INTR     = u[3]
-        #u_SNOW     = u[4]
-        #u_CC       = u[5]
-        #u_SNOWLQ   = u[6]
-        u_SWATI    = u[7:(7+NLAYER-1)]
+        u_GWAT     = integrator.u[1]
+        #u_INTS     = integrator.u[2]
+        #u_INTR     = integrator.u[3]
+        #u_SNOW     = integrator.u[4]
+        #u_CC       = integrator.u[5]
+        #u_SNOWLQ   = integrator.u[6]
+        u_SWATI    = integrator.u[7:(7+NLAYER-1)]
 
         (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
             LWFBrook90Julia.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_SWATMX, p_THSAT,
@@ -95,7 +91,7 @@
 
         # Water movement through soil
         (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI,
-        du_NTFLI, du_GWFL, du_SEEP) =
+        du_NTFLI, du_GWFL, du_SEEP, DTINEW) =
             MSBITERATE(IMODEL, p_QLAYER,
                     # for SRFLFR:
                     u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC,
@@ -121,11 +117,63 @@
         # Transport flow (heat, solutes, isotopes, ...)
         # TODO(bernhard): see initial prototype code... (script3)
 
+        # DEBUG
+        # @info """t:$(round(t;digits=4)), DTI:$DTINEW, NITS:$(integrator.u[7+NLAYER+25]), sum(aux_du_BYFLI):$(sum(aux_du_BYFLI)), sum(aux_du_DSFLI):$(sum(aux_du_DSFLI))""" # , p_fu_SRFL:$p_fu_SRFL, du_GWFL:$du_GWFL
+        # p_fu_SRFL +
+        #                       sum(aux_du_BYFLI) +
+        #                       sum(aux_du_DSFLI) +
+        #                       du_GWFL
+        # END DEBUG
+
+        # save intermediate results for use in ODE (function f())
+        integrator.p[4][1] = aux_du_VRFLI[NLAYER]
+        integrator.p[4][2] = du_GWFL
+        integrator.p[4][3] = du_SEEP
+        integrator.p[4][4] = p_fu_SRFL
+        integrator.p[4][5] = p_fu_SLFL
+        integrator.p[4][6] = du_NTFLI
+        integrator.p[4][7] = aux_du_BYFLI
+        integrator.p[4][8] = aux_du_DSFLI
+
+        # Force next time step to be: DTINEW
+        integrator.u[7+NLAYER+25] += 1 # cum_d_nits
+        set_proposed_dt!(integrator, DTINEW)
+    end
+
+    # B) Define callback
+    cb_func = FunctionCallingCallback(LWFBrook90R_compute_RHS_and_timestep!;
+                 func_everystep=true, func_start = true)
+    return cb_func
+end
+
+""" define_DiffEq_f()\n
+    Generates function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq.jl package.
+"""
+# function define_DiffEq_f()
+    function f_LWFBrook90R(du,u,p,t)
+        # computes right hand side (du) of states: u_GWAT, u_SWATI
+
+        # NOTE: Within the ufnction we can make use of:
+        # t
+        # p
+        # u
+
+        ##################
+        # Parse parameters
+        ## A) constant parameters:
+        (p_DT, NLAYER, IMODEL, compute_intermediate_quantities, Reset) = p[1][1]
+
+        ## A) solution depenedent parameters (computed in callback):
+        (aux_du_VRFLI__NLAYER, du_GWFL, du_SEEP, p_fu_SRFL, p_fu_SLFL,
+        du_NTFLI,
+        aux_du_BYFLI,
+        aux_du_DSFLI,) = p[4]
+
         ##################
         # Update solution:
         # u is a state vector with u[1] = S relative saturation (-)
         # Update GWAT:
-        du[1] = aux_du_VRFLI[NLAYER] - du_GWFL - du_SEEP
+        du[1] = aux_du_VRFLI__NLAYER - du_GWFL - du_SEEP
         # Update SWATI for each layer:
         #du[7] = 0
         #du[8] = 0
@@ -179,11 +227,12 @@
             du[7+NLAYER+21] = sum(aux_du_BYFLI)                       # byfl
             du[7+NLAYER+22] = sum(aux_du_DSFLI)                       # dsfl
             du[7+NLAYER+23] = du_GWFL                                 # gwfl
-            du[7+NLAYER+24] = aux_du_VRFLI[NLAYER]                    # vrfln
+            du[7+NLAYER+24] = aux_du_VRFLI__NLAYER                    # vrfln
 
-            # du[7+NLAYER+25]= 0 # cum_d_rthr, was computed in callback
-            # du[7+NLAYER+26]= 0 # cum_d_sthr, was computed in callback
-            # du[7+NLAYER+27]= 0 # mesfl, was computed in callback
+            # du[7+NLAYER+25]= 0 # cum_d_nits, was computed in callback
+            # du[7+NLAYER+26]= 0 # cum_d_rthr, was computed in callback
+            # du[7+NLAYER+27]= 0 # cum_d_sthr, was computed in callback
+            # du[7+NLAYER+28]= 0 # mesfl, was computed in callback
             # balerd[IDAY]=BALERD
 
             # TODO(bernhard): use SavingCallback() for all quantities that have du=0

@@ -428,7 +428,10 @@ function MSBITERATE(IMODEL, p_QLAYER,
     # limit step size
     #   ITER computes DTI so that the potential difference (due to aux_du_VRFLI)
     #   between adjacent layers does not change sign during the iteration time step
-    if (true) # NOTE: when using DiffEq.jl the integrator time step is determined by solve(). Therefore the adaptive time step control of LWFBrook can be deactivated.
+    if (true)
+        # NOTE: when using DiffEq.jl the integrator time step is determined by solve().
+        # On might think, that therefore the adaptive time step control of LWFBrook can be deactivated.
+        # However, this is not the case. DTI is used in INFLOW() to compute the fluxes aux_du_VRFLI, ... etc.
         DTINEW=LWFBrook90Julia.WAT.ITER(IMODEL, NLAYER, DTI, LWFBrook90Julia.CONSTANTS.p_DTIMIN,
                                         du_NTFLI, u_aux_PSITI, u_aux_θ,
                                         u_aux_WETNES,
@@ -466,5 +469,5 @@ function MSBITERATE(IMODEL, p_QLAYER,
     # groundwater flow and seepage loss
     du_GWFL, du_SEEP = LWFBrook90Julia.WAT.GWATER(u_GWAT, p_GSC, p_GSP, p_DT, aux_du_VRFLI[NLAYER])
 
-    return (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI, du_GWFL, du_SEEP)
+    return (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI, du_GWFL, du_SEEP, DTINEW)
 end

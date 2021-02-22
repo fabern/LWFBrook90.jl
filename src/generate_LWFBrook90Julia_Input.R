@@ -136,48 +136,48 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
 }
 #######
 
-####### Test function
-# BEA
-# 1) run first "LWFBrook90R-LWFSite-BEA-testdata.R" to prepare arguments
-# 2) then run following:
-generate_LWFBrook90Julia_Input(Julia_target_dir = ".", Julia_prefix = paste0("BEA2016-reset-", Reset),
-                               run_LWFBrook90R = TRUE,
-
-                               options_b90 = options,
-                               param_b90 = param,
-                               climate = meteo,
-                               soil = soilPuh,
-                               output= output,
-                               rtrn.output = TRUE, verbose = FALSE)
-
-# ALV8101
-# 1) run first "LWFBrook90R-TestScript-for-LWFSites_based_on_ALV8101_sen2.R" to prepare arguments
-# 2) then run following:
-generate_LWFBrook90Julia_Input(Julia_target_dir = ".", Julia_prefix = paste0("ALV8101_sen2-reset-", Reset),
-                               run_LWFBrook90R = TRUE,
-
-                    options_b90 = options,
-                    param_b90 = param,
-                    climate = meteo,
-                    soil = soilPuh,
-                    output= output,
-                    rtrn.output = TRUE, verbose = FALSE)
-
-# KAUFENRING
-# 1) run first "Schmidt-Walter-2020-Agric_For_Meteorol_results_fig_1.R" to prepare arguments
-# 2) then run following:
-
-generate_LWFBrook90Julia_Input(Julia_target_dir = ".", Julia_prefix = paste0("SW-2020_fig_1_evergreen-reset-", Reset),
-                               run_LWFBrook90R = TRUE,
-
-                               project.dir = "evergreen/",
-                               options_b90 = options_forest,
-                               #options_b90 = options_forest2, # FB modified
-                               param_b90 = parms_evergreen,
-                               climate = dplyr::rename(kau_meteo_d, windspeed=wind),
-                               soil = soil,
-                               chk_input = TRUE,
-                               output = output)
-#######
+# ####### Test function
+# # BEA
+# # 1) run first "LWFBrook90R-LWFSite-BEA-testdata.R" to prepare arguments
+# # 2) then run following:
+# generate_LWFBrook90Julia_Input(Julia_target_dir = ".", Julia_prefix = paste0("BEA2016-reset-", Reset),
+#                                run_LWFBrook90R = TRUE,
+# 
+#                                options_b90 = options,
+#                                param_b90 = param,
+#                                climate = meteo,
+#                                soil = soilPuh,
+#                                output= output,
+#                                rtrn.output = TRUE, verbose = FALSE)
+# 
+# # ALV8101
+# # 1) run first "LWFBrook90R-TestScript-for-LWFSites_based_on_ALV8101_sen2.R" to prepare arguments
+# # 2) then run following:
+# generate_LWFBrook90Julia_Input(Julia_target_dir = ".", Julia_prefix = paste0("ALV8101_sen2-reset-", Reset),
+#                                run_LWFBrook90R = TRUE,
+# 
+#                     options_b90 = options,
+#                     param_b90 = param,
+#                     climate = meteo,
+#                     soil = soilPuh,
+#                     output= output,
+#                     rtrn.output = TRUE, verbose = FALSE)
+# 
+# # KAUFENRING
+# # 1) run first "Schmidt-Walter-2020-Agric_For_Meteorol_results_fig_1.R" to prepare arguments
+# # 2) then run following:
+# 
+# generate_LWFBrook90Julia_Input(Julia_target_dir = ".", Julia_prefix = paste0("SW-2020_fig_1_evergreen-reset-", Reset),
+#                                run_LWFBrook90R = TRUE,
+# 
+#                                project.dir = "evergreen/",
+#                                options_b90 = options_forest,
+#                                #options_b90 = options_forest2, # FB modified
+#                                param_b90 = parms_evergreen,
+#                                climate = dplyr::rename(kau_meteo_d, windspeed=wind),
+#                                soil = soil,
+#                                chk_input = TRUE,
+#                                output = output)
+# #######
 
 

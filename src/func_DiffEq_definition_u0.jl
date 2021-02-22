@@ -21,7 +21,7 @@ function define_DiffEq_u0(u_GWAT_init,
             # accumulation variables:
             0;0;0;0;0;0;0;0;0;0;
             0;0;0;0;0;0;0;0;0;0;
-            0;0;0;0;0]
+            0;0;0;0;0;0]
     else
         u0 = [u_GWAT_init;
                 u_INTS_init;
