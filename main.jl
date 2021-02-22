@@ -2,8 +2,6 @@
 # using Infiltrator
 using DifferentialEquations
 using LWFBrook90Julia
-greet()
-
 
 # 1a) Read in input data
 input_prefix = "BEA2016-reset-FALSE"

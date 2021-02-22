@@ -15,7 +15,6 @@ include("module_SNO.jl");        # to bring into scope: using .SNO
 include("module_EVP.jl");        # to bring into scope: using .SNO
 
 export greet, read_LWFBrook90R_inputData, derive_params_from_input_meteo
-export my_f
 
 include("func_input_definition.jl")
 include("func_DiffEq_definition_u0.jl")
@@ -24,8 +23,5 @@ include("func_DiffEq_definition_cb.jl")
 include("func_DiffEq_definition_f.jl")
 include("func_DiffEq_definition_ode.jl")
 include("func_MSB_functions.jl")
-
-include("extra_file.jl")        #TODO(bernhard): remove this placeholder function once testing of own functions is implemented.
-greet() = print("Hello World!") #TODO(bernhard): remove this placeholder function once testing of own functions is implemented.
 
 end # module
