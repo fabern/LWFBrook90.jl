@@ -230,17 +230,33 @@ function VERT(KK_i, KK_iplus1,
               PSITI_i, PSITI_iplus1,
               STONEF_i, STONEF_iplus1,
               p_RHOWG)
-    KKMEAN = exp((log(KK_i) + log(KK_iplus1)) / 2)
+
+    # NOTE(bernhard): different averaging for KKMEAN and GRAD exist in different Brook90 versions:
+    # see: http://www.ecoshift.net/brook/update.htm (Version 4.4 - October 4, 2001)
+    # TODO(bernhard):
+
+    # # BROOK90: for Version 4.4 to 4.8 was
+    # KKMEAN = exp((log(KK_i) + log(KK_iplus1)) / 2)
+    # # BROOK90: for Version 4.2 and 4.3 was
+    # KKMEAN = exp((THICK_i * log(KK_i) + THICK1 * log(KK_iplus1)) / (THICK_i + THICK_iplus1))
+    # # BROOK90: for Version 4.1 and 3.25a and earlier was
+    # KKMEAN = exp( (THICK_iplus1 * log(KK_i) + THICK_i * log(KK_iplus1)) /
+    #               (THICK_i + THICK_iplus1) )
+    #LWFBROOK90R (2021-02-22):
+    KKMEAN = exp( (THICK_iplus1 * log(KK_i) + THICK_i * log(KK_iplus1)) /
+                  (THICK_i + THICK_iplus1) )
 
     # limit KKMEAN to lesser saturated conductivity
-    if (KKMEAN > KSAT_i)
-        KKMEAN = KSAT_i
-    end
-    if (KKMEAN > KSAT_iplus1)
-        KKMEAN = KSAT_iplus1
-    end
+    KKMEAN = min(KKMEAN, KSAT_i, KSAT_iplus1)
 
-    GRAD = (PSITI_i - PSITI_iplus1) / min(THICK_i, THICK_iplus1)
+    # # BROOK90: through Version 4.3a was
+    # GRAD = (PSITI_i - PSITI_iplus1) / ((THICK_i + THICK_iplus1) / 2)
+    # # BROOK90: for Version 4.4 to 4.8 was
+    # GRAD = (PSITI_i - PSITI_iplus1) / min(THICK_i, THICK_iplus1)
+    #LWFBROOK90R (2021-02-22):
+    GRAD = (PSITI_i - PSITI_iplus1) / ((THICK_i + THICK_iplus1) / 2)
+
+
     VRFLI = (GRAD * KKMEAN / p_RHOWG) * (1 - (STONEF_i + STONEF_iplus1) / 2)
 
     return(VRFLI)
