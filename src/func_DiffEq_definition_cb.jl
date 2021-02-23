@@ -274,6 +274,27 @@ function define_DiffEq_daily_cb()
             # integrator.u[7+NLAYER+29] = p_DTP*(p_MESFL(integrator.t))   # ?
             # timeseries_balerd[IDAY]=BALERD
 
+            # NOTE: if some quantities are reset after state update (in 2nd callback
+            #       happening every time step), below quantities are set in 2nd callback
+            if Reset == 1
+                # Quantities entirely recomputed in Reset
+                integrator.u[7+NLAYER+ 3] = 0
+                integrator.u[7+NLAYER+ 4] = 0
+                integrator.u[7+NLAYER+ 9] = 0
+                integrator.u[7+NLAYER+10] = 0
+                integrator.u[7+NLAYER+11] = 0
+                integrator.u[7+NLAYER+12] = 0
+                integrator.u[7+NLAYER+14] = 0
+                integrator.u[7+NLAYER+15] = 0
+                integrator.u[7+NLAYER+16] = 0
+                # Quantities only partially recomputed in Reset
+                # cum_d_rnet: p_fT_RFAL and aux_du_RSNO is not recomputed in Reset
+                integrator.u[7+NLAYER+ 6] = p_DTP*(p_fT_RFAL - aux_du_RSNO) # cum_d_RTHR - RSNOD   # cum_d_rnet
+                # cum_d_evap: aux_du_SNVP is not recomputed in Reset
+                integrator.u[7+NLAYER+ 8] = p_DTP*aux_du_SNVP
+            end
+
+
             # TODO(bernhard): use SavingCallback() for all quantities that have u=... and du=0
             #                 only keep du=... for quantities for which we compute cumulative sums
         end

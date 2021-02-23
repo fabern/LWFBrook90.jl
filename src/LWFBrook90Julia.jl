@@ -23,6 +23,7 @@ include("func_DiffEq_definition_u0.jl")
 include("func_DiffEq_definition_p.jl")
 include("func_DiffEq_definition_cb.jl")
 include("func_DiffEq_definition_f.jl")
+include("func_DiffEq_definition_f_ResetSnippet.jl")
 include("func_DiffEq_definition_ode.jl")
 include("func_MSB_functions.jl")
 
