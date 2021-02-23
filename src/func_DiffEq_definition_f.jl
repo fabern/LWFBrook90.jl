@@ -85,7 +85,7 @@
         ##################
         # Update soil limited boundary flows during iteration loop
         if Reset == 1
-            error("The case with updated flows (Reset==1) is not implemented here. It was initially implemented in LWFB90V4.jl")
+            error("The case with updated flows (Reset==1) is not implemented here. A test is implemented in branch 005.")
         end
 
         ##################

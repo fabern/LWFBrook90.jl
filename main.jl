@@ -2,21 +2,24 @@
 # using Infiltrator
 using DifferentialEquations
 using LWFBrook90Julia
+using ProgressLogging
 
 # 1a) Read in input data
 input_prefix = "BEA2016-reset-FALSE"
 input_path = "example/"*input_prefix*"-input/"
 
-# input_prefix = "SW-2020_fig_1_INPUT-evergreen"
-# input_path = "../../../LWF-Sites-Data-Download/TODO__2021-01-02_generate_2010-2021_LWFBrook_dataset/test-script/SW-2020_fig_1_INPUT-evergreen-input"
-# input_prefix = "SW-2020_fig_1_evergreen-reset-FALSE"
-# input_prefix = "SW-2020_fig_1_evergreen-reset-TRUE"
-# input_prefix = "ALV8101_sen2-reset-FALSE"
-# input_prefix = "ALV8101_sen2-reset-TRUE"
-# input_prefix = "BEA2016-reset-FALSE"
-# input_prefix = "BEA2016-reset-TRUE"
-# input_path = "../../../LWF-Sites-Data-Download/TODO__2021-01-02_generate_2010-2021_LWFBrook_dataset/test-script/"*input_prefix*"-input/"
+# define list of inputs with input_prefix, subfolder
+inputs = [# ("ALV8101_sen2-reset-FALSE"            , "testdata-ALV/"),
+          # ("ALV8101_sen2-reset-TRUE"             , "testdata-ALV/"),
+          ("BEA2016-reset-FALSE"                 , "testdata-BEA/"),
+          ("BEA2016-reset-TRUE"                  , "testdata-BEA/"),
+          # ("SW-2020_fig_1_evergreen-reset-FALSE" , "testdata-KAU/"),
+          # ("SW-2020_fig_1_evergreen-reset-TRUE"  , "testdata-KAU/"),
+          ]
 
+# loop over inputs
+for (input_prefix, subfolder) in inputs
+input_path = "../../../LWF-Sites-Data-Download/TODO__2021-01-02_generate_2010-2021_LWFBrook_dataset/test-script/"*subfolder*input_prefix*"-input/"
 
 (input_meteo,
     input_param,
@@ -122,23 +125,29 @@ u0 = LWFBrook90Julia.define_DiffEq_u0(u_GWAT_init,
 #   - p:      parameters
 
 # Define simulation time span:
-tspan = (0.,  5.) # simulate 5 days
-tspan = (0.,  100.) # simulate 100 days
+# tspan = (0.,  5.) # simulate 5 days
+# tspan = (0.,  100.) # simulate 100 days # NOTE: KAU bugs in "branch 005-" when at least 3*365
 tspan = (minimum(input_meteo[:,"days"]),
          maximum(input_meteo[:,"days"])) # simulate all available days
 # tspan = (LWFBrook90Julia.DateTime2RelativeDaysFloat(DateTime(1980,1,1), reference_date),
 #          LWFBrook90Julia.DateTime2RelativeDaysFloat(DateTime(1985,1,1), reference_date)) # simulates selected period
 
+# Define ODE:
 ode_LWFBrook90Julia = LWFBrook90Julia.define_DiffEq_ODE(u0, tspan, p)
-sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true)
+
+## Solve ODE:
+sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true;
+    saveat = tspan[1]:tspan[2], dt=1e-6, adaptive = true); # dt will be overwritten, adaptive deacives DiffEq.jl adaptivity
 
 ## Benchmarking
-# @time solve(ode_LWFBrook90Julia, progress = true)
+# @time sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true;
+#     saveat = tspan[1]:tspan[2], dt=1e-1, adaptive = false);
+# @time sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true, Euler(); # Note: Euler sometimes hangs
+#     saveat = tspan[1]:tspan[2], dt=1e-1, adaptive = false);
 # using BenchmarkTools # for benchmarking
-# @btime sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, Euler(), dt=1/12); # Instability detected aborting
-# @btime solve(ode_LWFBrook90Julia, Euler(), dt=1/24); # Instability detected aborting
-# @btime solve(ode_LWFBrook90Julia, dt=1/24); # uses DiffEq.jl adaptive timestepping, but initial dt of 1/24
-# @btime solve(ode_LWFBrook90Julia);
+# sol_LWFBrook90Julia = @btime solve(ode_LWFBrook90Julia; dt=1.0e-1, adaptive = false); # dt will be overwritten, adaptive deacives DiffEq.jl adaptivity
+# sol_LWFBrook90Julia = @btime solve(ode_LWFBrook90Julia; saveat = tspan[1]:tspan[2], dt=1.0e-1, adaptive = false); # dt will be overwritten, adaptive deacives DiffEq.jl adaptivity
+
 
 ## Plotting
 # 1) very basic
@@ -156,3 +165,4 @@ sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true)
 #         colorbar_title = "θ")
 include("main_plot_advanced.jl")
 ####################
+end
