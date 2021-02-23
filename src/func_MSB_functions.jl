@@ -431,7 +431,8 @@ function MSBITERATE(IMODEL, p_QLAYER,
         # NOTE: when using DiffEq.jl the integrator time step is determined by solve().
         # On might think, that therefore the adaptive time step control of LWFBrook can be deactivated.
         # However, this is not the case. DTI is used in INFLOW() to compute the fluxes aux_du_VRFLI, ... etc.
-        DTINEW=LWFBrook90Julia.WAT.ITER(IMODEL, NLAYER, DTI, LWFBrook90Julia.CONSTANTS.p_DTIMIN,
+        DTINEW, set_TRANI_to_zero, set_SLVP_to_zero =
+        LWFBrook90Julia.WAT.ITER(IMODEL, NLAYER, DTI, LWFBrook90Julia.CONSTANTS.p_DTIMIN,
                                         du_NTFLI, u_aux_PSITI, u_aux_θ,
                                         u_aux_WETNES,
                                         LWFBrook90Julia.KPT.FDPSIDWF_CH, LWFBrook90Julia.KPT.FDPSIDWF_MvG,
@@ -448,6 +449,22 @@ function MSBITERATE(IMODEL, p_QLAYER,
                                         #                 https://diffeq.sciml.ai/stable/basics/integrator/#DiffEqBase.set_proposed_dt!
                                         #                 However, this only affects the next time step and not the ongoing one as it does in LWFBrook90
 
+        # If ITER reduced stepsize below DTIMIN, aux_du_TRANI and aux_du_SLVP are set to zero
+        aux_du_TRANI_corrected = aux_du_TRANI
+        aux_du_SLVP_corrected = aux_du_SLVP
+        if (true)
+            for i = 1:NLAYER
+                if set_TRANI_to_zero[i] == 1
+                    aux_du_TRANI_corrected[i] = 0
+                    #@warn "Reduced DTI was lower than DTIMIN. DTI was increased to DTIMIN. Warning: original Brook set TRANI and SLVP to zero in these cases. This is not done anymore."
+                end
+            end
+            if set_SLVP_to_zero == 1
+                aux_du_SLVP_corrected = 0
+                #@warn "Reduced DTI was lower than DTIMIN. DTI was increased to DTIMIN. Warning: original Brook set TRANI and SLVP to zero in these cases. This is not done anymore."
+            end
+        end
+
         # recompute step
         if (DTINEW < DTI)
             # recalculate flow rates with new DTI
@@ -457,9 +474,10 @@ function MSBITERATE(IMODEL, p_QLAYER,
             # correct aux_du_VRFLI and compute aux_du_INFLI, aux_du_BYFLI, du_NTFLI
             DTI = DTINEW
             aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
-                LWFBrook90Julia.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
-                                            aux_du_SLVP, p_SWATMX, u_SWATI,
-                                            aux_du_VRFLI_1st_approx)
+                LWFBrook90Julia.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI,
+                                           aux_du_TRANI_corrected, aux_du_SLVP_corrected,
+                                           p_SWATMX, u_SWATI,
+                                           aux_du_VRFLI_1st_approx)
         end
     end
 
@@ -468,5 +486,5 @@ function MSBITERATE(IMODEL, p_QLAYER,
     # groundwater flow and seepage loss
     du_GWFL, du_SEEP = LWFBrook90Julia.WAT.GWATER(u_GWAT, p_GSC, p_GSP, p_DT, aux_du_VRFLI[NLAYER])
 
-    return (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI, du_GWFL, du_SEEP, DTINEW)
+    return (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI, du_GWFL, du_SEEP, DTINEW, aux_du_TRANI_corrected, aux_du_SLVP_corrected)
 end

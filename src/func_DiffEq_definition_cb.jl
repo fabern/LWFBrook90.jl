@@ -242,11 +242,17 @@ function define_DiffEq_daily_cb()
             integrator.u[7+NLAYER+6] = p_DTP*(p_fT_RFAL - aux_du_RINT - aux_du_RSNO) # cum_d_RTHR - RSNOD   # cum_d_rnet
             integrator.u[7+NLAYER+7] = p_DTP*(aux_du_SMLT)                                                  # cum_d_smlt
 
-            integrator.u[7+NLAYER+ 8] = p_DTP*(aux_du_IRVP + aux_du_ISVP + aux_du_SNVP + aux_du_SLVP + sum(aux_du_TRANI))  # cum_d_evap
-            integrator.u[7+NLAYER+ 9] = p_DTP*(sum(aux_du_TRANI))                                                          # cum_d_tran
+            integrator.u[7+NLAYER+ 8] = p_DTP*(aux_du_IRVP + aux_du_ISVP + aux_du_SNVP)                                    # cum_d_evap
+                                      # p_DTP*(aux_du_IRVP + aux_du_ISVP + aux_du_SNVP + aux_du_SLVP + sum(aux_du_TRANI))
+                                      # aux_du_SLVP and aux_du_TRANI will be added in 2nd callback as corrected values
+            integrator.u[7+NLAYER+ 9] = 0                                                                                  # cum_d_tran
+                                      # p_DTP*(sum(aux_du_TRANI))
+                                      # aux_du_TRANI is added in 2nd callback as corrected value
             integrator.u[7+NLAYER+10] = p_DTP*(aux_du_IRVP)                                                                # cum_d_irvp
             integrator.u[7+NLAYER+11] = p_DTP*(aux_du_ISVP)                                                                # cum_d_isvp
-            integrator.u[7+NLAYER+12] = p_DTP*(aux_du_SLVP)                                                                # cum_d_slvp
+            integrator.u[7+NLAYER+12] = 0                                                                                  # cum_d_slvp
+                                      # p_DTP*(aux_du_SLVP)
+                                      # aux_du_SLVP is added in 2nd callback as corrected value
             integrator.u[7+NLAYER+13] = p_DTP*(aux_du_SNVP)                                                                # cum_d_snvp
             integrator.u[7+NLAYER+14] = p_DTP*(p_fu_PINT)                                                                  # cum_d_pint
             integrator.u[7+NLAYER+15] = p_DTP*(p_fu_PTRAN)                                                                 # cum_d_ptran

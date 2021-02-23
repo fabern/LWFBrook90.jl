@@ -106,7 +106,7 @@ function define_DiffEq_timestep_cb()
 
         # Water movement through soil
         (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI,
-        du_NTFLI, du_GWFL, du_SEEP, DTINEW) =
+        du_NTFLI, du_GWFL, du_SEEP, DTINEW, aux_du_TRANI_corrected, aux_du_SLVP_corrected) =
             MSBITERATE(IMODEL, p_QLAYER,
                     # for SRFLFR:
                     u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC,
@@ -154,6 +154,12 @@ function define_DiffEq_timestep_cb()
         # Update NITS:
         integrator.u[7+NLAYER+25] += 1 # cum_d_nits
 
+        # Apply corrected SLVP and TRANI
+        integrator.u[7+NLAYER+ 8] += DTINEW*(aux_du_SLVP_corrected + sum(aux_du_TRANI_corrected))  # cum_d_evap
+        integrator.u[7+NLAYER+ 9] += DTINEW*(                        sum(aux_du_TRANI_corrected))
+        integrator.u[7+NLAYER+12] += DTINEW*(aux_du_SLVP_corrected)
+        integrator.p[3][3] = aux_du_TRANI_corrected
+        integrator.p[3][4] = aux_du_SLVP_corrected
 
         ##################
         # Update soil limited boundary flows during iteration loop

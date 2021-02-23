@@ -12,10 +12,10 @@ input_path = "example/"*input_prefix*"-input/"
 
 # input_prefix = "ALV8101_sen2-reset-FALSE";            subfolder = "testdata-ALV/"
 # input_prefix = "ALV8101_sen2-reset-TRUE";             subfolder = "testdata-ALV/"
-# input_prefix = "BEA2016-reset-FALSE";                 subfolder = "testdata-BEA/"
+input_prefix = "BEA2016-reset-FALSE";                 subfolder = "testdata-BEA/"
 # input_prefix = "BEA2016-reset-TRUE";                  subfolder = "testdata-BEA/"
 # input_prefix = "SW-2020_fig_1_evergreen-reset-FALSE"; subfolder = "testdata-KAU/"
-input_prefix = "SW-2020_fig_1_evergreen-reset-TRUE";  subfolder = "testdata-KAU/"
+# input_prefix = "SW-2020_fig_1_evergreen-reset-TRUE";  subfolder = "testdata-KAU/"
 input_path = "../../../LWF-Sites-Data-Download/TODO__2021-01-02_generate_2010-2021_LWFBrook_dataset/test-script/"*subfolder*input_prefix*"-input/"
 
 
@@ -123,9 +123,9 @@ u0 = LWFBrook90Julia.define_DiffEq_u0(u_GWAT_init,
 
 # Define simulation time span:
 # tspan = (0.,  5.) # simulate 5 days
-tspan = (0.,  100.) # simulate 100 days # NOTE: KAU bugs when at least 3*365
-# tspan = (minimum(input_meteo[:,"days"]),
-#          maximum(input_meteo[:,"days"])) # simulate all available days
+# tspan = (0.,  100.) # simulate 100 days # NOTE: KAU bugs when at least 3*365
+tspan = (minimum(input_meteo[:,"days"]),
+         maximum(input_meteo[:,"days"])) # simulate all available days
 # tspan = (LWFBrook90Julia.DateTime2RelativeDaysFloat(DateTime(1980,1,1), reference_date),
 #          LWFBrook90Julia.DateTime2RelativeDaysFloat(DateTime(1985,1,1), reference_date)) # simulates selected period
 

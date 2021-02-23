@@ -591,6 +591,8 @@ function ITER(IMODEL, NLAYER, DTI, DTIMIN,
     # test to see if DTI should be reduced
     DTINEW = DTI
 
+    set_TRANI_to_zero = zeros(NLAYER)
+    set_SLVP_to_zero  = zeros(1)
     for i = 1:NLAYER
         # 1) prevent too large a change in water content, reduce DTI to keep change below p_DSWMAX
         # DTINEW = min(DTINEW, 0.01 * p_DSWMAX * p_SWATMX[i] / max(0.000001, abs(du_NTFLI[i])))
@@ -617,6 +619,10 @@ function ITER(IMODEL, NLAYER, DTI, DTIMIN,
                 # if (i == 1)
                 #     SLVP=0   # TODO(Benrhard): should this change leak out into main program? (side effect)
                 # end
+                set_TRANI_to_zero[i] = 1
+                if (i == 1)
+                    set_SLVP_to_zero = 1
+                end
                 # NOTE: This original TRANI and SLVP correction violates the mass balance.
                 # @warn "Reduced DTI was lower than DTIMIN. DTI was increased to DTIMIN. Warning: original Brook set TRANI and SLVP to zero in these cases. This is not done anymore."
             end
@@ -641,7 +647,7 @@ function ITER(IMODEL, NLAYER, DTI, DTIMIN,
     #     @info("DTI reduced from $DTI to $DTINEW.")
     # end
 
-    return DTINEW # return second estimate of DTI
+    return (DTINEW, set_TRANI_to_zero, set_SLVP_to_zero) # return second estimate of DTI
 end
 
 """calculates groundwater flow and seepage loss
