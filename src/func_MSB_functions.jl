@@ -364,7 +364,7 @@ function MSBITERATE(IMODEL, p_QLAYER,
                     # for VERT:
                     p_KSAT,
                     #
-                    p_DRAIN, p_DTP, p_DTIMAX,
+                    p_DRAIN, DTI,
                     # for INFLOW:
                     p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP, p_SWATMX,
                     # for ITER:
@@ -372,7 +372,10 @@ function MSBITERATE(IMODEL, p_QLAYER,
                     p_DSWMAX, p_THSAT, p_θr, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN, p_WETINF, p_MvGα, p_MvGn,
                     # for GWATER:
                     u_GWAT, p_GSC, p_GSP, p_DT)
-
+    if DTI==0
+        #Infiltrator.@infiltrate
+        @error ("MSBITERATE() called with DTI == 0")
+    end
     ## On soil surface, partition incoming rain (RNET) and melt water (SMLT)
     # into either above ground source area flow (streamflow, SRFL) or
     # below ground ("infiltrated") input to soil (SLFL)
@@ -410,10 +413,6 @@ function MSBITERATE(IMODEL, p_QLAYER,
     #                 VRFLI() for both calls to INFLOW()
     #                 i.e. calling INFLOW(..., aux_du_VRFLI_1st_approx) weith DTI and DTINEW
     aux_du_VRFLI_1st_approx = aux_du_VRFLI
-
-    # first approximation for iteration time step,time remaining or DTIMAX
-    DTRI = p_DTP
-    DTI  = min(DTRI, p_DTIMAX)
 
     # vertical flow rates
     # second approximation on aux_du_VRFLI

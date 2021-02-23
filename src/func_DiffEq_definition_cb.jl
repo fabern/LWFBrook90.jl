@@ -7,6 +7,7 @@
 function define_DiffEq_daily_cb()
     # A) Define updating function
     function LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
+        # @info "Daily callback. DTRI: $(integrator.p[4][1])"
         # NOTE: we can make use of those:
         # integrator.t
         # integrator.p
@@ -219,6 +220,10 @@ function define_DiffEq_daily_cb()
         integrator.p[3][3] = aux_du_TRANI
         integrator.p[3][4] = aux_du_SLVP
 
+        # reinitialize remaining iteration time DTRI to total precip time step
+        # DTRI = p_DTP
+        integrator.p[4][1] = p_DTP
+        #@info "Daily callback. t: $(integrator.t), DTRI: $(integrator.p[4][1]), Integrator.dt: $(get_proposed_dt(integrator))"
 
 
         ##########################################

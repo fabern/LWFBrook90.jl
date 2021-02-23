@@ -1,6 +1,9 @@
 function define_DiffEq_timestep_cb()
     # A) Define updating function
     function LWFBrook90R_compute_RHS_and_timestep!(u,t,integrator)
+        # if integrator.t>=247.8 && integrator.t<251
+        #     @info "Timestep callback. t: $(integrator.t), DTRI: $(integrator.p[4][1]), Integrator.dt: $(get_proposed_dt(integrator)), u_SWATI_1:$(integrator.u[7])"
+        # end
         # NOTE: we can make use of those:
         # integrator.t
         # integrator.p
@@ -83,6 +86,24 @@ function define_DiffEq_timestep_cb()
         p_fu_BYFRAC = LWFBrook90Julia.WAT.BYFLFR(
                       NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_WETF)
 
+        # Assert time step is smaller than remaining DTRI in order to avoid overshooting a day
+        # Variant 1) Derive from time t
+        # DTRI = ceil(t; digits=0) - t
+        # if (DTRI == 0)
+        #     DTRI = p_DTP
+        # end
+        # Variant 2) Derive from saved DTRI
+        DTRI = integrator.p[4][1]
+        if (DTRI <= 0)
+            DTRI = p_DTP # TODO(bernhard): sometimes DTRI == 0, resulting in division by DTI=0
+        end
+        if (integrator.opts.adaptive)
+            error("DTRI is not working with adaptive solvers from DiffEq.jl")
+        end
+
+        # first approximation for iteration time step, time remaining or DTIMAX
+        DTI  = min(DTRI, p_DTIMAX)
+
         # Water movement through soil
         (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI,
         du_NTFLI, du_GWFL, du_SEEP, DTINEW) =
@@ -99,7 +120,7 @@ function define_DiffEq_timestep_cb()
                     # for VERT:
                     p_KSAT,
                     #
-                    p_DRAIN, p_DTP, p_DTIMAX,
+                    p_DRAIN, DTI,
                     # for INFLOW:
                     p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP, p_SWATMX,
                     # for ITER:
@@ -112,26 +133,26 @@ function define_DiffEq_timestep_cb()
         # TODO(bernhard): see initial prototype code... (script3)
 
         # DEBUG
-        # @info """t:$(round(t;digits=4)), DTI:$DTINEW, NITS:$(integrator.u[7+NLAYER+25]), sum(aux_du_BYFLI):$(sum(aux_du_BYFLI)), sum(aux_du_DSFLI):$(sum(aux_du_DSFLI))""" # , p_fu_SRFL:$p_fu_SRFL, du_GWFL:$du_GWFL
-        # p_fu_SRFL +
-        #                       sum(aux_du_BYFLI) +
-        #                       sum(aux_du_DSFLI) +
-        #                       du_GWFL
+        #@info """t:$(round(t;digits=4)), DTI:$DTINEW, DTRI:$DTRI, NITS:$(integrator.u[7+NLAYER+25]), sum(aux_du_BYFLI):$(sum(aux_du_BYFLI)), sum(aux_du_DSFLI):$(sum(aux_du_DSFLI))""" # , p_fu_SRFL:$p_fu_SRFL, du_GWFL:$du_GWFL
         # END DEBUG
 
         # save intermediate results for use in ODE (function f())
-        integrator.p[4][1] = aux_du_VRFLI[NLAYER]
-        integrator.p[4][2] = du_GWFL
-        integrator.p[4][3] = du_SEEP
-        integrator.p[4][4] = p_fu_SRFL
-        integrator.p[4][5] = p_fu_SLFL
-        integrator.p[4][6] = du_NTFLI
-        integrator.p[4][7] = aux_du_BYFLI
-        integrator.p[4][8] = aux_du_DSFLI
+        integrator.p[4][2] = aux_du_VRFLI[NLAYER]
+        integrator.p[4][3] = du_GWFL
+        integrator.p[4][4] = du_SEEP
+        integrator.p[4][5] = p_fu_SRFL
+        integrator.p[4][6] = p_fu_SLFL
+        integrator.p[4][7] = du_NTFLI
+        integrator.p[4][8] = aux_du_BYFLI
+        integrator.p[4][9] = aux_du_DSFLI
 
         # Force next time step to be: DTINEW
-        integrator.u[7+NLAYER+25] += 1 # cum_d_nits
+        integrator.dtcache = DTINEW # https://github.com/SciML/OrdinaryDiffEq.jl/issues/1351
         set_proposed_dt!(integrator, DTINEW)
+        # Update DTRI:
+        integrator.p[4][1] -= DTINEW
+        # Update NITS:
+        integrator.u[7+NLAYER+25] += 1 # cum_d_nits
 
 
         ##################
@@ -374,7 +395,8 @@ end
         (p_DT, NLAYER, IMODEL, compute_intermediate_quantities, Reset) = p[1][1]
 
         ## A) solution depenedent parameters (computed in callback):
-        (aux_du_VRFLI__NLAYER, du_GWFL, du_SEEP, p_fu_SRFL, p_fu_SLFL,
+        (DTRI, # DTRI unused
+        aux_du_VRFLI__NLAYER, du_GWFL, du_SEEP, p_fu_SRFL, p_fu_SLFL,
         du_NTFLI,
         aux_du_BYFLI,
         aux_du_DSFLI,) = p[4]
@@ -390,7 +412,7 @@ end
         #du[9] = 0
         #du[10] = 0
         #du[11] = 0
-        du[7:(7+(NLAYER-1))] = du_NTFLI[:]
+        du[7:(7+NLAYER-1)] = du_NTFLI[:]
 
         # Do not modify INTS, INTR, SNOW, CC, SNOWLQ
         # as they are separately modified by the callback.

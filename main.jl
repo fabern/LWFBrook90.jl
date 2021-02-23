@@ -123,23 +123,23 @@ u0 = LWFBrook90Julia.define_DiffEq_u0(u_GWAT_init,
 #   - p:      parameters
 
 # Define simulation time span:
-# tspan = (0.,  1.) # simulate 5 days
-# tspan = (0.,  100.) # simulate 100 days
-tspan = (minimum(input_meteo[:,"days"]),
-         maximum(input_meteo[:,"days"])) # simulate all available days
+# tspan = (0.,  5.) # simulate 5 days
+tspan = (0.,  100.) # simulate 100 days # NOTE: KAU bugs when at least 3*365
+# tspan = (minimum(input_meteo[:,"days"]),
+#          maximum(input_meteo[:,"days"])) # simulate all available days
 # tspan = (LWFBrook90Julia.DateTime2RelativeDaysFloat(DateTime(1980,1,1), reference_date),
 #          LWFBrook90Julia.DateTime2RelativeDaysFloat(DateTime(1985,1,1), reference_date)) # simulates selected period
 
 ode_LWFBrook90Julia = LWFBrook90Julia.define_DiffEq_ODE(u0, tspan, p)
-sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true; dt=0.0000001)
+sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true; dt=1e-1, adaptive = false) # dt will be overwritten, adaptive deacives DiffEq.jl adaptivity
 
 ## Benchmarking
-# @time sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true);
+# @time sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true; dt=1e-1, adaptive = false);
 # using BenchmarkTools # for benchmarking
 # @btime sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, Euler(), dt=1/12); # Instability detected aborting
 # @btime solve(ode_LWFBrook90Julia, Euler(), dt=1/24); # Instability detected aborting
 # @btime solve(ode_LWFBrook90Julia, dt=1/24); # uses DiffEq.jl adaptive timestepping, but initial dt of 1/24
-# sol_LWFBrook90Julia = @btime solve(ode_LWFBrook90Julia);
+# sol_LWFBrook90Julia = @btime solve(ode_LWFBrook90Julia; dt=1.0e-1, adaptive = false); # dt will be overwritten, adaptive deacives DiffEq.jl adaptivity
 
 ## Plotting
 # 1) very basic

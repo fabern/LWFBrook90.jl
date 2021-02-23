@@ -406,6 +406,10 @@ function INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
     # SWATMX(*) - maximum water storage for layer, mm
     # SWATI(*)  - water volume in layer, mm
     # VRFLI(*)  - vertical drainage rate from layer, mm/d
+    if DTI==0
+        #Infiltrator.@infiltrate
+        @error ("INFLOW() called with DTI == 0")
+    end
 
     VRFLI_posterior=fill(NaN, NLAYER) #TODO(bernhard): assess whether in-place INFLOW!() is faster
     INFLI=fill(NaN, NLAYER) #TODO(bernhard): assess whether in-place INFLOW!() is faster

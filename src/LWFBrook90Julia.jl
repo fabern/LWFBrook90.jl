@@ -3,6 +3,7 @@
 module LWFBrook90Julia
 
 using DifferentialEquations
+#using Infiltrator
 
 # on modules: https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
 include("module_CONSTANTS.jl");  # to bring into scope: using .CONSTANTS
