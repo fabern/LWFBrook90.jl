@@ -1,10 +1,10 @@
 # LWFBrook90Julia
 [![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://fabern.github.io/LWFBrook90Julia.jl/stable)
-<!--- [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://fabern.github.io/LWFBrook90Julia.jl/dev)-->
 [![Build Status](https://travis-ci.com/fabern/LWFBrook90Julia.jl.svg?token=Wmy6jUbNaUsJTRx8zJVf&branch=main)](https://travis-ci.com/fabern/LWFBrook90Julia.jl)
 [![Coverage](https://codecov.io/gh/fabern/LWFBrook90Julia.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/fabern/LWFBrook90Julia.jl)
 [![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/invenia/BlueStyle)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://fabern.github.io/LWFBrook90Julia.jl/stable)
+<!--- [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://fabern.github.io/LWFBrook90Julia.jl/dev)-->
 
 ## What is LWFBrook90Julia?
 Implementation of the LWF-BROOK90 hydrological model in Julia
@@ -25,7 +25,7 @@ LWFBrook90Julia is developed with the following objectives in mind:
 
 
 Figure 1: Summary of processes and state variables used in LWFBrook90Julia
-![Figure 1: Summary of processes and state variables (blue) used in LWFBrook90](https://github.com/fabern/LWFBrook90Julia.jl/tree/main/docs/src/figs/LWFBrook90Julia_overview_v1.4.png?raw=true)
+![Figure 1: Summary of processes and state variables (blue) used in LWFBrook90](https://github.com/fabern/LWFBrook90Julia.jl/blob/006-write-documentation/docs/src/figs/LWFBrook90Julia_overview_v1.4.png?raw=true)
 
 ## Acknowledgement
 Development of LWFBrook90Julia builds on the following works:
@@ -58,14 +58,19 @@ Note that some state variables (rain and snow interception storage, `u_INTR`, `u
 
 ## Example data set:
 Following plots illustrate results of the provided data set. The scalar state variables and depth-depenedent (vector) state variables can be plotted:
-![Figure 2: Example simulation: scalar results](docs/src/figs/git-hash-b3f7183/2021-02-24_16h56_LWFBrook90Julia_plot_u_scalar.png)<!---(https://github.com/fabern/LWFBrook90Julia.jl/tree/main/docs/src/figs/git-hash-b3f7183/2021-02-24_16h56_LWFBrook90Julia_plot_u_scalar.png?raw=true)-->
+![Figure 2: Example simulation: scalar results](https://github.com/fabern/LWFBrook90Julia.jl/blob/006-write-documentation/docs/src/figs/git-hash-b3f7183/2021-02-24_16h56_LWFBrook90Julia_plot_u_scalar.png?raw=true)
 
-![Figure 3: Example simulation: vector results soil water](docs/src/figs/git-hash-b3f7183/2021-02-24_16h56_LWFBrook90Julia_plot_u_vector.png)<!---(https://github.com/fabern/LWFBrook90Julia.jl/tree/main/docs/src/figs/git-hash-b3f7183/2021-02-24_16h56_LWFBrook90Julia_plot_u_vector.png?raw=true)-->
-
-Tests are run to assert agreement with results from LWFBrook90R. Currently minor discrepancies are still present (linked among other to the deactivation of "Reset==1" in LWFBrook90Julia and different time stepping algorithms).
-![Figure 4: Comparing daily outputs of LWFBrook90R and LWFBrook90Julia for example data set over a year](docs/src/figs/git-hash-b3f7183/2021-02-24_16h56_R-vs-Julia_comparison_DailyRawValues.png)<!---(https://github.com/fabern/LWFBrook90Julia.jl/tree/main/docs/src/figs/git-hash-b3f7183/2021-02-24_16h56_R-vs-Julia_comparison_DailyRawValues.png?raw=true)-->
+![Figure 3: Example simulation: vector results soil water](https://github.com/fabern/LWFBrook90Julia.jl/blob/006-write-documentation/docs/src/figs/git-hash-b3f7183/2021-02-24_16h56_LWFBrook90Julia_plot_u_vector.png?raw=true)
 
 Tests are run to assert agreement with results from LWFBrook90R. Currently minor discrepancies are still present (linked among other to the deactivation of "Reset==1" in LWFBrook90Julia and different time stepping algorithms).
-![Figure 4: Comparing daily outputs of LWFBrook90R and LWFBrook90Julia for example data set over a year](docs/src/figs/2021-02-23_21h25_R-vs-Julia_comparison_DailyRawValues.png)<!---(https://github.com/fabern/LWFBrook90Julia.jl/tree/main/docs/src/figs/2021-02-23_21h25_R-vs-Julia_comparison_DailyRawValues.png?raw=true)-->
+![Figure 4: Comparing daily outputs of LWFBrook90R and LWFBrook90Julia for example data set over a year](https://github.com/fabern/LWFBrook90Julia.jl/blob/006-write-documentation/docs/src/figs/git-hash-b3f7183/2021-02-24_16h56_R-vs-Julia_comparison_DailyRawValues.png?raw=true)
 
-TODO:resimulate last one and report here.
+![Figure 5: Comparing daily outputs of LWFBrook90R and LWFBrook90Julia for example data set over 3 months](https://github.com/fabern/LWFBrook90Julia.jl/blob/006-write-documentation/docs/src/figs/git-hash-b3f7183/2021-02-24_16h56_R-vs-Julia_comparison_DailyRawValues_first3months.png?raw=true)
+
+
+### Improve agreement
+Note that some features of LWFBrook90R are not implemented in the main version of LWFBrook90Julia. The time step adaptivity and Reset==1 are major ones that require some code refactoring that is not how the library for ODEs DiffEq.jl is intended to be used. Because of that implementation of these features is currently in a feature branch here on git `feature 005`. Below are some of the results of that code:
+
+![Figure 6: Comparing daily outputs of LWFBrook90R and experimental LWFBrook90Julia:feature-005 for example data set over a year](https://github.com/fabern/LWFBrook90Julia.jl/blob/006-write-documentation/docs/src/figs/git-hash-2-55ca42d-feature005/2021-02-24_19h10_R-vs-Julia_comparison_DailyRawValues.png?raw=true)
+
+![Figure 7: Comparing daily outputs of LWFBrook90R and experimental LWFBrook90Julia:feature-005 for example data set over 3 months](https://github.com/fabern/LWFBrook90Julia.jl/blob/006-write-documentation/docs/src/figs/git-hash-2-55ca42d-feature005/2021-02-24_19h10_R-vs-Julia_comparison_DailyRawValues_first3months.png?raw=true)
