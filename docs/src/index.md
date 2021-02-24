@@ -180,7 +180,3 @@ Possible calibration data could in the future could be:
 
 ```@index
 ```
-
-```@autodocs
-Modules = [LWFBrook90Julia]
-```
