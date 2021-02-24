@@ -10,6 +10,10 @@ LWFBrook90Julia is a 1D soil vegetation atmosphere transport model for forested 
 - TODO(bernhard): Remove paragraph on implementations: "LWFBrook90R is implemented in Fortran and has an R package as interface. LWFBrook90Julia is 100% implemented in Julia. It defines the dynamical system in terms of ordinary differential equations and corresponding (time-varying) parameters and makes use of the package DifferentialEquations.jl for solving this dynamical system for a specified time `tspan` and intial conditions `u0`."
 - TODO(bernhard): Refer the documentation of original Brook90: http://www.ecoshift.net/brook/b90doc.html
 
+## Documentation
+- Template for link to [LWFBrook90Julia - Page 1](@ref)
+
+
 ## Input data
 To run a simulation following input data are needed
 - siteparam
@@ -24,9 +28,11 @@ Which contain problem-specific settings such as site paramters, meteorological d
 
 These files need to be provided as CSVs in a single folder and can be loaded by `read_inputData(folder)`.
 
-The structure of these input data is illustrated by the example input data set located in "".
+The structure of these input data is illustrated by the example input data `BEA2016-*` set located in the folder `example/`.
 They are inspired by the definition of the input arguments to the function `run_LWFB90()` in the R package `LWFBrook90R`.
 [They are acutally equal with the arguments that are handed internally to the function `r_lwfbrook90()`]
+
+To load such input data and prepare a simulation follow the sample script `main.jl`, which makes use of the functions [`read_LWFBrook90R_inputData`](@ref) and [`derive_params_from_inputData`](@ref) among others.
 
 ### Needed time dependent parameters (daily time step): meteo data and stand properties
 

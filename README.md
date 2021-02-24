@@ -31,7 +31,7 @@ Development of LWFBrook90Julia builds on the following works:
 
 See the file `LICENSE` for the license of LWFBrook90Julia.
 
-Furthermore, Matthias Häni, Katrin Meusburger, Peter Waldner, Lorenz Walthert, Stephan Zimmermann of (WSL)[www.wsl.ch] and the long are gratefully acknowledged for providing example data files located in `example/BEA2016*`.
+Furthermore, Matthias Häni, Katrin Meusburger, Peter Waldner, Lorenz Walthert, Stephan Zimmermann of (WSL)[www.wsl.ch] and the Long-term Forest Ecosystem Research (LWF) project of WSL are gratefully acknowledged for providing example data files located in `example/BEA2016*`.
 
 ## For Users: getting started
 The file `main.jl` contains a setup and simple plotting command to get started with a first simulation.

@@ -7,27 +7,19 @@ using Interpolations: interpolate, BSpline, Constant, scale, extrapolate
 using DataFramesMeta
 using Dates: DateTime
 
-export define_Globals_ParametersAndVariables
-export derive_params_from_input
+export derive_params_from_inputData
 
 #######################
 #######################
 #######################
 # Exported functions
 
-"""define_Globals_ParametersAndVariables()\n Function that defines many constant parameters. TO BE REDEFINED.
 """
-function define_Globals_ParametersAndVariables()
-    return Nothing
-    # TODO(bernhard): is this needed?
-end
-
-"""
-derive_params_from_input(input_meteo::DataFrame, input_param::DataFrame, input_siteparam::DataFrame,
+derive_params_from_inputData(input_meteo::DataFrame, input_param::DataFrame, input_siteparam::DataFrame,
 input_precdat::DataFrame, input_pdur::DataFrame, input_soil_materials::DataFrame, input_soil_nodes::DataFrame)\n
 Takes input data sets and defines parameters needed for simulation.
 """
-function derive_params_from_input(input_meteo::DataFrame,
+function derive_params_from_inputData(input_meteo::DataFrame,
                                   input_param::DataFrame,
                                   input_siteparam::DataFrame,
                                   input_precdat::DataFrame,

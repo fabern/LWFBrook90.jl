@@ -17,7 +17,10 @@ inputs = [# ("ALV8101_sen2-reset-FALSE"            , "testdata-ALV/"),
           # ("SW-2020_fig_1_evergreen-reset-TRUE"  , "testdata-KAU/"),
           ]
 
+
 # loop over inputs
+# input_prefix = inputs[1][1]
+# subfolder    = inputs[1][2]
 for (input_prefix, subfolder) in inputs
 input_path = "../../../LWF-Sites-Data-Download/TODO__2021-01-02_generate_2010-2021_LWFBrook_dataset/test-script/"*subfolder*input_prefix*"-input/"
 
@@ -35,14 +38,14 @@ input_path = "../../../LWF-Sites-Data-Download/TODO__2021-01-02_generate_2010-20
 
 # 1c) Parse loaded/redefined input files
 (pfile_meteo, pfile_param, pfile_siteparam, pfile_precdat, pfile_pdur, pfile_soil) =
-    LWFBrook90Julia.GLBLDECL.derive_params_from_input(input_meteo,
-                                                      input_param,
-                                                      input_siteparam,
-                                                      input_precdat,
-                                                      input_pdur,
-                                                      input_soil_materials,
-                                                      input_soil_nodes,
-                                                      input_reference_date)
+    derive_params_from_inputData(input_meteo,
+                                 input_param,
+                                 input_siteparam,
+                                 input_precdat,
+                                 input_pdur,
+                                 input_soil_materials,
+                                 input_soil_nodes,
+                                 input_reference_date)
 
 ####################
 # Define simulation
