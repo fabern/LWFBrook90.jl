@@ -23,10 +23,8 @@ LWFBrook90Julia is developed with the following objectives in mind:
 - [ ] model flexibility allowing to reparametrize processes (possibly resulting in a [flexible model framework](https://presentations.copernicus.org/EGU2020/EGU2020-17975_presentation.pdf))
 - [ ] support for stable isotopes (δ18O and δ2H) by including transport equation and fractionation processes
 
-
-| <img src="https://github.com/fabern/LWFBrook90Julia.jl/blob/main/docs/src/figs/LWFBrook90Julia_overview_v1.4.png?raw=true" width="400">|
-|:--:|
-| Figure 1: Summary of processes and state variables used in LWFBrook90Julia |
+<p align="center"><img src="https://github.com/fabern/LWFBrook90Julia.jl/blob/main/docs/src/figs/LWFBrook90Julia_overview_v1.4.png?raw=true" width="400"><p>
+<p align="center">Figure 1: Summary of processes and state variables used in LWFBrook90Julia<p>
 
 
 ## Acknowledgement
