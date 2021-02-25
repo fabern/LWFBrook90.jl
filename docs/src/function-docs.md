@@ -48,4 +48,5 @@ Pages   = ["module_CONSTANTS.jl",
            "module_SNO.jl",
            "module_EVP.jl"
            ]
+Order = [:constant, :type, :function, :macro]
 ```

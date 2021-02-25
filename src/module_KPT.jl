@@ -1,58 +1,61 @@
 # fabian.bernhard@wsl.ch, 2021-02-03
 
+@doc raw"""
+# Soil water properties
+
+Text copied from Ecoshift on module KPT:
+
+"
+This section describes the soil water properties in BROOK90, and the four routines used to
+calculate their values. The section also discusses the concept of field capacity, and how
+it is or is not used. Finally the section comments on the selection of soil water
+parameters and the use of the menu item EditParameters-KPTGraph. This section uses both
+the standard algebraic notation for soil water variables as in Clapp and Hornberger(1978)
+and the BROOK90 variable names. The correspondence is
+θ  = THETA   W  = WETNES  ψ  = PSIM    K  = KK    b = BEXP
+θf = THETAF  Wf = WETF    ψf = PSIF    Kf = KF    n = CHN
+θs = THSAT   Wi = WETINF  ψi = PSIINF  Ks = KSAT  m = CHM
+T  = THICK   S  = STONEF
+
+Ecoshift-KPT:
+Functional relationships among soil-water content, θ, matric potential, ψ,
+and hydraulic conductivity, K, are required for any simulation that moves water through
+the soil. There is a rather vast literature on this subject, though much of it emphasizes
+agricultural soils rather than natural soils, which are less disturbed and higher in
+organic matter.
+
+##   Clapp Hornberger (IMODEL=0) see: http://www.ecoshift.net/brook/kpt.html
+BROOK90 uses a modification of the Campbell (1974) expressions with the near-saturation
+interpolation of Clapp and Hornberger (1978).
+1) W = (θ - θr) / θs - θr)
+2) Ψ = Ψs*W^(-b)              with b=1/λ
+3) K = Ks*W^(2b+3)            with b=1/λ
+near saturated:
+4) Ψ = -m*(W - n)*(1 - W)     = (-mW + mn) +m*W^2 -Wmn = m*W^2 -m*(1+n)*W + m*n
+5)      m = -Ψi/(1 - Wi) * [1/(1-Wi) - b/Wi]
+6)      n = 2 Wi - 1 + (b*Ψi / (m*Wi))  ### where Ψi is Ψ at Wi obtained from 2)
+clearly unsaturated:
+7) Ψ = Ψf*(W/Wf)^(-b)       = Ψf*Wf^(b)*W^(-b)
+8) K = Kf*(W/Wf)^(2b+3)  ### where Wf = θf/θs is the wetness at θf (with θr=0)
+
+   ==> dψdW = Ψf*Wf^(b)*    (-b*W^(-b-1))    # in clearly unsaturated range
+   ==> dψdW = 2*m*W - m*(1+n)
+
+##   Mualem van Genuchten (iModel=1)
+1) W = 1/(1 + (αh)^n )^m                         (Radcliffe eq.2.47)
+2) ψ = -1/α * [ (1-W^(1/m))*(W^(-1/m)) ]^(1/n)   (Radcliffe p.122)
+...
+8) K = Ks*W^l*[ 1 - (1-W^(1/m))^m ]^2
+
+   ==> dψdW = .....
+"
+
+"""
 module KPT # SOIL WATER PROPERTIES
 
 export SOILPAR, derive_auxiliary_SOILVAR
 
 using Roots # to find wetness for a given hydraulic conductivity
-
- # SOIL WATER PROPERTIES
-
-# Ecoshift-KPT:
-# This section describes the soil water properties in BROOK90, and the four routines used to
-# calculate their values. The section also discusses the concept of field capacity, and how
-# it is or is not used. Finally the section comments on the selection of soil water
-# parameters and the use of the menu item EditParameters-KPTGraph. This section uses both
-# the standard algebraic notation for soil water variables as in Clapp and Hornberger(1978)
-# and the BROOK90 variable names. The correspondence is
-# θ  = THETA   W  = WETNES  ψ  = PSIM    K  = KK    b = BEXP
-# θf = THETAF  Wf = WETF    ψf = PSIF    Kf = KF    n = CHN
-# θs = THSAT   Wi = WETINF  ψi = PSIINF  Ks = KSAT  m = CHM
-# T  = THICK   S  = STONEF
-
-# Ecoshift-KPT:
-# Functional relationships among soil-water content, θ, matric potential, ψ,
-# and hydraulic conductivity, K, are required for any simulation that moves water through
-# the soil. There is a rather vast literature on this subject, though much of it emphasizes
-# agricultural soils rather than natural soils, which are less disturbed and higher in
-# organic matter.
-
-###   Clapp Hornberger (IMODEL=0) see: http://www.ecoshift.net/brook/kpt.html
-# BROOK90 uses a modification of the Campbell (1974) expressions with the near-saturation
-# interpolation of Clapp and Hornberger (1978).
-# 1) W = (θ - θr) / θs - θr)
-# 2) Ψ = Ψs*W^(-b)              with b=1/λ
-# 3) K = Ks*W^(2b+3)            with b=1/λ
-# near saturated:
-# 4) Ψ = -m*(W - n)*(1 - W)     = (-mW + mn) +m*W^2 -Wmn = m*W^2 -m*(1+n)*W + m*n
-# 5)      m = -Ψi/(1 - Wi) * [1/(1-Wi) - b/Wi]
-# 6)      n = 2 Wi - 1 + (b*Ψi / (m*Wi))  ### where Ψi is Ψ at Wi obtained from 2)
-# clearly unsaturated:
-# 7) Ψ = Ψf*(W/Wf)^(-b)       = Ψf*Wf^(b)*W^(-b)
-# 8) K = Kf*(W/Wf)^(2b+3)  ### where Wf = θf/θs is the wetness at θf (with θr=0)
-#
-#    ==> dψdW = Ψf*Wf^(b)*    (-b*W^(-b-1))    # in clearly unsaturated range
-#    ==> dψdW = 2*m*W - m*(1+n)
-
-###   Mualem van Genuchten (iModel=1)
-# 1) W = 1/(1 + (αh)^n )^m                         (Radcliffe eq.2.47)
-# 2) ψ = -1/α * [ (1-W^(1/m))*(W^(-1/m)) ]^(1/n)   (Radcliffe p.122)
-# ...
-# 8) K = Ks*W^l*[ 1 - (1-W^(1/m))^m ]^2
-#
-#    ==> dψdW = .....
-
-
 
 
 ### ### Parameters

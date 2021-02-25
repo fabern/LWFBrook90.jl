@@ -19,9 +19,9 @@ inputs = [# ("ALV8101_sen2-reset-FALSE"            , "testdata-ALV/"),
 
 
 # loop over inputs
-# input_prefix = inputs[1][1]
-# subfolder    = inputs[1][2]
-for (input_prefix, subfolder) in inputs
+input_prefix = inputs[1][1]
+subfolder    = inputs[1][2]
+# for (input_prefix, subfolder) in inputs
 input_path = "../../../LWF-Sites-Data-Download/TODO__2021-01-02_generate_2010-2021_LWFBrook_dataset/test-script/"*subfolder*input_prefix*"-input/"
 
 (input_meteo,

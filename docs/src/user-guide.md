@@ -10,22 +10,19 @@ First, download and install Julia: [https://julialang.org/downloads/](https://ju
 To install LWFBrook90.jl open a Julia REPL and run:
 ```Julia
 using Pkg
-Pkg.add("LWFBrook90.jl")
+Pkg.add("LWFBrook90")
 ```
-!!! note
-
-    Currently the package is not yet registerd. So above command will not work.
 
 To install a current development version of the package you can install it directly from GitHub using:
 ```Julia
 using Pkg
-Pkg.add(PackageSpec(name = "Omniscape", rev = "main"))
+Pkg.add(PackageSpec(name = "LWFBrook90", rev = "develop"))
 ```
 
 Dependencies of LWFBrookJulia.jl should automatically be installed.
 
 ### Usage
-Check out a step by step in guide for installation in [Example](@ref)
+Check out a step-by-step in guide for installation in section [Example](@ref)
 
 The steps in a typical simulation script are:
 - load the package `using LWFBrook90`
@@ -33,7 +30,10 @@ The steps in a typical simulation script are:
 - read input data
 - set up model options
 - set up an `ODE` problem (`u0`,`tspan`, `p`) and solve it with DifferentialEquations.jl
-- plot and/or postprocess output
+- plot and/or postprocess simulation results
+
+LWFBrook90.jl can output additional quantities in daily resolution derived during simulation. Monthly or yearly quantities can be derived in the post processing.
+For performance reasons, e.g. for Bayesian parameter estimation, computation of these additional quantities can also be deactivated during simulation, and they could be calculated in a post-processing step from the state vector (not yet implemented).
 
 
 
@@ -157,20 +157,21 @@ Time dependent parameters (climate and vegetation) are provided in the following
 
 
 
-!!! note
-
-    TODO(bernhard): clean up documentation from here on...
-
 
 ## Calibration data (calibration not yet implemented)
-Possible calibration data could in the future could be:
+Roadmap to include calibration data intends to allow inclusion of:
 - Throughfall amounts (for parametrisation of interception)
 - Soil moisture (θ)
 - Soil matric potential (ψ)
 
 
 
+
+
+
 !!! note
+
+    USER GUIDE ENDS HERE.
 
     TODO(bernhard): after impelementation of function `read_inputData`
     Below is an illustration of the initial data sets that could be used.

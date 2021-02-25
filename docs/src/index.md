@@ -6,7 +6,7 @@ Pages = ["index.md",
          "model.md",
          "user-guide.md",
          "example.md",
-         "function-refs.md",
+         "code-lst.md",
          "function-docs.md"]
 Depth = 2
 ```
@@ -16,13 +16,13 @@ Depth = 2
 ## About LWFBrook90.jl
 LWFBrook90.jl implements a 1D soil vegetation atmosphere transport model.
 Intended use cases of this impelemntation are:
-- efficient model calibration for data analysis
 - support of stable isotopes (δ¹⁸O and δ²H)
-- increased flexibility for reparametrizations
+- efficient model calibration for data analysis
+- increased model flexibility
 
 To read about the model structure, see section [SVAT Model](@ref).
 For a quick start refer to the step-by-step guide in section [Example](@ref)
-For further details read through the [User Guide](@ref) or refer to sections [Function References](@ref) and [Function Documentations](@ref) for further technical intricacies e.g. for development of the package.
+For further details read through the section [User Guide](@ref) or refer to sections [Code Listing](@ref) and [Function Documentations](@ref) for further technical intricacies e.g. for development of the package.
 
 
 

@@ -15,13 +15,15 @@ makedocs(;
         "About"        => "index.md",
         "SVAT Model"   => "model.md",
         "User Guide"   => "user-guide.md",
-        "Examples"     => "example.md",
-        "Function References" => "function-refs.md",
-        "Function Documentation" => "function-docs.md"
+        "Example"      => "example.md",
+        "Code Listing" => "code-lst.md",
+        "Function Documentations" => "function-docs.md"
     ],
 )
 
 deploydocs(;
     repo="github.com/fabern/LWFBrook90.jl",
-    devbranch = "main"
+    devbranch = "main",
+    devurl    = "dev",
+    branch    = "gh-pages"
 )
