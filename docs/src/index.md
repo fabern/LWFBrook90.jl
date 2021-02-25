@@ -1,5 +1,5 @@
-# LWFBrook90Julia.jl
-Package repository: [https://github.com/fabern/LWFBrook90Julia.jl](https://github.com/fabern/LWFBrook90Julia.jl)
+# LWFBrook90.jl
+Package repository: [https://github.com/fabern/LWFBrook90.jl](https://github.com/fabern/LWFBrook90.jl)
 
 ```@contents
 Pages = ["index.md",
@@ -13,8 +13,8 @@ Depth = 2
 
 
 
-## About LWFBrook90Julia.jl
-LWFBrook90Julia.jl implements a 1D soil vegetation atmosphere transport model.
+## About LWFBrook90.jl
+LWFBrook90.jl implements a 1D soil vegetation atmosphere transport model.
 Intended use cases of this impelemntation are:
 - efficient model calibration for data analysis
 - support of stable isotopes (δ¹⁸O and δ²H)
@@ -26,9 +26,9 @@ For further details read through the [User Guide](@ref) or refer to sections [Fu
 
 
 
-## Citing LWFBrook90Julia.jl
-When using LWFBrook90Julia.jl please cite <!-- [TODO.et.al (2021)](TODO) -->
->TODO: generate citation: (Journal of Open Source Software? Zenodo? Alternatives?)
+## Citing LWFBrook90.jl
+When using LWFBrook90.jl please cite <!-- [TODO.et.al (2021)](TODO) -->
+>TODO: generate citation: (Journal of Open Source Software? Zenodo? Journal of Open Research Software (DiffEq.jl)? Alternatives?)
 
 
 

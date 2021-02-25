@@ -28,8 +28,8 @@ jobs:
           Pkg.develop(PackageSpec(path=pwd()))
           Pkg.instantiate()
           using Documenter: doctest
-          using LWFBrook90Julia
-          doctest(LWFBrook90Julia)
+          using LWFBrook90
+          doctest(LWFBrook90)
           include("docs/make.jl")'
       after_success: skip
 after_success:
@@ -39,4 +39,3 @@ after_success:
       Pkg.add("Coverage")
       using Coverage
       Codecov.submit(process_folder())'
-      

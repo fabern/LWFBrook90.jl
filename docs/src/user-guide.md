@@ -7,10 +7,10 @@
 ### Installation
 First, download and install Julia: [https://julialang.org/downloads/](https://julialang.org/downloads/).
 
-To install LWFBrook90Julia.jl open a Julia REPL and run:
+To install LWFBrook90.jl open a Julia REPL and run:
 ```Julia
 using Pkg
-Pkg.add("LWFBrook90Julia")
+Pkg.add("LWFBrook90.jl")
 ```
 !!! note
 
@@ -28,7 +28,7 @@ Dependencies of LWFBrookJulia.jl should automatically be installed.
 Check out a step by step in guide for installation in [Example](@ref)
 
 The steps in a typical simulation script are:
-- load the package `using LWFBrook90Julia`
+- load the package `using LWFBrook90`
 - load the package dependency `using DifferentialEquations`
 - read input data
 - set up model options
@@ -56,7 +56,7 @@ The input files can be specified in two ways:
 The first input data is not yet implemented.
 The second type of input data is more detailed and should be generated automatically by the user. The structure of the second type of input data is illustrated by the example input data `BEA2016-*` set located in the folder `example/`.
 
-An easy way to generate the second type of input data is by setting up a simulation with the R package [LWFBrook90R (v0.4.3)](https://github.com/pschmidtwalter/LWFBrook90R#usage). Instead of running the simulation with `run_LWFB90()`, the same arguments can be used to generate the input files for LWFBrook90Julia using the R function provided in the file `generate_LWFBrook90Julia_Input.R`.
+An easy way to generate the second type of input data is by setting up a simulation with the R package [LWFBrook90R (v0.4.3)](https://github.com/pschmidtwalter/LWFBrook90R#usage). Instead of running the simulation with `run_LWFB90()`, the same arguments can be used to generate the input files for LWFBrook90.jl using the R function provided in the file `generate_LWFBrook90jl_Input.R`.
 
 To load load input data and prepare a simulation follow the instructions in section [Example](@ref) or alternatively use the sample script `main.jl`.
 

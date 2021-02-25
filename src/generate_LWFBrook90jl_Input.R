@@ -1,16 +1,16 @@
 #################
 # Author: fabian.bernhard@wsl.ch
 # Date: 2021-02-11
-# Task: Generate input files for LWFBrook90Julia
+# Task: Generate input files for LWFBrook90.jl
 # Description: This code defines an R function that takes the same arguements as
 #              LWFBrook90R::run_LWFB90() and generates the corresponding Julia
 #              input functions.
 #
 #              If desired LWFBrook90R can also be run and output stored in csv
-#              files for comparison with LWFBrook90Julia.
+#              files for comparison with LWFBrook90.
 #################
 
-# Note that currently only basic functions are supported by LWFBrook90Julia.
+# Note that currently only basic functions are supported by LWFBrook90.
 
 
 ####### Define function

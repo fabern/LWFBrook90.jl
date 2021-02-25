@@ -6,7 +6,7 @@ Example data from Beatenberg is located in subfolder `example/`. WSL is acknowle
 
 Load packages:
 ```Julia
-using LWFBrook90Julia
+using LWFBrook90
 using DifferentialEquations
 ```
 
@@ -113,11 +113,11 @@ elseif IMODEL == 1
     # TODO(bernhard): store above quantities somewhere else than p[1][1][3] and pfile_soil?
     for i = 1:NLAYER
         # Define initial u_SWATI based on input parameter
-        u_aux_WETNESinit_i = LWFBrook90Julia.KPT.FWETNES_MvG(u_aux_PSIM_init[i],
+        u_aux_WETNESinit_i = LWFBrook90.jl.KPT.FWETNES_MvG(u_aux_PSIM_init[i],
                                                              p_MvGα[i],
                                                              p_MvGn[i])
         u_SWATIinit[i]     = p_SWATMX[i]/p_THSAT[i] *
-                             LWFBrook90Julia.KPT.FTheta_MvG(u_aux_WETNESinit_i,
+                             LWFBrook90.jl.KPT.FTheta_MvG(u_aux_WETNESinit_i,
                                                             p_THSAT[i],
                                                             p_θr[i])
 
@@ -152,14 +152,14 @@ u0 = define_LWFB90_u0(u_GWAT_init,
 tspan = (minimum(input_meteo[:,"days"]),
          maximum(input_meteo[:,"days"])) # simulate all available days
 # Define ODE:
-ode_LWFBrook90Julia = define_LWFB90_ODE(u0, tspan, p)
+ode_LWFBrook90 = define_LWFB90_ODE(u0, tspan, p)
 
 # Alternative definitions of tspan:
 # tspan = (0.,  5.) # simulate 5 days
 # tspan = (0.,  100.) # simulate 100 days
 # simulates specific period:
-# tspan = (LWFBrook90Julia.DateTime2RelativeDaysFloat(DateTime(1980,1,1), reference_date),
-#          LWFBrook90Julia.DateTime2RelativeDaysFloat(DateTime(1985,1,1), reference_date))
+# tspan = (LWFBrook90.jl.DateTime2RelativeDaysFloat(DateTime(1980,1,1), reference_date),
+#          LWFBrook90.jl.DateTime2RelativeDaysFloat(DateTime(1985,1,1), reference_date))
 ####################
 ```
 
@@ -168,7 +168,7 @@ Then the ODE problem can be solved:
 ```Julia
 ####################
 ## Solve ODE:
-sol_LWFBrook90Julia = solve(ode_LWFBrook90Julia, progress = true;
+sol_LWFBrook90 = solve(ode_LWFBrook90, progress = true;
     saveat = tspan[1]:tspan[2], dt=1e-6, adaptive = true);
 ####################
 ```
@@ -184,15 +184,15 @@ The generated solution can be plotted using the plotting recipes of DifferntialE
 ## Plotting
 using Plots
 # Plot 1
-plot(sol_LWFBrook90Julia;
+plot(sol_LWFBrook90;
     vars = [1, 2, 3, 4, 5, 6],
     label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
 
 # Plot 2
 # http://docs.juliaplots.org/latest/generated/gr/#gr-ref43
-x = LWFBrook90Julia.RelativeDaysFloat2DateTime.(sol_LWFBrook90Julia.t, input_reference_date)
+x = LWFBrook90.jl.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_reference_date)
 y = cumsum(pfile_soil["THICK"])
-z = sol_LWFBrook90Julia[6 .+ (1:NLAYER), :]./pfile_soil["THICK"]
+z = sol_LWFBrook90[6 .+ (1:NLAYER), :]./pfile_soil["THICK"]
 heatmap(x, y, z, yflip = true,
         xlabel = "Date",
         ylabel = "Depth",
@@ -221,28 +221,28 @@ Tests are run to assert agreement with results from LWFBrook90R. Visualizations 
 ```@raw html
 <p align="center">
 <img src="figs/git-hash-b3f7183/2021-02-24_16h56_R-vs-Julia_comparison_DailyRawValues.png" width="400"><br>
-<br><em><b>Figure 4</b>: Comparing daily outputs of LWFBrook90R and LWFBrook90Julia for example data set over a year</em><br>
+<br><em><b>Figure 4</b>: Comparing daily outputs of LWFBrook90R and LWFBrook90.jl for example data set over a year</em><br>
 <p>
 ```
 ```@raw html
 <p align="center">
 <img src="figs/git-hash-b3f7183/2021-02-24_16h56_R-vs-Julia_comparison_DailyRawValues_first3months.png" width="400"><br>
-<br><em><b>Figure 5</b>: Comparing daily outputs of LWFBrook90R and LWFBrook90Julia for example data set over 3 months</em><br>
+<br><em><b>Figure 5</b>: Comparing daily outputs of LWFBrook90R and LWFBrook90.jl for example data set over 3 months</em><br>
 <p>
 ```
 
-Note that some features of LWFBrook90R are not implemented in the main version of LWFBrook90Julia. The time step adaptivity and `Reset==1` are major ones that require some code refactoring that is not how the library for ODEs DiffEq.jl is intended to be used. Because of that implementation of these features is currently in a feature branch here on git `feature 005`. Below are some of the results of that code:
+Note that some features of LWFBrook90R are not implemented in the main version of LWFBrook90.jl. The time step adaptivity and `Reset==1` are major ones that require some code refactoring that is not how the library for ODEs DiffEq.jl is intended to be used. Because of that implementation of these features is currently in a feature branch here on git `feature 005`. Below are some of the results of that code:
 
 ```@raw html
 <p align="center">
 <img src="figs/git-hash-2-55ca42d-feature005/2021-02-24_19h10_R-vs-Julia_comparison_DailyRawValues.png" width="400"><br>
-<br><em><b>Figure 6</b>: Comparing daily outputs of LWFBrook90R and experimental LWFBrook90Julia:feature-005 for example data set over a year</em><br>
+<br><em><b>Figure 6</b>: Comparing daily outputs of LWFBrook90R and experimental LWFBrook90.jl:feature-005 for example data set over a year</em><br>
 <p>
 ```
 
 ```@raw html
 <p align="center">
 <img src="figs/git-hash-2-55ca42d-feature005/2021-02-24_19h10_R-vs-Julia_comparison_DailyRawValues_first3months.png" width="400"><br>
-<br><em><b>Figure 7</b>: Comparing daily outputs of LWFBrook90R and experimental LWFBrook90Julia:feature-005 for example data set over 3 months</em><br>
+<br><em><b>Figure 7</b>: Comparing daily outputs of LWFBrook90R and experimental LWFBrook90.jl:feature-005 for example data set over 3 months</em><br>
 <p>
 ```

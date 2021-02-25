@@ -1,6 +1,6 @@
 # fabian.bernhard@wsl.ch, 2021-02-01
 
-module LWFBrook90Julia
+module LWFBrook90
 
 using DifferentialEquations
 export read_LWFBrook90R_inputData, derive_params_from_inputData
