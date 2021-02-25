@@ -8,22 +8,6 @@ using ProgressLogging
 input_prefix = "BEA2016-reset-FALSE"
 input_path = "example/"*input_prefix*"-input/"
 
-# define list of inputs with input_prefix, subfolder
-inputs = [# ("ALV8101_sen2-reset-FALSE"            , "testdata-ALV/"),
-          # ("ALV8101_sen2-reset-TRUE"             , "testdata-ALV/"),
-          ("BEA2016-reset-FALSE"                 , "testdata-BEA/"),
-          ("BEA2016-reset-TRUE"                  , "testdata-BEA/"),
-          # ("SW-2020_fig_1_evergreen-reset-FALSE" , "testdata-KAU/"),
-          # ("SW-2020_fig_1_evergreen-reset-TRUE"  , "testdata-KAU/"),
-          ]
-
-
-# loop over inputs
-input_prefix = inputs[1][1]
-subfolder    = inputs[1][2]
-# for (input_prefix, subfolder) in inputs
-input_path = "../../../LWF-Sites-Data-Download/TODO__2021-01-02_generate_2010-2021_LWFBrook_dataset/test-script/"*subfolder*input_prefix*"-input/"
-
 (input_meteo,
     input_param,
     input_siteparam,
@@ -88,9 +72,11 @@ u_aux_PSIM_init = pfile_soil["PSIM_init"]
 ######
 # Transform initial value of auxiliary state u_aux_PSIM_init into state u_SWATIinit:
 u_SWATIinit  = fill(NaN, NLAYER)
+
 if any( u_aux_PSIM_init.> 0)
     error("Initial matrix psi must be negative or zero")
 end
+
 if IMODEL == 0
     error("IMODEL==0 is not implemented to get initial SWATI.")
     # TODO(bernhard): implement this.
@@ -180,6 +166,4 @@ sol_LWFBrook90 = solve(ode_LWFBrook90, progress = true;
 #         xlabel = "Date",
 #         ylabel = "Depth",
 #         colorbar_title = "θ")
-include("main_plot_advanced.jl")
 ####################
-end
