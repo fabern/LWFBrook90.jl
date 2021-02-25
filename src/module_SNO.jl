@@ -1,5 +1,70 @@
 # fabian.bernhard@wsl.ch, 2021-02-03
 
+@doc raw"""
+# Snow accumulation and melt
+
+Text copied from Ecoshift on module SNO:
+
+"
+Simulation of snow accumulation and melt is a complex subject (U.S. Army Corps Eng. 1956,
+Anderson and Crawford 1964, Colbeck and Ray 1979). Detailed expressions for the energy
+balance of snow surfaces have been developed (Anderson 1976, Dingman 1994) but they are
+not generalized to all cover types and are too complex for BROOK90. Leavesley and
+Striffler (1979) give an energy balance model that includes radiation melt and the effects
+of canopy cover on it, but ignores convection-condensation melt. More complex algorithms
+could be developed, but Colbeck et al. (1979) say "the energy exchange processes between
+snow and a forest cover are not well enough understood to allow detailed modelling of the
+melt process through use of the energy equation." The energy balance is made complicated
+because of the heat of fusion in the water-ice phase change, and because the surface vapor
+pressure for melting snow is fixed. Application of the Shuttleworth-Wallace two layer
+approach to snow under sparse canopies remains in the future.
+
+BROOK90 therefore falls back on the classic degree-day method for estimating snow energy
+balance. Anderson (1979, p. 342) states that "Air temperature (ambient) is an adequate
+index to surface energy exchange in most cases." This is not a perfect solution as
+Anderson points out three cases in which air temperature fails: 1) warm temperatures with
+little wind causes overestimates of melt, 2) high dewpoint with high wind causes
+underestimates, and 3) low temperatures with clear sky and ripe snow causes
+underestimates. A modified degree-day method that incorporates solar radiation and wind
+speed could be added but would require development for sparse canopies. Another
+improvement would separate the day into daytime and nighttime as is done in BROOK90 for
+evaporation. But BROOK90 currently uses only the mean daily temperature (TA) for the snow
+energy balance.
+
+The "water equivalent" of snow (SNOW, mm) is the depth of water a snowpack would produce
+if it were all melted; this is the BROOK90 variable that represents the snowpack. The
+actual depth of snow, assuming a constant snow density (SNODEN), is used only to calculate
+the amount of the canopy above the snow in subroutine CANOPY. Variable snow density (mass
+per unit volume) is not simulated in BROOK90. When the snow is colder than 0°C, it has a
+"cold content" (CC, MJ/m2), which is the energy needed to warm the snow to 0°C. When the
+snow is at 0°C, part of SNOW can be liquid water (SNOWLQ, mm). The maximum liquid water
+that can be retained by the snowpack without draining is a constant fraction (MAXLQF) of
+SNOW; CC and SNOWLQ are always initialized as zero in BROOK90, so any initial SNOW is
+considered to be at 0°C with no liquid water.
+
+Groundmelt is snowmelt at the bottom of a snowpack; it occurs because of heat conduction
+from the soil whenever the soil is unfrozen. A constant groundmelt rate (GRDMLT, mm/d) is
+an constant parameter in BROOK90 and is applied whenever there is snow on the ground. The
+possibilities of frozen soil or variable groundmelt are not considered.
+
+Snowmelt (SMLT, mm/d) is the sum of groundmelt and drainage of excess liquid water from
+the snowpack. Drainage occurs only after the snowpack is both isothermal at 0°C and is
+holding the maximum possible liquid water; the snowpack is then "ripe". The gains and
+losses of liquid water by the snowpack, including the refreezing of rain on cold snow, are
+handled in the somewhat complicated subroutine SNOWPACK.
+
+BROOK90 assumes that the snowpack is always isothermal. In reality, large and variable
+temperature gradients can exist in thick snowpacks; simulating these is beyond the scope
+of BROOK90. The snowpack temperature (TSNOW) at the beginning of the day is calculated in
+MSBSETVARS from the cold content
+
+TSNOW = -CC / (CVICE * SNOW)
+
+where CVICE is the heat capacity of ice (0.00192 MJ m-2 mm-1 K-1) (Leavesley and
+Striffler, 1979). TSNOW is used both in calculating snow evaporation (SNVP) and snow
+energy flux (SNOEN).
+"
+"""
 module SNO # SNOW ACCUMULATION AND MELT
 
 using ..CONSTANTS: p_CVICE, p_CVLQ, p_LF, p_WTOMJ, p_LS, p_CPRHO, p_GAMMA # https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
@@ -7,64 +72,6 @@ using ..PET: ESAT, SWGRA
 
 export SNOFRAC, SNOVAP, SNOENRGY
 
-# Ecoshift-SNO:
-# Simulation of snow accumulation and melt is a complex subject (U.S. Army Corps Eng. 1956,
-# Anderson and Crawford 1964, Colbeck and Ray 1979). Detailed expressions for the energy
-# balance of snow surfaces have been developed (Anderson 1976, Dingman 1994) but they are
-# not generalized to all cover types and are too complex for BROOK90. Leavesley and
-# Striffler (1979) give an energy balance model that includes radiation melt and the effects
-# of canopy cover on it, but ignores convection-condensation melt. More complex algorithms
-# could be developed, but Colbeck et al. (1979) say "the energy exchange processes between
-# snow and a forest cover are not well enough understood to allow detailed modelling of the
-# melt process through use of the energy equation." The energy balance is made complicated
-# because of the heat of fusion in the water-ice phase change, and because the surface vapor
-# pressure for melting snow is fixed. Application of the Shuttleworth-Wallace two layer
-# approach to snow under sparse canopies remains in the future.
-
-# BROOK90 therefore falls back on the classic degree-day method for estimating snow energy
-# balance. Anderson (1979, p. 342) states that "Air temperature (ambient) is an adequate
-# index to surface energy exchange in most cases." This is not a perfect solution as
-# Anderson points out three cases in which air temperature fails: 1) warm temperatures with
-# little wind causes overestimates of melt, 2) high dewpoint with high wind causes
-# underestimates, and 3) low temperatures with clear sky and ripe snow causes
-# underestimates. A modified degree-day method that incorporates solar radiation and wind
-# speed could be added but would require development for sparse canopies. Another
-# improvement would separate the day into daytime and nighttime as is done in BROOK90 for
-# evaporation. But BROOK90 currently uses only the mean daily temperature (TA) for the snow
-# energy balance.
-
-# The "water equivalent" of snow (SNOW, mm) is the depth of water a snowpack would produce
-# if it were all melted; this is the BROOK90 variable that represents the snowpack. The
-# actual depth of snow, assuming a constant snow density (SNODEN), is used only to calculate
-# the amount of the canopy above the snow in subroutine CANOPY. Variable snow density (mass
-# per unit volume) is not simulated in BROOK90. When the snow is colder than 0°C, it has a
-# "cold content" (CC, MJ/m2), which is the energy needed to warm the snow to 0°C. When the
-# snow is at 0°C, part of SNOW can be liquid water (SNOWLQ, mm). The maximum liquid water
-# that can be retained by the snowpack without draining is a constant fraction (MAXLQF) of
-# SNOW; CC and SNOWLQ are always initialized as zero in BROOK90, so any initial SNOW is
-# considered to be at 0°C with no liquid water.
-
-# Groundmelt is snowmelt at the bottom of a snowpack; it occurs because of heat conduction
-# from the soil whenever the soil is unfrozen. A constant groundmelt rate (GRDMLT, mm/d) is
-# an constant parameter in BROOK90 and is applied whenever there is snow on the ground. The
-# possibilities of frozen soil or variable groundmelt are not considered.
-
-# Snowmelt (SMLT, mm/d) is the sum of groundmelt and drainage of excess liquid water from
-# the snowpack. Drainage occurs only after the snowpack is both isothermal at 0°C and is
-# holding the maximum possible liquid water; the snowpack is then "ripe". The gains and
-# losses of liquid water by the snowpack, including the refreezing of rain on cold snow, are
-# handled in the somewhat complicated subroutine SNOWPACK.
-
-# BROOK90 assumes that the snowpack is always isothermal. In reality, large and variable
-# temperature gradients can exist in thick snowpacks; simulating these is beyond the scope
-# of BROOK90. The snowpack temperature (TSNOW) at the beginning of the day is calculated in
-# MSBSETVARS from the cold content
-
-# TSNOW = -CC / (CVICE * SNOW)
-
-# where CVICE is the heat capacity of ice (0.00192 MJ m-2 mm-1 K-1) (Leavesley and
-# Striffler, 1979). TSNOW is used both in calculating snow evaporation (SNVP) and snow
-# energy flux (SNOEN).
 
 """SNOFRAC(p_fT_TMAX, p_fT_TMIN, p_RSTEMP) separates RFAL from SFAL
 Ecoshift:

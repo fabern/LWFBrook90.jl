@@ -1,16 +1,229 @@
 # fabian.bernhard@wsl.ch, 2021-02-07
 
+@doc raw"""
+# Potential Evaporation
+Text copied from Ecoshift on module PET:
+
+"
+In this section, most equations are given in standard algebraic notation, as extended by
+Shuttleworth and Wallace (1985). The correspondence between algebraic notation and variable
+names is: found on
+[http://www.ecoshift.net/brook/b90doc.html](http://www.ecoshift.net/brook/b90doc.html)
+
+
+A common approach to estimating evaporation calculates a potential evaporation (PE) from
+weather variables, and then reduces actual evaporation below PE in response to soil drying.
+PE quantifies what the evaporation rate would be in the absence of any limitation of liquid
+water supply to the evaporating surfaces. It is thus an upper limit to the evaporation rate.
+Actual evaporation falls below the potential rate whenever liquid water supply to the plant
+leaves or to the soil surface cannot maintain the PE rate. Changing knowledge of limitations
+on evaporation has produced a variety of definitions of PE, which are related to the methods
+chosen to calculate it (Shuttleworth, 1991).
+
+Federer et al. (1996) use the term "potential evaporation" (PE) as a generic term to include
+the general concept and all definitions and methods. Then they distinguish three
+fundamentally different definitions of PE by subscripts. Reference-surface PE (PEr) is
+defined as the evaporation that would occur from a specified or reference land surface in
+given weather conditions with soil water at field capacity (Shuttleworth, 1991); the
+reference surface is normally defined as a short, complete, green plant cover.
+Surface-dependent PE (PEs) is defined as the evaporation that would occur from any given
+land surface in given weather conditions if plant surfaces were externally dry and soil
+water was at field capacity. Potential interception (PEi) is defined as the evaporation that
+would occur from any given land surface in given weather conditions if all plant and soil
+surfaces were externally wetted, as by rain. PEi and PEs depend on surface characteristics,
+most notably on canopy height and stomatal resistance respectively.
+
+Shuttleworth and Wallace (1985) applied the well-known Penman-Monteith equation separately
+for the canopy and for the soil surface to give separate estimates of transpiration and soil
+evaporation. The Shuttleworth-Wallace approach was designed to be applicable to canopies of
+any leaf area index or "sparseness". Federer and others (1996) developed the
+Shuttleworth-Wallace method to estimate PEs and PEi for any land surface. To obtain the
+potential soil evaporation component, they used a soil surface at field capacity for PEs and
+a saturated soil surface for PEi.
+
+However, BROOK90 separates evaporation into two pathways and five processes controlled by
+five resistances to vapor transfer:
+
+    canopy evaporation
+        IRVP    raa + rac         evaporation of intercepted rain
+        ISVP    raa + rac         evaporation of intercepted snow
+        TRAN    raa + rac + rsc   transpiration
+    ground evaporation
+        SNVP    raa + ras         evaporation from snow on the ground
+        SLVP    raa + ras + rss   soil evaporation
+
+where raa is the above canopy resistance, rac and ras are the within canopy resistances from
+the canopy and from the ground (soil/snow), rsc is the canopy surface resistance
+(predominantly stomatal resistance), and rss is the resistance to vapor movement within the
+soil. These are the five resistances in the Shuttleworth-Wallace equations.
+
+In BROOK90 only one canopy process and one ground process can occur at any given time. For
+IRVP, ISVP, and SNVP, the evaporating surfaces are always assumed saturated when the
+processes are occurring. In other words, they always evaporate at their own potential rate.
+The output value PINT is the interception evaporation that would occur if the canopy were
+continually wetted by snow or rain. IRVP and ISVP are equal to PINT as long as intercepted
+rain or snow remain on the canopy. Snow interception is treated identically with rain
+interception, with no allowance for melting the intercepted snow. When there is no
+interception, BROOK90 calculates and outputs potential transpiration, PTRAN, which is the
+transpiration that would occur if stomatal opening were not restricted by water supply to
+the leaves. It then reduces transpiration below PTRAN if low water supply to the leaves
+causes stomatal closure. For SNVP, BROOK90 avoids or neglects numerous problems of snow
+energy balance and any interaction with canopy evaporation by using only the vapor gradient
+and raa + ras, effectively a potential rate (see SNO-SNOVAP).
+
+Because the ground evaporation and the canopy evaporation are calculated simultaneously in
+the Shuttleworth-Wallace equations, the potential interception or transpiration depend on
+the value of rss (which is zero for snow or saturated soil). Potential conditions for the
+canopy processes often do not occur at the same time as potential conditions for the surface
+processes. When there is no snow on the ground, BROOK90 calculates potential canopy
+evaporation using the ambient soil resisistance, rss. When there is snow, BROOK90 calculates
+surface snow evaporation using raa + ras and the vapor gradient, and canopy evaporation
+using rss = 0. The equations then provide the soil (ground) evaporation (GER) corresponding
+to PTR and the soil evaporation (GIR) corresponding to PIR. If actual transpiration is less
+than PTR, soil evaporation is recalculated.
+
+Theoretically the Penman-Monteith and Shuttleworth-Wallace equations are only valid for a
+short time period over which the weather variables are effectively constant. However, in
+spite of their non-linearities, the equations also give reasonable values when used with
+weather variables averaged over daily and even monthly periods (Federer et al. 1996).
+Although BROOK90 uses only daily weather data, PE estimates could be made for shorter time
+periods such as hourly by assuming diurnal distributions of weather variables. However, this
+would be costly of computer time. Tanner and Pelton (1960) suggested that the Penman
+equation would be more accurate when used on a daily basis if daytime and nighttime were
+separated. Federer et al. (1996) show that separation of daytime and nighttime also works
+well with the Shuttleworth-Wallace method.
+
+BROOK90 obtains evaporation rates separately for daytime and nighttime within a day-night
+evaporation loop. All solar radiation (SOLRAD) is assigned to the daytime. The atmospheric
+humidity (EA) is assumed constant through the day ("day" refers to 24 hours). The daytime
+and nighttime values of air temperature and wind speed are obtained in subroutine WEATHER
+using function WNDADJ. Vapor pressure deficit (VPD) is obtained using subroutine ESAT.
+Subroutine CANOPY uses function INTERP to obtain canopy structure variables for the day.
+Subroutine ROUGH gets canopy roughness parameters. Within a day-night loop, the three
+aerodynamic resistances needed by the Shuttleworth-Wallace method are calculated in
+subroutine SWGRA. The canopy surface resistance (RSC) for the daytime is obtained from
+subroutine SRSC, and the soil surface resistance (RSS) in function FRSS. Subroutine SWPE
+uses function PM along with the various resistances to obtain potential transpiration rate
+(PTR) and the associated ground or soil evaporation rate (GER) by the Shuttleworth-Wallace
+equations. Subroutine SWPE is called again with RSC = 0 to give potential interception rate
+(PIR) and its associated soil evaporation rate (GIR). Subroutine TBYLAYER obtains actual
+transpiration by layer (ATRANI). If the actual transpiration is less than the potential, a
+new, higher GER is calculated by subroutine SWGE. BROOK90 then weights the daytime and
+nighttime rates by the solar daylength (DAYLEN) to obtain average rates for the day, PTRAN,
+GEVP, PINT, GIVP, and TRANI, which are used in later calculations.
+
+## Potential Evapotranspiration
+
+In BROOK90, PEs (surface-dependent potential evapotranspiration) is not directly calculated,
+because that would involve changing the value of rss to its potential value (at field
+capacity), which would then change the values of IRVP, ISVP, and PTRAN. Can users obtain a
+value of PEs for comparison with other studies? In July 2013, in response to a query by
+Stefan Plötner, I have figured out how PEs can be obtained. BROOK90 must be run with two
+parameter changes:
+
+In Fixed Parameters set RSSB to zero. This forces rss = RSSA, which is defined in BROOK90 as
+the value at "field capacity", and forces SNVP to be at the potential rate. Shuttleworth and
+Gurney (1990) point out that appropriate values of rss are poorly known (as is the
+dependence of rss on soil wetness). BROOK90 suggests using their value of 500 s/m for RSSA.
+In fact, it is perfectly feasible to avoid the "field capacity" concept by DEFINING
+potential soil evaporation as that which would occur at a fixed rss such as 500 s/m. Note
+that the potential SLVP is nearly inversely proportional to this rather arbitrary value. In
+Soil Parameters set THICK(1) = 9999 (max allowed) and NLAYER = 1. This forces a very thick
+top soil layer that should not dry out. If THICK is too small, SLVP at the potential rate
+may make the top layer water content go negative, which crashes the model. These parameter
+changes may increase SLVP a lot, and will reduce PTRAN and ISVP a little, but will not
+change ISVP and SNVP. An estimate of PEs can then be obtained as: PEs = PTRAN + SLVP + IRVP
++ ISVP + SNVP.
+
+Function PM - Penman-Monteith equation
+
+The Penman-Monteith equation is
+```math
+L_v ρ_w E = \frac{Δ(Rn - S) + c_p ρ D_a / r_a}{Δ + γ + γ(r_c/r_a)}
+```
+
+where E is the evaporation rate in volume of water per unit land area per unit time, Lv is
+the latent heat of vaporization for water, ρw is the density of water, Δ is the rate of
+change of vapor pressure with temperature, Rn is the net radiation above the surface, S is
+the subsurface heat flux, cp is the heat capacity of air, ρr is the density of air, Da is
+the vapor pressure deficit in the air, γ is the psychrometer constant, rc is the "canopy
+resistance", and ra is the aerodynamic resistance between the canopy and a reference height
+za at which Da is measured. The vapor pressure deficit, Da, is ea* - ea. The equation
+assumes that the vapor pressure at the effective evaporating surface, e0, is the saturated
+vapor pressure at the surface temperature. Then rc and ra are the two "resistances" through
+which water vapor passes as it moves down the vapor pressure gradient from e0 to ea. The
+canopy resistance, rc, represents resistance to flow of vapor through the stomates and
+cuticle of individual leaves and through the air around each leaf to some "effective" source
+height of water vapor in the plant canopy. The aerodynamic resistance, ra, is a measure of
+the turbulent transfer capability of the atmosphere between the effective source height and
+za. The Penman-Monteith equation is derived from the energy balance equation and the mass
+transfer equations for sensible and latent heat fluxes (e.g. Brutsaert 1982).
+"
+"""
 module PET
 
 export LWFBrook90_CANOPY, ROUGH, WEATHER, SWPE, SWGE, SWGRA, SRSC, ESAT
 
 using ..CONSTANTS # https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
 
+"""
+LWFBrook90_CANOPY() computes evolution of plant parameters over the season.
 
-# Ecoshift-PET:
-# slbksdjfisjdf lksdjf sidfjsldkfjs dlfkj o sdlkfjs df
+Ecoshift:
+Subroutine CANOPY calculates plant "parameters" that can vary with day of the year
+( DOY).
 
-"""LWFBrook90_CANOPY() computes ...
+The height of the canopy above any snowpack, h (HEIGHT), is
+
+HEIGHT = RELHIT * MAXHT - SNODEP
+
+where MAXHT is the maximum height for the year, which is an input parameter, and RELHIT is
+the relative height for the day of the year (doy), as obtained with function INTERP from the
+RELHT parameter array. HEIGHT is not allowed to be less than 0.01 m, which gives an
+appropriate roughness parameter for "smooth" surfaces. The snowpack depth (SNODEP, m) is the
+snow water content (SNOW, mm) divided by 1000 times snow density (SNODEN), which is assumed
+constant. Although snow density can actually vary from 0.05 to 0.5, the constant value is
+good enough to account for burying of the canopy in BROOK90. The RATIO of uncovered HEIGHT
+to total height (RELHT * MAXHT) is also calculated.
+
+Actual projected leaf area index, Lp (LAI), is
+
+LAI = MAXLAI * RELLAI(DOY) * DENSEF * RATIO
+
+where MAXLAI is the maximum LAI for the year, RELLAI(DOY) is the relative LAI for the doy as
+obtained with function INTERP from the RELLAI parameter array, DENSEF is a thinning
+parameter between zero and one (see below). The use of RATIO assumes that LAI is distributed
+uniformly with height. LAI is prevented from being less than 0.00001 to avoid zero divides;
+this can cause small amounts of transpiration, which may be ignored.
+
+Actual projected stem area index Sp (SAI), is assumed proportional to HEIGHT following
+Federer et al. (1996), so
+
+SAI = CS * HEIGHT * DENSEF
+
+where CS is a parameter that is the ratio of SAI to HEIGHT.
+
+Total root length per unit area (RTLEN) is
+
+RTLEN = MXRTLN * RELHT * DENSEF
+
+where MXRTLN is the maximum root length for the year. Correction for seasonal RELHT assumes
+that root length increases proportionally with height growth.
+
+The total plant resistance to water movement (RPLANT) is
+
+RPLANT = 1 / (MXKPL * RELHT * DENSEF)
+
+where MXKPL is the plant conductivity at maximum height growth. RPLANT is not allowed to be
+greater than 1E8 MPa d/mm, which is effectively infinite. Correction for seasonal RELHT
+assumes that canopy conductance increases proportionally with height growth.
+
+DENSEF is normally 1.0 in the above four equations. This parameter was included in the model
+as a convenient way to "thin" a canopy by removing a fraction of the plants. LAI, SAI, and
+RTLEN are all reduced proportionally to DENSEF, and RPLANT is increased. However DENSEF does
+NOT reduce HEIGHT because the remaining canopy still has the same height. Therefore DENSEF
+should NOT be set to 0 to simulate a clearcut as HEIGHT is unchanged and the aerodynamic
+resistances will be wrong. Probably DENSEF should not be less than 0.05.
 """
 function LWFBrook90_CANOPY(p_fT_HEIGHT,
                            p_fT_LAI,  # leaf area index, m2/m2, minimum of 0.00001
@@ -143,7 +356,7 @@ end
 
 
 
-"""WEATHER() computes canopy roughness height.
+"""WEATHER() computes solar radiation, temperature and wind speed.
 
 Ecoshift:
 WEATHER includes all adjustments of input weather data, including separation into daytime
@@ -266,8 +479,33 @@ function ESAT(p_fu_TA)
     return (ES, DELTA)
 end
 
-"""WNDADJ(p_fu_ZA, p_fu_DISP, p_fu_Z0, p_FETCH, p_ZW, p_Z0W) returns ratio of wind speed at
+@doc raw"""
+WNDADJ(p_fu_ZA, p_fu_DISP, p_fu_Z0, p_FETCH, p_ZW, p_Z0W) returns ratio of wind speed at
 reference height (above canopy) to wind speed at weather station
+
+Ecoshift: This function estimates the wind speed (UA) at reference height ZA above the
+canopy from input wind speed at a remote weather station (UW). Assume that the weather
+station represents a new surface downwind that has a roughness of z0w (Z0W) and a fetch of F
+(FETCH). Brutsaert (1982) gives the height of the internal boundary layer, zb, as
+
+```math
+z_b = 0.334 F^{0.875} z_{0w}^{0.125}
+```
+
+For logarithmic wind profiles over both surfaces to have the same wind speed at zb,
+
+```math
+u_a = u_w \left( \frac{
+    \log(z_b/z_{0w}) \log((z_a-d)/z_{0})
+    }{
+    \log(z_b/z_{0}) \log(z_{w}/z_{0w})
+    } \right)
+```
+
+where zw (ZW) is the height of wind measurement at the weather station (Federer et al. 1996)
+and d (DISP) is the zero-plane displacement of the canopy. This assumes that the weather
+station is over a smooth surface so its zero plane displacement can be ignored. If the
+parameter Z0W is set to zero, then no adjustment is made and ua = uw.
 """
 function WNDADJ(p_fu_ZA, p_fu_DISP, p_fu_Z0, p_FETCH, p_ZW, p_Z0W)
     # Brutsaert (1982) equation 7-39

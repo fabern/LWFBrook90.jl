@@ -18,7 +18,7 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
     p_ESLOPE= pfile_param["ESLOPE"]
     p_DSLOPE= pfile_param["DSLOPE"]
     # equivalent slope for radiation calculations
-    p_L1, p_L2 = LWFBrook90Julia.SUN.EQUIVSLP(p_LAT, p_ESLOPE, pfile_param["ASPECT"])
+    p_L1, p_L2 = LWFBrook90.SUN.EQUIVSLP(p_LAT, p_ESLOPE, pfile_param["ASPECT"])
 
     p_SNODEN = pfile_param["SNODEN"]
     p_MXRTLN = pfile_param["MXRTLN"]
@@ -87,11 +87,11 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
     p_DURATN = pfile_pdur["DURATN"]
 
     # root density parameters
-    p_inirdep    = pfile_param["inirdep"] # for RootGrowth in LWFBrook90Julia
-    p_inirlen    = pfile_param["inirlen"] # for RootGrowth in LWFBrook90Julia
-    p_rgroper    = pfile_param["rgroper"] # for RootGrowth in LWFBrook90Julia
-    p_tini       = pfile_soil["tini"]     # for RootGrowth in LWFBrook90Julia
-    p_frelden    = pfile_soil["frelden"]  # for RootGrowth in LWFBrook90Julia
+    p_inirdep    = pfile_param["inirdep"] # for RootGrowth in LWFBrook90.jl
+    p_inirlen    = pfile_param["inirlen"] # for RootGrowth in LWFBrook90.jl
+    p_rgroper    = pfile_param["rgroper"] # for RootGrowth in LWFBrook90.jl
+    p_tini       = pfile_soil["tini"]     # for RootGrowth in LWFBrook90.jl
+    p_frelden    = pfile_soil["frelden"]  # for RootGrowth in LWFBrook90.jl
 
     # unused p_HeatCapOld = pfile_soil["HeatCapOld"]
 
@@ -132,7 +132,7 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
     # infiltration parameters INFPAR()
     p_ILAYER = pfile_param["ILAYER"] # number of layers over which infiltration is distributed
     p_INFEXP = pfile_param["INFEXP"]
-    p_INFRAC = LWFBrook90Julia.WAT.INFPAR(p_INFEXP, p_ILAYER, p_THICK, NLAYER)
+    p_INFRAC = LWFBrook90.WAT.INFPAR(p_INFEXP, p_ILAYER, p_THICK, NLAYER)
 
 
     # soil water parameters
@@ -147,8 +147,8 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
     p_THETAF
     # TODO(bernhard): clean up use of p_PSIF and p_THETAF (depending on IMODEL they are
     #                 initialized as NaN. Are they overwritten by SOILPAR?)
-    ) = LWFBrook90Julia.KPT.SOILPAR(
-            LWFBrook90Julia.CONSTANTS.p_RHOWG,
+    ) = LWFBrook90.KPT.SOILPAR(
+            LWFBrook90.CONSTANTS.p_RHOWG,
             p_THICK, # layer thicknesses (mm)
             p_THETAF,# θ at field capacity (-)
             p_THSAT, # θ at saturation == matrix porosity (-)
@@ -168,10 +168,10 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
     # p_PsiCrit is the ψ value that corresponds to the constant, critical θ value p_ThCrit
     # Note that p_PSICR is different!
     if (IMODEL == 0)
-        p_PsiCrit = LWFBrook90Julia.KPT.FPSIMF_CH.(LWFBrook90Julia.CONSTANTS.p_ThCrit./p_THSAT,
+        p_PsiCrit = LWFBrook90.KPT.FPSIMF_CH.(LWFBrook90.CONSTANTS.p_ThCrit./p_THSAT,
                                                    p_PSIF, p_BEXP, p_WET∞, p_WETF, p_CHM, p_CHN)
     elseif (IMODEL == 1)
-        p_PsiCrit = LWFBrook90Julia.KPT.FPSIM_MvG.(LWFBrook90Julia.CONSTANTS.p_ThCrit./(p_THSAT .- p_θr),
+        p_PsiCrit = LWFBrook90.KPT.FPSIM_MvG.(LWFBrook90.CONSTANTS.p_ThCrit./(p_THSAT .- p_θr),
                                                    p_MvGα, p_MvGn)
     else
         error("Unknown IMODEL!")
@@ -213,7 +213,7 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
 
         # FOR MSBITERATE:
         p_QLAYER, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC, p_IMPERV,
-        p_LENGTH, p_DSLOPE, LWFBrook90Julia.CONSTANTS.p_RHOWG, p_DPSIMX,
+        p_LENGTH, p_DSLOPE, LWFBrook90.CONSTANTS.p_RHOWG, p_DPSIMX,
         p_KSAT, p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX,
         p_GSC, p_GSP, p_THICK, p_STONEF,
 
@@ -230,7 +230,7 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
         p_RTRAD, p_FXYLEM,
         p_WNDRAT, p_FETCH, p_Z0W, p_ZW,
         p_RSTEMP,
-        LWFBrook90Julia.CONSTANTS.p_CVICE,
+        LWFBrook90.CONSTANTS.p_CVICE,
         p_LWIDTH, p_RHOTP, p_NN, p_KSNVP,
         p_ALBSN, p_ALB,
         p_RSSA, p_RSSB,
@@ -238,7 +238,7 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
 
         p_inirdep, p_inirlen, p_rgroper, p_tini, p_frelden,
 
-        LWFBrook90Julia.CONSTANTS.p_WTOMJ, p_C1, p_C2, p_C3, p_CR,
+        LWFBrook90.CONSTANTS.p_WTOMJ, p_C1, p_C2, p_C3, p_CR,
         p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_TL, p_T1, p_T2, p_TH,
         p_PSICR, NOOUTF, p_PsiCrit,
 
@@ -263,8 +263,8 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
         # This would result in use of e.g. hourly PRECIN and hourly MESFL
     end
 
-    p_DOY_inclRef = (t) -> LWFBrook90Julia.p_DOY(t, pfile_meteo["input_reference_date"])
-    p_MONTHN_inclRef = (t) -> LWFBrook90Julia.p_MONTHN(t, pfile_meteo["input_reference_date"])
+    p_DOY_inclRef = (t) -> LWFBrook90.p_DOY(t, pfile_meteo["input_reference_date"])
+    p_MONTHN_inclRef = (t) -> LWFBrook90.p_MONTHN(t, pfile_meteo["input_reference_date"])
     p_fT = (p_DOY_inclRef,
             p_MONTHN_inclRef,
             pfile_meteo["p_GLOBRAD"],

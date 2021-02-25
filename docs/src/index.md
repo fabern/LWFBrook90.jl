@@ -1,34 +1,34 @@
-# LWFBrook90Julia.jl
-Package repository: [https://github.com/fabern/LWFBrook90Julia.jl](https://github.com/fabern/LWFBrook90Julia.jl)
+# LWFBrook90.jl
+Package repository: [https://github.com/fabern/LWFBrook90.jl](https://github.com/fabern/LWFBrook90.jl)
 
 ```@contents
 Pages = ["index.md",
          "model.md",
          "user-guide.md",
          "example.md",
-         "function-refs.md",
+         "code-lst.md",
          "function-docs.md"]
 Depth = 2
 ```
 
 
 
-## About LWFBrook90Julia.jl
-LWFBrook90Julia.jl implements a 1D soil vegetation atmosphere transport model.
+## About LWFBrook90.jl
+LWFBrook90.jl implements a 1D soil vegetation atmosphere transport model.
 Intended use cases of this impelemntation are:
-- efficient model calibration for data analysis
 - support of stable isotopes (δ¹⁸O and δ²H)
-- increased flexibility for reparametrizations
+- efficient model calibration for data analysis
+- increased model flexibility
 
 To read about the model structure, see section [SVAT Model](@ref).
 For a quick start refer to the step-by-step guide in section [Example](@ref)
-For further details read through the [User Guide](@ref) or refer to sections [Function References](@ref) and [Function Documentations](@ref) for further technical intricacies e.g. for development of the package.
+For further details read through the section [User Guide](@ref) or refer to sections [Code Listing](@ref) and [Function Documentations](@ref) for further technical intricacies e.g. for development of the package.
 
 
 
-## Citing LWFBrook90Julia.jl
-When using LWFBrook90Julia.jl please cite <!-- [TODO.et.al (2021)](TODO) -->
->TODO: generate citation: (Journal of Open Source Software? Zenodo? Alternatives?)
+## Citing LWFBrook90.jl
+When using LWFBrook90.jl please cite <!-- [TODO.et.al (2021)](TODO) -->
+>TODO: generate citation: (Journal of Open Source Software? Zenodo? Journal of Open Research Software (DiffEq.jl)? Alternatives?)
 
 
 

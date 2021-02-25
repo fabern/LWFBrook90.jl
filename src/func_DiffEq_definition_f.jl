@@ -77,7 +77,7 @@
         u_SWATI    = u[7:(7+NLAYER-1)]
 
         (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-            LWFBrook90Julia.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_SWATMX, p_THSAT,
+            LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_SWATMX, p_THSAT,
                  p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_KF,
                  p_θr, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
                  p_PSIG, NLAYER, IMODEL)
@@ -92,7 +92,7 @@
         # Compute fluxes
 
         # Bypass fraction of infiltration to each layer
-        p_fu_BYFRAC = LWFBrook90Julia.WAT.BYFLFR(
+        p_fu_BYFRAC = LWFBrook90.WAT.BYFLFR(
                       NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_WETF)
 
         # Water movement through soil

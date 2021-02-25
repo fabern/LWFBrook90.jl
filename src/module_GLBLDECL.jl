@@ -293,7 +293,7 @@ function derive_params_from_input_soil(input_soil_materials, input_soil_nodes, I
     # C         volumetric heat capacities for solid, water and organic -- transfer from [MJ m-2 mm-1 K-1] to [J mm-3 K-1]
     #         TPar[7,I) = p_CVSOL   # To define in module_CONSTANTS.jl: p_CVSOL = ?  # CVSOL  - volumetric heat capacity of solid (MJ m-2 mm-1 K-1)
     #         TPar[8,I) = p_CVORG   # To define in module_CONSTANTS.jl: p_CVORG = ?  # volumetric heat capacity of organic material (MJ m-2 mm-1 K-1) (hillel98)
-    #         TPar[9,I) = LWFBrook90Julia.CONSTANTS.p_CVLQ
+    #         TPar[9,I) = LWFBrook90.CONSTANTS.p_CVLQ
     # 208    CONTINUE
     #        READ (12,*) C
     #       end

@@ -1,24 +1,28 @@
 # fabian.bernhard@wsl.ch, 2021-02-03
+"""
+# Interception and transpiration
+Text copied from Ecoshift on module EVP:
 
+"
+BROOK90 routines in this module relate to interception and actual transpiration.
+Subroutines INTER and INTER24, which handle the interception of rain or snow by the plant
+canopy are equivalent routines. INTER24 is used when parameter `p_NPINT` is 1 and
+precipitation is input once a day; it assumes that the daily precipitation all occurs
+within DURATN hours in the middle of the day. INTER is used when `p_NPINT > 1` and
+precipitation is input more than once a day; it assumes that precipitation rate is
+constant through the precipitation time step. INTER and INTER24 are used both for rain and
+snow, with different calling parameters and variables. PLNTRES calculates parameters
+related to rhizosphere, root, and xylem resistance; it is called once at the beginning of
+each day. These parameters affect only soil water supply rate, not potential
+transpiration. TBYLAYER calculates the daily transpiration from each soil layer from the
+potential transpiration (PTRAN) and the total soil water potential in each layer (PSITI).
+"
+"""
 module EVP # Interception and transpiration
 
 using ..CONSTANTS: p_RHOWG, p_PI # https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
 
 export PLNTRES, TBYLAYER, INTER, INTER24
-
-# Ecoshift-EVP:
-# BROOK90 routines in this module relate to interception and actual transpiration.
-# Subroutines INTER and INTER24, which handle the interception of rain or snow by the plant
-# canopy are equivalent routines. INTER24 is used when parameter p_NPINT is 1 and
-# precipitation is input once a day; it assumes that the daily precipitation all occurs
-# within DURATN hours in the middle of the day. INTER is used when p_NPINT > 1 and
-# precipitation is input more than once a day; it assumes that precipitation rate is
-# constant through the precipitation time step. INTER and INTER24 are used both for rain and
-# snow, with different calling parameters and variables. PLNTRES calculates parameters
-# related to rhizosphere, root, and xylem resistance; it is called once at the beginning of
-# each day. These parameters affect only soil water supply rate, not potential
-# transpiration. TBYLAYER calculates the daily transpiration from each soil layer from the
-# potential transpiration (PTRAN) and the total soil water potential in each layer (PSITI).
 
 """  PLNTRES() allocates total plant resistance to xylem and root layers
 Ecoshift:
@@ -132,6 +136,7 @@ RELHT. The dependence on the seasonal RELHT assumes that root length increases
 proportionally with height growth. MXRTLN is an input parameter expressing the length of
 absorbing roots per unit ground area in m/m2. Lr and R1 only affect rhizosphere resistance
 and thus are only important for dry soil or when Lr is small.
+"
 """
 function PLNTRES(NLAYER, p_THICK, p_STONEF, p_fu_RTLEN, p_fT_RELDEN, p_RTRAD, p_fu_RPLANT, p_FXYLEM, p_PI, p_RHOWG) # TODO(bernhard) find out how to import p_PI and p_RHOWG from the moduel CONSTANTS
     # compute stone-free layer thickness D

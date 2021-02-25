@@ -32,11 +32,11 @@ function MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
     #
     # solar parameters depending on only on DOY
     # TODO(bernhard): a) Do this outside of integration loop in define_LWFB90_p() p_fT_DAYLEN
-    p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY = LWFBrook90Julia.SUN.SUNDS(p_LAT, p_ESLOPE, DOY, p_L1, p_L2, LWFBrook90Julia.CONSTANTS.p_SC, LWFBrook90Julia.CONSTANTS.p_PI, LWFBrook90Julia.CONSTANTS.p_WTOMJ)
+    p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY = LWFBrook90.SUN.SUNDS(p_LAT, p_ESLOPE, DOY, p_L1, p_L2, LWFBrook90.CONSTANTS.p_SC, LWFBrook90.CONSTANTS.p_PI, LWFBrook90.CONSTANTS.p_WTOMJ)
 
     # canopy parameters depending on DOY as well as different state depending parameters
     p_fu_HEIGHTeff, p_fu_LAIeff, p_fT_SAIeff, p_fu_RTLEN, p_fu_RPLANT =
-        LWFBrook90Julia.PET.LWFBrook90_CANOPY(p_fT_HEIGHT,
+        LWFBrook90.PET.LWFBrook90_CANOPY(p_fT_HEIGHT,
                           p_fT_LAI,  # leaf area index, m2/m2, minimum of 0.00001
                           p_fT_SAI,  # stem area index, m2/m2
                           u_SNOW,    # water equivalent of snow on the ground, mm
@@ -52,24 +52,24 @@ function MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
         p_fu_Z0GS = p_Z0G
     end
     p_fu_Z0GS, p_fu_Z0C, p_fu_DISPC, p_fu_Z0, p_fu_DISP, p_fu_ZA =
-            LWFBrook90Julia.PET.ROUGH(p_fu_HEIGHTeff, p_ZMINH, p_fu_LAIeff, p_fT_SAIeff,
+            LWFBrook90.PET.ROUGH(p_fu_HEIGHTeff, p_ZMINH, p_fu_LAIeff, p_fT_SAIeff,
                                       p_CZS, p_CZR, p_HS, p_HR, p_LPC, p_CS, p_fu_Z0GS)
 
     # plant resistance components
-    p_fu_RXYLEM, p_fu_RROOTI, p_fu_ALPHA = LWFBrook90Julia.EVP.PLNTRES(NLAYER, p_THICK, p_STONEF, p_fu_RTLEN, p_fT_RELDEN, p_RTRAD, p_fu_RPLANT, p_FXYLEM, LWFBrook90Julia.CONSTANTS.p_PI, LWFBrook90Julia.CONSTANTS.p_RHOWG)
+    p_fu_RXYLEM, p_fu_RROOTI, p_fu_ALPHA = LWFBrook90.EVP.PLNTRES(NLAYER, p_THICK, p_STONEF, p_fu_RTLEN, p_fT_RELDEN, p_RTRAD, p_fu_RPLANT, p_FXYLEM, LWFBrook90.CONSTANTS.p_PI, LWFBrook90.CONSTANTS.p_RHOWG)
 
     # calculated weather data
     p_fu_SHEAT = 0
     (p_fu_SOLRADC, p_fu_TA, p_fu_TADTM, p_fu_TANTM, UA, p_fu_UADTM, p_fu_UANTM) =
-        LWFBrook90Julia.PET.WEATHER(p_fT_TMAX, p_fT_TMIN, p_fT_DAYLEN, p_fT_I0HDAY, p_fT_EA, p_fT_UW, p_fu_ZA, p_fu_DISP, p_fu_Z0, p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_fT_SOLRAD)
+        LWFBrook90.PET.WEATHER(p_fT_TMAX, p_fT_TMIN, p_fT_DAYLEN, p_fT_I0HDAY, p_fT_EA, p_fT_UW, p_fu_ZA, p_fu_DISP, p_fu_Z0, p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_fT_SOLRAD)
     # fraction of precipitation as p_fT_SFAL
-    p_fT_SNOFRC= LWFBrook90Julia.SNO.SNOFRAC(p_fT_TMAX, p_fT_TMIN, p_RSTEMP)
+    p_fT_SNOFRC= LWFBrook90.SNO.SNOFRAC(p_fT_TMAX, p_fT_TMIN, p_RSTEMP)
 
     if (u_SNOW > 0)
         # snowpack temperature at beginning of day
         p_fu_TSNOW = -u_CC / (p_CVICE * u_SNOW)
         # potential snow evaporation PSNVP
-        p_fu_PSNVP=LWFBrook90Julia.SNO.SNOVAP(p_fu_TSNOW, p_fu_TA, p_fT_EA, UA, p_fu_ZA, p_fu_HEIGHTeff, p_fu_Z0, p_fu_DISP, p_fu_Z0C, p_fu_DISPC, p_fu_Z0GS, p_LWIDTH, p_RHOTP, p_NN, p_fu_LAIeff, p_fT_SAIeff, p_KSNVP)
+        p_fu_PSNVP=LWFBrook90.SNO.SNOVAP(p_fu_TSNOW, p_fu_TA, p_fT_EA, UA, p_fu_ZA, p_fu_HEIGHTeff, p_fu_Z0, p_fu_DISP, p_fu_Z0C, p_fu_DISPC, p_fu_Z0GS, p_LWIDTH, p_RHOTP, p_NN, p_fu_LAIeff, p_fT_SAIeff, p_KSNVP)
         p_fu_ALBEDO = p_ALBSN
         p_fu_RSS = 0
     else
@@ -77,7 +77,7 @@ function MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
         p_fu_PSNVP = 0
         p_fu_ALBEDO = p_ALB
         # soil evaporation resistance
-        p_fu_RSS = LWFBrook90Julia.PET.FRSS(p_RSSA, p_RSSB, p_PSIF[1], u_aux_PSIM[1], p_PsiCrit[1])
+        p_fu_RSS = LWFBrook90.PET.FRSS(p_RSSA, p_RSSB, p_PSIF[1], u_aux_PSIM[1], p_PsiCrit[1])
 
         # check for zero or negative p_fu_RSS (TODO: not done in LWFBrook90)
         #if (p_fu_RSS < 0.000001)
@@ -86,7 +86,7 @@ function MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
     end
 
     # snow surface energy balance (is performed even when SNOW=0 in case snow is added during day)
-    p_fu_SNOEN = LWFBrook90Julia.SNO.SNOENRGY(p_fu_TSNOW, p_fu_TA, p_fT_DAYLEN, p_CCFAC, p_MELFAC, p_fT_SLFDAY, p_fu_LAIeff, p_fT_SAIeff, p_LAIMLT, p_SAIMLT)
+    p_fu_SNOEN = LWFBrook90.SNO.SNOENRGY(p_fu_TSNOW, p_fu_TA, p_fT_DAYLEN, p_CCFAC, p_MELFAC, p_fT_SLFDAY, p_fu_LAIeff, p_fT_SAIeff, p_LAIMLT, p_SAIMLT)
 
     return (p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY,
             p_fu_HEIGHTeff, p_fu_LAIeff, p_fT_SAIeff, p_fu_RTLEN, p_fu_RPLANT,
@@ -158,17 +158,17 @@ function MSBDAYNIGHT(IDAY, #TODO(bernhard) just for debug... remove again!
         cloud_fraction = p_fu_SOLRADC / p_fT_I0HDAY
         # end
         AA, ASUBS =
-            LWFBrook90Julia.SUN.AVAILEN(SLRAD[J], p_fu_ALBEDO, p_C1, p_C2, p_C3, TAJ, p_fT_EA,
+            LWFBrook90.SUN.AVAILEN(SLRAD[J], p_fu_ALBEDO, p_C1, p_C2, p_C3, TAJ, p_fT_EA,
                     cloud_fraction,
                     p_fu_SHEAT, p_CR, p_fu_LAIeff, p_fT_SAIeff)
 
         # vapor pressure deficit
-        ES, DELTA = LWFBrook90Julia.PET.ESAT(TAJ)
+        ES, DELTA = LWFBrook90.PET.ESAT(TAJ)
         VPD = ES - p_fT_EA
         # S.-W. resistances
-        RAA, RAC, RAS = LWFBrook90Julia.PET.SWGRA(UAJ, p_fu_ZA, p_fu_HEIGHTeff, p_fu_Z0, p_fu_DISP, p_fu_Z0C, p_fu_DISPC, p_fu_Z0GS, p_LWIDTH, p_RHOTP, p_NN, p_fu_LAIeff, p_fT_SAIeff)
+        RAA, RAC, RAS = LWFBrook90.PET.SWGRA(UAJ, p_fu_ZA, p_fu_HEIGHTeff, p_fu_Z0, p_fu_DISP, p_fu_Z0C, p_fu_DISPC, p_fu_Z0GS, p_LWIDTH, p_RHOTP, p_NN, p_fu_LAIeff, p_fT_SAIeff)
         if (J == 1)
-            RSC=LWFBrook90Julia.PET.SRSC(SLRAD[J], p_fu_TA, VPD, p_fu_LAIeff, p_fT_SAIeff, p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_CR, p_TL, p_T1, p_T2, p_TH)
+            RSC=LWFBrook90.PET.SRSC(SLRAD[J], p_fu_TA, VPD, p_fu_LAIeff, p_fT_SAIeff, p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_CR, p_TL, p_T1, p_T2, p_TH)
         else
             RSC = 1 / (p_GLMIN * p_fu_LAIeff)
         end
@@ -176,25 +176,25 @@ function MSBDAYNIGHT(IDAY, #TODO(bernhard) just for debug... remove again!
         #print("\nIDAY:$(@sprintf("% 3d", IDAY)), J = $J     AA:$(@sprintf("% 8.4f", AA)), ASUBS:$(@sprintf("% 8.4f", ASUBS)), VPD:$(@sprintf("% 8.4f", VPD)), RAA:$(@sprintf("% 8.4f", RAA)), RAC:$(@sprintf("% 8.4f", RAC)), RAS:$(@sprintf("% 8.4f", RAS)), RSC:$(@sprintf("% 8.4f", RSC)), p_fu_RSS:$(@sprintf("% 8.4f", p_fu_RSS)), DELTA:$(@sprintf("% 8.4f", DELTA))")
 
         # S.-W. potential transpiration and ground evaporation rates
-        p_fu_PTR[J], p_fu_GER[J] =  LWFBrook90Julia.PET.SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, p_fu_RSS, DELTA)
+        p_fu_PTR[J], p_fu_GER[J] =  LWFBrook90.PET.SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, p_fu_RSS, DELTA)
         # S.-W. potential interception and ground evap. rates
         # RSC = 0, p_fu_RSS not changed
-        p_fu_PIR[J], p_fu_GIR[J] =  LWFBrook90Julia.PET.SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, 0, p_fu_RSS, DELTA)
+        p_fu_PIR[J], p_fu_GIR[J] =  LWFBrook90.PET.SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, 0, p_fu_RSS, DELTA)
 
         if IMODEL == 1
             # S.-W. potential interception and ground evap. rates
             # RSC not changed, p_fu_RSS = 0
-            _, p_fu_PGER[J] =  LWFBrook90Julia.PET.SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, 0, DELTA)
+            _, p_fu_PGER[J] =  LWFBrook90.PET.SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, 0, DELTA)
         end
         # actual transpiration and ground evaporation rates
         if (p_fu_PTR[J] > 0.001)
-            ATR[J], ATRANI = LWFBrook90Julia.EVP.TBYLAYER(J, p_fu_PTR[J], p_fu_DISPC, p_fu_ALPHA, p_fu_KK, p_fu_RROOTI, p_fu_RXYLEM, u_aux_PSITI, NLAYER, p_PSICR, NOOUTF)
+            ATR[J], ATRANI = LWFBrook90.EVP.TBYLAYER(J, p_fu_PTR[J], p_fu_DISPC, p_fu_ALPHA, p_fu_KK, p_fu_RROOTI, p_fu_RXYLEM, u_aux_PSITI, NLAYER, p_PSICR, NOOUTF)
             for i = 1:NLAYER
                 p_fu_ATRI[J,i] = ATRANI[i]
             end
             if (ATR[J] < p_fu_PTR[J])
                 # soil water limitation, new GER
-                p_fu_GER[J]=LWFBrook90Julia.PET.SWGE(AA, ASUBS, VPD, RAA, RAS, p_fu_RSS, DELTA, ATR[J])
+                p_fu_GER[J]=LWFBrook90.PET.SWGE(AA, ASUBS, VPD, RAA, RAS, p_fu_RSS, DELTA, ATR[J])
             end
         else
             # no transpiration, condensation ignored
@@ -203,7 +203,7 @@ function MSBDAYNIGHT(IDAY, #TODO(bernhard) just for debug... remove again!
             for i = 1:NLAYER
                 p_fu_ATRI[J,i] = 0
             end
-            p_fu_GER[J]=LWFBrook90Julia.PET.SWGE(AA, ASUBS, VPD, RAA, RAS, p_fu_RSS, DELTA, 0)
+            p_fu_GER[J]=LWFBrook90.PET.SWGE(AA, ASUBS, VPD, RAA, RAS, p_fu_RSS, DELTA, 0)
         end
     end
     #print("\nIDAY:$(@sprintf("% 3d", IDAY)), p_fu_GER[1]: $(@sprintf("% 8.4f",p_fu_GER[1])), p_fu_GIR[1]: $(@sprintf("% 8.4f",p_fu_GIR[1]))")
@@ -285,23 +285,23 @@ function MSBPREINT(#arguments:
         # snow interception
         if (p_fu_PINT < 0 && p_fu_TA > 0)
             # prevent frost when too warm, carry negative p_fu_PINT to rain
-            aux_du_SINT, aux_du_ISVP = LWFBrook90Julia.EVP.INTER(p_fT_SFAL, 0, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DTP, u_INTS)
+            aux_du_SINT, aux_du_ISVP = LWFBrook90.EVP.INTER(p_fT_SFAL, 0, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DTP, u_INTS)
         else
-            aux_du_SINT, aux_du_ISVP = LWFBrook90Julia.EVP.INTER(p_fT_SFAL, p_fu_PINT, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DTP, u_INTS)
+            aux_du_SINT, aux_du_ISVP = LWFBrook90.EVP.INTER(p_fT_SFAL, p_fu_PINT, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DTP, u_INTS)
         end
         # rain interception,  note potential interception rate is PID/p_DT-aux_du_ISVP
-        aux_du_RINT, aux_du_IRVP = LWFBrook90Julia.EVP.INTER(p_fT_RFAL, p_fu_PINT - aux_du_ISVP, p_fu_LAI, p_fu_SAI, p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS, p_DTP, u_INTR)
+        aux_du_RINT, aux_du_IRVP = LWFBrook90.EVP.INTER(p_fT_RFAL, p_fu_PINT - aux_du_ISVP, p_fu_LAI, p_fu_SAI, p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS, p_DTP, u_INTR)
     else
         # one precip interval in day, use storm p_DURATN and INTER24
         # snow interception
         if (p_fu_PINT < 0 && p_fu_TA > 0)
             # prevent frost when too warm, carry negative p_fu_PINT to rain
-            aux_du_SINT, aux_du_ISVP = LWFBrook90Julia.EVP.INTER24(p_fT_SFAL, 0, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DURATN, u_INTS, MONTHN)
+            aux_du_SINT, aux_du_ISVP = LWFBrook90.EVP.INTER24(p_fT_SFAL, 0, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DURATN, u_INTS, MONTHN)
         else
-            aux_du_SINT, aux_du_ISVP = LWFBrook90Julia.EVP.INTER24(p_fT_SFAL, p_fu_PINT, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DURATN, u_INTS, MONTHN)
+            aux_du_SINT, aux_du_ISVP = LWFBrook90.EVP.INTER24(p_fT_SFAL, p_fu_PINT, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DURATN, u_INTS, MONTHN)
         end
         # rain interception,  note potential interception rate is PID/p_DT-aux_du_ISVP
-        aux_du_RINT, aux_du_IRVP = LWFBrook90Julia.EVP.INTER24(p_fT_RFAL, p_fu_PINT - aux_du_ISVP, p_fu_LAI, p_fu_SAI, p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS, p_DURATN, u_INTR, MONTHN)
+        aux_du_RINT, aux_du_IRVP = LWFBrook90.EVP.INTER24(p_fT_RFAL, p_fu_PINT - aux_du_ISVP, p_fu_LAI, p_fu_SAI, p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS, p_DURATN, u_INTR, MONTHN)
     end
 
     # throughfall
@@ -329,7 +329,7 @@ function MSBPREINT(#arguments:
         end
         # snow accumulation and melt
         u_CC, u_SNOW, u_SNOWLQ, aux_du_RSNO, aux_du_SNVP, aux_du_SMLT =
-          LWFBrook90Julia.SNO.SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN,
+          LWFBrook90.SNO.SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN,
                    # States that are overwritten:
                    u_CC, u_SNOW, u_SNOWLQ,
                    p_DTP, p_fu_TA, p_MAXLQF, p_GRDMLT)
@@ -379,7 +379,7 @@ function MSBITERATE(IMODEL, p_QLAYER,
     # below ground ("infiltrated") input to soil (SLFL)
     # source area flow rate
     if (p_QLAYER > 0)
-        SAFRAC=LWFBrook90Julia.WAT.SRFLFR(p_QLAYER, u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC)
+        SAFRAC=LWFBrook90.WAT.SRFLFR(p_QLAYER, u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC)
     else
         SAFRAC = 0.
     end
@@ -400,7 +400,7 @@ function MSBITERATE(IMODEL, p_QLAYER,
                 # added in Version 4
                 aux_du_DSFLI[i] = 0
             else
-                aux_du_DSFLI[i] = LWFBrook90Julia.WAT.DSLOP(p_DSLOPE, p_LENGTH, p_THICK[i], p_STONEF[i], u_aux_PSIM[i], p_RHOWG, p_fu_KK[i])
+                aux_du_DSFLI[i] = LWFBrook90.WAT.DSLOP(p_DSLOPE, p_LENGTH, p_THICK[i], p_STONEF[i], u_aux_PSIM[i], p_RHOWG, p_fu_KK[i])
             end
             # vertical flow rates
             if (i < NLAYER)
@@ -408,7 +408,7 @@ function MSBITERATE(IMODEL, p_QLAYER,
                     aux_du_VRFLI[i] = 0
                 else
                     aux_du_VRFLI[i] =
-                        LWFBrook90Julia.WAT.VERT(p_fu_KK[i],     p_fu_KK[i+1],
+                        LWFBrook90.WAT.VERT(p_fu_KK[i],     p_fu_KK[i+1],
                                                 p_KSAT[i],      p_KSAT[i+1],
                                                 p_THICK[i],     p_THICK[i+1],
                                                 u_aux_PSITI[i], u_aux_PSITI[i+1],
@@ -437,32 +437,32 @@ function MSBITERATE(IMODEL, p_QLAYER,
     DTI = min(DTRI, p_DTIMAX)
     # net inflow to each layer including E and T withdrawal adjusted for interception
     aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
-        LWFBrook90Julia.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
+        LWFBrook90.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
                                     aux_du_SLVP, p_SWATMX, u_SWATI,
                                     aux_du_VRFLI_1st_approx)
 
     if IMODEL == 0
-        DPSIDW = LWFBrook90Julia.KPT.FDPSIDWF_CH(u_aux_WETNES, p_WET∞, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN)
+        DPSIDW = LWFBrook90.KPT.FDPSIDWF_CH(u_aux_WETNES, p_WET∞, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN)
     else # IMODEL == 1
-        DPSIDW = LWFBrook90Julia.KPT.FDPSIDWF_MvG(u_aux_WETNES, p_MvGα, p_MvGn)
+        DPSIDW = LWFBrook90.KPT.FDPSIDWF_MvG(u_aux_WETNES, p_MvGα, p_MvGn)
     end
     # limit step size
     #   ITER computes DTI so that the potential difference (due to aux_du_VRFLI)
     #   between adjacent layers does not change sign during the iteration time step
-    DTINEW=LWFBrook90Julia.WAT.ITER(IMODEL, NLAYER, DTI, LWFBrook90Julia.CONSTANTS.p_DTIMIN, DPSIDW,
+    DTINEW=LWFBrook90.WAT.ITER(IMODEL, NLAYER, DTI, LWFBrook90.CONSTANTS.p_DTIMIN, DPSIDW,
                                     du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMX, p_THICK, p_STONEF, p_THSAT, p_θr)
     # recompute step
     if (DTINEW < DTI)
         # recalculate flow rates with new DTI
         DTI = DTINEW
         aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
-            LWFBrook90Julia.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
+            LWFBrook90.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
                                         aux_du_SLVP, p_SWATMX, u_SWATI,
                                         aux_du_VRFLI_1st_approx)
     end
 
     # groundwater flow and seepage loss
-    du_GWFL, du_SEEP = LWFBrook90Julia.WAT.GWATER(u_GWAT, p_GSC, p_GSP, p_DT, aux_du_VRFLI[NLAYER])
+    du_GWFL, du_SEEP = LWFBrook90.WAT.GWATER(u_GWAT, p_GSC, p_GSP, p_DT, aux_du_VRFLI[NLAYER])
 
 
     return (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, DTI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI, du_GWFL, du_SEEP)

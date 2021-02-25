@@ -58,7 +58,7 @@ function define_LWFB90_cb()
 
         # Compute time dependent root density parameters
         # TODO(bernhard): Do this outside of integration loop in define_LWFB90_p()
-        p_fT_RELDEN = LWFBrook90Julia.WAT.LWFRootGrowth(p_frelden, p_tini, p_AGE(integrator.t), p_rgroper, p_inirdep, p_inirlen, NLAYER)
+        p_fT_RELDEN = LWFBrook90.WAT.LWFRootGrowth(p_frelden, p_tini, p_AGE(integrator.t), p_rgroper, p_inirdep, p_inirlen, NLAYER)
 
         # Compute rate of rain (mm/day)
         # TODO(bernhard): a) Do this outside of integration loop in define_LWFB90_p()
@@ -97,7 +97,7 @@ function define_LWFB90_cb()
 
         # Derive (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) from u_SWATI
         (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-            LWFBrook90Julia.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_SWATMX, p_THSAT,
+            LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_SWATMX, p_THSAT,
                  p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_KF,
                  p_θr, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
                  p_PSIG, NLAYER, IMODEL)

@@ -5,35 +5,35 @@
 ## Installation and usage
 
 ### Installation
-First, download and install Julia: [https://julialang.org/downloads/](https://julialang.org/downloads/).
+First, download and install Julia: [https://julialang.org/downloads/](https://julialang.org/downloads/). If you like you can also install [julia-vscode.org](https://www.julia-vscode.org) to get a complete IDE. Installation instructions for the VS Code Julia Extension are a bit hidden in their documentation. They can be found here: [https://www.julia-vscode.org/docs/dev/gettingstarted/#Installation-and-Configuration-1](https://www.julia-vscode.org/docs/dev/gettingstarted/#Installation-and-Configuration-1).
 
-To install LWFBrook90Julia.jl open a Julia REPL and run:
+To install LWFBrook90.jl open a Julia REPL and run:
 ```Julia
 using Pkg
-Pkg.add("LWFBrook90Julia")
+Pkg.add("LWFBrook90")
 ```
-!!! note
-
-    Currently the package is not yet registerd. So above command will not work.
 
 To install a current development version of the package you can install it directly from GitHub using:
 ```Julia
 using Pkg
-Pkg.add(PackageSpec(name = "Omniscape", rev = "main"))
+Pkg.add(PackageSpec(name = "LWFBrook90", rev = "develop"))
 ```
 
 Dependencies of LWFBrookJulia.jl should automatically be installed.
 
 ### Usage
-Check out a step by step in guide for installation in [Example](@ref)
+Check out a step-by-step in guide for installation in section [Example](@ref)
 
 The steps in a typical simulation script are:
-- load the package `using LWFBrook90Julia`
+- load the package `using LWFBrook90`
 - load the package dependency `using DifferentialEquations`
 - read input data
 - set up model options
 - set up an `ODE` problem (`u0`,`tspan`, `p`) and solve it with DifferentialEquations.jl
-- plot and/or postprocess output
+- plot and/or postprocess simulation results
+
+LWFBrook90.jl can output additional quantities in daily resolution derived during simulation. Monthly or yearly quantities can be derived in the post processing.
+For performance reasons, e.g. for Bayesian parameter estimation, computation of these additional quantities can also be deactivated during simulation, and they could be calculated in a post-processing step from the state vector (not yet implemented).
 
 
 
@@ -56,9 +56,11 @@ The input files can be specified in two ways:
 The first input data is not yet implemented.
 The second type of input data is more detailed and should be generated automatically by the user. The structure of the second type of input data is illustrated by the example input data `BEA2016-*` set located in the folder `example/`.
 
-An easy way to generate the second type of input data is by setting up a simulation with the R package [LWFBrook90R (v0.4.3)](https://github.com/pschmidtwalter/LWFBrook90R#usage). Instead of running the simulation with `run_LWFB90()`, the same arguments can be used to generate the input files for LWFBrook90Julia using the R function provided in the file `generate_LWFBrook90Julia_Input.R`.
+An easy way to generate the second type of input data is by setting up a simulation with the R package [LWFBrook90R (v0.4.3)](https://github.com/pschmidtwalter/LWFBrook90R#usage). Instead of running the simulation with `run_LWFB90()`, the same arguments can be used to generate the input files for LWFBrook90.jl using the R function provided in the file `generate_LWFBrook90jl_Input.R`.
 
 To load load input data and prepare a simulation follow the instructions in section [Example](@ref) or alternatively use the sample script `main.jl`.
+
+In case you're unfamiliar to Julia, there are various ways to run a script such as `main.jl`: One possibility is to open the Julia REPL and run the script using `include(“main.jl”)`. Alternatively, the editor VS Code in combination with the Julia extension ([julia-vscode.org](https://www.julia-vscode.org)), provides a complete IDE for programming in Julia.
 
 !!! note
 
@@ -157,20 +159,21 @@ Time dependent parameters (climate and vegetation) are provided in the following
 
 
 
-!!! note
-
-    TODO(bernhard): clean up documentation from here on...
-
 
 ## Calibration data (calibration not yet implemented)
-Possible calibration data could in the future could be:
+Roadmap to include calibration data intends to allow inclusion of:
 - Throughfall amounts (for parametrisation of interception)
 - Soil moisture (θ)
 - Soil matric potential (ψ)
 
 
 
+
+
+
 !!! note
+
+    USER GUIDE ENDS HERE.
 
     TODO(bernhard): after impelementation of function `read_inputData`
     Below is an illustration of the initial data sets that could be used.
