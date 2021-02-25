@@ -1,7 +1,6 @@
 # fabian.bernhard@wsl.ch, 2021-01-02
-# using Infiltrator
 using LWFBrook90
-using DifferentialEquations
+using OrdinaryDiffEq: solve, Tsit5
 
 # 1a) Read in input data
 input_prefix = "BEA2016-reset-FALSE"
@@ -134,8 +133,9 @@ ode_LWFBrook90 = define_LWFB90_ODE(u0, tspan, p)
 
 ####################
 ## Solve ODE:
-sol_LWFBrook90 = solve(ode_LWFBrook90, progress = true;
-    saveat = tspan[1]:tspan[2], dt=1e-6, adaptive = true); # dt will be overwritten, adaptive deacives DiffEq.jl adaptivity
+sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
+    progress = true,
+    saveat = tspan[1]:tspan[2], dt=1e-6, adaptive = true); # dt will be overwritten
 ####################
 
 ####################

@@ -26,7 +26,7 @@ Check out a step-by-step in guide for installation in section [Example](@ref)
 
 The steps in a typical simulation script are:
 - load the package `using LWFBrook90`
-- load the package dependency `using DifferentialEquations`
+- load the package dependency `using OrdinaryDiffEq: solve, Tsit5`
 - read input data
 - set up model options
 - set up an `ODE` problem (`u0`,`tspan`, `p`) and solve it with DifferentialEquations.jl
