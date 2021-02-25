@@ -6,7 +6,15 @@ Functions are documented more in detail on another page in section [Function Doc
 LWFBrook90.jl is organised in different modules. They are documented below:
 
 ```@autodocs
-Modules = [LWFBrook90]
+Modules = [LWFBrook90,
+           LWFBrook90.CONSTANTS,
+           LWFBrook90.GLBLDECL,
+           LWFBrook90.KPT,
+           LWFBrook90.WAT,
+           LWFBrook90.SUN,
+           LWFBrook90.PET,
+           LWFBrook90.SNO,
+           LWFBrook90.EVP]
 Order   = [:module]
 ```
 
