@@ -1,24 +1,24 @@
 ```@meta
-CurrentModule = LWFBrook90.jl
+CurrentModule = LWFBrook90
 ```
 
 # Function Documentations
 
 ## Functions from file `LWFBrook90.jl`
 ```@autodocs
-Modules = [LWFBrook90.jl]
+Modules = [LWFBrook90]
 Pages   = ["LWFBrook90.jl"]
 ```
 
 ## Functions from file `func_input_definition.jl`
 ```@autodocs
-Modules = [LWFBrook90.jl]
+Modules = [LWFBrook90]
 Pages   = ["func_input_definition.jl"]
 ```
 
 ## Functions defining the DiffEq.jl system of ODE (p, u0, f, callbacks, ...)
 ```@autodocs
-Modules = [LWFBrook90.jl]
+Modules = [LWFBrook90]
 Pages   = ["func_DiffEq_definition_u0.jl",
            "func_DiffEq_definition_p.jl",
            "func_DiffEq_definition_cb.jl",

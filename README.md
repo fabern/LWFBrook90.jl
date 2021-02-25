@@ -39,7 +39,7 @@ Furthermore, Matthias Häni, Katrin Meusburger, Peter Waldner, Lorenz Walthert, 
 The file `main.jl` contains a setup and simple plotting command to get started with a first simulation.
 An example data set `BEA2016*` was generated using the R package LWFBrook90R and is located inthe folder `example/`. See outputs at the bottom of this README.
 
-Further documentation of [LWFBrook90.jl](https://fabern.github.io/LWFBrook90.jl/stable), and [BROOK90](http://www.ecoshift.net/brook/b90doc.html) are available by following the links.
+Further documentation of [LWFBrook90](https://fabern.github.io/LWFBrook90.jl/stable), and [BROOK90](http://www.ecoshift.net/brook/b90doc.html) are available by following the links.
 
 ### Example data set:
 Following plots illustrate results of the provided data set. The scalar state variables and depth-depenedent (vector) state variables can be plotted:
