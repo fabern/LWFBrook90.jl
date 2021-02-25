@@ -2,7 +2,9 @@
 
 module LWFBrook90
 
-using DifferentialEquations
+using OrdinaryDiffEq  # instead of loading the full DifferentialEquations
+using DiffEqCallbacks # instead of loading the full DifferentialEquations
+
 export read_LWFBrook90R_inputData, derive_params_from_inputData
 export define_LWFB90_p, define_LWFB90_u0, define_LWFB90_ODE
 
