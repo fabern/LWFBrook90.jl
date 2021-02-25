@@ -7,7 +7,7 @@ Implementation of the LWF-BROOK90 hydrological model in Julia
 [![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/invenia/BlueStyle)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://fabern.github.io/LWFBrook90.jl/stable)
-<!--- [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://fabern.github.io/LWFBrook90.jl/dev)-->
+<!--- [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://fabern.github.io/LWFBrook90.jl/dev) [![Join the chat at https://gitter.im/fabern/LWFBrook90.jl](https://badges.gitter.im/fabern/LWFBrook90.jl.svg)](https://gitter.im/fabern/LWFBrook90.jl?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)-->
 
 
 
