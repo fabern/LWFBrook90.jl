@@ -5,7 +5,7 @@
 ## Installation and usage
 
 ### Installation
-First, download and install Julia: [https://julialang.org/downloads/](https://julialang.org/downloads/).
+First, download and install Julia: [https://julialang.org/downloads/](https://julialang.org/downloads/). If you like you can also install [julia-vscode.org](https://www.julia-vscode.org) to get a complete IDE. Installation instructions for the VS Code Julia Extension are a bit hidden in their documentation. They can be found here: [https://www.julia-vscode.org/docs/dev/gettingstarted/#Installation-and-Configuration-1](https://www.julia-vscode.org/docs/dev/gettingstarted/#Installation-and-Configuration-1).
 
 To install LWFBrook90.jl open a Julia REPL and run:
 ```Julia
@@ -59,6 +59,8 @@ The second type of input data is more detailed and should be generated automatic
 An easy way to generate the second type of input data is by setting up a simulation with the R package [LWFBrook90R (v0.4.3)](https://github.com/pschmidtwalter/LWFBrook90R#usage). Instead of running the simulation with `run_LWFB90()`, the same arguments can be used to generate the input files for LWFBrook90.jl using the R function provided in the file `generate_LWFBrook90jl_Input.R`.
 
 To load load input data and prepare a simulation follow the instructions in section [Example](@ref) or alternatively use the sample script `main.jl`.
+
+In case you're unfamiliar to Julia, there are various ways to run a script such as `main.jl`: One possibility is to open the Julia REPL and run the script using `include(“main.jl”)`. Alternatively, the editor VS Code in combination with the Julia extension ([julia-vscode.org](https://www.julia-vscode.org)), provides a complete IDE for programming in Julia.
 
 !!! note
 

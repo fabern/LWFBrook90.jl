@@ -2,7 +2,6 @@
 # using Infiltrator
 using LWFBrook90
 using DifferentialEquations
-using ProgressLogging
 
 # 1a) Read in input data
 input_prefix = "BEA2016-reset-FALSE"
@@ -154,14 +153,14 @@ sol_LWFBrook90 = solve(ode_LWFBrook90, progress = true;
 ####################
 ## Plotting
 # 1) very basic
-# using Plots
+# using Plots # Install plot package at first use with `]` and then `add Plots`
 # # Plot 1
 # plot(sol_LWFBrook90; vars = [1, 2, 3, 4, 5, 6],label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
 # # Plot 2
 # # http://docs.juliaplots.org/latest/generated/gr/#gr-ref43
 # x = LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_reference_date)
 # y = cumsum(pfile_soil["THICK"])
-# z = sol_LWFBrook90[6 .+ (1:NLAYER), :]./pfile_soil["THICK"] # TODO(bernhard): check is this really θ?
+# z = sol_LWFBrook90[6 .+ (1:NLAYER), :]./pfile_soil["THICK"]
 # heatmap(x, y, z, yflip = true,
 #         xlabel = "Date",
 #         ylabel = "Depth",
