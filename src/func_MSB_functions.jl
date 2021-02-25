@@ -31,7 +31,7 @@ function MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
                     p_CCFAC, p_MELFAC, p_LAIMLT, p_SAIMLT)
     #
     # solar parameters depending on only on DOY
-    # TODO(bernhard): a) Do this outside of integration loop in define_DiffEq_parameters() p_fT_DAYLEN
+    # TODO(bernhard): a) Do this outside of integration loop in define_LWFB90_p() p_fT_DAYLEN
     p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY = LWFBrook90Julia.SUN.SUNDS(p_LAT, p_ESLOPE, DOY, p_L1, p_L2, LWFBrook90Julia.CONSTANTS.p_SC, LWFBrook90Julia.CONSTANTS.p_PI, LWFBrook90Julia.CONSTANTS.p_WTOMJ)
 
     # canopy parameters depending on DOY as well as different state depending parameters

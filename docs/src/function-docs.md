@@ -2,7 +2,7 @@
 CurrentModule = LWFBrook90Julia
 ```
 
-# LWFBrook90Julia - Page 1
+# Function Documentations
 
 ## Functions from file `LWFBrook90Julia.jl`
 ```@autodocs

@@ -1,7 +1,7 @@
-""" define_DiffEq_f()\n
+""" define_LWFB90_f()\n
     Generates function f (right-hand-side of ODEs) needed for ODE() probelm in DiffEq.jl package.
 """
-# function define_DiffEq_f()
+# function define_LWFB90_f()
     function f_LWFBrook90R(du,u,p,t)
         # computes right hand side (du) of states: u_GWAT, u_SWATI
 
@@ -32,7 +32,7 @@
         _, _, _, _, _) = p[2]
 
         # Compute rate of rain (mm/day)
-        # TODO(bernhard): a) Do this outside of integration loop in define_DiffEq_parameters()
+        # TODO(bernhard): a) Do this outside of integration loop in define_LWFB90_p()
         #                 b) And simplify it directly to rate p_fT_PREC in both cases
         #                    i.e in case PREINT (PRECDAT) or in case
         if (isequal(p_DTP, 1))

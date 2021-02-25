@@ -4,6 +4,7 @@ module LWFBrook90Julia
 
 using DifferentialEquations
 export read_LWFBrook90R_inputData, derive_params_from_inputData
+export define_LWFB90_p, define_LWFB90_u0, define_LWFB90_ODE
 
 # on modules: https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
 include("module_CONSTANTS.jl");  # to bring into scope: using .CONSTANTS

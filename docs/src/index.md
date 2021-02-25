@@ -1,188 +1,51 @@
-```@meta
-CurrentModule = LWFBrook90Julia
+# LWFBrook90Julia.jl
+Package repository: [https://github.com/fabern/LWFBrook90Julia.jl](https://github.com/fabern/LWFBrook90Julia.jl)
+
+```@contents
+Pages = ["index.md",
+         "model.md",
+         "user-guide.md",
+         "example.md",
+         "function-refs.md",
+         "function-docs.md"]
+Depth = 2
 ```
 
-# LWFBrook90Julia
-
-LWFBrook90Julia is a 1D soil vegetation atmosphere transport model for forested areas based on LWFBrook90R.
-
-- TODO(bernhard): describe use of model here.
-- TODO(bernhard): Remove paragraph on implementations: "LWFBrook90R is implemented in Fortran and has an R package as interface. LWFBrook90Julia is 100% implemented in Julia. It defines the dynamical system in terms of ordinary differential equations and corresponding (time-varying) parameters and makes use of the package DifferentialEquations.jl for solving this dynamical system for a specified time `tspan` and intial conditions `u0`."
-- TODO(bernhard): Refer the documentation of original Brook90: http://www.ecoshift.net/brook/b90doc.html
-
-## Documentation
-- Template for link to [LWFBrook90Julia - Page 1](@ref)
 
 
-## Input data
-To run a simulation following input data are needed
-- siteparam
-- meteo
-- precdat (currently unused)
-- pdur
-- soil_materials
-- soil_nodes
-- param
+## About LWFBrook90Julia.jl
+LWFBrook90Julia.jl implements a 1D soil vegetation atmosphere transport model.
+Intended use cases of this impelemntation are:
+- efficient model calibration for data analysis
+- support of stable isotopes (δ¹⁸O and δ²H)
+- increased flexibility for reparametrizations
 
-Which contain problem-specific settings such as site paramters, meteorological drivers, and soil parameters as well as implementation-specific control settings in `input_param`.
-
-These files need to be provided as CSVs in a single folder and can be loaded by `read_inputData(folder)`.
-
-The structure of these input data is illustrated by the example input data `BEA2016-*` set located in the folder `example/`.
-They are inspired by the definition of the input arguments to the function `run_LWFB90()` in the R package `LWFBrook90R`.
-[They are acutally equal with the arguments that are handed internally to the function `r_lwfbrook90()`]
-
-To load such input data and prepare a simulation follow the sample script `main.jl`, which makes use of the functions [`read_LWFBrook90R_inputData`](@ref) and [`derive_params_from_inputData`](@ref) among others.
-
-### Needed time dependent parameters (daily time step): meteo data and stand properties
-
-Time dependent parameters (climate and vegetation) are provided in the following form:
-
-KAUFENRING (LWFBrook90R):
-- TODO(Bernhard): remove this once an example data set is prepared.
-- TODO(bernhard): include site_id
-- TODO(bernhard): include tmean
-- TODO(bernhard): remove MESFL (measured streamflow)
-- TODO(bernhard): switch to dates (YYYY.MM.DD) instead of 3 columns
-- TODO(bernhard): first row (ID, ...) and third row (UNITS) are not part of csv
-
-```
-climveg.csv
-```
-
-| yr   | mo | da | globrad | tmax  | tmin   | vappres | wind | prec | mesfl | densef | height | lai | sai   | age |
-| ---- | ---| ---| ------- | ----- | ------ | ------- | ---- | ---- | ----- | ------ | ------ | --- | ----- | --- |
-| ID   | ID | ID | METEO | METEO  | METEO   | METEO   | METEO| METEO| STREAM| VEG    | VEG    | VEG | VEG   | VEG |
-|      |    |    | MJ/m2   | °C    | °C     | kPa     | m/s  | mm   |       |        |        |     |       |     |
-| 1980 | 1  | 1  | 3.45    | 1.85  | -6.39  | 0.5     | 2.87 | 0.2  | 0     | 1      | 25     | 4.8 | 0.875 | 100 |
+To read about the model structure, see section [SVAT Model](@ref).
+For a quick start refer to the step-by-step guide in section [Example](@ref)
+For further details read through the [User Guide](@ref) or refer to sections [Function References](@ref) and [Function Documentations](@ref) for further technical intricacies e.g. for development of the package.
 
 
 
-LWF sites (TODO: format as LWFBrook90R):
-- TODO(Bernhard): remove this once an example data set is here.
-
-| site_id | dates      | tmin   | tmax  | tmean  | prec | relhum | globrad | wind | vappres |
-| ------- | ---------- | ------ | ----- | ------ | ---- | ------ | ------- | ---- | ------- |
-|         |            | °C     | °C    | °C     | mm   | %      | MJ/m2   | m/s  | kPa     |
-| BEA     | 01.01.2010 | -6.39  | 1.85  | -1.78  | 0.2  | 79.39  | 3.45    | 2.87 | 0.43    |
-| BEA     | 02.01.2010 | -14.09 | -6.98 | -10.83 | 0    | 79.25  | 7.26    | 3.6  | 0.21    |
-
-
-| site     | X      | Y      | long_wgs84 | lat_wgs84   | tree height (m) | max root depth (m) | LAI  | tree age (yr) | % of deciduous plants |
-| -------- | ------ | ------ | ---------- | ----------- | --------------- | ------------------ | ---- | ------------- | --------------------- |
-| BEA      | 827262 | 165790 | 10.40555   | 46.60469346 | 3.5             | 1.1                | 1.91 | 80            | 45                    |
-| BEA      | 827620 | 165710 | 10.41018   | 46.60385246 | 8.5             | 1.0                | 1.91 | 80            | 50                    |
+## Citing LWFBrook90Julia.jl
+When using LWFBrook90Julia.jl please cite <!-- [TODO.et.al (2021)](TODO) -->
+>TODO: generate citation: (Journal of Open Source Software? Zenodo? Alternatives?)
 
 
 
-### Needed constant meteo data
-
-```
-pdur.csv
-```
-
-```
-"x"
-4
-4
-4
-4
-4
-4
-4
-4
-4
-4
-4
-4
-```
-
-`param.csv``
-
-```
-
-"x"
-11323
-0
-0
-0
-0.14
-0.14
-0.25
-0.5
-0.2
-0.3
-5000
-0.005
-2
-0.004
-0.00325
-0.001
-4
-0.035
-0.13
-...
-
-```
-
-`precdat.csv``
-
-- TODO(bernhard): currently not implemented
+## Acknowledgments
+- Brook90 (v4.8) by C. Anthony Federer
+- LWFBrook90R (v0.4.3) by Paul Schmidt-Walter, Volodymyr Trotsiuk, Klaus Hammel, Martin Kennel, Anthony Federer, Robert Nuske
+- Matthias Häni, Katrin Meusburger, Peter Waldner, Lorenz Walthert, Stephan Zimmermann of [WSL](https://www.wsl.ch) and the Long-term Forest Ecosystem Research (LWF) project of WSL are gratefully acknowledged for providing example data files located in `example/BEA2016*`.
 
 
 
+## References
+Federer, C. A., Vörösmarty, C., & Fekete, B. (2003). Sensitivity of Annual Evaporation to Soil and Root Properties in Two Models of Contrasting Complexity. *Journal of Hydrometeorology*, 4(6), 1276–1290. https://doi.org/10.1175/1525-7541(2003)004<1276:SOAETS>2.0.CO;2
 
+Federer, C. A. (2002). BROOK 90: A simulation model output for evaporation, soil water, and streamflow. http://www.ecoshift.net/brook/brook90.htm
 
-### Needed soil properties
+Hammel, K., & Kennel, M. (2001). Charakterisierung und Analyse der Wasserverfügbarkeit und des Wasserhaushalts von Waldstandorten in Bayern mit dem Simulationsmodell BROOK90 (No. 185; *Forstliche Forschungsberichte München*, p. 135). Technische Uni München Wissenschaftszentrum Weihenstephan. ISBN 3-933506-16-6
 
-KAUFENRING:
-- TODO(Bernhard): remove this once an example data set is here.
+Hammel, K., & Kennel, M. (2001). Charakterisierung und Analyse der Wasserverfügbarkeit und des Wasserhaushalts von Waldstandorten in Bayern mit dem Simulationsmodell BROOK90 (No. 185; *Forstliche Forschungsberichte München*, p. 135). Technische Uni München Wissenschaftszentrum Weihenstephan. ISBN 3-933506-16-6
 
-`soil_materials.csv`:
-
-| mat | ths  | thr   | alpha | npar | ksat  | tort   | gravel |
-| --- | ---  | ---   | ---   | ---  | ---   | ---    | ---    |
-| 1   | 0.44 | 0.069 | 2.6   | 1.18 | 196.0 | 1.03   | 0.016  |
-| 2   | 0.39 | 0.069 | 3.86  | 1.14 | 30.6  | -0.87  | 0.017  |
-
-
-`soil_nodes.csv`:
-
-| layer | midpoint | thick | mat | psiini | rootden|
-| ---   | ----     | ----- | --- | ------ | ------ |
-| 1     | -0.01    | 20    | 1   | -6.3   | 0.024  |
-| 2     | -0.03    | 20    | 1   | -6.3   | 0.023  |
-| 3     | -0.05    | 20    | 1   | -6.3   | 0.022  |
-| 4     | -0.07    | 20    | 1   | -6.3   | 0.020  |
-| 5     | -0.09    | 20    | 1   | -6.3   | 0.020  |
-| 6     | -0.125   | 50    | 1   | -6.3   | 0.018  |
-| 7     | -0.175   | 50    | 1   | -6.3   | 0.016  |
-| 8     | -0.225   | 50    | 1   | -6.3   | 0.014  |
-| 9     | -0.275   | 50    | 1   | -6.3   | 0.012  |
-| 10    | -0.35    | 100   | 2   | -6.3   | 0.010  |
-
-LWF sites (TODO: format as LWFBrook90R):
-- TODO(Bernhard): remove this once an example data set is here.
-
-| site_id             | Total soilde pth | horizon | texture                                   | upper | lower | bd       | gravel   | sand     | silt     | clay     | c_org    |
-| ------------------- | ---------------- | ------- | ----------------------------------------- | ----- | ----- | -------- | -------- | -------- | -------- | -------- | -------- |
-| unit                | m                | KA5     | German soil texture classification system | (m)   | (m)   | (g cm-3) | fraction | (mass-%) | (mass-%) | (mass-%) | (mass-%) |
-| ***\*Münstertal_pit1\**** | 1.2              | Ah      | Sl3                                       | 0     | -0.05 | 1.32     | 0.1      | 70       | 20       | 10       | 9        |
-| -                   | -                | Bv      | …                                         | -0.05 | -0.4  |          |          |          |          |          |          |
-| ***\*Münstertal_pit2\**** | 1.3              | Ah      |                                           | ...   |       |          |          |          |          |          |          |
-| -                   | -                | Bv      |                                           | ...   |       |          |          |          |          |          |          |
-
-
-
-## Calibration data (calibration not yet implemented)
-Possible calibration data could in the future could be:
-- Throughfall amounts (for parametrisation of interception)
-- Soil moisture (θ)
-- Soil matric potential (ψ)
-
-
-
-# Package content
-
-```@index
-```
+Schmidt-Walter, P., Trotsiuk, V., Meusburger, K., Zacios, M., & Meesenburg, H. (2020). Advancing simulations of water fluxes, soil moisture and drought stress by using the LWF-Brook90 hydrological model in R. *Agricultural and Forest Meteorology*, 291, 108023. https://doi.org/10.1016/j.agrformet.2020.108023
