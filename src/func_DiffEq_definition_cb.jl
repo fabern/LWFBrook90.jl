@@ -1,10 +1,10 @@
-""" define_DiffEq_cb()\n
+""" define_LWFB90_cb()\n
     Generates callback function cb needed for ODE() probelm in DiffEq.jl package.
     LWFBrook90 updates states INTS, INTR, SNOW, CC, SNOWLQ not continuously but only
     once per day. This operator splitting (daily vs continuous update of ODEs) is
     implemented by using this callback function which is called once per day.
 """
-function define_DiffEq_cb()
+function define_LWFB90_cb()
     # A) Define updating function
     function LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         # NOTE: we can make use of those:
@@ -57,11 +57,11 @@ function define_DiffEq_cb()
         p_fT_DENSEF = max(0.050, p_DENSEF(integrator.t))
 
         # Compute time dependent root density parameters
-        # TODO(bernhard): Do this outside of integration loop in define_DiffEq_parameters()
+        # TODO(bernhard): Do this outside of integration loop in define_LWFB90_p()
         p_fT_RELDEN = LWFBrook90Julia.WAT.LWFRootGrowth(p_frelden, p_tini, p_AGE(integrator.t), p_rgroper, p_inirdep, p_inirlen, NLAYER)
 
         # Compute rate of rain (mm/day)
-        # TODO(bernhard): a) Do this outside of integration loop in define_DiffEq_parameters()
+        # TODO(bernhard): a) Do this outside of integration loop in define_LWFB90_p()
         #                 b) And simplify it directly to rate p_fT_PREC in both cases
         #                    i.e in case PREINT (PRECDAT) or in case
         if (isequal(p_DTP, 1))
@@ -273,7 +273,7 @@ function define_DiffEq_cb()
     return cb_func
 end
 
-""" define_DiffEq_ODE()\n
+""" define_LWFB90_ODE()\n
     Generates an ODEProblem from DiffEq.jl.\n\n
     # An ODE problem which consists of
     #   - definition of right-hand-side (RHS) function f

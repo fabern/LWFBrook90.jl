@@ -12,7 +12,12 @@ makedocs(;
         assets=String[],
     ),
     pages=[
-        "Home" => "index.md",
+        "About"        => "index.md",
+        "SVAT Model"   => "model.md",
+        "User Guide"   => "user-guide.md",
+        "Examples"     => "example.md",
+        "Function References" => "function-refs.md",
+        "Function Documentation" => "function-docs.md"
     ],
 )
 

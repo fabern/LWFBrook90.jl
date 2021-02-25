@@ -1,7 +1,7 @@
-function define_DiffEq_ODE(u0, tspan, p)
+function define_LWFB90_ODE(u0, tspan, p)
 
     # Define callback functions
-    cb_func = define_DiffEq_cb()
+    cb_func = define_LWFB90_cb()
 
     # swcheck_cb = ContinuousCallback()    #TODO(bernhard) Implement swchek as ContinuousCallback
     # Reset_cb = FunctionCallingCallback() #TODO(bernhard) low priority: implement Reset==1
