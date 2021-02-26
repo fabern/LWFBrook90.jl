@@ -473,10 +473,12 @@ function INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
             end
         end
 
-        if (i > 1)
+        if (i == 1)
+            NTFLI[i] = INFLI[i] - VRFLI_posterior[i] - aux_du_DSFLI[i] - aux_du_TRANI[i] - aux_du_SLVP
+        elseif (i > 1)
             NTFLI[i] = VRFLI_posterior[i-1] + INFLI[i] - VRFLI_posterior[i] - aux_du_DSFLI[i] - aux_du_TRANI[i]
         else
-            NTFLI[i] = INFLI[i] - VRFLI_posterior[i] - aux_du_DSFLI[i] - aux_du_TRANI[i] - aux_du_SLVP
+            @error "Unexpected value of i."
         end
 
     end
