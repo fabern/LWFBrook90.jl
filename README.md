@@ -3,13 +3,12 @@ Implementation of the LWF-BROOK90 hydrological model in Julia
 
 [![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
 [![Build Status](https://travis-ci.com/fabern/LWFBrook90.jl.svg?token=Wmy6jUbNaUsJTRx8zJVf&branch=main)](https://travis-ci.com/fabern/LWFBrook90.jl)
+[![Build Status](https://github.com/fabern/LWFBrook90.jl/workflows/CI/badge.svg)](https://github.com/fabern/LWFBrook90.jl/actions)
 [![Coverage](https://codecov.io/gh/fabern/LWFBrook90.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/fabern/LWFBrook90.jl)
 [![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/invenia/BlueStyle)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://fabern.github.io/LWFBrook90.jl/stable)
-<!--- [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://fabern.github.io/LWFBrook90.jl/dev)-->
-
-
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://fabern.github.io/LWFBrook90.jl/dev)
 
 ## What is LWFBrook90.jl?
 The model LWF-BROOK90 is a 1D Soil Vegetation Atmosphere Transport (SVAT) model, calculating the soil water balance in forest soil. Modelled processes include vertical soil water movement, soil and plant evapotranspiration and temporary storages in snowpack or interception layer.
