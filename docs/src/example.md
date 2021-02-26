@@ -205,13 +205,13 @@ heatmap(x, y, z, yflip = true,
 Following plots illustrate results of the provided data set. The scalar state variables and depth-depenedent (vector) state variables can be plotted:
 ```@raw html
 <p align="center">
-<img src="assets/git-hash-b3f7183/2021-02-24_16h56_LWFBrook90Julia_plot_u_scalar.png" width="400"><br>
+<img src="../assets/git-hash-b3f7183/2021-02-24_16h56_LWFBrook90Julia_plot_u_scalar.png" width="400"><br>
 <br><em><b>Figure 2</b>: Example simulation: scalar results</em><br>
 <p>
 ```
 ```@raw html
 <p align="center">
-<img src="assets/git-hash-b3f7183/2021-02-24_16h56_LWFBrook90Julia_plot_u_vector.png" width="400"><br>
+<img src="../assets/git-hash-b3f7183/2021-02-24_16h56_LWFBrook90Julia_plot_u_vector.png" width="400"><br>
 <br><em><b>Figure 3</b>: Example simulation: vector results soil water</em><br>
 <p>
 ```
@@ -221,13 +221,13 @@ Following plots illustrate results of the provided data set. The scalar state va
 Tests are run to assert agreement with results from LWFBrook90R. Visualizations are reported below. Note that minor discrepancies ```@raw htmlare still present linked to the adaptive time stepping and intermediate updates of state variables.
 ```@raw html
 <p align="center">
-<img src="assets/git-hash-b3f7183/2021-02-24_16h56_R-vs-Julia_comparison_DailyRawValues.png" width="400"><br>
+<img src="../assets/git-hash-b3f7183/2021-02-24_16h56_R-vs-Julia_comparison_DailyRawValues.png" width="400"><br>
 <br><em><b>Figure 4</b>: Comparing daily outputs of LWFBrook90R and LWFBrook90.jl for example data set over a year</em><br>
 <p>
 ```
 ```@raw html
 <p align="center">
-<img src="assets/git-hash-b3f7183/2021-02-24_16h56_R-vs-Julia_comparison_DailyRawValues_first3months.png" width="400"><br>
+<img src="../assets/git-hash-b3f7183/2021-02-24_16h56_R-vs-Julia_comparison_DailyRawValues_first3months.png" width="400"><br>
 <br><em><b>Figure 5</b>: Comparing daily outputs of LWFBrook90R and LWFBrook90.jl for example data set over 3 months</em><br>
 <p>
 ```
@@ -236,14 +236,14 @@ Note that some features of LWFBrook90R are not implemented in the main version o
 
 ```@raw html
 <p align="center">
-<img src="assets/git-hash-2-55ca42d-feature005/2021-02-24_19h10_R-vs-Julia_comparison_DailyRawValues.png" width="400"><br>
+<img src="../assets/git-hash-2-55ca42d-feature005/2021-02-24_19h10_R-vs-Julia_comparison_DailyRawValues.png" width="400"><br>
 <br><em><b>Figure 6</b>: Comparing daily outputs of LWFBrook90R and experimental LWFBrook90.jl:feature-005 for example data set over a year</em><br>
 <p>
 ```
 
 ```@raw html
 <p align="center">
-<img src="assets/git-hash-2-55ca42d-feature005/2021-02-24_19h10_R-vs-Julia_comparison_DailyRawValues_first3months.png" width="400"><br>
+<img src="../assets/git-hash-2-55ca42d-feature005/2021-02-24_19h10_R-vs-Julia_comparison_DailyRawValues_first3months.png" width="400"><br>
 <br><em><b>Figure 7</b>: Comparing daily outputs of LWFBrook90R and experimental LWFBrook90.jl:feature-005 for example data set over 3 months</em><br>
 <p>
 ```

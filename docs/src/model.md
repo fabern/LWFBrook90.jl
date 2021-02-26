@@ -9,7 +9,7 @@ Mass loss through evaporation from temporary storages (snowpack or interception 
 Processes and state variables in LWF-BROOK90 are summarised visually in Figure 1 below.
 ```@raw html
 <p align="center">
-<img src='assets/LWFBrook90jl_overview_v1.4-juliacolors.png' width="400"><br>
+<img src='../assets/LWFBrook90jl_overview_v1.4-juliacolors.png' width="400"><br>
 <br><em><b>Figure 1</b>: Summary of processes and state variables used in LWFBrook90.jl</em><br>
 <p>
 ```
