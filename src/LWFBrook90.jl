@@ -4,6 +4,7 @@ module LWFBrook90
 
 using OrdinaryDiffEq  # instead of loading the full DifferentialEquations
 using DiffEqCallbacks # instead of loading the full DifferentialEquations
+using Dates
 
 export read_LWFBrook90R_inputData, derive_params_from_inputData
 export define_LWFB90_p, define_LWFB90_u0, define_LWFB90_ODE
@@ -25,5 +26,7 @@ include("func_DiffEq_definition_cb.jl")
 include("func_DiffEq_definition_f.jl")
 include("func_DiffEq_definition_ode.jl")
 include("func_MSB_functions.jl")
+
+include("../example/BEA2016-reset-FALSE-input/func_run_example.jl")
 
 end # module

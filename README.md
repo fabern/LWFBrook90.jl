@@ -47,8 +47,10 @@ For the license of LWFBrook90.jl see the file `LICENSE`.
 
 
 ## For Users: getting started
-The file `main.jl` contains a setup and simple plotting command to get started with a first simulation.
 An example data set `BEA2016*` was generated using the R package LWFBrook90R and is located inthe folder `example/`. See outputs in the next section.
+
+To run this example simulation simulation simply call LWFBrook90.run_example(). Note, that the first time it takes some time to load and compile the package. Another possibility is to follow the script `main.jl`, which sets up a simulation and shows some simple plotting commands.
+
 
 Further documentation of [LWFBrook90.jl](https://fabern.github.io/LWFBrook90.jl/stable), and [BROOK90](http://www.ecoshift.net/brook/b90doc.html) are available.
 
@@ -71,8 +73,8 @@ Tests are run to assert agreement with results from LWFBrook90R. Visualizations 
 
 
 ## Limitations of LWFBrook90.jl
-- Preprocessing steps to define a conevnient format of onput data sets are not yet designed. Currently, LWFBrook90.jl makes use of the preprocessing steps provded in the the R package LWFBrook90R.
-- LWFBrook90R is based on LWF-BROOK90. LWF-BROOK90 was itself based an older version of BROOK90 (v3.1F). Developments in BROOK90 up to v4.8 (such as intercell averages of hydraulic conductivity) are therefore only partially included, but not activated by default in LWFBrook90.jl.
+- Preprocessing steps to define a convenient format of input data sets are not yet designed. Currently, LWFBrook90.jl makes use of the preprocessing steps provded in the the R package LWFBrook90R.
+- LWFBrook90R is based on LWF-BROOK90. LWF-BROOK90 was itself based an older version of BROOK90 (v3.1F). Developments in BROOK90 up to v4.8 (such as intercell averages of hydraulic conductivity `KKMEAN`) are therefore only partially included, but not activated by default in LWFBrook90.jl.
 - Currently a part of LWFBrook90R Reset==1, is not implemented in LWFBrook90.jl. (A test implementation of this is available in the branch `005-simplify-time-step-control`.)
 
 ### Improve agreement with LWFBrook90R

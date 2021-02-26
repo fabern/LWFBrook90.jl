@@ -3,6 +3,7 @@
 Example data from Beatenberg is located in subfolder `example/`. WSL is acknowledged for providing the input data (see section [Acknowledgments](@ref)).
 
 ## Step-by-step instructions
+To run the example simulation simulation simply call LWFBrook90.run_example(). For more control either run the script `main.jl`or follow the step-by-step instructiosn below.
 
 Load packages:
 ```Julia
@@ -180,26 +181,38 @@ Note to use the progress bar during the solve the optional package should additi
 
 
 The generated solution can be plotted using the plotting recipes of DifferntialEquations.jl for Plots.jl ([see instructions](https://diffeq.sciml.ai/stable/basics/plot/))
+
 ```Julia
 ####################
 ## Plotting
 using Plots
-# Plot 1
+sol_LWFBrook90_Dates =
+    LWFBrook90.jl.RelativeDaysFloat2DateTime.(
+        sol_LWFBrook90.t,
+        input_reference_date)
+
+# Plot scalar quantities
+# Using dates (but not interpolated)
+plot(sol_LWFBrook90_Dates,
+    sol_LWFBrook90[[1,2,3,4,5,6],:]',
+    label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
+
+# Using simple plot recipe that interpolates, but without dates
 plot(sol_LWFBrook90;
     vars = [1, 2, 3, 4, 5, 6],
     label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
 
-# Plot 2
+# Plot vector quantities
 # http://docs.juliaplots.org/latest/generated/gr/#gr-ref43
-x = LWFBrook90.jl.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_reference_date)
+x = sol_LWFBrook90_Dates
 y = cumsum(pfile_soil["THICK"])
-z = sol_LWFBrook90[6 .+ (1:NLAYER), :]./pfile_soil["THICK"]
-heatmap(x, y, z, yflip = true,
-        xlabel = "Date",
-        ylabel = "Depth",
-        colorbar_title = "θ")
+z = sol_LWFBrook90[7 .+ (0:example["NLAYER"]-1), :]./pfile_soil["THICK"]
+heatmap(x, y, z,
+    yflip = true,
+    xlabel = "Date",
+    ylabel = "Depth",
+    colorbar_title = "θ")
 ```
-
 
 ## Plotting results
 Following plots illustrate results of the provided data set. The scalar state variables and depth-depenedent (vector) state variables can be plotted:
