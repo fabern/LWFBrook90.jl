@@ -1,7 +1,7 @@
 name = "LWFBrook90"
 uuid = "100deb6c-4418-4b77-ad5c-a1fadb580743"
 authors = ["Fabian Bernhard"]
-version = "0.1.2"
+version = "0.1.0"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
@@ -15,6 +15,13 @@ Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
 
 [compat]
 julia = "1"
+CSV = "0.8"
+DataFrames = "0.22"
+DataFramesMeta = "0.6"
+DiffEqCallbacks = "2"
+Interpolations = "0.13"
+OrdinaryDiffEq = "5"
+Roots = "1"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
