@@ -23,7 +23,7 @@ makedocs(;
 
 deploydocs(;
     repo="github.com/fabern/LWFBrook90.jl",
-    devbranch = "main",
+    devbranch = "develop",
     devurl    = "dev",
     branch    = "gh-pages"
 )
