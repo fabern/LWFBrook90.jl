@@ -1,9 +1,9 @@
 """
     run_example()
 
-Run example simulation located "/example/BEA2016-reset-FALSE-input" for 100 days
+Run example simulation located in "/example/BEA2016-reset-FALSE-input" for 100 days
 and return a Dict containing the solution (solution
-object of DifferentialEquations.jl) other variables useful for plotting.
+object of DifferentialEquations.jl) and other variables useful for plotting.
 
 ## Example:
     using LWFBrook90
@@ -35,7 +35,8 @@ object of DifferentialEquations.jl) other variables useful for plotting.
 function run_example()
 
     @info """
-    LWFBrook90 example is run. Plotting can be done in the following way:
+    LWFBrook90 example is being run. Once it has finished, plotting can be done in the
+    following way:
 
     using LWFBrook90
     using Plots
