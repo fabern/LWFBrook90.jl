@@ -66,7 +66,8 @@ function run_example()
 
     # 1a) Read in input data
     input_prefix = "BEA2016-reset-FALSE"
-    input_path = "example/"*input_prefix*"-input/"
+    # input_path = "example/"*input_prefix*"-input/"
+    input_path = @__DIR__ # https://stackoverflow.com/a/63021629
 
     (input_meteo, input_param, input_siteparam, input_precdat, input_pdur,
     input_soil_materials, input_soil_nodes, input_reference_date) =

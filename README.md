@@ -9,13 +9,12 @@ Implementation of the LWF-BROOK90 hydrological model in Julia
 </p>
 <p align="center">Developer info:
 <a href="https://github.com/fabern/LWFBrook90.jl/actions"><img title="Build Status" src="https://github.com/fabern/LWFBrook90.jl/workflows/CI/badge.svg"/></a>
-<a href="https://codecov.io/gh/fabern/LWFBrook90.jl"><img title="Coverage" src="https://codecov.io/gh/fabern/LWFBrook90.jl/branch/master/graph/badge.svg"/></a>
+<a href="https://codecov.io/gh/fabern/LWFBrook90.jl"><img title="Coverage" src="https://codecov.io/gh/fabern/LWFBrook90.jl/branch/develop/graph/badge.svg?token=6F1BUJ8UR9"/>
 <a href="https://github.com/invenia/BlueStyle"><img title="Code Style: Blue" src="https://img.shields.io/badge/code%20style-blue-4495d1.svg"/></a>
 <a href="https://fabern.github.io/LWFBrook90.jl/dev"><img title="Dev" src="https://img.shields.io/badge/docs-dev-blue.svg"></a>
 <a href="https://discourse.julialang.org/t/good-practices-for-package-development-in-the-julia-ecosystem/8175/2">Git branch model</a>
 </p>
-
-
+</a>
 
 ## What is LWFBrook90.jl?
 The model LWF-BROOK90 is a 1D Soil Vegetation Atmosphere Transport (SVAT) model, calculating the soil water balance in forest soil. Modelled processes include vertical soil water movement, soil and plant evapotranspiration and temporary storages in snowpack or interception layer.
