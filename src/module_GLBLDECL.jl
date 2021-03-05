@@ -2,8 +2,8 @@
 
 module GLBLDECL
 
-using DataFrames
 using Interpolations: interpolate, BSpline, Constant, scale, extrapolate
+using DataFrames: DataFrame
 using DataFramesMeta
 using Dates: DateTime
 

@@ -55,7 +55,7 @@ module KPT # SOIL WATER PROPERTIES
 
 export SOILPAR, derive_auxiliary_SOILVAR
 
-using Roots # to find wetness for a given hydraulic conductivity
+using Roots: find_zero, Bisection # to find wetness for a given hydraulic conductivity
 
 
 ### ### Parameters
