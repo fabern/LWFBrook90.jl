@@ -6,17 +6,18 @@ using DataFramesMeta#: @linq, transform, DataFramesMeta
 using Dates: DateTime, Millisecond, Second, Day, month, value, dayofyear
 
 """
-read_LWFBrook90R_inputData(folder::String, prefix::String)\n
-Intent: load different input files for LWFBrook90\n
+    read_LWFBrook90R_inputData(folder::String, prefix::String)
+
+Load different input files for LWFBrook90:
 - climveg
 - param
 - siteparam
 - pdur
 - soil_materials.csv
 - soil_nodes.csv
-\n\n
+
 These files were created with an R script `generate_LWFBrook90Julia_Input.R` that
-takes the same arguements as the R funciton LWFBrook90R::run_LWFB90() and generates
+takes the same arguements as the R funciton `LWFBrook90R::run_LWFB90()` and generates
 the corresponding Julia input functions.
 """
 function read_LWFBrook90R_inputData(folder::String, prefix::String)
@@ -117,31 +118,48 @@ end
 
 ######################
 # Define functions to handle DateTimes and convert into Days as Floats
-""" DateTime2RelativeDaysFloat(x,
-        reference_DateTime)\n Transforms DateTimes `x` to simulation time """
+"""
+    DateTime2RelativeDaysFloat(x,reference_DateTime)
+
+Transforms DateTimes `x` to simulation time
+"""
 function DateTime2RelativeDaysFloat(x::DateTime, reference::DateTime)
     ms2days = 1.0/(24.0*3600.0*1000.0) # to convert milliseconds to days
     ms2days*value(convert(Millisecond, x-reference))
 end
-""" RelativeDaysFloat2DateTime(t,
-        reference_DateTime)\n Transforms simulation time t to DateTimes `dt` """
+"""
+    RelativeDaysFloat2DateTime(t, reference_DateTime)
+
+Transforms simulation time `t` to DateTimes
+"""
 function RelativeDaysFloat2DateTime(t::Float64, reference::DateTime)
     # reference + Day(floor(t))
     t_sec = 60*60*24*t # t is in days, t_sec in seconds
     reference + Second(floor(t_sec))
 end
-""" p_DOY(t::Float64, reference::DateTime)\n Get DOY (Day Of Year) from simulation time"""
+"""
+    p_DOY(t::Float64, reference::DateTime)
+
+Get DOY (Day Of Year) from simulation time
+"""
 function p_DOY(t::Float64, reference::DateTime)
     dayofyear(reference + Day(floor(t)))
 end
-""" p_MONTHN(t::Float64, reference::DateTime)\n Get Month from simulation time"""
+"""
+    p_MONTHN(t::Float64, reference::DateTime)
+
+Get Month from simulation time
+"""
 function p_MONTHN(t::Float64, reference::DateTime)
     month(reference + Day(floor(t)))
 end
 
 # Subset input data and transform dates into floats relative to reference_date
-# """ subset_standardize(data::DataFrame, start::DateTime, stop::DateTime, reference::DateTime)\n
-# Returns DataFrame `data` that is subset between `start` and `stop` and colum `dates` transformed to simulation time."""
+# """
+#    subset_standardize(data::DataFrame, start::DateTime, stop::DateTime, reference::DateTime)
+#
+# Returns DataFrame `data` that is subset between `start` and `stop` and colum `dates` transformed to simulation time.
+# """
 # function subset_standardize(data::DataFrame, start::DateTime, stop::DateTime, reference::DateTime)
 #     @linq data |>
 #     # Subset

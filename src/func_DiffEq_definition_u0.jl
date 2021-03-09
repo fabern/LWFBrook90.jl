@@ -1,5 +1,8 @@
-""" define_LWFB90_u0()\n
-    Generates vector u0 needed for ODE() problem in DiffEq.jl package."""
+"""
+    define_LWFB90_u0()
+
+Generate vector u0 needed for ODE() problem in DiffEq.jl package.
+"""
 function define_LWFB90_u0(u_GWAT_init,
                             u_INTS_init,
                             u_INTR_init,

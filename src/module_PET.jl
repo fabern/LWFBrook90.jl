@@ -167,9 +167,12 @@ export LWFBrook90_CANOPY, ROUGH, WEATHER, SWPE, SWGE, SWGRA, SRSC, ESAT
 using ..CONSTANTS # https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
 
 """
-LWFBrook90_CANOPY() computes evolution of plant parameters over the season.
+    LWFBrook90_CANOPY()
 
-Ecoshift:
+Compute evolution of plant parameters over the season.
+
+# Ecoshift
+"
 Subroutine CANOPY calculates plant "parameters" that can vary with day of the year
 ( DOY).
 
@@ -224,6 +227,7 @@ RTLEN are all reduced proportionally to DENSEF, and RPLANT is increased. However
 NOT reduce HEIGHT because the remaining canopy still has the same height. Therefore DENSEF
 should NOT be set to 0 to simulate a clearcut as HEIGHT is unchanged and the aerodynamic
 resistances will be wrong. Probably DENSEF should not be less than 0.05.
+"
 """
 function LWFBrook90_CANOPY(p_fT_HEIGHT,
                            p_fT_LAI,  # leaf area index, m2/m2, minimum of 0.00001
@@ -263,9 +267,13 @@ function LWFBrook90_CANOPY(p_fT_HEIGHT,
     return (p_fu_HEIGHTeff, p_fu_LAIeff, p_fT_SAIeff, p_fu_RTLEN, p_fu_RPLANT)
 end
 
-"""ROUGH() computes canopy roughness height.
+"""
 
-Ecoshift:
+    ROUGH()
+
+Compute canopy roughness height.
+
+# Ecoshift:
 ROUGH obtains the roughness parameter, z0 , and the zero-plane displacement, d, based on
 canopy height, h, the projected leaf area index, Lp, and the projected stem area index, Sp.
 The methods used follow Shuttleworth and Gurney (1990) with some modifications. Shuttleworth
@@ -356,9 +364,12 @@ end
 
 
 
-"""WEATHER() computes solar radiation, temperature and wind speed.
+"""
+    WEATHER()
 
-Ecoshift:
+Compute solar radiation, temperature and wind speed.
+
+# Ecoshift
 WEATHER includes all adjustments of input weather data, including separation into daytime
 and nighttime values.
 
@@ -465,8 +476,11 @@ function WEATHER(p_fT_TMAX, p_fT_TMIN, p_fT_DAYLEN, p_fT_I0HDAY, p_fT_EA, p_fT_U
             p_fu_UANTM) # average wind speed for nighttime at ZA, m/s
 end
 
-""" ESAT(p_fu_TA) calculates saturated vp (kPa) and DELTA=dES/dTA (kPa/K) from temperature based on
-Murray J Applied Meteorol 6:203 using as input p_fu_TA (air temperature in °C)
+"""
+    ESAT(p_fu_TA)
+
+Calculate saturated vp (kPa) and DELTA=dES/dTA (kPa/K) from temperature based on
+Murray J Applied Meteorol 6:203 using as input p_fu_TA (air temperature in °C).
 """
 function ESAT(p_fu_TA)
     #
@@ -480,10 +494,13 @@ function ESAT(p_fu_TA)
 end
 
 @doc raw"""
-WNDADJ(p_fu_ZA, p_fu_DISP, p_fu_Z0, p_FETCH, p_ZW, p_Z0W) returns ratio of wind speed at
-reference height (above canopy) to wind speed at weather station
+    WNDADJ(p_fu_ZA, p_fu_DISP, p_fu_Z0, p_FETCH, p_ZW, p_Z0W)
 
-Ecoshift: This function estimates the wind speed (UA) at reference height ZA above the
+Compute ratio of wind speed at reference height (above canopy) to wind speed at weather station.
+
+# Ecoshift
+"
+This function estimates the wind speed (UA) at reference height ZA above the
 canopy from input wind speed at a remote weather station (UW). Assume that the weather
 station represents a new surface downwind that has a roughness of z0w (Z0W) and a fetch of F
 (FETCH). Brutsaert (1982) gives the height of the internal boundary layer, zb, as
@@ -506,6 +523,7 @@ where zw (ZW) is the height of wind measurement at the weather station (Federer 
 and d (DISP) is the zero-plane displacement of the canopy. This assumes that the weather
 station is over a smooth surface so its zero plane displacement can be ignored. If the
 parameter Z0W is set to zero, then no adjustment is made and ua = uw.
+"
 """
 function WNDADJ(p_fu_ZA, p_fu_DISP, p_fu_Z0, p_FETCH, p_ZW, p_Z0W)
     # Brutsaert (1982) equation 7-39
@@ -518,10 +536,12 @@ end
 
 
 """
-SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, p_fu_RSS, DELTA)\n
-computes Shuttleworth and Wallace (1985) transpiration and ground evaporation
+    SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, p_fu_RSS, DELTA)
 
-Ecoshift:
+Compute Shuttleworth and Wallace (1985) transpiration and ground evaporation.
+
+# Ecoshift
+"
 Shuttleworth and Wallace (1985) (SW) modified the Penman-Monteith method to account
 separately for the different water vapor and sensible heat pathways from the soil and from
 the leaves. Instead of the two resistances of equation (1), rc and ra, SW define five: rsc,
@@ -577,6 +597,7 @@ less in reverse order.
 
 The outputs Ec (PRATE) and Es (ERATE) from SWPE are in units of mm/d whereas Lvρw E in (1)
 is output as W m-2 from function PM. The conversion is ETOM * WTOMJ .
+"
 """
 function SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, p_fu_RSS, DELTA)
     # AA      - net radiation at canopy top minus ground flux, W/m2
@@ -611,9 +632,12 @@ function SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, p_fu_RSS, DELTA)
 end
 
 """
-SWGE() computes ground evaporation rate (mm/d) using Shuttleworth-Wallace with known transpiration
+    SWGE()
 
-Ecoshift:
+Compute ground evaporation rate (mm/d) using Shuttleworth-Wallace with known transpiration.
+
+# Ecoshift
+"
 The Shuttleworth-Wallace approach incorporates the energy tradeoff between transpiration and
 soil evaporation. When transpiration is reduced by low availability of soil water or is
 zero, BROOK90 uses the new value of transpiration, Ec (ARATE), in subroutine SWGE to get a
@@ -622,6 +646,7 @@ into (2) and solving for Lv ρw E gives
 (14) ...
 then
 (15) Lv ρw Es = Lv ρw E - Lv ρw Ec
+"
 """
 function SWGE(AA, ASUBS, VPD, RAA, RAS, p_fu_RSS, DELTA, ARATE)
     # AA      - net radiation at canopy top minus ground flux, W/m2
@@ -645,9 +670,12 @@ end
 
 
 """
-SWGRA()
+    SWGRA()
 
-Ecoshift:
+Compute Shuttleworth - Wallace - Gurney Aerodynamic Resistances.
+
+# Ecoshift
+"
 Shuttleworth - Wallace - Gurney Aerodynamic Resistances
 The three SW aerodynamic resistances, raa, ras, and rac are obtained in subroutine SWGRA by
 the methods of Shuttleworth and Gurney (1990). The derivations of their equations are not
@@ -720,6 +748,7 @@ the leaf diffusion resistance are in series on each side of flat leaves (Jarvis 
 McNaughton 1986). The two resistances should be summed over each side of the leaf before
 integrating over the canopy, but this is too complicated for practical application
 (Choudhury and Monteith 1988).
+"
 """
 function SWGRA(UA, p_fu_ZA, p_fu_HEIGHT, p_fu_Z0, p_fu_DISP, p_fu_Z0C, p_fu_DISPC, p_fu_Z0GS, p_LWIDTH, p_RHOTP, p_NN, p_fu_LAI, p_fu_SAI)
     # UA      -  wind speed at reference height, m/s
@@ -806,9 +835,12 @@ function FRSS(p_RSSA, p_RSSB, p_PSIF_TopLayer, u_aux_PSIM_TopLayer, p_PsiCrit_To
 end
 
 """
-SRSC() computes canopy surface resistance
+SRSC()
 
-Ecoshift:
+Compute canopy surface resistance.
+
+# Ecoshift
+"
 This routine obtains the canopy surface resistance, rsc, which is the classic canopy
 resistance in the Penman-Monteith equation, using the Jarvis (1976) expression for the
 factors that control the individual leaf resistance, r, and its reciprocal the leaf
@@ -930,6 +962,7 @@ and (33) is then
 
 which corresponds to Shuttleworth and Gurney (1990) and Saugier and Katerji (1991) when Sp =
 0. The combination of (32) and (34) provides the value of rsc (RSC)
+"
 """
 function SRSC(RAD, p_fu_TA, VPD, p_fu_LAI, p_fu_SAI, p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_CR, p_TL, p_T1, p_T2, p_TH)
     # RAD     - solar radiation on canopy, W/m2
@@ -981,7 +1014,12 @@ end
 
 
 """
-Ecoshift:
+    PM(AA, VPD, DELTA, RA, RC)
+
+Compute Penman-Monteith latent heat flux density, W/m2.
+
+# Ecoshift
+"
 The Penman-Monteith equation is
 
 Lv ρw E = (Δ (Rn-S) + c_p ρ Da / ra ) / (Δ + γ + γ (rc/ra))
@@ -1002,6 +1040,7 @@ height of water vapor in the plant canopy. The aerodynamic resistance, ra, is a 
 the turbulent transfer capability of the atmosphere between the effective source height and
 za. The Penman-Monteith equation is derived from the energy balance equation and the mass
 transfer equations for sensible and latent heat fluxes (e.g. Brutsaert 1982).
+"
 """
 function PM(AA, VPD, DELTA, RA, RC)
     Pm = (RA * DELTA * AA + p_CPRHO * VPD) / ((DELTA + p_GAMMA) * RA + p_GAMMA * RC)

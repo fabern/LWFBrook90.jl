@@ -28,7 +28,7 @@ For further details read through the section [User Guide](@ref) or refer to sect
 
 ## Citing LWFBrook90.jl
 When using LWFBrook90.jl please cite <!-- [TODO.et.al (2021)](TODO) -->
->TODO: generate citation: (Journal of Open Source Software? Zenodo? Journal of Open Research Software (DiffEq.jl)? Alternatives?)
+>TODO: generate citation: (Journal of Open Source Software? Zenodo? Journal of Open Research Software (DifferentialEquations.jl)? Alternatives?)
 
 
 
@@ -43,8 +43,6 @@ When using LWFBrook90.jl please cite <!-- [TODO.et.al (2021)](TODO) -->
 Federer, C. A., Vörösmarty, C., & Fekete, B. (2003). Sensitivity of Annual Evaporation to Soil and Root Properties in Two Models of Contrasting Complexity. *Journal of Hydrometeorology*, 4(6), 1276–1290. https://doi.org/10.1175/1525-7541(2003)004<1276:SOAETS>2.0.CO;2
 
 Federer, C. A. (2002). BROOK 90: A simulation model output for evaporation, soil water, and streamflow. http://www.ecoshift.net/brook/brook90.htm
-
-Hammel, K., & Kennel, M. (2001). Charakterisierung und Analyse der Wasserverfügbarkeit und des Wasserhaushalts von Waldstandorten in Bayern mit dem Simulationsmodell BROOK90 (No. 185; *Forstliche Forschungsberichte München*, p. 135). Technische Uni München Wissenschaftszentrum Weihenstephan. ISBN 3-933506-16-6
 
 Hammel, K., & Kennel, M. (2001). Charakterisierung und Analyse der Wasserverfügbarkeit und des Wasserhaushalts von Waldstandorten in Bayern mit dem Simulationsmodell BROOK90 (No. 185; *Forstliche Forschungsberichte München*, p. 135). Technische Uni München Wissenschaftszentrum Weihenstephan. ISBN 3-933506-16-6
 

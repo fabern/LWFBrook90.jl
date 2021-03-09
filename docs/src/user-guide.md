@@ -11,11 +11,6 @@ To install LWFBrook90.jl open a Julia REPL, enter the Pkg REPL by pressing `]` a
 ```
 (@v1.5) pkg> add LWFBrook90
 ```
-If the you want to use the develop version not in the package registry you can install directly from github using the command:
-```
-(@v1.5) pkg> add https://github.com/fabern/LWFBrook90.jl
-```
-
 Dependencies of LWFBrookJulia.jl should automatically be installed.
 
 ### Usage

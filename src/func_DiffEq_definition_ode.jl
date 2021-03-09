@@ -1,3 +1,20 @@
+"""
+    define_LWFB90_ODE()
+
+Generates an ODEProblem from DiffEq.jl
+
+An ODE problem which consists of
+  - definition of right-hand-side (RHS) function f
+  - definition of callback function cb
+  - initial condition of states
+  - definition of simulation time span
+  - parameters
+
+Seperate updating of different states (INTS, INTR, SNOW, CC, SNOWLQ are updated once per
+day while GWAT and SWATI are updated continuously) is implemented by means of operator
+splitting using a callback function for the daily updates and a ODE RHS (right hand
+side) for the continuous update.
+"""
 function define_LWFB90_ODE(u0, tspan, p)
 
     # Define callback functions

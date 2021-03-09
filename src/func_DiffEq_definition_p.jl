@@ -1,6 +1,21 @@
-""" define_diff_eq_parameters(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, compute_intermediate_quantities,
-    pfile_meteo, pfile_siteparam, pfile_param, pfile_soil, pfile_pdur)\n
-    Generates vector p needed for ODE() problem in DiffEq.jl package."""
+"""
+    define_diff_eq_parameters()
+
+Generate vector p needed for ODE() problem in DiffEq.jl package.
+
+# Arguments
+- `NLAYER::...`: TODO argument description.
+- `IMODEL::...`: TODO argument description.
+- `constant_dt_solver::...`: TODO argument description.
+- `NOOUTF::...`: TODO argument description.
+- `Reset::...`: TODO argument description.
+- `compute_intermediate_quantities::...`: TODO argument description.
+- `pfile_meteo::...`: TODO argument description.
+- `pfile_siteparam::...`: TODO argument description.
+- `pfile_param::...`: TODO argument description.
+- `pfile_soil::...`: TODO argument description.
+- `pfile_pdur::...`: TODO argument description.
+"""
 function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, compute_intermediate_quantities,
     pfile_meteo, pfile_siteparam, pfile_param, pfile_soil, pfile_pdur)
 

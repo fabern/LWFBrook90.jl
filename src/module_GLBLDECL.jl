@@ -15,9 +15,10 @@ export derive_params_from_inputData
 # Exported functions
 
 """
-derive_params_from_inputData(input_meteo::DataFrame, input_param::DataFrame, input_siteparam::DataFrame,
-input_precdat::DataFrame, input_pdur::DataFrame, input_soil_materials::DataFrame, input_soil_nodes::DataFrame)\n
-Takes input data sets and defines parameters needed for simulation.
+    derive_params_from_inputData(input_meteo::DataFrame, input_param::DataFrame, input_siteparam::DataFrame,
+    input_precdat::DataFrame, input_pdur::DataFrame, input_soil_materials::DataFrame, input_soil_nodes::DataFrame)
+
+Take input data sets and defines parameters needed for simulation.
 """
 function derive_params_from_inputData(input_meteo::DataFrame,
                                   input_param::DataFrame,
@@ -59,8 +60,9 @@ end
 #######################
 # Unexported functions
 """
-derive_params_from_input_meteo(input_meteo::DataFrame)\n
-Takes climate and vegetation parameters in `input_meteo` and generates continuous parameters.
+    derive_params_from_input_meteo(input_meteo::DataFrame)
+
+Take climate and vegetation parameters in `input_meteo` and generates continuous parameters.
 """
 function derive_params_from_input_meteo(input_meteo::DataFrame, input_reference_date::DateTime)
 
@@ -107,7 +109,10 @@ function derive_params_from_input_meteo(input_meteo::DataFrame, input_reference_
                  ("input_reference_date", input_reference_date)])
 end
 
-"""derive_params_from_input_pdur(input_pdur)\n Function that defines constant parameters from input_pdur. TO BE REDEFINED
+"""
+    derive_params_from_input_pdur(input_pdur)
+
+Define constant parameters from input_pdur. TO BE REDEFINED
 """
 function derive_params_from_input_pdur(input_pdur)
     # Interception parameters -------
@@ -115,7 +120,10 @@ function derive_params_from_input_pdur(input_pdur)
     return Dict([("DURATN",DURATN)])
 end
 
-"""derive_params_from_input_siteparam(input_siteparam)\n Function that defines constant parameters from input_siteparam. TO BE REDEFINED
+"""
+    derive_params_from_input_siteparam(input_siteparam)
+
+Define constant parameters from input_siteparam. TO BE REDEFINED
 """
 function derive_params_from_input_siteparam(input_siteparam)
     p_LAT  = input_siteparam[1,3]/57.296
@@ -130,7 +138,10 @@ function derive_params_from_input_siteparam(input_siteparam)
                  ("p_NPINT",p_NPINT)])
 end
 
-"""derive_params_from_input_soil(input_soil_materials, input_soil_nodes, IMODEL, ILAYER, QLAYER, NLAYER)\n Function that defines constant parameters from input_pdur. TO BE REDEFINED
+"""
+    derive_params_from_input_soil(input_soil_materials,IMODEL, ILAYER, QLAYER, NLAYER)
+
+Define constant parameters from input_pdur. TO BE REDEFINED
 """
 function derive_params_from_input_soil(input_soil_materials, input_soil_nodes, IMODEL, ILAYER, QLAYER, NLAYER, HEAT, nmat, inirdep, rgrorate)
     # Parse soil parameter according to material at different depth given by
@@ -322,7 +333,10 @@ function derive_params_from_input_soil(input_soil_materials, input_soil_nodes, I
                 ("TopInfT", TopInfT)])
 end
 
-"""derive_params_from_input_param(input_param)\nFunction that defines constant parameters from input_param. TO BE REDEFINED
+"""
+    derive_params_from_input_param(input_param)
+
+unction that defines constant parameters from input_param. TO BE REDEFINED
 """
 function derive_params_from_input_param(input_param)
     # from LWFBrook90R:PFILE.h

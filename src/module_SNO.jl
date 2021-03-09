@@ -73,8 +73,13 @@ using ..PET: ESAT, SWGRA
 export SNOFRAC, SNOVAP, SNOENRGY
 
 
-"""SNOFRAC(p_fT_TMAX, p_fT_TMIN, p_RSTEMP) separates RFAL from SFAL
-Ecoshift:
+"""
+    SNOFRAC(p_fT_TMAX, p_fT_TMIN, p_RSTEMP)
+
+Separate RFAL from SFAL.
+
+# Ecoshift
+"
 Separation of daily precipitation into snow or rain is a major problem in hydrologic
 modeling. For instance, if the wrong precipitation form is chosen in December, simulated
 streamflow from that day's precipitation could be shifted from December to April or vice
@@ -90,6 +95,7 @@ where RSTEMP is the "base" temperature for the rain-snow transition. When TMAX <
 SNOFRC = 1; when TMIN > RSTEMP, SNOFRC = 0. The default value of RSTEMP is -0.5°C because
 that seems to work best at Hubbard Brook. If precipitation is input more than once a day,
 the same SNOFRC is used for all precipitation intervals.
+"
 """
 function SNOFRAC(p_fT_TMAX, p_fT_TMIN, p_RSTEMP)
     if (p_fT_TMIN >= p_RSTEMP)
@@ -102,13 +108,17 @@ function SNOFRAC(p_fT_TMAX, p_fT_TMIN, p_RSTEMP)
     return p_fT_SNOFRC
 end
 
-""" SNOVAP(p_fu_TSNOW, p_fu_TA, p_fT_EA, UA, p_fu_ZA, p_fu_HEIGHT, p_fu_Z0, p_fu_DISP, p_fu_Z0C, p_fu_DISPC, p_fu_Z0GS, p_LWIDTH, p_RHOTP, p_NN, p_fu_LAI, p_fu_SAI, p_KSNVP)
-Returns potential snow evaporation (mm/d)
+"""
+    SNOVAP(p_fu_TSNOW, p_fu_TA, p_fT_EA, UA, p_fu_ZA, p_fu_HEIGHT, p_fu_Z0, p_fu_DISP,
+    p_fu_Z0C,p_fu_DISPC, p_fu_Z0GS, p_LWIDTH, p_RHOTP, p_NN, p_fu_LAI, p_fu_SAI, p_KSNVP)
+
+Compute potential snow evaporation (mm/d).
 
 
-Ecoshift:
-Evaporation rate from the snowpack, and its negative, condensation, are evaluated using the
-aerodynamic flux equation
+# Ecoshift
+"
+Evaporation rate from the snowpack, and its negative, condensation, are evaluated
+using the aerodynamic flux equation
 
 E = (cp ρ / g Ls rw ) (e0 - ea) / (raa + ras)
 
@@ -153,6 +163,7 @@ evaporation under forests.
 Note that although evaporation and condensation of water are simulated in SNOVAP, the
 accompanying latent transfer is not simulated. The snow energy balance in subroutine
 SNOENRGY is (unfortunately) decoupled from the snow evaporation-condensation process.
+"
 """
 function SNOVAP(p_fu_TSNOW, p_fu_TA, p_fT_EA, UA, p_fu_ZA, p_fu_HEIGHT, p_fu_Z0, p_fu_DISP,
     p_fu_Z0C, p_fu_DISPC, p_fu_Z0GS, p_LWIDTH, p_RHOTP, p_NN, p_fu_LAI, p_fu_SAI, p_KSNVP)
@@ -173,10 +184,14 @@ function SNOVAP(p_fu_TSNOW, p_fu_TA, p_fT_EA, UA, p_fu_ZA, p_fu_HEIGHT, p_fu_Z0,
     return p_fu_PSNVP # potential snow evaporation (mm/d)
 end
 
-""" SNOENRGY(p_fu_TSNOW, p_fu_TA, p_fT_DAYLEN, p_CCFAC, p_MELFAC, p_fT_SLFDAY, p_fu_LAI,
-p_fu_SAI, p_LAIMLT, p_SAIMLT)\nreturns energy flux density to snow surface, MJ m-2 d-1
+"""
+    SNOENRGY(p_fu_TSNOW, p_fu_TA, p_fT_DAYLEN, p_CCFAC, p_MELFAC, p_fT_SLFDAY, p_fu_LAI,
+    p_fu_SAI, p_LAIMLT, p_SAIMLT)
 
-Ecoshift:
+Compute energy flux density to snow surface, MJ m-2 d-1.
+
+# Ecoshift
+"
 The energy flux density to the snow surface (SNOEN, MJ m-2 d-1) is calculated in subroutine
 SNOENRGY independently of precipitation for the day.
 
@@ -205,6 +220,7 @@ below this. Inclusion of SLFDAY in the MELT equation arises from an assumption t
 radiation melt plays an important role. If this is not so, then SLFDAY multiplier could be
 omitted, and snowmelt would not depend on slope-aspect. The functional forms of the SAI and
 LAI dependencies are based on the somewhat arbitrary curves used by Federer and Lash (1978).
+"
 """
 function SNOENRGY(p_fu_TSNOW, p_fu_TA, p_fT_DAYLEN, p_CCFAC, p_MELFAC, p_fT_SLFDAY, p_fu_LAI, p_fu_SAI, p_LAIMLT, p_SAIMLT)
     # snow surface energy balance
@@ -220,11 +236,13 @@ function SNOENRGY(p_fu_TSNOW, p_fu_TA, p_fT_DAYLEN, p_CCFAC, p_MELFAC, p_fT_SLFD
 end
 
 """
-SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN, u_CC, u_SNOW,
-                  u_SNOWLQ, p_DTP, p_fu_TA, p_MAXLQF, p_GRDMLT)\n
-Updates status of snowpack.
+    SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN, u_CC, u_SNOW,
+    u_SNOWLQ, p_DTP, p_fu_TA, p_MAXLQF, p_GRDMLT)
 
-Ecoshift:
+Update status of snowpack.
+
+# Ecoshift
+"
 In each precipitation interval, throughfall of rain (RTHR) and throughfall of snow (STHR)
 are calculated and subroutine SNOWPACK is entered if there is STHR or if there is SNOW. This
 subroutine adds throughfall to the snowpack, subtracts groundmelt, snow evaporation, and
@@ -283,6 +301,7 @@ MSBPREINT then calculates the rain passing through the snow (RNET) as
 RNET = RTHR - RSNO.
 
 When SNOW exists at the beginning of the day, soil evaporation (SLVP) is zero.
+"
 """
 function SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN, u_CC, u_SNOW,
                   u_SNOWLQ, p_DTP, p_fu_TA, p_MAXLQF, p_GRDMLT)

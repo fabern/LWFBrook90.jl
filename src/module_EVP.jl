@@ -24,7 +24,11 @@ using ..CONSTANTS: p_RHOWG, p_PI # https://discourse.julialang.org/t/large-progr
 
 export PLNTRES, TBYLAYER, INTER, INTER24
 
-"""  PLNTRES() allocates total plant resistance to xylem and root layers
+"""
+    PLNTRES()
+
+Allocates total plant resistance to xylem and root layers.
+
 Ecoshift:
 Subroutine PLNTRES is called at the beginning of each day to obtain resistivities to liquid
 water flow: rhizosphere resistivity for each soil layer, root resistivity in each soil
@@ -172,7 +176,11 @@ function PLNTRES(NLAYER, p_THICK, p_STONEF, p_fu_RTLEN, p_fT_RELDEN, p_RTRAD, p_
 end
 
 
-"""TBYLAYER() allocates transporation among soil layers.
+"""
+
+    TBYLAYER()
+
+Allocate transporation among soil layers.
 
 Ecoshift:
 TBYLAYER determines the rate at which liquid water can be supplied to transpiring leaves,
@@ -388,8 +396,26 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fu_ALPHA, p_fu_KK, p_fu_RROOTI, p_f
 end
 
 
-"""Rain interception, used when p_NPINT > 1
+"""
+    INTER(p_fT_RFAL, p_fu_PINT, p_fu_LAI, p_fu_SAI, p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS, p_DTP, u_INTR)
 
+Compute rain catch rate (interception) and evaporation rate of intercepted rain in mm/d.
+
+Rain interception, used when p_NPINT > 1.
+
+# Arguments
+- `p_fT_RFAL`: rainfall rate, mm/d
+- `p_fu_PINT`: potential interception rate, mm/d
+- `p_fu_LAI`: projected leaf area index, m2/m2
+- `p_fu_SAI`: projected stem area index, m2/m2
+- `p_FRINTL`: intercepted fraction of p_fT_RFAL per unit p_fu_LAI
+- `p_FRINTS`: intercepted fraction of p_fT_RFAL per unit p_fu_SAI
+- `p_CINTRL`: maximum interception storage of rain per unit p_fu_LAI, mm
+- `p_CINTRS`: maximum interception storage of rain per unit p_fu_SAI, mm
+- `p_DTP`: precipitation interval time step, d
+- `u_INTR`: intercepted rain storage, mm,
+
+# Ecoshift:
 Older studies of rain and snow interception regressed throughfall on precipitation, but such
 interpretation ignored the fact that energy supply rather than water supply may limit
 interception and also ignores storm duration/intensity and interstorm interval. Detailed
@@ -482,7 +508,7 @@ function INTER(p_fT_RFAL, p_fu_PINT, p_fu_LAI, p_fu_SAI, p_FRINTL, p_FRINTS, p_C
     # p_FRINTS  intercepted fraction of p_fT_RFAL per unit p_fu_SAI
     # p_CINTRL  maximum interception storage of rain per unit p_fu_LAI, mm
     # p_CINTRS  maximum interception storage of rain per unit p_fu_SAI, mm
-    # DTP       precipitation interval time step, d
+    # p_DTP     precipitation interval time step, d
     # u_INTR    intercepted rain storage, mm,
 
     # maximum RINT, mm/d
@@ -516,10 +542,29 @@ function INTER(p_fT_RFAL, p_fu_PINT, p_fu_LAI, p_fu_SAI, p_FRINTL, p_FRINTS, p_C
   return (aux_du_RINT, aux_du_IRVP)
 end
 
-""" Rain interception with duration in hours, used when p_NPINT = 1. Same routine is used for
-snow interception, with different calling variables
+"""
+    INTER(p_fT_RFAL, p_fu_PINT, p_fu_LAI, p_fu_SAI, p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS, p_DTP, u_INTR)
 
-Ecoshift:
+Compute rain catch rate (interception) and evaporation rate of intercepted rain in mm/d.
+
+Rain interception with duration in hours, used when p_NPINT = 1. Same routine is used for
+snow interception, with different calling variables.
+
+# Arguments:
+- `p_fT_RFAL`: 24-hour average rainfall rate, mm/d
+- `p_fu_PINT`: potential interception rate, mm/d
+- `p_fu_LAI`: projected leaf area index, m2/m2
+- `p_fu_SAI`: projected stem area index, m2/m2
+- `p_FRINTL`: intercepted fraction of p_fT_RFAL per unit p_fu_LAI
+- `p_FRINTS`: intercepted fraction of p_fT_RFAL per unit p_fu_SAI
+- `p_CINTRL`: maximum interception storage of rain per unit p_fu_LAI, mm
+- `p_CINTRS`: maximum interception storage of rain per unit p_fu_SAI, mm
+- `p_DURATN`: average storm duration, hr
+- `u_INTR`: intercepted rain storage, mm,
+- `MONTHN`: Month of the year
+
+# Ecoshift:
+"
 Subroutine INTER24 - daily interception
 Proper representation and integration of the interception process is a problem for
 hydrologic models that use a daily interval for precipitation input (p_NPINT = 1), because the
@@ -546,19 +591,20 @@ To determine appropriate values of DURATN I examined hourly precipitation data f
 of precipitation of 0.02 inch (0.5 mm) or greater over days with such precipitation gave the
 following results after a little smoothing
 
-                    J   F   M   A   M   J   J   A   S   O   N   D
-San Juan PR         3   2   2   2   2   2   2   3   3   3   3   3
-Atlanta GA          5   5   5   5   4   4   3   3   4   4   5   6
-Caribou ME          4   4   5   5   4   4   4   4   4   6   6   5
-Madison WI          4   4   5   3   3   2   3   3   4   4   5   5
-Lake Charles LA     5   4   3   3   3   3   2   2   3   3   4   5
-Phoenix AZ          4   4   4   4   4   2   2   2   2   2   4   4
-Rapid City SD       3   3   3   4   4   3   2   2   2   2   4   4
-Tacoma WA           6   6   5   4   4   4   4   4   4   4   6   6
-Fairbanks AK        3   3   4   4   4   4   3   3   4   4   4   3
-Hubbard Brook NH    5   5   5   4   4   4   4   4   4   5   5   5
+                        J   F   M   A   M   J   J   A   S   O   N   D
+    San Juan PR         3   2   2   2   2   2   2   3   3   3   3   3
+    Atlanta GA          5   5   5   5   4   4   3   3   4   4   5   6
+    Caribou ME          4   4   5   5   4   4   4   4   4   6   6   5
+    Madison WI          4   4   5   3   3   2   3   3   4   4   5   5
+    Lake Charles LA     5   4   3   3   3   3   2   2   3   3   4   5
+    Phoenix AZ          4   4   4   4   4   2   2   2   2   2   4   4
+    Rapid City SD       3   3   3   4   4   3   2   2   2   2   4   4
+    Tacoma WA           6   6   5   4   4   4   4   4   4   4   6   6
+    Fairbanks AK        3   3   4   4   4   4   3   3   4   4   4   3
+    Hubbard Brook NH    5   5   5   4   4   4   4   4   4   5   5   5
 
 Apparently a default DURATN of 4 hours is appropriate for all months anywhere in the U.S.
+"
 """
 function INTER24(p_fT_RFAL, p_fu_PINT, p_fu_LAI, p_fu_SAI, p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS, p_DURATN, u_INTR, MONTHN)
     # p_fT_RFAL  24-hour average rainfall rate, mm/d
