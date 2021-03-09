@@ -14,7 +14,7 @@ Depth = 2
 
 
 ## About LWFBrook90.jl
-LWFBrook90.jl implements a 1D soil vegetation atmosphere transport model.
+LWFBrook90.jl implements a 1D soil-vegetation-atmosphere transfer model.
 Intended use cases of this impelemntation are:
 - support of stable isotopes (δ¹⁸O and δ²H)
 - efficient model calibration for data analysis
