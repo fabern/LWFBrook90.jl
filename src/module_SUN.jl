@@ -49,6 +49,12 @@ using ..CONSTANTS: p_SIGMA, p_PI # https://discourse.julialang.org/t/large-progr
 export EQUIVSLP, SUNDS, AVAILEN
 
 """
+    EQUIVSLP(p_LAT, SLOPE, p_ASPECT)
+
+Correct solar radiation for slope and aspect and compute "equivalent slope" parameters.
+
+# Ecoshift
+"
 Correction of solar radiation for slope and aspect requires calculation of an "equivalent
 slope" in subroutine EQUIVSLP. The equivalent slope is defined as the location on the
 earth's surface where a horizontal surface is parallel to the given sloping surface.
@@ -64,6 +70,7 @@ L2 = ATAN { SIN(SLOPE) * SIN(ASPECT) /[ COS(SLOPE) * COS(LAT) - SIN(SLOPE) * SIN
 with fixes for negative or zero denominator in L2, where SLOPE (ESLOPE), ASPECT, and
 latitude (LAT) are input parameters describing the location. All angles in the subroutine
 are in radians.
+"
 """
 function EQUIVSLP(p_LAT, SLOPE, p_ASPECT)
     #Swift#s p_L1 and p_L2, Lee (3.31, 3.32)
@@ -79,9 +86,13 @@ function EQUIVSLP(p_LAT, SLOPE, p_ASPECT)
     return (p_L1, p_L2)
 end
 
-""" Function SUNDS() returns p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY
+"""
+    SUNDS()
 
-From ecoshift:
+Return p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY.
+
+# Ecoshift
+"
 Several radiation-related variables depend only on day of the year and location. These are
 calculated in SUNDS, which is called once a day.
 
@@ -126,6 +137,7 @@ from the I0SDAY equation with L1 = LAT, L2 = 0, and T3 and T2 for a horizontal s
 LAT. The daylength (DAYLEN), which is the fraction of a day that the sun is above a
 horizontal horizon, is HAFDAY / π where function HAFDAY is used with L = LAT. SLFDAY is the
 ratio of I0SDAY to I0HDAY. SUNDS outputs DAYLEN, I0HDAY, and SLFDAY.
+"
 """
 function SUNDS(p_LAT, SLOPE, DOY, p_L1, p_L2, p_SC, p_PI, p_WTOMJ)
     SCD = p_SC / (1.0 - 0.0167 * cos(0.0172 * (DOY - 3))) ^ 2
@@ -198,10 +210,14 @@ end
 
 
 
-""" AVAILEN(SLRAD, p_fu_ALBEDO, p_C1, p_C2, p_C3, p_fu_TA, p_fT_EA, RATIO, p_fu_SHEAT, p_CR, p_fu_LAI, p_fu_SAI)\n
-estimates the available energy above and below the canopy.
+"""
+    AVAILEN(SLRAD, p_fu_ALBEDO, p_C1, p_C2, p_C3, p_fu_TA, p_fT_EA, RATIO, p_fu_SHEAT, p_CR,
+    p_fu_LAI, p_fu_SAI)
 
-Ecoshift:
+Estimate the available energy above and below the canopy.
+
+# Ecoshift
+"
 Estimates of available energy above and below the canopy are made in subroutine AVAILEN.
 Available energy is net radiation minus subsurface heat flux (SHEAT), and is the energy
 available for partitioning into heating the air and evaporating water. SHEAT is set to zero
@@ -305,6 +321,7 @@ plays a major role in the value of PE estimates when net radiation is estimated.
 effort using worldwide longwave data (not estimates from models!) will be needed to improve
 this situation. Fortunately, the cloud cover correction, approximate as it is, brings the
 net longwave closer to zero and helps wash out the emissivity error.
+"
 """
 function AVAILEN(SLRAD, p_fu_ALBEDO, p_C1, p_C2, p_C3, p_fu_TA, p_fT_EA, RATIO, p_fu_SHEAT, p_CR, p_fu_LAI, p_fu_SAI)
 

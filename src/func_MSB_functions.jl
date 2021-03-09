@@ -1,6 +1,12 @@
 # TODO(bernhard): think about where to put function definition of MSBSETVARS(), MSBDAYNIGHT()
-"""MSBSETVARS() function that computes state dependent parameters for
-updating states INTS, INTR, SNOW, CC, SNOWLQ in callback function
+"""
+    MSBSETVARS()
+
+Compute state dependent parameters for updating states INTS, INTR, SNOW, CC, SNOWLQ in
+callback function.
+
+# Arguments
+- many
 """
 function MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
                     # arguments

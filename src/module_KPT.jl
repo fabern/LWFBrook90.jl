@@ -78,7 +78,11 @@ using Roots: find_zero, Bisection # to find wetness for a given hydraulic conduc
 ### # from LWFBrook90R:     real(kind=8) :: MvGl     ! tortuosity parameter (default = 0.5)
 
 
-"""SOILPAR()\n Function that defines constant parameters from input_siteparam. TO BE REDEFINED
+"""
+
+    SOILPAR()
+
+Define constant parameters from input_siteparam. TO BE REDEFINED
 """
 function SOILPAR(p_RHOWG,
                  p_THICK, # layer thicknesses (mm)
@@ -241,12 +245,17 @@ function SOILPAR_MvG(p_RHOWG,p_THICK,p_THETAF,p_THSAT,p_STONEF,p_BEXP,
     return (p_ψg, p_SWATMX, p_WETfc, p_CHm, p_CHn, p_Ksat, p_PSIF, p_THETAF)#, u_aux_WETNES, u_aux_SWATI)
 end
 
-""" derive_auxiliary_SOILVAR(u_SWATI, p_SWATMX, p_THSAT,
+"""
+
+    derive_auxiliary_SOILVAR(u_SWATI, p_SWATMX, p_THSAT,
                  p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_KF,
                  p_θr, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
-                 p_PSIG, NLAYER, IMODEL)\n
-Derives alternative representations of soil water status.
-I.e. based on the state u_SWATI it returns (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, p_fu_KK)"""
+                 p_PSIG, NLAYER, IMODEL)
+
+Derive alternative representations of soil water status.
+
+Based on the state u_SWATI it returns (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, p_fu_KK)
+"""
 function derive_auxiliary_SOILVAR(u_SWATI, p_SWATMX, p_THSAT,
                  p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_KF,
                  p_θr, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
@@ -330,10 +339,13 @@ end
 
 
 # TODO(bernhard): remove remark that I renamed LWFBrook90_MvG_FK() to FK_MvG()
-""" FK_MvG(WETNES, KSAT, MvGl, MvGn)\n Computes hydraulic conductivity from
-wetness for the Mualem van Genuchten parametrization.\n\n
+"""
 
-Computes unsaturated hydraulic conductivity: K(Se) a.k.a. K(W) using MvG equation 8)
+    FK_MvG(WETNES, KSAT, MvGl, MvGn)
+
+Compute hydraulic conductivity from wetness for the Mualem van Genuchten parametrization.
+
+Compute unsaturated hydraulic conductivity: K(Se) a.k.a. K(W) using MvG equation 8)
 K = Ks*W^l*[ 1 - (1-W^(1/m))^m ]^2 using m = 1-1/n yields: K = Ks*W^l*[ 1 - (1-W^(n/(n-1)))^(1-1/n) ]^2
 """
 function FK_MvG(WETNES, KSAT, MvGl, MvGn)
@@ -344,18 +356,17 @@ function FK_MvG(WETNES, KSAT, MvGl, MvGn)
     return KSAT*AWET^MvGl*(1 - (1-AWET^(MvGn/(MvGn-1)) )^(1-1/MvGn) )^2
 end
 
-""" FPSIMF_CH(u_aux_WETNES,p_PSIF, p_BEXP, p_WET∞, p_WETF, p_CHM, p_CHN)\n Computes ψ(Se) = h(Se) a.k.a ψ(W) = h(W)
+"""
+    FPSIMF_CH(u_aux_WETNES,p_PSIF, p_BEXP, p_WET∞, p_WETF, p_CHM, p_CHN)
+
+Compute ψ(Se) = h(Se) a.k.a ψ(W) = h(W).
 """
 
-""" FPSIM_MvG(u_aux_WETNES, p_MvGα, p_MvGn)\n Computes ψ(Se) = h(Se) a.k.a ψ(W) = h(W)
 """
-#TODO(bernhard): check correct usage in SOILVAR() i.e. split in FPSIM_MvG() and FPSIMF_CH
-# old definition: TODO: remove function LWFBrook90_MvG_FPSIMF(u_aux_WETNES,
-# old definition: TODO: remove                                p_PSIF, p_BEXP, p_WET∞, p_WETF, p_CHM, p_CHN,
-# old definition: TODO: remove                                p_MvGα, p_MvGn,
-# old definition: TODO: remove                                iModel)
-# old definition: TODO: replace by (for iModel = 0): FPSIMF_CH(u_aux_WETNES,p_PSIF, p_BEXP, p_WET∞, p_WETF, p_CHM, p_CHN)
-# old definition: TODO: replace by (for iModel = 1): FPSIM_MvG(u_aux_WETNES, p_MvGα, p_MvGn)
+    FPSIM_MvG(u_aux_WETNES, p_MvGα, p_MvGn)
+
+Compute ψ(Se) = h(Se) a.k.a ψ(W) = h(W).
+"""
 function FPSIMF_CH(u_aux_WETNES,p_PSIF, p_BEXP, p_WET∞, p_WETF, p_CHM, p_CHN)
     # Computes ψ(Se) = h(Se) a.k.a ψ(W) = h(W)
     #
@@ -441,9 +452,10 @@ function FDPSIDWF_MvG(u_aux_WETNES, α, n)
                               # d PSI/d WETNES, kPa
 end
 
-# TODO(bernhard): remove remark that I renamed LWFBrook90_MvG_FTheta() to FTheta_MvG()
-"""FTheta_MvG(u_aux_WETNES, p_θs, p_θr, iModel)
-Computes θ based on Se.
+"""
+    FTheta_MvG(u_aux_WETNES, p_θs, p_θr, iModel)
+
+Compute θ based on Se.
 """
 function FTheta_MvG(u_aux_WETNES, p_θs, p_θr)
     # Computes θ(Se) = Se*(θs-θr) + θr
@@ -460,11 +472,9 @@ function FTheta_CH(u_aux_WETNES, p_θs)
 end
 
 # TODO(bernhard): remove remark that I renamed LWFBrook90_MvG_FWETNES() to FWETNES_MvG()
-""" FWETNES_MvG(u_aux_PSIM, p_MvGα, p_MvGn)\n
-Computes θ(ψ) = θ(h) by computing first Se(ψ)=Se(h) a.k.a  W(ψ)=W(h)
 """
+    FWETNES_MvG(u_aux_PSIM, p_MvGα, p_MvGn)
 
-""" FWETNES_CH(u_aux_PSIM,p_WETF, p_WET∞, p_BEXP, p_PSIF, p_CHM, p_CHN)\n
 Computes θ(ψ) = θ(h) by computing first Se(ψ)=Se(h) a.k.a  W(ψ)=W(h)
 """
 function FWETNES_MvG(u_aux_PSIM, p_MvGα, p_MvGn)
@@ -486,6 +496,11 @@ function FWETNES_MvG(u_aux_PSIM, p_MvGα, p_MvGn)
     return WETNEs
 end
 
+"""
+    FWETNES_CH(u_aux_PSIM,p_WETF, p_WET∞, p_BEXP, p_PSIF, p_CHM, p_CHN)
+
+Computes θ(ψ) = θ(h) by computing first Se(ψ)=Se(h) a.k.a  W(ψ)=W(h)
+"""
 function FWETNES_CH(u_aux_PSIM,p_WETF, p_WET∞, p_BEXP, p_PSIF, p_CHM, p_CHN)
     # Computes θ(ψ) = θ(h) by computing first Se(ψ)=Se(h) a.k.a  W(ψ)=W(h)
     #

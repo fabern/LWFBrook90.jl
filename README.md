@@ -16,7 +16,7 @@ Implementation of the LWF-BROOK90 hydrological model in Julia
 </p>
 
 ## What is LWFBrook90.jl?
-The model LWF-BROOK90 is a 1D Soil Vegetation Atmosphere Transport (SVAT) model, calculating the soil water balance in forest soil. Modelled processes include vertical soil water movement, soil and plant evapotranspiration and temporary storages in snowpack or interception layer.
+The model LWF-BROOK90 is a 1D Soil-Vegetation-Atmosphere Transfer (SVAT) model, calculating the soil water balance in forest soil. Modelled processes include vertical soil water movement, soil and plant evapotranspiration and temporary storages in snowpack or interception layer.
 LWFBrook90.jl is an implementation of the existing LWF-BROOK90 rewritten entirely in the Julia programming language.
 
 Processes and state variables of the model in LWF-BROOK90 are summarised visually in Figure 1 below.
@@ -41,7 +41,7 @@ Development of LWFBrook90.jl builds on the following works:
 
 Furthermore, Matthias Häni, Katrin Meusburger, Peter Waldner, Lorenz Walthert, Stephan Zimmermann of [WSL](http://www.wsl.ch) and its Long-term Forest Ecosystem Research (LWF) project gratefully acknowledged for providing example data files located in `example/BEA2016*`.
 
-LWFBrook90.jl is licensed under GPL-3.0 (see the file `LICENSE`).
+LWFBrook90.jl is licensed under GPL-3.0 (for details see the file `LICENSE`).
 
 
 
@@ -76,7 +76,7 @@ Tests are run to assert agreement with results from LWFBrook90R. Visualizations 
 - Currently a part of LWFBrook90R activated when `Reset==1`, is not implemented in LWFBrook90.jl. (A test implementation of this is available in the branch `005-simplify-time-step-control`.)
 
 ### Improve agreement with LWFBrook90R
-Note that some features of LWFBrook90R are not implemented in the main version of LWFBrook90.jl. The time step adaptivity and `Reset==1` of LWFBrook90R would require code refactoring, which goes slightly against the intended use of the library for ODEs DiffEqeuations.jl. Because of this, implementation of these features is left aways from the main version. However, an attempt at their implementation resides currently in a feature branch `005`. Below are some of the results of that branch:
+Note that some features of LWFBrook90R are not implemented in the main version of LWFBrook90.jl. The time step adaptivity and `Reset==1` of LWFBrook90R would require code refactoring, which goes slightly against the intended use of the library for ODEs DifferentialEquations.jl. Because of this, implementation of these features is left away from the main version. However, an attempt at their implementation resides currently in a feature branch `005`. Below are some of the results generated with that branch:
 
 <p align="center"><img src="https://github.com/fabern/LWFBrook90.jl/blob/develop/docs/src/assets/git-hash-2-55ca42d-feature005/2021-02-24_19h10_R-vs-Julia_comparison_DailyRawValues.png?raw=true" width="400"><p>
 <p align="center">Figure 6: Comparing daily outputs of LWFBrook90R and experimental LWFBrook90.jl:feature-005 for example data set over a year<p>

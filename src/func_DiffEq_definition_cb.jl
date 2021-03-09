@@ -1,8 +1,11 @@
-""" define_LWFB90_cb()\n
-    Generates callback function cb needed for ODE() probelm in DiffEq.jl package.
-    LWFBrook90 updates states INTS, INTR, SNOW, CC, SNOWLQ not continuously but only
-    once per day. This operator splitting (daily vs continuous update of ODEs) is
-    implemented by using this callback function which is called once per day.
+"""
+    define_LWFB90_cb()
+
+Generate callback function cb needed for ODE() problem in DiffEq.jl package.
+
+LWFBrook90 updates states INTS, INTR, SNOW, CC, SNOWLQ not continuously but only
+once per day. This operator splitting (daily vs continuous update of ODEs) is
+implemented by using this callback function which is called once per day.
 """
 function define_LWFB90_cb()
     # A) Define updating function
@@ -272,17 +275,3 @@ function define_LWFB90_cb()
                                initial_affect = true);
     return cb_func
 end
-
-""" define_LWFB90_ODE()\n
-    Generates an ODEProblem from DiffEq.jl.\n\n
-    # An ODE problem which consists of
-    #   - definition of right-hand-side (RHS) function f
-    #   - definition of callback function cb
-    #   - initial condition of states
-    #   - definition of simulation time span
-    #   - parameters\n
-    Seperate updating of different states (INTS, INTR, SNOW, CC, SNOWLQ are updated once per
-    day while GWAT and SWATI are updated continuously) is implemented by means of operator
-    splitting using a callback function for the daily updates and a ODE RHS (right hand
-    side) for the continuous update.
-"""

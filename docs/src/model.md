@@ -1,7 +1,7 @@
 # SVAT Model
 
 ## Description
-LWFBrook90.jl is a 1D Soil Vegetation Atmosphere Transport (SVAT) model, calculating the soil water balance in forest soil. Modelled processes include vertical soil water movement, soil and plant evapotranspiration and temporary storages in snowpack or interception layer.
+LWFBrook90.jl is a 1D Soil-Vegetation-Atmosphere Transfer (SVAT) model, calculating the soil water balance in forest soil. Modelled processes include vertical soil water movement, soil and plant evapotranspiration and temporary storages in snowpack or interception layer.
 
 Vertical soil water movement is modelled using the Richards equations and preferential flow.
 Mass loss through evaporation from temporary storages (snowpack or interception by vegetation) is included.
@@ -13,7 +13,6 @@ Processes and state variables in LWF-BROOK90 are summarised visually in Figure 1
 <br><em><b>Figure 1</b>: Summary of processes and state variables used in LWFBrook90.jl</em><br>
 <p>
 ```
-
 
 ## Implementation
 The model is implemented based code from the R package LWFBrook90R and its Fortran source code as well as the original implementation of BROOK90 (v4.8) (www.ecoshift.net/brook/b90doc.html).

@@ -47,13 +47,16 @@ module WAT # WATER MOVEMENT IN SOIL
 
 export INFPAR, LWFRootGrowth, ITER
 
-"""INFPAR(p_INFEXP, p_ILAYER, p_THICK, NLAYER)\n Computes fraction of infiltration to each
-soil layer.\n\n
-Arguments:
-- p_INFEXP: infiltration exponent: 0 all to top, 1 uniform with depth, >1.0=more at bottom than at top
-- p_ILAYER: number of layers over which infiltration is distributed
-- p_THICK
-- NLAYER
+"""
+    INFPAR(p_INFEXP, p_ILAYER, p_THICK, NLAYER)
+
+Compute fraction of infiltration to each soil layer.
+
+# Arguments:
+- `p_INFEXP`: infiltration exponent: 0 all to top, 1 uniform with depth, >1.0=more at bottom than at top
+- `p_ILAYER`: number of layers over which infiltration is distributed
+- `p_THICK`
+- `NLAYER`
 """
 function INFPAR(p_INFEXP, p_ILAYER, p_THICK, NLAYER)
     p_INFRAC = fill(NaN, NLAYER) # fraction of infiltration to each layer
@@ -80,18 +83,21 @@ end
 
 
 
-"""LWFRootGrowth(frelden, tini, age, rgroper, inirdep, inirlen, NLAYER)\n Computes root growth
-according to LWF root growth model, (Hammel and Kennel 2000).\n\n
-Arguments:
-    - frelden[] :  final relative values of root length per unit volume
-    - tini[]    :  initial time for root growth in layer
-    - age       :  age of vegetation
-    - rgroper   :  period of root growth in layer, a
-    - inirdep   :  intial root depth, m
-    - inirlen   :  intial total root length, m m-2
-    - NLAYER    :  number of soil layers
+"""
+    LWFRootGrowth(frelden, tini, age, rgroper, inirdep, inirlen, NLAYER)
+
+Compute root growth according to LWF root growth model, (Hammel and Kennel 2000).
+
+# Arguments:
+    - `frelden[]`:  final relative values of root length per unit volume
+    - `tini[]`   :  initial time for root growth in layer
+    - `age`      :  age of vegetation
+    - `rgroper`  :  period of root growth in layer, a
+    - `inirdep`  :  intial root depth, m
+    - `inirlen`  :  intial total root length, m m-2
+    - `NLAYER`   :  number of soil layers
 Returns:
-    - RELDEN[]  : current, age-dependent relative values of root length per unit volume
+    - `RELDEN[]`  : current, age-dependent relative values of root length per unit volume
 """
 function LWFRootGrowth(frelden, tini, age, rgroper, inirdep, inirlen, NLAYER)
 
@@ -121,10 +127,12 @@ end
 
 
 """
-BYFLFR(NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_WETF)\n
-TODO(bernhard):
+    BYFLFR(NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_WETF)
 
-Ecoshift:
+Compute fraction of bypass flow.
+
+# Ecoshift
+"
 Bypass flow (BYFL) and surface or source area flow (SRFL) are the two stormflow or quickflow
 generating mechanisms in BROOK90. The conceptual difference is that SRFL is "new" water that
 has not infiltrated but has moved across the surface to a channel, whereas BYFL is "new"
@@ -168,6 +176,7 @@ produces a constant BYFRAC of QFFC.
 
 Note that BYFRAC is calculated from soil water prior to the input of water for the time
 step.
+"
 """
 function BYFLFR(NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_WETF)
     # TODO(bernhard): could be optimized by not allocating each time new memory (versus in-place)
@@ -211,7 +220,10 @@ function BYFLFR(NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_WETF)
 end
 
 
-""" DSLOP() downslope flow rate from layer
+"""
+    DSLOP()
+
+Compute downslope flow rate from layer.
 """
 function DSLOP(p_DSLOPE, p_LENGTH, p_THICK_i, p_STONEF_i, u_aux_PSIM_i, p_RHOWG, p_fu_KK_i)
 
@@ -228,7 +240,10 @@ function DSLOP(p_DSLOPE, p_LENGTH, p_THICK_i, p_STONEF_i, u_aux_PSIM_i, p_RHOWG,
     return aux_du_DSFLI
 end
 
-""" VERT() vertical flow rate
+"""
+    VERT()
+
+Compute vertical flow rate.
 """
 function VERT(KK_i, KK_iplus1,
               KSAT_i, KSAT_iplus1,
@@ -254,9 +269,13 @@ function VERT(KK_i, KK_iplus1,
     VRFLI = (GRAD * KK_mean / p_RHOWG) * (1 - (STONEF_i + STONEF_iplus1) / 2)
     return(VRFLI)
 end
-"""KKMEAN(KK_i, KK_iplus1, THICK_i, THICK_iplus1)\n
-computes average hydraulic conductivity. Note that between version 3.1 (where LWFBrook90 was
-forked), and 4.8 of Brook90 there were different variants how to compute the average.
+"""
+    KKMEAN(KK_i, KK_iplus1, THICK_i, THICK_iplus1)
+
+Compute average hydraulic conductivity.
+
+Note that between version 3.1 (where LWFBrook90 was forked), and 4.8 of Brook90 there were
+different variants how to compute the average.
 """
 function KKMEAN(KK_i, KK_iplus1, THICK_i, THICK_iplus1)
     # NOTE(bernhard): different averaging for KKMEAN and GRAD exist in different Brook90 versions:
@@ -277,9 +296,14 @@ end
 
 
 
-"""net inflow to soil layer
+"""
+    INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
+    aux_du_DSFLI, aux_du_TRANI, aux_du_SLVP, p_SWATMX, u_SWATI, VRFLI_prior)
 
-Ecoshift:
+Compute net inflow to soil layer.
+
+# Ecoshift
+"
 In this routine, infiltrating water (SLFL) is allocated to soil water in each layer (INFLIi
 ) and to bypass flow from each layer (BYFLIi ). The fraction of SLFL going to each layer
 (INFRACi ) is constant and is obtained in subroutine INFPAR. This fraction is separated into
@@ -326,6 +350,7 @@ VRFLI(0) to reduce, excess water becomes negative INFLI(1) and increases BYFLI(1
 
 The modified values of VRFLIi are output from the INFLOW routine as variable VV because the
 original VRFLIi are needed again if the iteration time step (DTI) is reduced.
+"
 """
 function INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
                 aux_du_DSFLI, aux_du_TRANI, aux_du_SLVP, p_SWATMX, u_SWATI, VRFLI_prior)
@@ -602,7 +627,10 @@ function ITER(IMODEL, NLAYER, DTI, DTIMIN, DPSIDW,
     return DTINEW # second estimate of DTI
 end
 
-"""calculates groundwater flow and seepage loss
+"""
+    GWATER(u_GWAT, p_GSC, p_GSP, p_DT, aux_du_VRFLIN)
+
+Calculate groundwater flow and seepage loss.
 """
 function GWATER(u_GWAT, p_GSC, p_GSP, p_DT, aux_du_VRFLIN)
     if (p_GSC < 1.0e-8)
