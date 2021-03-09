@@ -8,7 +8,7 @@ makedocs(;
     authors="Fabian Bernhard",
     repo="https://github.com/fabern/LWFBrook90.jl/blob/{commit}{path}#L{line}",
     sitename="LWFBrook90.jl",
-    format=HTML(;
+    format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
         canonical="https://fabern.github.io/LWFBrook90.jl",
         assets=String[],
@@ -28,5 +28,5 @@ deploydocs(;
     devbranch = "develop",
     devurl    = "dev",
     branch    = "gh-pages",
-    versions = ["stable" => "v^", "v#.#.#", devurl => devurl],
+    versions = ["stable" => "v^", "v#.#.#", "dev" => "dev"],
 )
