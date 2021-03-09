@@ -1,5 +1,7 @@
 using LWFBrook90
-using Documenter: makedocs, deploydocs, HTML
+using Documenter
+
+DocMeta.setdocmeta!(LWFBrook90, :DocTestSetup, :(using LWFBrook90); recursive=true)
 
 makedocs(;
     modules=[LWFBrook90],
@@ -25,5 +27,6 @@ deploydocs(;
     repo="github.com/fabern/LWFBrook90.jl",
     devbranch = "develop",
     devurl    = "dev",
-    branch    = "gh-pages"
+    branch    = "gh-pages",
+    versions = ["stable" => "v^", "v#.#.#", devurl => devurl],
 )
