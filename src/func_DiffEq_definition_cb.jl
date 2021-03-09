@@ -1,7 +1,7 @@
 """
     define_LWFB90_cb()
 
-Generate callback function cb needed for ODE() probelm in DiffEq.jl package.
+Generate callback function cb needed for ODE() problem in DiffEq.jl package.
 
 LWFBrook90 updates states INTS, INTR, SNOW, CC, SNOWLQ not continuously but only
 once per day. This operator splitting (daily vs continuous update of ODEs) is

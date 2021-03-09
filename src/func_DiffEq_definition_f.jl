@@ -1,7 +1,7 @@
 """
     define_LWFB90_f()
 
-Generate function f (right-hand-side of ODEs) needed for ODE() probelm in DiffEq.jl package.
+Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq.jl package.
 """
 # function define_LWFB90_f()
     function f_LWFBrook90R(du,u,p,t)
