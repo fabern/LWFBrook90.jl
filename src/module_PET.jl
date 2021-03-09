@@ -1,5 +1,3 @@
-# fabian.bernhard@wsl.ch, 2021-02-07
-
 @doc raw"""
 # Potential Evaporation
 Text copied from Ecoshift on module PET:

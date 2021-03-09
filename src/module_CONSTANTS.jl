@@ -1,5 +1,3 @@
-# fabian.bernhard@wsl.ch, 2021-01-02
-
 module CONSTANTS
 
 export p_WTOMJ,p_ETOM,p_CPRHO,p_GAMMA,p_CVLQ,p_CVICE,p_LF,p_LS,p_RHOWG,p_SIGMA,p_SC,p_K,p_PI,p_ThCrit

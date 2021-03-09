@@ -1,5 +1,3 @@
-# fabian.bernhard@wsl.ch, 2021-02-01
-
 using LWFBrook90
 using Test: @test, @testset
 
