@@ -1,5 +1,5 @@
 #################
-# Author: fabian.bernhard@wsl.ch
+# Author: fabian.bernhard
 # Date: 2021-02-11
 # Task: Generate input files for LWFBrook90.jl
 # Description: This code defines an R function that takes the same arguements as

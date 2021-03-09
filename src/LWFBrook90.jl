@@ -1,5 +1,3 @@
-# fabian.bernhard@wsl.ch, 2021-02-01
-
 module LWFBrook90
 
 using OrdinaryDiffEq  # instead of loading the full DifferentialEquations

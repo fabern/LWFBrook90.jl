@@ -1,4 +1,3 @@
-# fabian.bernhard@wsl.ch, 2021-01-02
 using LWFBrook90
 using OrdinaryDiffEq: solve, Tsit5
 

@@ -1,5 +1,3 @@
-# fabian.bernhard@wsl.ch, 2021-02-02
-
 using CSV: read, File
 using DataFrames: DataFrame, rename# ,select
 using DataFramesMeta#: @linq, transform, DataFramesMeta

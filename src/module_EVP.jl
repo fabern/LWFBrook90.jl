@@ -1,4 +1,3 @@
-# fabian.bernhard@wsl.ch, 2021-02-03
 """
 # Interception and transpiration
 Text copied from Ecoshift on module EVP:

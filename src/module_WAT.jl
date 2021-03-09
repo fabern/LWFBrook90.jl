@@ -1,5 +1,3 @@
-# fabian.bernhard@wsl.ch, 2021-02-03
-
 @doc raw"""
 # Water movement in soil
 

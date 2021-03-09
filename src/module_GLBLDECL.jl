@@ -1,5 +1,3 @@
-# fabian.bernhard@wsl.ch, 2021-01-02
-
 module GLBLDECL
 
 using Interpolations: interpolate, BSpline, Constant, scale, extrapolate
