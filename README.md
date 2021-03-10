@@ -16,6 +16,7 @@ Implementation of the LWF-BROOK90 hydrological model in Julia
 </p>
 
 ## What is LWFBrook90.jl?
+<p align="center"><img src="https://github.com/fabern/LWFBrook90.jl/blob/develop/docs/src/assets/logo.png?raw=true" width="150"><p>
 The model LWF-BROOK90 is a 1D Soil-Vegetation-Atmosphere Transfer (SVAT) model, calculating the soil water balance in forest soil. Modelled processes include vertical soil water movement, soil and plant evapotranspiration and temporary storages in snowpack or interception layer.
 LWFBrook90.jl is an implementation of the existing LWF-BROOK90 rewritten entirely in the Julia programming language.
 
