@@ -91,3 +91,9 @@ Note that some features of LWFBrook90R are not implemented in the main version o
 Any help in form of discussions, pull requests, example data sets, or otherwise is very welcome. Please don't hesitate to contact us.
 
 For implementation details: see documentation section [Implementation](https://fabern.github.io/LWFBrook90.jl/stable/model/#Implementation).
+
+If you're new to scientific computing in Julia. There are many useful tutorials around. For a quick start you can check out:
+- Getting Started with Julia (for Experienced Programmers), by C.Rackauckas, 35min: https://www.youtube.com/watch?v=-lJK92bEKow
+- Noteworthy Differences from other Languages: https://docs.julialang.org/en/v1/manual/noteworthy-differences/
+
+For more in depth treatments of topics related to scientific computing and machine learning in Julia be sure to check out the course MIT 18.337J by C. Rackauckas at https://github.com/mitmath/18337. This course lists further introduction material under lecture 1.1.
