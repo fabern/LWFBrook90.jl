@@ -22,7 +22,8 @@ end
 end
 
 @testset "run_example" begin
-    example_result = LWFBrook90.run_example()
+    example_result = LWFBrook90.run_example(;verbose=false)
+
     idx_of_state_variables = 1:(7+(example_result["NLAYER"]-1))
     @test example_result["solution"].u[10][idx_of_state_variables] ≈
         [0.0, 0.0, 0.0, 0.829558, 0.0,
