@@ -32,38 +32,40 @@ object of DifferentialEquations.jl) and other variables useful for plotting.
         colorbar_title = "θ")
 
 """
-function run_example()
+function run_example(;verbose::Bool=true)
 
-    @info """
-    LWFBrook90 example is being run. Once it has finished, plotting can be done in the
-    following way:
+    if verbose
+        @info """
+        LWFBrook90 example is being run. Once it has finished, plotting can be done in the
+        following way:
 
-    using LWFBrook90
-    using Plots
-    example = LWFBrook90.run_example()
+        using LWFBrook90
+        using Plots
+        example = LWFBrook90.run_example()
 
-    # Plot scalar solution
-    # Using dates (but not interpolated)
-    plot(example["solutionDates"],
-        example["solution"][[1,2,3,4,5,6],:]',
-        label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
+        # Plot scalar solution
+        # Using dates (but not interpolated)
+        plot(example["solutionDates"],
+            example["solution"][[1,2,3,4,5,6],:]',
+            label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
 
-    # Using simple plot recipe that interpolates, but without dates
-    plot(example["solution"];
-        vars = [1, 2, 3, 4, 5, 6],
-        label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
+        # Using simple plot recipe that interpolates, but without dates
+        plot(example["solution"];
+            vars = [1, 2, 3, 4, 5, 6],
+            label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
 
-    # Plot vector solution
-    x = example["solutionDates"]
-    y = cumsum(example["thickness"])
-    z = example["solution"][7 .+ (0:example["NLAYER"]-1), :]./example["thickness"]
-    heatmap(x, y, z,
-        yflip = true,
-        xlabel = "Date",
-        ylabel = "Depth",
-        colorbar_title = "θ")
+        # Plot vector solution
+        x = example["solutionDates"]
+        y = cumsum(example["thickness"])
+        z = example["solution"][7 .+ (0:example["NLAYER"]-1), :]./example["thickness"]
+        heatmap(x, y, z,
+            yflip = true,
+            xlabel = "Date",
+            ylabel = "Depth",
+            colorbar_title = "θ")
 
-    """
+        """
+    end
 
     # 1a) Read in input data
     input_prefix = "BEA2016-reset-FALSE"
