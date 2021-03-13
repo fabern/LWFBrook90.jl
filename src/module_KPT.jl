@@ -51,7 +51,7 @@ clearly unsaturated:
 """
 module KPT # SOIL WATER PROPERTIES
 
-export SOILPAR, derive_auxiliary_SOILVAR
+export SOILPAR_CH, SOILPAR_MvG, derive_auxiliary_SOILVAR
 
 using Roots: find_zero, Bisection # to find wetness for a given hydraulic conductivity
 
@@ -82,42 +82,6 @@ using Roots: find_zero, Bisection # to find wetness for a given hydraulic conduc
 
 Define constant parameters from input_siteparam. TO BE REDEFINED
 """
-function SOILPAR(p_RHOWG,
-                 p_THICK, # layer thicknesses (mm)
-                 p_THETAF,# θ at field capacity (-)
-                 p_THSAT, # θ at saturation == matrix porosity (-)
-
-                 p_STONEF,# stone volume fraction, unitless
-                 p_BEXP,  # exponent for psi-theta relation
-                 p_KF,    # hydraulic conductivity at field capacity (mm/d)
-                 p_PSIF,  # ψ at field capacity (kPa)
-                 p_WET∞,  # wetness at dry end of near-saturation range
-
-                 p_Kθfc,
-                 p_PSICR, # minimum plant leaf water potential (MPa)
-                 p_Ksat, p_MvGl, p_MvGn, p_MvGα, p_θr,
-
-                 NLAYER, IMODEL)
-
-    if IMODEL == 0
-        (p_ψg, p_SWATMX, p_WETfc, p_CHm, p_CHn, p_Ksat, p_PSIF, p_THETAF) =
-            SOILPAR_CH(p_RHOWG,p_THICK,p_THETAF,p_THSAT,p_STONEF,p_BEXP,
-                                          p_KF,p_PSIF,p_WET∞,p_Kθfc,p_PSICR,p_Ksat,
-                                          p_MvGl, p_MvGn, p_MvGα, p_θr,
-                                          NLAYER)
-    elseif IMODEL == 1
-        (p_ψg, p_SWATMX, p_WETfc, p_CHm, p_CHn, p_Ksat, p_PSIF, p_THETAF) =
-            SOILPAR_MvG(p_RHOWG,p_THICK,p_THETAF,p_THSAT,p_STONEF,p_BEXP,
-                                          p_KF,p_PSIF,p_WET∞,p_Kθfc,p_PSICR,p_Ksat,
-                                          p_MvGl, p_MvGn, p_MvGα, p_θr,
-                                          NLAYER)
-    else
-        error("Error in SOILPAR(), unexpected input IMODEL: $IMODEL. Valid values ar 0 or 1.")
-    end
-
-    return (p_ψg, p_SWATMX, p_WETfc, p_CHm, p_CHn, p_Ksat, p_PSIF, p_THETAF)
-end
-
 function SOILPAR_CH(p_RHOWG,p_THICK,p_THETAF,p_THSAT,p_STONEF,p_BEXP,
                                           p_KF,p_PSIF,p_WET∞,
                                           p_Kθfc,p_PSICR,p_Ksat,
