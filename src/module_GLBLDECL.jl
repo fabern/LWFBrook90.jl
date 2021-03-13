@@ -90,73 +90,36 @@ function derive_params_from_input_meteoveg(
     p_tini,
     p_frelden)
 
-    function interpolate_uniform(data, minScale, maxScale)
-        @linq data |>
-            #TODO(bernhard) make this work with option previous...
-            interpolate(BSpline(Constant())) |>
-            #variant b: interpolate(BSpline(Constant{Previous}())) |>
-            #variant c: interpolate(BSpline(Constant{Next}())) |>
-            # variant1 (assuming discrete scale with uniform spacing): scale(minScale:maxScale) |>
-            # variant2 (assuming uniform spacing):
-            scale(range(minScale, maxScale, length=length(data))) |>
-            extrapolate(0) #fillvalue = 0
-    end
-    function interpolate_uniform2D(data, minScale, maxScale)
-        @linq data |>
-            #TODO(bernhard) make this work with option previous...
-            interpolate( (BSpline(Constant()), NoInterp()) ) |> # 1st dimension: ..., 2nd dimension NoInterp()
-            #variant b: interpolate(BSpline(Constant{Previous}())) |>
-            #variant c: interpolate(BSpline(Constant{Next}())) |>
-            # variant1 (assuming discrete scale with uniform spacing): scale(minScale:maxScale) |>
-            # variant2 (assuming uniform spacing):
-            scale(range(minScale, maxScale, length=size(data,1)), 1:size(data,2)) |>
-            extrapolate(0) #fillvalue = 0
-
-            # http://juliamath.github.io/Interpolations.jl/latest/control/#Scaled-BSplines-1
-
-            # # Example from: http://juliamath.github.io/Interpolations.jl/latest/control/#Parametric-splines-1
-            # t = 0:.1:1
-            # x = sin.(2π*t)
-            # y = cos.(2π*t)
-            # z = tan.(2π*t)
-            # A = hcat(x,y,z)
-
-            # itp1 = interpolate(A, (BSpline(Cubic(Natural(OnGrid()))), NoInterp()))
-            # itp2 = scale(itp1, t, 1:size(A,2))
-            # itp  = extrapolate(itp2,0)
-            # tfine = 0:.01:1
-            # xs, ys = [itp(t,1) for t in tfine], [itp(t,2) for t in tfine]
-            # using Plots
-            # scatter(x, y, label="knots")
-            # plot!(xs, ys, label="spline")
-    end
-
     # 2) Interpolate input data in time
-    p_GLOBRAD = interpolate_uniform(input_meteoveg[:,:GLOBRAD],minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
-    p_TMAX    = interpolate_uniform(input_meteoveg[:,:TMAX],   minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
-    p_TMIN    = interpolate_uniform(input_meteoveg[:,:TMIN],   minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
-    p_VAPPRES = interpolate_uniform(input_meteoveg[:,:VAPPRES],minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
-    p_WIND    = interpolate_uniform(input_meteoveg[:,:WIND],   minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
-    p_MESFL   = interpolate_uniform(input_meteoveg[:,:MESFL],  minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
-    p_DENSEF  = interpolate_uniform(input_meteoveg[:,:DENSEF], minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
-    p_HEIGHT  = interpolate_uniform(input_meteoveg[:,:HEIGHT], minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
-    p_LAI     = interpolate_uniform(input_meteoveg[:,:LAI],    minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
-    p_SAI     = interpolate_uniform(input_meteoveg[:,:SAI],    minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
-    p_AGE     = interpolate_uniform(input_meteoveg[:,:AGE],    minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
+    time_range = range(minimum(input_meteoveg.days), maximum(input_meteoveg.days), length=length(input_meteoveg.days))
+
+    p_GLOBRAD = extrapolate(scale(interpolate(input_meteoveg.GLOBRAD, (BSpline(Constant()))), time_range) ,0)
+    p_TMAX    = extrapolate(scale(interpolate(input_meteoveg.TMAX,    (BSpline(Constant()))), time_range) ,0)
+    p_TMIN    = extrapolate(scale(interpolate(input_meteoveg.TMIN,    (BSpline(Constant()))), time_range) ,0)
+    p_VAPPRES = extrapolate(scale(interpolate(input_meteoveg.VAPPRES, (BSpline(Constant()))), time_range) ,0)
+    p_WIND    = extrapolate(scale(interpolate(input_meteoveg.WIND,    (BSpline(Constant()))), time_range) ,0)
+    p_MESFL   = extrapolate(scale(interpolate(input_meteoveg.MESFL,   (BSpline(Constant()))), time_range) ,0)
+    p_DENSEF  = extrapolate(scale(interpolate(input_meteoveg.DENSEF,  (BSpline(Constant()))), time_range) ,0)
+    p_HEIGHT  = extrapolate(scale(interpolate(input_meteoveg.HEIGHT,  (BSpline(Constant()))), time_range) ,0)
+    p_LAI     = extrapolate(scale(interpolate(input_meteoveg.LAI,     (BSpline(Constant()))), time_range) ,0)
+    p_SAI     = extrapolate(scale(interpolate(input_meteoveg.SAI,     (BSpline(Constant()))), time_range) ,0)
+    p_AGE     = extrapolate(scale(interpolate(input_meteoveg.AGE,     (BSpline(Constant()))), time_range) ,0)
+    p_PREC    = extrapolate(scale(interpolate(input_meteoveg.PRECIN,  (BSpline(Constant()))), time_range) ,0)
 
     # 2a Compute time dependent root density parameters
     # Which is a vector quantity that is dependent on time:
     p_RELDEN_2Darray = fill(NaN, nrow(input_meteoveg), NLAYER)
     for i in 1:nrow(input_meteoveg)
-        p_RELDEN_2Darray[i,:] = LWFRootGrowth(p_frelden, p_tini, input_meteoveg[i,:AGE], p_rgroper, p_inirdep, p_inirlen, NLAYER)
+        p_RELDEN_2Darray[i,:] = LWFRootGrowth(p_frelden, p_tini, input_meteoveg.AGE[i], p_rgroper, p_inirdep, p_inirlen, NLAYER)
     end
-    p_RELDEN = interpolate_uniform2D(p_RELDEN_2Darray, minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
+    p_RELDEN =  extrapolate(scale(interpolate(p_RELDEN_2Darray, (BSpline(Constant()), NoInterp()) ),# 1st dimension: ..., 2nd dimension NoInterp()
+                            time_range, 1:size(p_RELDEN_2Darray,2)),
+                    0) # extrapolate with fillvalue = 0
 
     # 2b Compute precipitation rate for precipitation intervals
-
     # NOTE: PRECIN is already in mm/day from the input data set
-    #       No transformation is needed
-    p_PREC  = interpolate_uniform(input_meteoveg[:,:PRECIN], minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
+    #       No transformation is needed for p_PREC.
+    #       Just define p_DTP.
     if p_NPINT == 1
         p_DTP = 1 / p_NPINT
     else
