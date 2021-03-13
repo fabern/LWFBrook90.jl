@@ -36,7 +36,7 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
     filter(dates >= input_Data$options_b90$startdate) %>%
     filter(dates <= input_Data$options_b90$enddate)
 
-  out_csv_climveg <- clim_daily %>%
+  out_csv_meteoveg <- clim_daily %>%
     dplyr::left_join(mesfl_daily, by="dates") %>%
     dplyr::left_join(veg_daily, by="dates")
 
@@ -109,7 +109,7 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
   write.csv(out_csv_pdur,           file.path(input_folder, paste0(Julia_prefix, "_pdur.csv")),           row.names = FALSE)
   write.csv(out_csv_param,          file.path(input_folder, paste0(Julia_prefix, "_param.csv")),          row.names = FALSE)
   # write.csv(out_csv_precdat,        file.path(input_folder, paste0(Julia_prefix, "_precdat.csv")),        row.names = FALSE)
-  write.csv(out_csv_climveg,        file.path(input_folder, paste0(Julia_prefix, "_climveg.csv")),        row.names = FALSE)
+  write.csv(out_csv_meteoveg,        file.path(input_folder, paste0(Julia_prefix, "_meteoveg.csv")),        row.names = FALSE)
   write.csv(out_csv_siteparam,      file.path(input_folder, paste0(Julia_prefix, "_siteparam.csv")),      row.names = FALSE)
 
   # If run is requested also run LWFBrook90R and save results

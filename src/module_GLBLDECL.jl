@@ -15,12 +15,12 @@ export derive_params_from_inputData
 # Exported functions
 
 """
-    derive_params_from_inputData(input_meteo::DataFrame, input_param::DataFrame, input_siteparam::DataFrame,
+    derive_params_from_inputData(input_meteoveg::DataFrame, input_param::DataFrame, input_siteparam::DataFrame,
     input_precdat::DataFrame, input_pdur::DataFrame, input_soil_materials::DataFrame, input_soil_nodes::DataFrame)
 
 Take input data sets and defines parameters needed for simulation.
 """
-function derive_params_from_inputData(input_meteo::DataFrame,
+function derive_params_from_inputData(input_meteoveg::DataFrame,
                                   input_param::DataFrame,
                                   input_siteparam::DataFrame,
                                   input_precdat::DataFrame,
@@ -49,7 +49,7 @@ function derive_params_from_inputData(input_meteo::DataFrame,
                                                pfile_param["rgrorate"])
     # Defines: pfile_soil["THICK"],pfile_soil["PSIM_init"],pfile_soil["frelden"],pfile_soil["PAR"],pfile_soil["STONEF"],pfile_soil["tini"],pfile_soil["HeatCapOld"],pfile_soil["TopInfT"],
 
-    pfile_meteo = derive_params_from_input_meteo(input_meteo, input_reference_date,
+    pfile_meteoveg = derive_params_from_input_meteoveg(input_meteoveg, input_reference_date,
                                                 # for precipitation:
                                                 pfile_siteparam["p_NPINT"],
                                                 # for RootGrowth in LWFBrook90.jl:
@@ -59,12 +59,12 @@ function derive_params_from_inputData(input_meteo::DataFrame,
                                                 pfile_param["rgroper"],
                                                 pfile_soil["tini"],
                                                 pfile_soil["frelden"])
-    # Defines: pfile_meteo["p_GLOBRAD"], pfile_meteo["p_TMAX"], pfile_meteo["p_TMIN"],
-    #          pfile_meteo["p_VAPPRES"], pfile_meteo["p_WIND"], pfile_meteo["p_PREC"], pfile_meteo["p_MESFL"],
-    #          pfile_meteo["p_DENSEF"], pfile_meteo["p_HEIGHT"], pfile_meteo["p_LAI"], pfile_meteo["p_SAI"], pfile_meteo["p_AGE"],
-    #          pfile_meteo["p_FRELDEN"]
+    # Defines: pfile_meteoveg["p_GLOBRAD"], pfile_meteoveg["p_TMAX"], pfile_meteoveg["p_TMIN"],
+    #          pfile_meteoveg["p_VAPPRES"], pfile_meteoveg["p_WIND"], pfile_meteoveg["p_PREC"], pfile_meteoveg["p_MESFL"],
+    #          pfile_meteoveg["p_DENSEF"], pfile_meteoveg["p_HEIGHT"], pfile_meteoveg["p_LAI"], pfile_meteoveg["p_SAI"], pfile_meteoveg["p_AGE"],
+    #          pfile_meteoveg["p_FRELDEN"]
 
-    return (pfile_meteo, pfile_param, pfile_siteparam, pfile_precdat, pfile_pdur, pfile_soil)
+    return (pfile_meteoveg, pfile_param, pfile_siteparam, pfile_precdat, pfile_pdur, pfile_soil)
 end
 
 
@@ -73,12 +73,12 @@ end
 #######################
 # Unexported functions
 """
-    derive_params_from_input_meteo(input_meteo::DataFrame)
+    derive_params_from_input_meteoveg(input_meteoveg::DataFrame)
 
-Take climate and vegetation parameters in `input_meteo` and generates continuous parameters.
+Take climate and vegetation parameters in `input_meteoveg` and generates continuous parameters.
 """
-function derive_params_from_input_meteo(
-    input_meteo::DataFrame,
+function derive_params_from_input_meteoveg(
+    input_meteoveg::DataFrame,
     input_reference_date::DateTime,
     # for precipitation
     p_NPINT,
@@ -132,31 +132,31 @@ function derive_params_from_input_meteo(
     end
 
     # 2) Interpolate input data in time
-    p_GLOBRAD = interpolate_uniform(input_meteo[:,:GLOBRAD],minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
-    p_TMAX    = interpolate_uniform(input_meteo[:,:TMAX],   minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
-    p_TMIN    = interpolate_uniform(input_meteo[:,:TMIN],   minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
-    p_VAPPRES = interpolate_uniform(input_meteo[:,:VAPPRES],minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
-    p_WIND    = interpolate_uniform(input_meteo[:,:WIND],   minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
-    p_MESFL   = interpolate_uniform(input_meteo[:,:MESFL],  minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
-    p_DENSEF  = interpolate_uniform(input_meteo[:,:DENSEF], minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
-    p_HEIGHT  = interpolate_uniform(input_meteo[:,:HEIGHT], minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
-    p_LAI     = interpolate_uniform(input_meteo[:,:LAI],    minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
-    p_SAI     = interpolate_uniform(input_meteo[:,:SAI],    minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
-    p_AGE     = interpolate_uniform(input_meteo[:,:AGE],    minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
+    p_GLOBRAD = interpolate_uniform(input_meteoveg[:,:GLOBRAD],minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
+    p_TMAX    = interpolate_uniform(input_meteoveg[:,:TMAX],   minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
+    p_TMIN    = interpolate_uniform(input_meteoveg[:,:TMIN],   minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
+    p_VAPPRES = interpolate_uniform(input_meteoveg[:,:VAPPRES],minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
+    p_WIND    = interpolate_uniform(input_meteoveg[:,:WIND],   minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
+    p_MESFL   = interpolate_uniform(input_meteoveg[:,:MESFL],  minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
+    p_DENSEF  = interpolate_uniform(input_meteoveg[:,:DENSEF], minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
+    p_HEIGHT  = interpolate_uniform(input_meteoveg[:,:HEIGHT], minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
+    p_LAI     = interpolate_uniform(input_meteoveg[:,:LAI],    minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
+    p_SAI     = interpolate_uniform(input_meteoveg[:,:SAI],    minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
+    p_AGE     = interpolate_uniform(input_meteoveg[:,:AGE],    minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
 
     # 2a Compute time dependent root density parameters
     # Which is a vector quantity that is dependent on time:
-    p_RELDEN_2Darray = fill(NaN, nrow(input_meteo), NLAYER)
-    for i in 1:nrow(input_meteo)
-        p_RELDEN_2Darray[i,:] = LWFRootGrowth(p_frelden, p_tini, input_meteo[i,:AGE], p_rgroper, p_inirdep, p_inirlen, NLAYER)
+    p_RELDEN_2Darray = fill(NaN, nrow(input_meteoveg), NLAYER)
+    for i in 1:nrow(input_meteoveg)
+        p_RELDEN_2Darray[i,:] = LWFRootGrowth(p_frelden, p_tini, input_meteoveg[i,:AGE], p_rgroper, p_inirdep, p_inirlen, NLAYER)
     end
-    p_RELDEN = interpolate_uniform2D(p_RELDEN_2Darray, minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
+    p_RELDEN = interpolate_uniform2D(p_RELDEN_2Darray, minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
 
     # 2b Compute precipitation rate for precipitation intervals
 
     # NOTE: PRECIN is already in mm/day from the input data set
     #       No transformation is needed
-    p_PREC  = interpolate_uniform(input_meteo[:,:PRECIN], minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
+    p_PREC  = interpolate_uniform(input_meteoveg[:,:PRECIN], minimum(input_meteoveg[:,:days]), maximum(input_meteoveg[:,:days]))
     if p_NPINT == 1
         p_DTP = 1 / p_NPINT
     else

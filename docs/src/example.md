@@ -17,7 +17,7 @@ using OrdinaryDiffEq: solve, Tsit5
 input_prefix = "BEA2016-reset-FALSE"
 input_path = "example/"*input_prefix*"-input/"
 
-(input_meteo,
+(input_meteoveg,
     input_param,
     input_siteparam,
     input_precdat,    #TODO(bernhard): input_precdat is unused
@@ -36,8 +36,8 @@ After that the objects are further parsed and simulation parameters are defined.
 
 ```Julia
 # 1c) Parse loaded/redefined input files
-(pfile_meteo, pfile_param, pfile_siteparam, pfile_precdat, pfile_pdur, pfile_soil) =
-    derive_params_from_inputData(input_meteo,
+(pfile_meteoveg, pfile_param, pfile_siteparam, pfile_precdat, pfile_pdur, pfile_soil) =
+    derive_params_from_inputData(input_meteoveg,
                                  input_param,
                                  input_siteparam,
                                  input_precdat,
@@ -74,7 +74,7 @@ Then functions from the package are used to define the problem that will be hand
 # Define parameters for differential equation
 p = define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver,
                     NOOUTF, Reset, compute_intermediate_quantities,
-                    pfile_meteo,
+                    pfile_meteoveg,
                     pfile_siteparam,
                     pfile_param,
                     pfile_soil,
@@ -150,8 +150,8 @@ u0 = define_LWFB90_u0(u_GWAT_init,
 #   - p:      parameters
 
 # Define simulation time span:
-tspan = (minimum(input_meteo[:,"days"]),
-         maximum(input_meteo[:,"days"])) # simulate all available days
+tspan = (minimum(input_meteoveg[:,"days"]),
+         maximum(input_meteoveg[:,"days"])) # simulate all available days
 # Define ODE:
 ode_LWFBrook90 = define_LWFB90_ODE(u0, tspan, p)
 

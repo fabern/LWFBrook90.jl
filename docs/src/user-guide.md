@@ -62,13 +62,20 @@ In case you're unfamiliar to Julia, there are various ways to run a script such 
 
 Time dependent parameters (climate and vegetation) are provided in the following form:
 
-`BEA2016-reset-FALSE_climveg.csv`:
+`BEA2016-reset-FALSE_meteoveg.csv`:
 
-| dates      | globrad | tmax | tmin  | vappres | windspeed | prec | mesfl | densef | height | lai   | sai  | age       |
-| ---------- | ------- | ---- | ----- | ------- | --------- | ---- | ----- | ------ | ------ | ----- | ---- | --------- |
-| 2016-01-01 | 4.08    | 5.5  | -1.1  | 0.53    | 1.22      | 3.2  | 0     | 1      | 23     | 1.752 | 1    | 200       |
-| 2016-01-02 | 1.61    | 3.36 | -2.08 | 0.49    | 0.89      | 0.2  | 0     | 1      | 23     | 1.752 | 1    | 200.00274 |
+| dates      | globrad | tmax    | tmin    | vappres | windspeed | prec     | mesfl    | densef | height | lai   | sai   | age       |
+| ---------- | ------- | ----    | -----   | ------- | --------- | ----     | -----    | ------ | ------ | ----- | ----  | -------   |
+|            | weather | weather | weather | weather | weather   | weather  | stream   | stand  | stand  | stand | stand | stand     |
+|            | (MJ/m2) | (°C)    | (°C)    | (kPa)   | (m/s)     | (mm/day) | (unused) | (-)    | (m)    | (-)   | (-)   | (years)   |
+| 2016-01-01 | 4.08    | 5.5     | -1.1    | 0.53    | 1.22      | 3.2      | 0        | 1      | 23     | 1.752 | 1     | 200       |
+| 2016-01-02 | 1.61    | 3.36    | -2.08   | 0.49    | 0.89      | 0.2      | 0        | 1      | 23     | 1.752 | 1     | 200.00274 |
 
+Note that the second and third rows containing description and unit headers is not contained in the input dataset.
+
+`precdat.csv``
+
+- TODO(bernhard): support for `precdat.csv` is currently not implemented
 
 
 ### Needed constant meteo data
@@ -119,9 +126,6 @@ Time dependent parameters (climate and vegetation) are provided in the following
 5e-04,"dpsimax"
 ```
 
-`precdat.csv``
-
-- TODO(bernhard): support for `precdat.csv` is currently not implemented
 
 
 ### Needed soil properties
@@ -129,6 +133,7 @@ Time dependent parameters (climate and vegetation) are provided in the following
 
 | layer | midpoint | thick | mat  | psiini | rootden |
 | ----- | -------- | ----- | ---- | ------ | ------- |
+| (-)   | (m)      | (mm)  | (#)  | (kPa)  | (-)     |
 | 1     | -0.02    | 40    | 1    | -6.3   | 0.029   |
 | 2     | -0.06    | 40    | 2    | -6.3   | 0.025   |
 | 3     | -0.14    | 120   | 3    | -6.3   | 0.020   |
@@ -137,10 +142,13 @@ Time dependent parameters (climate and vegetation) are provided in the following
 | 6     | -0.925   | 350   | 6    | -6.3   | 0.002   |
 | 7     | -1.15    | 100   | 7    | -6.3   | 0.001   |
 
-`soil_materials.csv`:
+Note that the second row containing units is not contained in the input dataset.
+
+`soil_materials.csv`: (when using Mualem-van Genuchten parmetrization)
 
 | mat  | ths   | thr   | alpha    | npar  | ksat      | tort  | gravel |
 | ---- | ----- | ----- | -------- | ----- | --------- | ----- | ------ |
+| (#)  | (-)   | (-)   | (m-1)    | (-)   | (mm/day)  | (-)   | (-)    |
 | 1    | 0.715 | 0.069 | 1147.889 | 1.051 | 24864.678 | 4.670 | 0.010  |
 | 2    | 0.669 | 0.069 | 1274.886 | 1.051 | 12881.486 | 4.478 | 0.175  |
 | 3    | 0.656 | 0.069 | 1215.927 | 1.051 | 10516.617 | 4.502 | 0.175  |
@@ -149,6 +157,14 @@ Time dependent parameters (climate and vegetation) are provided in the following
 | 6    | 0.565 | 0.069 | 570.682  | 1.051 | 1488.210  | 5.148 | 0.010  |
 | 7    | 0.467 | 0.069 | 164.564  | 1.051 | 67.978    | 0.010 | 0.950  |
 
+Note that the second row containing units is not contained in the input dataset.
+
+`soil_materials.csv`: (when using Clapp-Hornberger parametrization) (NOT IMPLEMENTED!)
+
+| mat  | thsat | thetaf| psif    | bexp  | kf       | wtinf | gravel |
+| ---- | ----- | ----- | ------- | ----- | -------  | ----- | ------ |
+| (#)  | (-)   | (-)   | (kPa)   | (-)   | (mm/day) | (-)   | (-)    |
+| NA   | NA    | NA    | NA      | NA    | NA       | NA    | NA     |
 
 
 
@@ -178,25 +194,30 @@ Roadmap to include calibration data intends to allow inclusion of:
 | BEA     | 01.01.2010 | -6.39  | 1.85  | -1.78  | 0.2  | 79.39  | 3.45    | 2.87 | 0.43    |
 | BEA     | 02.01.2010 | -14.09 | -6.98 | -10.83 | 0    | 79.25  | 7.26    | 3.6  | 0.21    |
 
+Note that the second row containing units is not contained in the input dataset.
 
-| site     | X      | Y      | long_wgs84 | lat_wgs84   | tree height (m) | max root depth (m) | LAI  | tree age (yr) | % of deciduous plants |
-| -------- | ------ | ------ | ---------- | ----------- | --------------- | ------------------ | ---- | ------------- | --------------------- |
-| BEA      | 827262 | 165790 | 10.40555   | 46.60469346 | 3.5             | 1.1                | 1.91 | 80            | 45                    |
-| BEA      | 827620 | 165710 | 10.41018   | 46.60385246 | 8.5             | 1.0                | 1.91 | 80            | 50                    |
+| site     | X      | Y      | long_wgs84 | lat_wgs84   | tree height  | max root depth | LAI  | tree age  | % of deciduous plants |
+| -------- | ------ | ------ | ---------- | ----------- | ------------ | -------------- | ---- | --------- | --------------------- |
+| (-)      | (m)    | (-)    | (°E WGS84) | (°N WGS84)  | (m)          | (m)            | (-)  | (years)   | (%)                   |
+| BEA      | 827262 | 165790 | 10.40555   | 46.60469346 | 3.5          | 1.1            | 1.91 | 80        | 45                    |
+| BEA      | 827620 | 165710 | 10.41018   | 46.60385246 | 8.5          | 1.0            | 1.91 | 80        | 50                    |
+TODO: remove (X, Y)
 
+Note that the second row containing units is not contained in the input dataset.
 
 
 #### Needed soil properties
 LWF sites (TODO: format as LWFBrook90R):
 - TODO(Bernhard): remove this once an example data set is here.
 
-| site_id             | Total  soil depth | horizon | texture                                   | upper | lower | bd       | gravel   | sand     | silt     | clay     | c_org    |
-| ------------------- | ---------------- | ------- | ----------------------------------------- | ----- | ----- | -------- | -------- | -------- | -------- | -------- | -------- |
-| unit                | m                | KA5     | GSTCS* | (m)   | (m)   | (g cm-3) | fraction | (mass-%) | (mass-%) | (mass-%) | (mass-%) |
-| Münstertal_pit1 | 1.2              | Ah      | Sl3                                       | 0     | -0.05 | 1.32     | 0.1      | 70       | 20       | 10       | 9        |
-| -                   | -                | Bv      | …                                         | -0.05 | -0.4  |          |          |          |          |          |          |
-| Münstertal_pit2 | 1.3              | Ah      |                                           | ...   |       |          |          |          |          |          |          |
-| -                   | -                | Bv      |                                           | ...   |       |          |          |          |          |          |          |
+| site_id         | Total soil depth | horizon | texture | upper | lower | bd       | gravel   | sand     | silt     | clay     | c_org    |
+| --------------- | ---------------- | ------- | ------- | ----- | ----- | -------- | -------- | -------- | -------- | -------- | -------- |
+| unit            | m                | KA5     | GSTCS*  | (m)   | (m)   | (g cm-3) | fraction | (mass-%) | (mass-%) | (mass-%) | (mass-%) |
+| Münstertal_pit1 | 1.2              | Ah      | Sl3     | 0     | -0.05 | 1.32     | 0.1      | 70       | 20       | 10       | 9        |
+| -               | -                | Bv      | …       | -0.05 | -0.4  |          |          |          |          |          |          |
+| Münstertal_pit2 | 1.3              | Ah      |         | ...   |       |          |          |          |          |          |          |
+| -               | -                | Bv      |         | ...   |       |          |          |          |          |          |          |
 \* GSTCS refers to: German soil texture classification system
 
+Note that the second row containing units is not contained in the input dataset.
 

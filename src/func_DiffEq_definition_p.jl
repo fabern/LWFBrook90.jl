@@ -10,14 +10,14 @@ Generate vector p needed for ODE() problem in DiffEq.jl package.
 - `NOOUTF::...`: TODO argument description.
 - `Reset::...`: TODO argument description.
 - `compute_intermediate_quantities::...`: TODO argument description.
-- `pfile_meteo::...`: TODO argument description.
+- `pfile_meteoveg::...`: TODO argument description.
 - `pfile_siteparam::...`: TODO argument description.
 - `pfile_param::...`: TODO argument description.
 - `pfile_soil::...`: TODO argument description.
 - `pfile_pdur::...`: TODO argument description.
 """
 function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, compute_intermediate_quantities,
-    pfile_meteo, pfile_siteparam, pfile_param, pfile_soil, pfile_pdur)
+    pfile_meteoveg, pfile_siteparam, pfile_param, pfile_soil, pfile_pdur)
 
     ########
     # 1) Parse pfile inputs:
@@ -265,25 +265,25 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
     p_cst = (p_cst_1, p_cst_2)
 
     # 2b) Time varying parameters (e.g. meteorological forcings)
-    p_DOY_inclRef = (t) -> LWFBrook90.p_DOY(t, pfile_meteo["input_reference_date"])
-    p_MONTHN_inclRef = (t) -> LWFBrook90.p_MONTHN(t, pfile_meteo["input_reference_date"])
+    p_DOY_inclRef = (t) -> LWFBrook90.p_DOY(t, pfile_meteoveg["input_reference_date"])
+    p_MONTHN_inclRef = (t) -> LWFBrook90.p_MONTHN(t, pfile_meteoveg["input_reference_date"])
     p_fT = (p_DOY_inclRef,
             p_MONTHN_inclRef,
-            pfile_meteo["p_GLOBRAD"],
-            pfile_meteo["p_TMAX"],
-            pfile_meteo["p_TMIN"],
-            pfile_meteo["p_VAPPRES"],
-            pfile_meteo["p_WIND"],
-            pfile_meteo["p_PREC"],
-            pfile_meteo["p_DTP"],
-            pfile_meteo["p_NPINT"],
-            pfile_meteo["p_MESFL"],
-            pfile_meteo["p_DENSEF"],
-            pfile_meteo["p_HEIGHT"],
-            pfile_meteo["p_LAI"],
-            pfile_meteo["p_SAI"],
-            pfile_meteo["p_AGE"],
-            pfile_meteo["p_RELDEN"])
+            pfile_meteoveg["p_GLOBRAD"],
+            pfile_meteoveg["p_TMAX"],
+            pfile_meteoveg["p_TMIN"],
+            pfile_meteoveg["p_VAPPRES"],
+            pfile_meteoveg["p_WIND"],
+            pfile_meteoveg["p_PREC"],
+            pfile_meteoveg["p_DTP"],
+            pfile_meteoveg["p_NPINT"],
+            pfile_meteoveg["p_MESFL"],
+            pfile_meteoveg["p_DENSEF"],
+            pfile_meteoveg["p_HEIGHT"],
+            pfile_meteoveg["p_LAI"],
+            pfile_meteoveg["p_SAI"],
+            pfile_meteoveg["p_AGE"],
+            pfile_meteoveg["p_RELDEN"])
 
     # 2c) Time varying "parameters" (depending on state variables)
     #     These need to be exchanged between CallBack and RHS in DiffEq.jl which is why they

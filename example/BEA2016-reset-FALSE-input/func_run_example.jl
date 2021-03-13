@@ -70,14 +70,14 @@ function run_example()
     # input_path = "example/"*input_prefix*"-input/"
     input_path = @__DIR__ # https://stackoverflow.com/a/63021629
 
-    (input_meteo, input_param, input_siteparam, input_precdat, input_pdur,
+    (input_meteoveg, input_param, input_siteparam, input_precdat, input_pdur,
     input_soil_materials, input_soil_nodes, input_reference_date) =
         read_LWFBrook90R_inputData(input_path, input_prefix)
 
     # 1c) Parse loaded/redefined input files
-    (pfile_meteo, pfile_param, pfile_siteparam, pfile_precdat, pfile_pdur, pfile_soil) =
+    (pfile_meteoveg, pfile_param, pfile_siteparam, pfile_precdat, pfile_pdur, pfile_soil) =
         derive_params_from_inputData(
-            input_meteo, input_param, input_siteparam, input_precdat, input_pdur,
+            input_meteoveg, input_param, input_siteparam, input_precdat, input_pdur,
             input_soil_materials, input_soil_nodes, input_reference_date)
 
     ####################
@@ -99,7 +99,7 @@ function run_example()
     # Define parameters for differential equation
     p = define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver,
                         NOOUTF, Reset, compute_intermediate_quantities,
-                        pfile_meteo,
+                        pfile_meteoveg,
                         pfile_siteparam,
                         pfile_param,
                         pfile_soil,
