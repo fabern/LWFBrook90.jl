@@ -42,8 +42,6 @@ function define_LWFB90_cb()
         p_RSSA, p_RSSB,
         p_CCFAC, p_MELFAC, p_LAIMLT, p_SAIMLT,
 
-        p_inirdep, p_inirlen, p_rgroper, p_tini, p_frelden,
-
         p_WTOMJ, p_C1, p_C2, p_C3, p_CR,
         p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_TL, p_T1, p_T2, p_TH,
         p_PSICR, NOOUTF, p_PsiCrit,

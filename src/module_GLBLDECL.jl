@@ -64,6 +64,10 @@ function derive_params_from_inputData(input_meteoveg::DataFrame,
     #          pfile_meteoveg["p_DENSEF"], pfile_meteoveg["p_HEIGHT"], pfile_meteoveg["p_LAI"], pfile_meteoveg["p_SAI"], pfile_meteoveg["p_AGE"],
     #          pfile_meteoveg["p_FRELDEN"]
 
+    # TODO(bernhard): document input parameters: inirdep, inirlen, rgroper, tini, frelden,
+    #                 as they are only used here, but not documented in comments in
+    #                 func_DiffEq_definition_p.jl
+
     return (pfile_meteoveg, pfile_param, pfile_siteparam, pfile_precdat, pfile_pdur, pfile_soil)
 end
 
