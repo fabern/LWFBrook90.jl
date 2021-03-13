@@ -233,7 +233,7 @@ function DSLOP(p_DSLOPE, p_LENGTH, p_THICK_i, p_STONEF_i, u_aux_PSIM_i, p_RHOWG,
 
     # no water uptake into dry soil because no free water at outflow face
     if (aux_du_DSFLI < 0)
-        aux_du_DSFLI = 0
+        aux_du_DSFLI = 0.
     end
     return aux_du_DSFLI
 end

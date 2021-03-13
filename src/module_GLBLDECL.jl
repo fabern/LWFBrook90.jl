@@ -1,9 +1,11 @@
 module GLBLDECL
 
-using Interpolations: interpolate, BSpline, Constant, scale, extrapolate
+using Interpolations: interpolate, BSpline, Constant, scale, extrapolate, NoInterp
 using DataFrames: DataFrame
 using DataFramesMeta
 using Dates: DateTime
+
+using ..WAT: LWFRootGrowth
 
 export derive_params_from_inputData
 
@@ -27,8 +29,6 @@ function derive_params_from_inputData(input_meteo::DataFrame,
                                   input_soil_nodes::DataFrame,
                                   input_reference_date::DateTime)
 
-    pfile_meteo = derive_params_from_input_meteo(input_meteo, input_reference_date)
-    # Defines: pfile_meteo["p_GLOBRAD"], pfile_meteo["p_TMAX"], pfile_meteo["p_TMIN"], pfile_meteo["p_VAPPRES"], pfile_meteo["p_WIND"], pfile_meteo["p_PRECIN"], pfile_meteo["p_MESFL"], pfile_meteo["p_DENSEF"], pfile_meteo["p_HEIGHT"], pfile_meteo["p_LAI"], pfile_meteo["p_SAI"], pfile_meteo["p_AGE"]
     pfile_param = derive_params_from_input_param(input_param)
     # Defines: pfile_param["ILAYER"], pfile_param["NDAYS"], pfile_param["HEAT"], pfile_param["ESLOPE"], pfile_param["ASPECT"], pfile_param["ALB"], pfile_param["ALBSN"], pfile_param["C1"], pfile_param["C2"], pfile_param["C3"], pfile_param["WNDRAT"], pfile_param["FETCH"], pfile_param["Z0W"], pfile_param["ZW"], pfile_param["LWIDTH"], pfile_param["Z0G"], pfile_param["Z0S"], pfile_param["LPC"], pfile_param["CS"], pfile_param["CZS"], pfile_param["CZR"], pfile_param["HS"], pfile_param["HR"], pfile_param["ZMINH"], pfile_param["RHOTP"], pfile_param["NN"], pfile_param["RSTEMP"], pfile_param["INTR_init"], pfile_param["INTS_init"], pfile_param["FRINTL"], pfile_param["FSINTL"], pfile_param["FRINTS"], pfile_param["FSINTS"], pfile_param["CINTRL"], pfile_param["CINTRS"], pfile_param["CINTSL"], pfile_param["CINTSS"], pfile_param["MELFAC"], pfile_param["CCFAC"], pfile_param["LAIMLT"], pfile_param["SAIMLT"], pfile_param["GRDMLT"], pfile_param["MAXLQF"], pfile_param["KSNVP"], pfile_param["SNODEN"], pfile_param["GLMAX"], pfile_param["CR"], pfile_param["GLMIN"], pfile_param["RM"], pfile_param["R5"], pfile_param["CVPD"], pfile_param["TL"], pfile_param["T1"], pfile_param["T2"], pfile_param["TH"], pfile_param["MXKPL"], pfile_param["MXRTLN"], pfile_param["inirlen"], pfile_param["inirdep"], pfile_param["rgroper"], pfile_param["FXYLEM"], pfile_param["PSICR"], pfile_param["RTRAD"], pfile_param["NOOUTF"], pfile_param["FXYLEM"], pfile_param["inirlen"], pfile_param["NLAYER"], pfile_param["ILAYER"], pfile_param["QLAYER"], pfile_param["IMODEL"], pfile_param["RSSA"], pfile_param["RSSB"], pfile_param["INFEXP"], pfile_param["BYPAR"], pfile_param["QFPAR"], pfile_param["QFFC"], pfile_param["IMPERV"], pfile_param["DSLOPE"], pfile_param["LENGTH"], pfile_param["DRAIN"], pfile_param["GSC"], pfile_param["GSP"], pfile_param["DTIMAX"], pfile_param["DSWMAX"], pfile_param["DPSIMX"], )
     pfile_siteparam = derive_params_from_input_siteparam(input_siteparam)
@@ -49,6 +49,21 @@ function derive_params_from_inputData(input_meteo::DataFrame,
                                                pfile_param["rgrorate"])
     # Defines: pfile_soil["THICK"],pfile_soil["PSIM_init"],pfile_soil["frelden"],pfile_soil["PAR"],pfile_soil["STONEF"],pfile_soil["tini"],pfile_soil["HeatCapOld"],pfile_soil["TopInfT"],
 
+    pfile_meteo = derive_params_from_input_meteo(input_meteo, input_reference_date,
+                                                # for precipitation:
+                                                pfile_siteparam["p_NPINT"],
+                                                # for RootGrowth in LWFBrook90.jl:
+                                                pfile_param["NLAYER"],
+                                                pfile_param["inirdep"],
+                                                pfile_param["inirlen"],
+                                                pfile_param["rgroper"],
+                                                pfile_soil["tini"],
+                                                pfile_soil["frelden"])
+    # Defines: pfile_meteo["p_GLOBRAD"], pfile_meteo["p_TMAX"], pfile_meteo["p_TMIN"],
+    #          pfile_meteo["p_VAPPRES"], pfile_meteo["p_WIND"], pfile_meteo["p_PREC"], pfile_meteo["p_MESFL"],
+    #          pfile_meteo["p_DENSEF"], pfile_meteo["p_HEIGHT"], pfile_meteo["p_LAI"], pfile_meteo["p_SAI"], pfile_meteo["p_AGE"],
+    #          pfile_meteo["p_FRELDEN"]
+
     return (pfile_meteo, pfile_param, pfile_siteparam, pfile_precdat, pfile_pdur, pfile_soil)
 end
 
@@ -62,20 +77,58 @@ end
 
 Take climate and vegetation parameters in `input_meteo` and generates continuous parameters.
 """
-function derive_params_from_input_meteo(input_meteo::DataFrame, input_reference_date::DateTime)
+function derive_params_from_input_meteo(
+    input_meteo::DataFrame,
+    input_reference_date::DateTime,
+    # for precipitation
+    p_NPINT,
+    # root density parameters
+    NLAYER,
+    p_inirdep,
+    p_inirlen,
+    p_rgroper,
+    p_tini,
+    p_frelden)
 
     function interpolate_uniform(data, minScale, maxScale)
-    @linq data |>
-        #TODO(bernhard) make this work with option previous...
-        interpolate(BSpline(Constant())) |>
-        #variant b: interpolate(BSpline(Constant{Previous}())) |>
-        #variant c: interpolate(BSpline(Constant{Next}())) |>
-        # variant1 (assuming discrete scale with uniform spacing): scale(minScale:maxScale) |>
-        # variant2 (assuming uniform spacing):
-        scale(range(minScale, maxScale, length=length(data))) |>
-        extrapolate(0) #fillvalue = 0
+        @linq data |>
+            #TODO(bernhard) make this work with option previous...
+            interpolate(BSpline(Constant())) |>
+            #variant b: interpolate(BSpline(Constant{Previous}())) |>
+            #variant c: interpolate(BSpline(Constant{Next}())) |>
+            # variant1 (assuming discrete scale with uniform spacing): scale(minScale:maxScale) |>
+            # variant2 (assuming uniform spacing):
+            scale(range(minScale, maxScale, length=length(data))) |>
+            extrapolate(0) #fillvalue = 0
+    end
+    function interpolate_uniform2D(data, minScale, maxScale)
+        @linq data |>
+            #TODO(bernhard) make this work with option previous...
+            interpolate( (BSpline(Constant()), NoInterp()) ) |> # 1st dimension: ..., 2nd dimension NoInterp()
+            #variant b: interpolate(BSpline(Constant{Previous}())) |>
+            #variant c: interpolate(BSpline(Constant{Next}())) |>
+            # variant1 (assuming discrete scale with uniform spacing): scale(minScale:maxScale) |>
+            # variant2 (assuming uniform spacing):
+            scale(range(minScale, maxScale, length=size(data,1)), 1:size(data,2)) |>
+            extrapolate(0) #fillvalue = 0
 
-        # http://juliamath.github.io/Interpolations.jl/latest/control/#Scaled-BSplines-1
+            # http://juliamath.github.io/Interpolations.jl/latest/control/#Scaled-BSplines-1
+
+            # # Example from: http://juliamath.github.io/Interpolations.jl/latest/control/#Parametric-splines-1
+            # t = 0:.1:1
+            # x = sin.(2π*t)
+            # y = cos.(2π*t)
+            # z = tan.(2π*t)
+            # A = hcat(x,y,z)
+
+            # itp1 = interpolate(A, (BSpline(Cubic(Natural(OnGrid()))), NoInterp()))
+            # itp2 = scale(itp1, t, 1:size(A,2))
+            # itp  = extrapolate(itp2,0)
+            # tfine = 0:.01:1
+            # xs, ys = [itp(t,1) for t in tfine], [itp(t,2) for t in tfine]
+            # using Plots
+            # scatter(x, y, label="knots")
+            # plot!(xs, ys, label="spline")
     end
 
     # 2) Interpolate input data in time
@@ -84,7 +137,6 @@ function derive_params_from_input_meteo(input_meteo::DataFrame, input_reference_
     p_TMIN    = interpolate_uniform(input_meteo[:,:TMIN],   minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
     p_VAPPRES = interpolate_uniform(input_meteo[:,:VAPPRES],minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
     p_WIND    = interpolate_uniform(input_meteo[:,:WIND],   minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
-    p_PRECIN  = interpolate_uniform(input_meteo[:,:PRECIN], minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
     p_MESFL   = interpolate_uniform(input_meteo[:,:MESFL],  minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
     p_DENSEF  = interpolate_uniform(input_meteo[:,:DENSEF], minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
     p_HEIGHT  = interpolate_uniform(input_meteo[:,:HEIGHT], minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
@@ -92,18 +144,63 @@ function derive_params_from_input_meteo(input_meteo::DataFrame, input_reference_
     p_SAI     = interpolate_uniform(input_meteo[:,:SAI],    minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
     p_AGE     = interpolate_uniform(input_meteo[:,:AGE],    minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
 
+    # 2a Compute time dependent root density parameters
+    # Which is a vector quantity that is dependent on time:
+    p_RELDEN_2Darray = fill(NaN, nrow(input_meteo), NLAYER)
+    for i in 1:nrow(input_meteo)
+        p_RELDEN_2Darray[i,:] = LWFRootGrowth(p_frelden, p_tini, input_meteo[i,:AGE], p_rgroper, p_inirdep, p_inirlen, NLAYER)
+    end
+    p_RELDEN = interpolate_uniform2D(p_RELDEN_2Darray, minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
+
+    # 2b Compute precipitation rate for precipitation intervals
+
+    # NOTE: PRECIN is already in mm/day from the input data set
+    #       No transformation is needed
+    p_PREC  = interpolate_uniform(input_meteo[:,:PRECIN], minimum(input_meteo[:,:days]), maximum(input_meteo[:,:days]))
+    if p_NPINT == 1
+        p_DTP = 1 / p_NPINT
+    else
+        error("Case with multiple precipitation intervals (using PRECDAT) is not implemented.")
+    end
+
+    # #### TODO(bernhard): get rid of this part below
+    # if (isequal(p_NPINT, 1))
+    #     # One precipitation interval per day. I.e. length of precipitation interval:
+    #     p_DTP = 1 # (days), time step for precipitation interval (for PRECIN and MESFL)
+    #               # in this case it is equal to simulation interval p_DT = 1.0 day
+
+    #     # BROOK90 computed:
+    #     p_fT_PREINT = p_PREC(integrator.t) / p_DTP # (mm per interval), precipitation
+    #     # FB: however, this seems not correct in cases where DTP ≠ 1. I'd rather compute:
+    #     p_fT_PREINT = p_PREC(integrator.t) * p_DTP # (mm per interval), precipitation
+    # else
+    #     # multiple precipitation intervals per day: (not implemented)
+    #     error("Case with multiple precipitation intervals (using PRECDAT) is not implemented.")
+    #     p_DTP = 1/p_NPINT # (days), time step for precipitation interval (for PRECIN and MESFL)
+    #     # This would result in use of e.g. hourly PRECIN and hourly MESFL
+
+    #     # PRECIN (mm/day)
+    #     # PREINT (mm per interval) = PRECIN*p_DTP
+    #     error("Case where input file PRECDAT is used is not implemented.
+    #            Reading PRECDAT should result in PREINT (precipitation amount per interval)")
+    # end
+    # #### END TODO
+
     return Dict([("p_GLOBRAD",p_GLOBRAD),
                  ("p_TMAX",p_TMAX),
                  ("p_TMIN",p_TMIN),
                  ("p_VAPPRES",p_VAPPRES),
                  ("p_WIND",p_WIND),
-                 ("p_PRECIN",p_PRECIN),
+                 ("p_PREC",p_PREC),
+                 ("p_DTP",p_DTP),
+                 ("p_NPINT",p_NPINT),
                  ("p_MESFL",p_MESFL),
                  ("p_DENSEF",p_DENSEF),
                  ("p_HEIGHT",p_HEIGHT),
                  ("p_LAI",p_LAI),
                  ("p_SAI",p_SAI),
                  ("p_AGE",p_AGE),
+                 ("p_RELDEN",p_RELDEN),
                  ("input_reference_date", input_reference_date)])
 end
 

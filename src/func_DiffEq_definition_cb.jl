@@ -54,33 +54,10 @@ function define_LWFB90_cb()
         p_DURATN, p_MAXLQF, p_GRDMLT) = integrator.p[1][2]
 
         ## B) time dependent parameters
-        p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PRECIN, p_DTP, p_NPINT,
-            p_MESFL, p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE = integrator.p[2]
+        p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC, p_DTP, p_NPINT,
+            p_MESFL, p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE, p_RELDEN = integrator.p[2]
 
         p_fT_DENSEF = max(0.050, p_DENSEF(integrator.t))
-
-        # Compute time dependent root density parameters
-        # TODO(bernhard): Do this outside of integration loop in define_LWFB90_p()
-        p_fT_RELDEN = LWFBrook90.WAT.LWFRootGrowth(p_frelden, p_tini, p_AGE(integrator.t), p_rgroper, p_inirdep, p_inirlen, NLAYER)
-
-        # Compute rate of rain (mm/day)
-        # TODO(bernhard): a) Do this outside of integration loop in define_LWFB90_p()
-        #                 b) And simplify it directly to rate p_fT_PREC in both cases
-        #                    i.e in case PREINT (PRECDAT) or in case
-        if (isequal(p_DTP, 1))
-            # p[2][9] # p_DTP
-            # p[2][10] # p_NPINT
-
-            # NOTE: Curently parameters overdetermine. We only need two out of the following three:
-            # p_DTP = p_DT/p_NPINT
-            # p_NPINT = p_DT/p_DTP
-
-            p_fT_PREINT = p_PRECIN(integrator.t) / p_DTP # (mm/day)
-            # TODO(bernhard): rename p_NPINT to p_NPINT
-        else
-            error("Case where input file PRECDAT is used is not implemented.
-                   Reading PRECDAT should result in PREINT (precipitation amount per interval)")
-        end
 
         ## C) state dependent parameters:
         # Calculate parameters:
@@ -123,7 +100,7 @@ function define_LWFB90_cb()
                      # for ROUGH:
                      p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC, p_CS,
                      # for PLNTRES:
-                     NLAYER, p_THICK, p_STONEF, p_fT_RELDEN, p_RTRAD, p_FXYLEM,
+                     NLAYER, p_THICK, p_STONEF, p_RELDEN.(integrator.t, 1:NLAYER), p_RTRAD, p_FXYLEM,
                      # for WEATHER:
                      p_TMAX(integrator.t), p_TMIN(integrator.t), p_EA(integrator.t), p_UW(integrator.t), p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_SOLRAD(integrator.t),
                      # for SNOFRAC:
@@ -178,7 +155,7 @@ function define_LWFB90_cb()
         aux_du_RSNO, aux_du_SNVP, aux_du_SMLT,
         # compute updated states:
         u_SNOW, u_CC, u_SNOWLQ) =
-            MSBPREINT(p_fT_PREINT, p_DTP, p_fT_SNOFRC, p_NPINT, p_fu_PINT, p_fu_TA,
+            MSBPREINT(p_PREC(integrator.t), p_DTP, p_fT_SNOFRC, p_NPINT, p_fu_PINT, p_fu_TA,
                    # for INTER (snow)
                    u_INTS, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS,
                    # for INTER (rain)

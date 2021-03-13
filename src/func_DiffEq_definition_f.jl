@@ -30,26 +30,8 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # unused are the constant parameters saved in: = p[1][2]
 
         ## B) time dependent parameters
-        (p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PRECIN, p_DTP, p_NPINT, p_MESFL,
+        (p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC, p_DTP, p_NPINT, p_MESFL,
         _, _, _, _, _) = p[2]
-
-        # Compute rate of rain (mm/day)
-        # TODO(bernhard): a) Do this outside of integration loop in define_LWFB90_p()
-        #                 b) And simplify it directly to rate p_fT_PREC in both cases
-        #                    i.e in case PREINT (PRECDAT) or in case
-        if (isequal(p_DTP, 1))
-            # p[2][9] # p_DTP
-            # p[2][10] # p_NPINT
-
-            # NOTE: Curently parameters overdetermine. We only need two out of the following three:
-            # p_DTP = p_DT/p_NPINT
-            # p_NPINT = p_DT/p_DTP
-
-            p_fT_PREINT = p_PRECIN(t) / p_DTP # (mm/day)
-        else
-            error("Case where input file PRECDAT is used is not implemented.
-                   Reading PRECDAT should result in PREINT (precipitation amount per interval)")
-        end
 
         DTRI = p_DTP
 

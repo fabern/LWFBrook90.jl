@@ -243,20 +243,21 @@ function MSBDAYNIGHT_postprocess(IMODEL, NLAYER,
                                  p_fu_PGER,
                                  p_DT)
 
-    # average rates over day
-    p_fu_PTRAN = (p_fu_PTR[1] * p_fT_DAYLEN + p_fu_PTR[2] * (1 - p_fT_DAYLEN)) / p_DT #TODO(bernhard) why "/ p_DT"? This seems wrong.
-    p_fu_GEVP  = (p_fu_GER[1] * p_fT_DAYLEN + p_fu_GER[2] * (1 - p_fT_DAYLEN)) / p_DT #TODO(bernhard) why "/ p_DT"? This seems wrong.
-    p_fu_PINT  = (p_fu_PIR[1] * p_fT_DAYLEN + p_fu_PIR[2] * (1 - p_fT_DAYLEN)) / p_DT #TODO(bernhard) why "/ p_DT"? This seems wrong.
-    p_fu_GIVP  = (p_fu_GIR[1] * p_fT_DAYLEN + p_fu_GIR[2] * (1 - p_fT_DAYLEN)) / p_DT #TODO(bernhard) why "/ p_DT"? This seems wrong.
+    # average rates over day (mm/day)
+    # mm/day   =  mm/day      * day         + mm/day      *  (day - day)       / day
+    p_fu_PTRAN = (p_fu_PTR[1] * p_fT_DAYLEN + p_fu_PTR[2] * (1 - p_fT_DAYLEN)) / p_DT
+    p_fu_GEVP  = (p_fu_GER[1] * p_fT_DAYLEN + p_fu_GER[2] * (1 - p_fT_DAYLEN)) / p_DT
+    p_fu_PINT  = (p_fu_PIR[1] * p_fT_DAYLEN + p_fu_PIR[2] * (1 - p_fT_DAYLEN)) / p_DT
+    p_fu_GIVP  = (p_fu_GIR[1] * p_fT_DAYLEN + p_fu_GIR[2] * (1 - p_fT_DAYLEN)) / p_DT
 
     if IMODEL==1
-        p_fu_PSLVP = (p_fu_PGER[1] * p_fT_DAYLEN + p_fu_PGER[2] * (1 - p_fT_DAYLEN)) / p_DT #TODO(bernhard) why "/ p_DT"? This seems wrong.
+        p_fu_PSLVP = (p_fu_PGER[1] * p_fT_DAYLEN + p_fu_PGER[2] * (1 - p_fT_DAYLEN)) / p_DT
     end
 
     aux_du_TRANI=zeros(NLAYER)
 
     for i = 1:NLAYER
-        aux_du_TRANI[i] = (p_fu_ATRI[1, i] * p_fT_DAYLEN + p_fu_ATRI[2, i] * (1 - p_fT_DAYLEN)) / p_DT #TODO(bernhard) why "/ p_DT"? This seems wrong.
+        aux_du_TRANI[i] = (p_fu_ATRI[1, i] * p_fT_DAYLEN + p_fu_ATRI[2, i] * (1 - p_fT_DAYLEN)) / p_DT
     end
 
     return (p_fu_PTRAN, # average potential transpiration rate for day (mm/d)
@@ -270,7 +271,7 @@ end
 
 function MSBPREINT(#arguments:
                    #
-                   p_fT_PREINT, p_DTP, p_fT_SNOFRC, p_NPINT, p_fu_PINT, p_fu_TA,
+                   p_fT_PREC, p_DTP, p_fT_SNOFRC, p_NPINT, p_fu_PINT, p_fu_TA,
                    # for INTER (snow)
                    u_INTS, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS,
                    # for INTER (rain)
@@ -282,7 +283,6 @@ function MSBPREINT(#arguments:
                    # for SNOWPACK
                    u_CC, u_SNOWLQ, p_fu_PSNVP, p_fu_SNOEN, p_MAXLQF, p_GRDMLT)
 
-    p_fT_PREC = p_fT_PREINT / p_DTP     # PREINT in mm, PREC as rate in mm/day # TODO: check is PREINT in mm?
     p_fT_SFAL = p_fT_SNOFRC * p_fT_PREC # rate in mm/day
     p_fT_RFAL = p_fT_PREC - p_fT_SFAL   # rate in mm/day
 

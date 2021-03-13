@@ -265,19 +265,6 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
     p_cst = (p_cst_1, p_cst_2)
 
     # 2b) Time varying parameters (e.g. meteorological forcings)
-    p_NPINT = pfile_siteparam["p_NPINT"]
-    if (isequal(p_NPINT, 1))
-        # one precipitation interval per day:
-        #   p_DTP = 1.0 day, i.e equal to simulatino interval p_DT = 1.0 day
-        #   use precipitation rate (mm/day) = p_PRECIN/1 = p_PRECIN/p_DTP
-        p_DTP = 1 # time step for precipitation interval (for PRECIN and MESFL), may be <= 1 d
-    else
-        # multiple precipitation intervals per day: (not implemented)
-        p_DTP = Nothing # time step for precipitation interval (for PRECIN and MESFL), may be <= 1 d
-        error("Case with multiple precipitation intervals (using PRECDAT) is not implemented.")
-        # This would result in use of e.g. hourly PRECIN and hourly MESFL
-    end
-
     p_DOY_inclRef = (t) -> LWFBrook90.p_DOY(t, pfile_meteo["input_reference_date"])
     p_MONTHN_inclRef = (t) -> LWFBrook90.p_MONTHN(t, pfile_meteo["input_reference_date"])
     p_fT = (p_DOY_inclRef,
@@ -287,14 +274,16 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
             pfile_meteo["p_TMIN"],
             pfile_meteo["p_VAPPRES"],
             pfile_meteo["p_WIND"],
-            pfile_meteo["p_PRECIN"],
-            p_DTP, p_NPINT,
+            pfile_meteo["p_PREC"],
+            pfile_meteo["p_DTP"],
+            pfile_meteo["p_NPINT"],
             pfile_meteo["p_MESFL"],
             pfile_meteo["p_DENSEF"],
             pfile_meteo["p_HEIGHT"],
             pfile_meteo["p_LAI"],
             pfile_meteo["p_SAI"],
-            pfile_meteo["p_AGE"])
+            pfile_meteo["p_AGE"],
+            pfile_meteo["p_RELDEN"])
 
     # 2c) Time varying "parameters" (depending on state variables)
     #     These need to be exchanged between CallBack and RHS in DiffEq.jl which is why they
