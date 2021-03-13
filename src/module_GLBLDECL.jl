@@ -1,6 +1,6 @@
 module GLBLDECL
 
-using Interpolations: interpolate, BSpline, Constant, scale, extrapolate, NoInterp
+using Interpolations: interpolate, BSpline, Constant, Previous, scale, extrapolate, NoInterp
 using DataFrames: DataFrame
 using DataFramesMeta
 using Dates: DateTime
@@ -93,18 +93,27 @@ function derive_params_from_input_meteoveg(
     # 2) Interpolate input data in time
     time_range = range(minimum(input_meteoveg.days), maximum(input_meteoveg.days), length=length(input_meteoveg.days))
 
-    p_GLOBRAD = extrapolate(scale(interpolate(input_meteoveg.GLOBRAD, (BSpline(Constant()))), time_range) ,0)
-    p_TMAX    = extrapolate(scale(interpolate(input_meteoveg.TMAX,    (BSpline(Constant()))), time_range) ,0)
-    p_TMIN    = extrapolate(scale(interpolate(input_meteoveg.TMIN,    (BSpline(Constant()))), time_range) ,0)
-    p_VAPPRES = extrapolate(scale(interpolate(input_meteoveg.VAPPRES, (BSpline(Constant()))), time_range) ,0)
-    p_WIND    = extrapolate(scale(interpolate(input_meteoveg.WIND,    (BSpline(Constant()))), time_range) ,0)
-    p_MESFL   = extrapolate(scale(interpolate(input_meteoveg.MESFL,   (BSpline(Constant()))), time_range) ,0)
-    p_DENSEF  = extrapolate(scale(interpolate(input_meteoveg.DENSEF,  (BSpline(Constant()))), time_range) ,0)
-    p_HEIGHT  = extrapolate(scale(interpolate(input_meteoveg.HEIGHT,  (BSpline(Constant()))), time_range) ,0)
-    p_LAI     = extrapolate(scale(interpolate(input_meteoveg.LAI,     (BSpline(Constant()))), time_range) ,0)
-    p_SAI     = extrapolate(scale(interpolate(input_meteoveg.SAI,     (BSpline(Constant()))), time_range) ,0)
-    p_AGE     = extrapolate(scale(interpolate(input_meteoveg.AGE,     (BSpline(Constant()))), time_range) ,0)
-    p_PREC    = extrapolate(scale(interpolate(input_meteoveg.PRECIN,  (BSpline(Constant()))), time_range) ,0)
+    # using Plots
+    # time_range = range(minimum(input_meteoveg.days), maximum(input_meteoveg.days), length=length(input_meteoveg.days))
+    # ts = 0:0.01:365
+    # scatter(input_meteoveg.days, input_meteoveg.PRECIN)
+    # plot!(ts, scale(interpolate(input_meteoveg.PRECIN, (BSpline(Constant{Previous}()))), time_range)(ts), label = "PRECIN {Previous}",  xlims=(0,30))
+    # plot!(ts, scale(interpolate(input_meteoveg.PRECIN, (BSpline(Constant{Next}()))),     time_range)(ts), label = "PRECIN {Next}",      xlims=(0,30))
+    # plot!(ts, scale(interpolate(input_meteoveg.PRECIN, (BSpline(Constant()))),           time_range)(ts), label = "PRECIN {Nearest}",   xlims=(0,30))
+    # # plot!(ts, scale(interpolate(input_meteoveg.PRECIN, (BSpline(Linear()))),             time_range)(ts), label = "PRECIN Linear",   xlims=(0,30))
+
+    p_GLOBRAD = extrapolate(scale(interpolate(input_meteoveg.GLOBRAD, (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_TMAX    = extrapolate(scale(interpolate(input_meteoveg.TMAX,    (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_TMIN    = extrapolate(scale(interpolate(input_meteoveg.TMIN,    (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_VAPPRES = extrapolate(scale(interpolate(input_meteoveg.VAPPRES, (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_WIND    = extrapolate(scale(interpolate(input_meteoveg.WIND,    (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_MESFL   = extrapolate(scale(interpolate(input_meteoveg.MESFL,   (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_DENSEF  = extrapolate(scale(interpolate(input_meteoveg.DENSEF,  (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_HEIGHT  = extrapolate(scale(interpolate(input_meteoveg.HEIGHT,  (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_LAI     = extrapolate(scale(interpolate(input_meteoveg.LAI,     (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_SAI     = extrapolate(scale(interpolate(input_meteoveg.SAI,     (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_AGE     = extrapolate(scale(interpolate(input_meteoveg.AGE,     (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_PREC    = extrapolate(scale(interpolate(input_meteoveg.PRECIN,  (BSpline(Constant{Previous}()))), time_range) ,0)
 
     # 2a Compute time dependent root density parameters
     # Which is a vector quantity that is dependent on time:
@@ -112,7 +121,7 @@ function derive_params_from_input_meteoveg(
     for i in 1:nrow(input_meteoveg)
         p_RELDEN_2Darray[i,:] = LWFRootGrowth(p_frelden, p_tini, input_meteoveg.AGE[i], p_rgroper, p_inirdep, p_inirlen, NLAYER)
     end
-    p_RELDEN =  extrapolate(scale(interpolate(p_RELDEN_2Darray, (BSpline(Constant()), NoInterp()) ),# 1st dimension: ..., 2nd dimension NoInterp()
+    p_RELDEN =  extrapolate(scale(interpolate(p_RELDEN_2Darray, (BSpline(Constant{Previous}()), NoInterp()) ),# 1st dimension: ..., 2nd dimension NoInterp()
                             time_range, 1:size(p_RELDEN_2Darray,2)),
                     0) # extrapolate with fillvalue = 0
 

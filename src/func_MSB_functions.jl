@@ -401,39 +401,39 @@ function MSBITERATE(IMODEL, p_QLAYER,
     aux_du_DSFLI = fill(NaN, NLAYER)
 
     for i = NLAYER:-1:1
-            # downslope flow rates
-            if( p_LENGTH == 0 || p_DSLOPE == 0)
-                # added in Version 4
-                aux_du_DSFLI[i] = 0
+        # downslope flow rates
+        if (p_LENGTH == 0 || p_DSLOPE == 0)
+            # added in Version 4
+            aux_du_DSFLI[i] = 0
+        else
+            aux_du_DSFLI[i] = LWFBrook90.WAT.DSLOP(p_DSLOPE, p_LENGTH, p_THICK[i], p_STONEF[i], u_aux_PSIM[i], p_RHOWG, p_fu_KK[i])
+        end
+        # vertical flow rates
+        if (i < NLAYER)
+            if (abs(u_aux_PSITI[i] - u_aux_PSITI[i+1]) < p_DPSIMX)
+                aux_du_VRFLI[i] = 0
             else
-                aux_du_DSFLI[i] = LWFBrook90.WAT.DSLOP(p_DSLOPE, p_LENGTH, p_THICK[i], p_STONEF[i], u_aux_PSIM[i], p_RHOWG, p_fu_KK[i])
+                aux_du_VRFLI[i] =
+                    LWFBrook90.WAT.VERT(p_fu_KK[i],     p_fu_KK[i+1],
+                                            p_KSAT[i],      p_KSAT[i+1],
+                                            p_THICK[i],     p_THICK[i+1],
+                                            u_aux_PSITI[i], u_aux_PSITI[i+1],
+                                            p_STONEF[i],    p_STONEF[i+1],
+                                            p_RHOWG)
             end
-            # vertical flow rates
-            if (i < NLAYER)
-                if (abs(u_aux_PSITI[i] - u_aux_PSITI[i+1]) < p_DPSIMX)
-                    aux_du_VRFLI[i] = 0
-                else
-                    aux_du_VRFLI[i] =
-                        LWFBrook90.WAT.VERT(p_fu_KK[i],     p_fu_KK[i+1],
-                                                p_KSAT[i],      p_KSAT[i+1],
-                                                p_THICK[i],     p_THICK[i+1],
-                                                u_aux_PSITI[i], u_aux_PSITI[i+1],
-                                                p_STONEF[i],    p_STONEF[i+1],
-                                                p_RHOWG)
-                end
+        else
+        # bottom layer i == NLAYER
+            if (p_DRAIN > 0.00001)
+            # gravity drainage only
+                aux_du_VRFLI[NLAYER] = p_DRAIN * p_fu_KK[NLAYER] * (1 - p_STONEF[NLAYER])
             else
-            # bottom layer i == NLAYER
-                if (p_DRAIN > 0.00001)
-                # gravity drainage only
-                    aux_du_VRFLI[NLAYER] = p_DRAIN * p_fu_KK[NLAYER] * (1 - p_STONEF[NLAYER])
-                else
-                # bottom of profile sealed
-                    aux_du_VRFLI[NLAYER] = 0
-                end
+            # bottom of profile sealed
+                aux_du_VRFLI[NLAYER] = 0
             end
-            # if (IDAY >= 6 && i==NLAYER) # TODO(bernhard): this seemed like a no effect snippet
-            #     p_DRAIN=p_DRAIN         # TODO(bernhard): this seemed like a no effect snippet
-            # end                         # TODO(bernhard): this seemed like a no effect snippet
+        end
+        # if (IDAY >= 6 && i==NLAYER) # TODO(bernhard): this seemed like a no effect snippet
+        #     p_DRAIN=p_DRAIN         # TODO(bernhard): this seemed like a no effect snippet
+        # end                         # TODO(bernhard): this seemed like a no effect snippet
     end
 
     # first approximation on aux_du_VRFLI
