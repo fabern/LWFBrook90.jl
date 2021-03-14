@@ -10,7 +10,7 @@ callback function.
 """
 function MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
                     # arguments
-                    IMODEL,
+                    IMODEL, NLAYER, p_soil,
                     # for SUNDS
                     p_LAT, p_ESLOPE, DOY, p_L1, p_L2,
                     # for CANOPY
@@ -20,7 +20,7 @@ function MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
                     # for ROUGH
                     p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC, p_CS,
                     # for PLNTRES
-                    NLAYER, p_THICK, p_STONEF, p_fT_RELDEN, p_RTRAD, p_FXYLEM,
+                    p_fT_RELDEN, p_RTRAD, p_FXYLEM,
                     # for WEATHER
                     p_fT_TMAX, p_fT_TMIN, p_fT_EA, p_fT_UW, p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_fT_SOLRAD,
                     # for SNOFRAC
@@ -32,7 +32,7 @@ function MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
                     #
                     p_ALBSN, p_ALB,
                     # for FRSS
-                    p_RSSA, p_RSSB, p_PSIF, u_aux_PSIM, p_PsiCrit, #p_PSIF[1], u_aux_PSIM[1]
+                    p_RSSA, p_RSSB, u_aux_PSIM, #u_aux_PSIM[1]
                     # for SNOENRGY
                     p_CCFAC, p_MELFAC, p_LAIMLT, p_SAIMLT)
     #
@@ -62,7 +62,7 @@ function MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
                                       p_CZS, p_CZR, p_HS, p_HR, p_LPC, p_CS, p_fu_Z0GS)
 
     # plant resistance components
-    p_fu_RXYLEM, p_fu_RROOTI, p_fu_ALPHA = LWFBrook90.EVP.PLNTRES(NLAYER, p_THICK, p_STONEF, p_fu_RTLEN, p_fT_RELDEN, p_RTRAD, p_fu_RPLANT, p_FXYLEM, LWFBrook90.CONSTANTS.p_PI, LWFBrook90.CONSTANTS.p_RHOWG)
+    p_fu_RXYLEM, p_fu_RROOTI, p_fu_ALPHA = LWFBrook90.EVP.PLNTRES(NLAYER, p_soil, p_fu_RTLEN, p_fT_RELDEN, p_RTRAD, p_fu_RPLANT, p_FXYLEM, LWFBrook90.CONSTANTS.p_PI, LWFBrook90.CONSTANTS.p_RHOWG)
 
     # calculated weather data
     p_fu_SHEAT = 0
@@ -83,7 +83,7 @@ function MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
         p_fu_PSNVP = 0
         p_fu_ALBEDO = p_ALB
         # soil evaporation resistance
-        p_fu_RSS = LWFBrook90.PET.FRSS(p_RSSA, p_RSSB, p_PSIF[1], u_aux_PSIM[1], p_PsiCrit[1])
+        p_fu_RSS = LWFBrook90.PET.FRSS(p_RSSA, p_RSSB, u_aux_PSIM[1], p_soil)
 
         # check for zero or negative p_fu_RSS (TODO: not done in LWFBrook90)
         #if (p_fu_RSS < 0.000001)
@@ -357,11 +357,11 @@ function MSBPREINT(#arguments:
 end
 
 
-function MSBITERATE(p_QLAYER, p_soil,
+function MSBITERATE(IMODEL, NLAYER, p_QLAYER, p_soil,
                     # for SRFLFR:
                     u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC,
                     #
-                    p_IMPERV, p_fu_RNET, aux_du_SMLT, NLAYER,
+                    p_IMPERV, p_fu_RNET, aux_du_SMLT,
                     p_LENGTH, p_DSLOPE,
                     # for DSLOP:
                     p_RHOWG, u_aux_PSIM, p_fu_KK,
@@ -398,14 +398,15 @@ function MSBITERATE(p_QLAYER, p_soil,
     aux_du_VRFLI = fill(NaN, NLAYER)
     aux_du_DSFLI = fill(NaN, NLAYER)
 
+    # downslope flow rates
+    if (p_LENGTH == 0 || p_DSLOPE == 0)
+        # added in Version 4
+        aux_du_DSFLI .= 0
+    else
+        aux_du_DSFLI .= LWFBrook90.WAT.DSLOP(p_DSLOPE, p_LENGTH, p_RHOWG, p_soil, u_aux_PSIM, p_fu_KK)
+    end
+
     for i = NLAYER:-1:1
-        # downslope flow rates
-        if (p_LENGTH == 0 || p_DSLOPE == 0)
-            # added in Version 4
-            aux_du_DSFLI[i] = 0
-        else
-            aux_du_DSFLI[i] = LWFBrook90.WAT.DSLOP(p_DSLOPE, p_LENGTH, p_soil.p_THICK[i], p_soil.p_STONEF[i], u_aux_PSIM[i], p_RHOWG, p_fu_KK[i])
-        end
         # vertical flow rates
         if (i < NLAYER)
             if (abs(u_aux_PSITI[i] - u_aux_PSITI[i+1]) < p_DPSIMX)
@@ -445,16 +446,12 @@ function MSBITERATE(p_QLAYER, p_soil,
                                     aux_du_SLVP, p_soil.p_SWATMX, u_SWATI,
                                     aux_du_VRFLI_1st_approx)
 
-    if isa(p_soil, LWFBrook90.KPT.KPT_SOILPAR_Mvg1d)
-        DPSIDW = LWFBrook90.KPT.FDPSIDWF_MvG(u_aux_WETNES, p_soil.p_MvGα, p_soil.p_MvGn)
-    else # elseis isa(p_soil, KPT_SOILPAR_Ch1d)
-        DPSIDW = LWFBrook90.KPT.FDPSIDWF_CH(u_aux_WETNES, p_soil.p_WETINF, p_soil.p_BEXP, p_soil.p_PSIF, p_soil.p_WETF, p_soil.p_CHM, p_soil.p_CHN)
-    end
+    DPSIDW = LWFBrook90.KPT.FDPSIDWF(u_aux_WETNES, p_soil)
 
     # limit step size
     #   ITER computes DTI so that the potential difference (due to aux_du_VRFLI)
     #   between adjacent layers does not change sign during the iteration time step
-    DTINEW=LWFBrook90.WAT.ITER(DTI, LWFBrook90.CONSTANTS.p_DTIMIN, DPSIDW,
+    DTINEW=LWFBrook90.WAT.ITER(NLAYER, IMODEL, DTI, LWFBrook90.CONSTANTS.p_DTIMIN, DPSIDW,
                                     du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMX,
                     p_soil)
     # recompute step

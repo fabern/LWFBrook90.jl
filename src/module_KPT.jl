@@ -83,6 +83,24 @@ using ..CONSTANTS: p_ThCrit,p_RHOWG # https://discourse.julialang.org/t/large-pr
 # long INTRO: https://benlauwens.github.io/ThinkJulia.jl/latest/book.html#chap15
 # DOC: https://docs.julialang.org/en/v1/manual/types/#Composite-Types
 # Careful: https://docs.julialang.org/en/v1/manual/performance-tips/#The-dangers-of-abusing-multiple-dispatch-(aka,-more-on-types-with-values-as-parameters)
+# Careful: Don't use abstract types for fields (p_THICK::AbstractVector). Use {T} https://docs.julialang.org/en/v1/manual/performance-tips/#Avoid-fields-with-abstract-type
+#
+# Because we want to derive additional fields at initialization, an inner construcor is needed.
+# In order that it works with parametric types ( d{T<:Number} ), an outer constructer that derives
+# the type from its elements is needed. Without this one would need to provide the type explicitly
+# when instantiating e.g. d{Float64}(1.2, 2.0) instead of d(1.2, 2.0).
+# struct d{T<:Number}
+#     # Input fields
+#     field1::T
+#     field2::T
+#     field3::T
+
+#     function d{T}(field1, field2) where {T<:Number}
+#         new(field1, field2, field1+field2)
+#     end
+# end
+# d(field1::T, field2::T) where {T<:Number} = d{T}(field1,field2) # see https://docs.julialang.org/en/v1/manual/constructors/#Parametric-Constructors
+
 abstract type AbstractKptSoilpar end
 """
 Represents a discretized 1D column of soil with Clapp-Hornberger parametrization.
@@ -90,45 +108,38 @@ Represents a discretized 1D column of soil with Clapp-Hornberger parametrization
 Input fields: p_THICK, p_STONEF, p_THSAT, p_PSIF, p_THETAF, p_KF, p_BEXP, p_WETINF
 Derived fields: p_CHM, p_CHN, p_THETAF, p_PSIG, p_SWATMX, p_WETF, p_PsiCrit
 """
-struct KPT_SOILPAR_Ch1d <: AbstractKptSoilpar
+struct KPT_SOILPAR_Ch1d{T<:AbstractVector} <: AbstractKptSoilpar
     # Input fields
-    p_THICK::AbstractVector
-    p_STONEF::AbstractVector
-    p_THSAT::AbstractVector
-    p_PSIF::AbstractVector
-    p_THETAF::AbstractVector
-    p_KF::AbstractVector
-    p_BEXP::AbstractVector
-    p_WETINF::AbstractVector
+    p_THICK::T
+    p_STONEF::T
+    p_THSAT::T
+    p_PSIF::T
+    p_THETAF::T
+    p_KF::T
+    p_BEXP::T
+    p_WETINF::T
     # Derived fields
-    p_CHM::AbstractVector
-    p_CHN::AbstractVector
-    p_PSIG::AbstractVector
-    p_SWATMX::AbstractVector
-    p_WETF::AbstractVector
-    p_PsiCrit::AbstractVector
+    p_CHM::T
+    p_CHN::T
+    p_PSIG::T
+    p_SWATMX::T
+    p_WETF::T
+    p_PsiCrit::T
     # p_PsiCrit is the ψ value that corresponds to the constant, critical θ value p_ThCrit
     # Note that p_PSICR is different!
 
 
     # # Inner constructor:
-    function KPT_SOILPAR_Ch1d(;p_THICK, p_STONEF, p_THSAT, p_PSIF, p_THETAF, p_KF, p_BEXP, p_WETINF)
+    function KPT_SOILPAR_Ch1d{T}(;p_THICK, p_STONEF, p_THSAT, p_PSIF, p_THETAF, p_KF, p_BEXP, p_WETINF) where {T<:AbstractVector}
         NLAYER = length(p_THICK)
         @assert size(p_THICK) == size(p_STONEF) == size(p_THSAT) == size(p_PSIF) ==
             size(p_THETAF) == size(p_KF) == size(p_BEXP) == size(p_WETINF)
 
         # Derive fields
-        # Derive 2:
-        # Variant 2a: used to be SOILPAR()
-        # p_Kθfc = p_KSAT = p_MvGl = p_MvGn = p_MvGα = p_θr = fill(NaN, NLAYER)
-        # (p_PSIG, p_SWATMX, p_WETF, p_CHM, p_CHN, p_KSAT, p_PSIF, p_THETAF ) =
-        # SOILPAR_CH(p_RHOWG,
-        #                             p_THICK,p_THETAF,p_THSAT,p_STONEF,p_BEXP,
-        #                             p_KF,p_PSIF,p_WETINF,p_Kθfc,p_PSICR,p_KSAT,
-        #                             p_MvGl, p_MvGn, p_MvGα, p_θr,
-        #                             NLAYER)
+        # Variant A: used to be SOILPAR()
+        # # removed...
 
-        # Variant 2b:
+        # Variant B: rewritten SOILPAR() here
         p_WETF   = p_THETAF ./ p_THSAT # wetness at field capacity, dimensionless
         p_KSAT   = p_KF .* (1 ./ p_WETF) .^ (2 .* p_BEXP .+ 3) # saturated hydraulic conductivity, mm/d
         p_SWATMX = p_THICK .* p_THSAT .* (1.0 .- p_STONEF) # maximum water storage for layer, mm
@@ -150,29 +161,8 @@ struct KPT_SOILPAR_Ch1d <: AbstractKptSoilpar
         end
         # unused p_WETc = p_WETF .* (1000 .* p_PSICR ./ p_PSIF) .^ (-1 ./ p_BEXP) # wetness at p_PSICR, dimensionless
 
-        # Derive 1:
-        # # Variant 1a:
-        # p_PsiCrit = FPSIMF_CH.(p_ThCrit./p_THSAT,
-        #                        p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN)
-        # Variant 1b:
-        WetnesCrit = p_ThCrit ./ p_THSAT
-        # Obtain Ψi from Wi for one layer using equation (7) in the clearly
-        # unsaturated region and equation (4) in the near-saturation region.
-        p_PsiCrit = fill(NaN, NLAYER)
-        for i = 1:NLAYER
-            if WetnesCrit[i] <= 0.
-                p_PsiCrit[i] = -10000000000
-            elseif WetnesCrit[i] < p_WETINF[i]
-                # in clearly unsaturated range (eq. 7)
-                p_PsiCrit[i] = p_PSIF[i] * (WetnesCrit[i] / p_WETF[i]) ^ (-p_BEXP[i])
-            elseif WetnesCrit[i] < 1.0
-                # in near-saturated range (eq. 4)
-                p_PsiCrit[i] = p_CHM[i] * (WetnesCrit[i] - p_CHN[i]) * (WetnesCrit[i] - 1)
-            else
-                # saturated
-                p_PsiCrit[i] = 0.0
-            end
-        end
+        # Derive further fields
+        p_PsiCrit = FPSIM_CH(p_ThCrit./p_THSAT, p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN)
 
         # NOTE(bernhard): removed further tasks that were in SOILPAR() in LWFBrook90R
         #                  - computation of p_WETc = p_WETF .* (1000 .* p_PSICR ./ p_PSIF) .^ (-1 ./ p_BEXP) # wetness at p_PSICR, dimensionless
@@ -188,6 +178,9 @@ struct KPT_SOILPAR_Ch1d <: AbstractKptSoilpar
             p_CHM, p_CHN, p_PSIG, p_SWATMX, p_WETF, p_PsiCrit)
     end
 end
+KPT_SOILPAR_Ch1d(;p_THICK::T, p_STONEF::T, p_THSAT::T, p_PSIF::T, p_THETAF::T, p_KF::T, p_BEXP::T, p_WETINF::T) where {T<:AbstractVector} =
+    KPT_SOILPAR_Ch1d{T}(;p_THICK, p_STONEF, p_THSAT, p_PSIF, p_THETAF, p_KF, p_BEXP, p_WETINF)
+    # for explanation see https://docs.julialang.org/en/v1/manual/constructors/#Parametric-Constructors
 
 """
 Represents a discretized 1D column of soil with Mualem-van Genuchten parametrization.
@@ -195,57 +188,41 @@ Represents a discretized 1D column of soil with Mualem-van Genuchten parametriza
 Input fields: p_THICK, p_STONEF, p_THSAT, p_Kθfc, p_KSAT, p_MvGα, p_MvGn, p_MvGl, p_θr
 Derived fields: p_PSIF, p_THETAF, p_PSIG, p_SWATMX, p_WETF, p_PsiCrit
 """
-struct KPT_SOILPAR_Mvg1d <: AbstractKptSoilpar
+struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
     # Input fields
-    p_THICK::AbstractVector
-    p_STONEF::AbstractVector
-    p_THSAT::AbstractVector
-    p_Kθfc::AbstractVector
-    p_KSAT::AbstractVector
-    p_MvGα::AbstractVector
-    p_MvGn::AbstractVector
-    p_MvGl::AbstractVector
-    p_θr::AbstractVector
+    p_THICK::T
+    p_STONEF::T
+    p_THSAT::T
+    p_Kθfc::T
+    p_KSAT::T
+    p_MvGα::T
+    p_MvGn::T
+    p_MvGl::T
+    p_θr::T
     # Derived fields
-    p_PSIF::AbstractVector    # matric potential at field capacity, kPa
-    p_THETAF::AbstractVector  # soil moisture θ at field capacity, m3/m3
-    p_PSIG::AbstractVector    # gravity potential negative down from surface, kPa
-    p_SWATMX::AbstractVector  # maximum water storage for layer, mm
-    p_WETF::AbstractVector    # wetness at field capacity, dimensionless
-    p_PsiCrit::AbstractVector
+    p_PSIF::T    # matric potential at field capacity, kPa
+    p_THETAF::T  # soil moisture θ at field capacity, m3/m3
+    p_PSIG::T    # gravity potential negative down from surface, kPa
+    p_SWATMX::T  # maximum water storage for layer, mm
+    p_WETF::T    # wetness at field capacity, dimensionless
+    p_PsiCrit::T
     # p_PsiCrit is the ψ value that corresponds to the constant, critical θ value p_ThCrit
     # Note that p_PSICR is different!
 
 
     # # Inner constructor:
-    function KPT_SOILPAR_Mvg1d(;p_THICK, p_STONEF, p_THSAT, p_Kθfc, p_KSAT, p_MvGα, p_MvGn, p_MvGl, p_θr)
+    function KPT_SOILPAR_Mvg1d{T}(;p_THICK, p_STONEF, p_THSAT, p_Kθfc, p_KSAT, p_MvGα, p_MvGn, p_MvGl, p_θr) where {T<:AbstractVector}
         NLAYER = length(p_THICK)
         @assert size(p_THICK) == size(p_STONEF) == size(p_THSAT) == size(p_Kθfc) ==
                 size(p_KSAT) == size(p_MvGα) == size(p_MvGn) == size(p_MvGl) == size(p_θr)
 
         # Derive fields
-        # Derive 1:
-        # Variant 1a:
-        # p_PsiCrit =
-        #     FPSIM_MvG.(p_ThCrit./(p_THSAT .- p_θr),
-        #                                 p_MvGα, p_MvGn)
-        # Variant 1b:
-        eps       = 1.e-6
-        # MvGm      = 1-1/MvGn
-        AWET      = max.(eps, p_ThCrit./(p_THSAT .- p_θr))
-        p_PsiCrit = 9.81 * (-1 ./ p_MvGα).*(AWET.^(-1 ./ (1 .- 1 ./ p_MvGn)).-1).^(1 ./ p_MvGn) # 9.81 conversion from m to kPa
+        p_PsiCrit = FPSIM_MvG(p_ThCrit./(p_THSAT .- p_θr), p_MvGα, p_MvGn)
 
-        # Derive 2:
-        # # Variant 2a: used to be SOILPAR()
-        # p_THETAF = p_PSIF = p_BEXP = p_KF = p_WETINF = fill(NaN, NLAYER)
-        # (p_PSIG, p_SWATMX, p_WETF, p_KSAT, p_PSIF, p_THETAF) =
-        #     SOILPAR_MvG(p_RHOWG,
-        #                                 p_THICK,p_THETAF,p_THSAT,p_STONEF,p_BEXP,
-        #                                 p_KF,p_PSIF,p_WETINF,p_Kθfc,p_PSICR, p_KSAT,
-        #                                 p_MvGl, p_MvGn, p_MvGα, p_θr,
-        #                                 NLAYER)
+        # # Variant A: used to be SOILPAR()
+        # # removed...
 
-        # Variant 2b:
+        # Variant B: rewritten SOILPAR() here
         p_SWATMX = p_THICK .* p_THSAT .* (1.0 .- p_STONEF) # maximum water storage for layer, mm
         p_PSIG   = fill(NaN, NLAYER) # gravity potential negative down from surface, kPa
         for i = 1:NLAYER
@@ -265,8 +242,8 @@ struct KPT_SOILPAR_Mvg1d <: AbstractKptSoilpar
             # In LWFBrook90R: this was done using FWETK()
             # In LWFBrook90R: if p_WETF[i] == -99999. error("Computed invalid p_WETF by FWETK()") end
         end
-        p_PSIF   = FPSIM_MvG.(p_WETF, p_MvGα, p_MvGn)  # matric potential at field capacity, kPa
-        p_THETAF = FTheta_MvG.(p_WETF, p_THSAT, p_θr)  # soil moisture θ at field capacity, m3/m3
+        p_PSIF   = FPSIM_MvG(p_WETF, p_MvGα, p_MvGn)  # matric potential at field capacity, kPa
+        p_THETAF = FTheta_MvG(p_WETF, p_THSAT, p_θr)  # soil moisture θ at field capacity, m3/m3
 
         # NOTE(bernhard): removed further tasks that were in SOILPAR() in LWFBrook90R
         #                  - computation of p_WETc = FWETNES_MvG.(1000 .* p_PSICR, p_MvGα, p_MvGn) # wetness at p_PSICR, dimensionless
@@ -280,10 +257,11 @@ struct KPT_SOILPAR_Mvg1d <: AbstractKptSoilpar
             p_PSIF, p_THETAF,p_PSIG,p_SWATMX,p_WETF,p_PsiCrit)
     end
 end
-
+KPT_SOILPAR_Mvg1d(;p_THICK::T, p_STONEF::T, p_THSAT::T, p_Kθfc::T, p_KSAT::T, p_MvGα::T, p_MvGn::T, p_MvGl::T, p_θr::T) where {T<:AbstractVector} =
+KPT_SOILPAR_Mvg1d{T}(;p_THICK, p_STONEF, p_THSAT, p_Kθfc, p_KSAT, p_MvGα, p_MvGn, p_MvGl, p_θr)
+    # for explanation see https://docs.julialang.org/en/v1/manual/constructors/#Parametric-Constructors
 
 """
-
     derive_auxiliary_SOILVAR(u_SWATI, p_soil)
 
 Derive alternative representations of soil water status.
@@ -297,39 +275,28 @@ Based on the state `u_SWATI` it returns (`u_aux_WETNES`, `u_aux_PSIM`, `u_aux_PS
 - `p_fu_KK`:      unsaturated hydraulic conductivity: K(Se) a.k.a. K(W)
 """
 function derive_auxiliary_SOILVAR(u_SWATI,  p::KPT_SOILPAR_Mvg1d)
-    NLAYER   = size(p.p_KSAT,1)
 
-    u_aux_WETNES = fill(NaN, NLAYER)
-    u_aux_PSIM   = fill(NaN, NLAYER)
-    u_aux_θ      = fill(NaN, NLAYER)
-    u_aux_PSITI  = fill(NaN, NLAYER)
-    p_fu_KK      = fill(NaN, NLAYER)
-    for i = 1:NLAYER
-        u_aux_WETNES[i] = (p.p_THSAT[i] * u_SWATI[i] / p.p_SWATMX[i] -p.p_θr[i]) / (p.p_THSAT[i] - p.p_θr[i])
-        u_aux_WETNES[i] = min(1, u_aux_WETNES[i])
+    u_aux_WETNES = (p.p_THSAT .* u_SWATI ./ p.p_SWATMX .- p.p_θr) ./ (p.p_THSAT - p.p_θr)
+    u_aux_WETNES = min.(1, u_aux_WETNES)
 
-        u_aux_PSIM[i]   = FPSIM_MvG(u_aux_WETNES[i], p.p_MvGα[i], p.p_MvGn[i])
-        u_aux_θ[i]      = FTheta_MvG(u_aux_WETNES[i], p.p_THSAT[i], p.p_θr[i])
-        p_fu_KK[i]      = FK_MvG(u_aux_WETNES[i], p.p_KSAT[i], p.p_MvGl[i], p.p_MvGn[i])
+    u_aux_PSIM   = FPSIM(u_aux_WETNES, p)
+    u_aux_θ      = FTheta(u_aux_WETNES, p)
+    p_fu_KK      = FK_MvG(u_aux_WETNES, p.p_KSAT, p.p_MvGl, p.p_MvGn)
 
-        u_aux_PSITI[i]  = u_aux_PSIM[i] + p.p_PSIG[i]
-    end
+    u_aux_PSITI  = u_aux_PSIM .+ p.p_PSIG
+
     return (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
 end
 function derive_auxiliary_SOILVAR(u_SWATI,  p::KPT_SOILPAR_Ch1d)
     NLAYER   = size(p.p_KSAT,1)
 
     u_aux_WETNES = u_SWATI./p.p_SWATMX
+    u_aux_PSIM  = FPSIM(u_aux_WETNES, p)
+    u_aux_θ     = FTheta(u_aux_WETNES, p)
 
-    u_aux_PSIM  = fill(NaN, NLAYER)
-    u_aux_θ     = fill(NaN, NLAYER)
     u_aux_PSITI = fill(NaN, NLAYER)
     p_fu_KK     = fill(NaN, NLAYER)
-
     for i = 1:NLAYER
-        u_aux_PSIM[i]  = FPSIMF_CH(
-            u_aux_WETNES[i],p.p_PSIF[i], p.p_BEXP[i], p.p_WETINF[i], p.p_WETF[i], p.p_CHM[i], p.p_CHN[i])
-        u_aux_θ[i]     = FTheta_CH(u_aux_WETNES[i], p.p_THSAT[i])
         u_aux_PSITI[i] = u_aux_PSIM[i] + p.p_PSIG[i]
         if u_aux_WETNES[i] > 0.00010
             p_fu_KK[i] = p.p_KF[i] * (u_aux_WETNES[i] / p.p_WETF[i]) ^ (2 * p.p_BEXP[i] + 3)
@@ -340,8 +307,6 @@ function derive_auxiliary_SOILVAR(u_SWATI,  p::KPT_SOILPAR_Ch1d)
     return (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
 end
 
-
-# TODO(bernhard): remove remark that I renamed LWFBrook90_MvG_FK() to FK_MvG()
 """
 
     FK_MvG(WETNES, KSAT, MvGl, MvGn)
@@ -356,74 +321,111 @@ function FK_MvG(WETNES, KSAT, MvGl, MvGn)
     AWET = max.(WETNES, eps)
 
     # return: hydraulic conductivity, mm/d
-    return KSAT*AWET^MvGl*(1 - (1-AWET^(MvGn/(MvGn-1)) )^(1-1/MvGn) )^2
+    return KSAT .* AWET .^ MvGl .* (1 .- (1 .- AWET .^ (MvGn ./ (MvGn .- 1)) ).^(1 .- 1 ./ MvGn) ) .^ 2
 end
 
 """
-    FPSIMF_CH(u_aux_WETNES,p_PSIF, p_BEXP, p_WET∞, p_WETF, p_CHM, p_CHN)
+    FPSIM(u_aux_WETNES, p_soil)
 
 Compute ψ(Se) = h(Se) a.k.a ψ(W) = h(W).
 """
-
-"""
-    FPSIM_MvG(u_aux_WETNES, p_MvGα, p_MvGn)
-
-Compute ψ(Se) = h(Se) a.k.a ψ(W) = h(W).
-"""
-function FPSIMF_CH(u_aux_WETNES,p_PSIF, p_BEXP, p_WET∞, p_WETF, p_CHM, p_CHN)
-    # Computes ψ(Se) = h(Se) a.k.a ψ(W) = h(W)
-    #
-    # iModel == 0 (Clapp + Hornberger)
+function FPSIM(u_aux_WETNES, p::KPT_SOILPAR_Ch1d)
     # FPSIM obtains Ψi from Wi for one layer using equation (7) in the clearly
     # unsaturated region and equation (4) in the near-saturation region.
-    if u_aux_WETNES <= 0.
-        ψM = -10000000000
-    elseif u_aux_WETNES < p_WET∞
-        # in clearly unsaturated range (eq. 7)
-        ψM = p_PSIF * (u_aux_WETNES / p_WETF) ^ (-p_BEXP)
-    elseif u_aux_WETNES < 1.0
-        # in near-saturated range (eq. 4)
-        ψM = p_CHM* (u_aux_WETNES - p_CHN) * (u_aux_WETNES - 1)
-    else
-        # saturated
-        ψM = 0.0
+    NLAYER = length(p.p_SWATMX)
+    ψM     = fill(NaN, NLAYER)
+    for i in 1:NLAYER
+        if u_aux_WETNES[i] <= 0.
+            ψM[i] = -10000000000
+        elseif u_aux_WETNES[i] < p.p_WETINF[i]
+            # in clearly unsaturated range (eq. 7)
+            ψM[i] = p.p_PSIF[i] * (u_aux_WETNES[i] / p.p_WETF[i]) ^ (-p.p_BEXP[i])
+        elseif u_aux_WETNES[i] < 1.0
+            # in near-saturated range (eq. 4)
+            ψM[i] = p.p_CHM[i]* (u_aux_WETNES[i] - p.p_CHN[i]) * (u_aux_WETNES[i] - 1)
+        else
+            # saturated
+            ψM[i] = 0.0
+        end
     end
     return ψM
 end
-function FPSIM_MvG(u_aux_WETNES, p_MvGα, p_MvGn)
-    # iModel == 1 (Mualem - van Genuchten)
-    # ...
+function FPSIM_CH(u_aux_WETNES,p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN)
+    # needed only for construction of KPT_SOILPAR_Ch1d
+
+    # FPSIM obtains Ψi from Wi for one layer using equation (7) in the clearly
+    # unsaturated region and equation (4) in the near-saturation region.
+    NLAYER = length(u_aux_WETNES)
+    ψM     = fill(NaN, NLAYER)
+    for i in 1:NLAYER
+        if u_aux_WETNES[i] <= 0.
+            ψM[i] = -10000000000
+        elseif u_aux_WETNES[i] < p_WETINF[i]
+            # in clearly unsaturated range (eq. 7)
+            ψM[i] = p_PSIF[i] * (u_aux_WETNES[i] / p_WETF[i]) ^ (-p_BEXP[i])
+        elseif u_aux_WETNES[i] < 1.0
+            # in near-saturated range (eq. 4)
+            ψM[i] = p_CHM[i]* (u_aux_WETNES[i] - p_CHN[i]) * (u_aux_WETNES[i] - 1)
+        else
+            # saturated
+            ψM[i] = 0.0
+        end
+    end
+    return ψM
+end
+function FPSIM(u_aux_WETNES, p::KPT_SOILPAR_Mvg1d)
     eps = 1.e-6
     # MvGm = 1-1/MvGn
     AWET = max.(u_aux_WETNES, eps)
-    ψM = (-1/p_MvGα)*(AWET^(-1/(1-1/p_MvGn))-1)^(1/p_MvGn)
-    ψM = ψM * 9.81 # 9.81 conversion from m to kPa #TODO define and use const
+    ψM = (-1 ./ p.p_MvGα) .* (AWET .^ (-1 ./ (1 .- 1 ./ p.p_MvGn)) .- 1) .^ (1 ./ p.p_MvGn)
 
-    return ψM
+    return ψM * 9.81 # 9.81 conversion from m to kPa #TODO define and use const
+end # TODO(bernhard): FPSIM for p::KPT_SOILPAR_Mvg1d seems unused
+function FPSIM_MvG(u_aux_WETNES, p_MvGα, p_MvGn)
+    eps = 1.e-6
+    # MvGm = 1-1/MvGn
+    AWET = max.(u_aux_WETNES, eps)
+    ψM = (-1 ./ p_MvGα) .* (AWET .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
+    return ψM * 9.81 # 9.81 conversion from m to kPa #TODO define and use const
 end
 
-
 """
+    FDPSIDWF_CH(u_aux_WETNES, p_soil)
+
+Compute derivative dψi/dWi for each layer i.
+
 Ecoshift:
 FDPSIDW returns dψi/dWi for one layer, which is needed for the selection of iteration
-time-step. Differentiation of (7) and (4) leads to
+time-step.
+
+For Clapp-Hornberger:
+Differentiation of (7) and (4) leads to
 dψi / dWi = ( -b ψf / Wf ) ( Wi / Wf )-b-1
 in the unsaturated range,
 dψi / dWi= m ( 2 Wi - n - 1 )
 in the near saturation range, and
 dψi / dWi = 0
 when the soil is saturated (Wi = 1).
+
+For Mualem-van Genuchten:
+dψi / dWi = TODO.... write documentation here
 """
-
-function FDPSIDWF_CH(u_aux_WETNES, p_WET∞, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN)
+function FDPSIDWF(u_aux_WETNES, p::KPT_SOILPAR_Ch1d)
     # FDPSIDW returns dΨi/dWi for one layer, which is needed for the selection of iteration time-step.
+    p_WETINF = p.p_WETINF
+    p_BEXP   = p.p_BEXP
+    p_PSIF   = p.p_PSIF
+    p_WETF   = p.p_WETF
+    p_CHM    = p.p_CHM
+    p_CHN    = p.p_CHN
 
-    dψδW = zeros(size(u_aux_WETNES))
+    dψδW  = zero(u_aux_WETNES)
     for i = 1:length(u_aux_WETNES)
-        if u_aux_WETNES[i] < p_WET∞[i]
+        if u_aux_WETNES[i] < p_WETINF[i]
             # in clearly unsaturated range (eq. 7)
             dψδW[i] = (-p_BEXP[i] * p_PSIF[i] / p_WETF[i]) * (u_aux_WETNES[i] / p_WETF[i]) ^ (-p_BEXP[i] - 1)
-            # TODO(bernhard): slightly faster: dψδW[i] = p_PSIF[i]*p_WETF[i]^p_BEXP[i] * -p_BEXP[i]*u_aux_WETNES[i]^(-p_BEXP[i]-1)
+            # TODO(bernhard): slightly faster:
+            # dψδW[i] = p_PSIF[i]*p_WETF[i]^p_BEXP[i] * -p_BEXP[i]*u_aux_WETNES[i]^(-p_BEXP[i]-1)
         elseif u_aux_WETNES[i] < 1.0
             # in near-saturated range (eq. 4)
             dψδW[i] = p_CHM[i] * (2 * u_aux_WETNES[i] - p_CHN[i] - 1)
@@ -434,8 +436,10 @@ function FDPSIDWF_CH(u_aux_WETNES, p_WET∞, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CH
     end
     return dψδW # d PSI/d WETNES, kPa
 end
+function FDPSIDWF(u_aux_WETNES, p::KPT_SOILPAR_Mvg1d)
+    α = p.p_MvGα
+    n = p.p_MvGn
 
-function FDPSIDWF_MvG(u_aux_WETNES, α, n)
     eps = 1.e-6
     m = 1 .- 1 ./ n
     dψδW = zeros(size(u_aux_WETNES))
@@ -456,80 +460,78 @@ function FDPSIDWF_MvG(u_aux_WETNES, α, n)
 end
 
 """
-    FTheta_MvG(u_aux_WETNES, p_θs, p_θr, iModel)
+    FTheta(u_aux_WETNES, p_soil)
 
 Compute θ based on Se.
 """
-function FTheta_MvG(u_aux_WETNES, p_θs, p_θr)
+function FTheta(u_aux_WETNES, p::KPT_SOILPAR_Mvg1d)
     # Computes θ(Se) = Se*(θs-θr) + θr
-    return u_aux_WETNES*(p_θs-p_θr)+p_θr
+    return u_aux_WETNES .* (p.p_THSAT .- p.p_θr) .+ p.p_θr
 end
-function FTheta_CH(u_aux_WETNES, p_θs)
+function FTheta(u_aux_WETNES, p::KPT_SOILPAR_Ch1d)
     # Computes θ(Se) = Se*(θs-θr) + θr
 
     # variant 1:
     # p_θr = 0
-    # return u_aux_WETNES*(p_θs-p_θr)+p_θr
+    # return u_aux_WETNES*(p_THSAT-p_θr)+p_θr
     # variant 2:
-    return u_aux_WETNES*p_θs
+    return u_aux_WETNES .* p.p_THSAT
 end
-
-# TODO(bernhard): remove remark that I renamed LWFBrook90_MvG_FWETNES() to FWETNES_MvG()
-"""
-    FWETNES_MvG(u_aux_PSIM, p_MvGα, p_MvGn)
-
-Computes θ(ψ) = θ(h) by computing first Se(ψ)=Se(h) a.k.a  W(ψ)=W(h)
-"""
-function FWETNES_MvG(u_aux_PSIM, p_MvGα, p_MvGn)
-    # Computes θ(ψ) = θ(h) by computing first Se(ψ)=Se(h) a.k.a  W(ψ)=W(h)
-    #
-    # FWETNES obtains wetness from matrix potential PSIM
-
-    # WETNEs = NaN # fill(NaN, length(u_aux_PSIM)) # NOTE(bernhard): works only for a single argument
-    #for i = 1:length(u_aux_PSIM)
-    if u_aux_PSIM <= 0
-        # 1) W = (1 + (αh)^n )^(-m)
-        # MvGm = 1-1/MvGn
-        WETNEs = (1+(-p_MvGα*u_aux_PSIM/9.81)^p_MvGn)^(-(1-1/p_MvGn)) # 9.81 conversion from kPa to m #TODO define and use const
-    else
-        WETNEs = 1.0
-    end
-    #end
-
-    return WETNEs
+function FTheta_MvG(u_aux_WETNES, p_THSAT, p_θr)
+    # needed only for construction of KPT_SOILPAR_Mvg1d
+    return u_aux_WETNES .* (p_THSAT .- p_θr) .+ p_θr
 end
 
 """
-    FWETNES_CH(u_aux_PSIM,p_WETF, p_WET∞, p_BEXP, p_PSIF, p_CHM, p_CHN)
+    FWETNES(u_aux_PSIM, p_soil)
 
 Computes θ(ψ) = θ(h) by computing first Se(ψ)=Se(h) a.k.a  W(ψ)=W(h)
 """
-function FWETNES_CH(u_aux_PSIM,p_WETF, p_WET∞, p_BEXP, p_PSIF, p_CHM, p_CHN)
-    # Computes θ(ψ) = θ(h) by computing first Se(ψ)=Se(h) a.k.a  W(ψ)=W(h)
-    #
-    # FWETNES obtains wetness from matrix potential PSIM
-
-    error("FWETNES not implemented for Clapp+Hornberger. Use FSWATIPSIMF!")
-
-    # WETNEs = NaN # fill(NaN, length(u_aux_PSIM)) # NOTE(bernhard): works only for a single argument
-    #for i = 1:length(u_aux_PSIM)
-    if u_aux_PSIM > 0
-        error("STOP: Received positive ψ (u_aux_PSIM).")
-        # TODO(bernhard): or should it set WETNEs = u_aux_WETNES
-    elseif (u_aux_PSIM == 0.)
-        WETNEs = 1.0
-    else
-        # in clearly unsaturated range (eq. 7)
-        WETNEs= p_WETF * (u_aux_PSIM / p_PSIF) ^ (-1 / p_BEXP)
-        if (WETNEs > p_WET∞)
-            # in near-saturated range (eq. 4)
-            WETNEs = 0.5*( (1 + p_CHN) + ((p_CHN-1)^2              + 4*u_aux_PSIM/p_CHM)^0.5)
-            #WETNEs[i] = 0.5*( (1 + p_CHN[i]) + (p_CHN[i]^2 - 2*p_CHN[i] + 1 + 4*u_aux_PSIM[i]/p_CHM[i])^0.5)
-            #WETNEs[i] = (1. + p_CHN[i])*0.5 + 0.5*(p_CHN[i]^2.0 - 2.0*p_CHN[i] + 1. + 4.0*u_aux_PSIM[i] / p_CHM[i])^(0.5)
+function FWETNES(u_aux_PSIM, p::KPT_SOILPAR_Mvg1d)
+    NLAYER = length(u_aux_PSIM)
+    WETNES = fill(NaN, NLAYER)
+    for i = 1:NLAYER
+        if u_aux_PSIM[i] <= 0
+            # 1) W = (1 + (αh)^n )^(-m)
+            α = p.p_MvGα[i]
+            n = p.p_MvGn[i]
+            # MvGm = 1-1/MvGn
+            WETNES[i] = (1+(-α*u_aux_PSIM[i]/9.81)^n)^(-(1-1/n)) # 9.81 conversion from kPa to m #TODO define and use const
+        else
+            WETNES[i] = 1.0
         end
     end
-    #end
-    return WETNEs
+    return WETNES
+end
+function FWETNES(u_aux_PSIM, p::KPT_SOILPAR_Ch1d)
+    error("FWETNES not implemented for Clapp+Hornberger. Use FSWATIPSIMF!")
+
+    p_WETF = p.p_WETF
+    p_WETINF = p.p_WETINF
+    p_BEXP = p.p_BEXP
+    p_PSIF = p.p_PSIF
+    p_CHM = p.p_CHM
+    p_CHN = p.p_CHN
+
+    NLAYER = length(u_aux_PSIM)
+    WETNES = fill(NaN, NLAYER)
+    for i = 1:NLAYER
+        if u_aux_PSIM[i] > 0
+            error("STOP: Received positive ψ (u_aux_PSIM).")
+        elseif (u_aux_PSIM[i] == 0.)
+            WETNES[i] = 1.0
+        else
+            # in clearly unsaturated range (eq. 7)
+            WETNES[i] = p_WETF[i] * (u_aux_PSIM[i] / p_PSIF[i]) ^ (-1 / p_BEXP[i])
+            if (WETNES[i] > p_WETINF[i])
+                # in near-saturated range (eq. 4)
+                WETNES[i] = 0.5*( (1 + p_CHN[i]) + ((p_CHN[i]-1)^2              + 4*u_aux_PSIM[i]/p_CHM[i])^0.5)
+                #WETNES[i] = 0.5*( (1 + p_CHN[i]) + (p_CHN[i]^2 - 2*p_CHN[i] + 1 + 4*u_aux_PSIM[i]/p_CHM[i])^0.5)
+                #WETNES[i] = (1. + p_CHN[i])*0.5 + 0.5*(p_CHN[i]^2.0 - 2.0*p_CHN[i] + 1. + 4.0*u_aux_PSIM[i] / p_CHM[i])^(0.5)
+            end
+        end
+    end
+    return WETNES
 end
 
 end

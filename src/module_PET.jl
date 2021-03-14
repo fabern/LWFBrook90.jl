@@ -814,19 +814,20 @@ melting and evaporating snow as well as transpiration is a complicated mess.
 When the parameter RSSA is set to 0 there is no soil evaporation (SLVP).
 """
 
-function FRSS(p_RSSA, p_RSSB, p_PSIF_TopLayer, u_aux_PSIM_TopLayer, p_PsiCrit_TopLayer)
+function FRSS(p_RSSA, p_RSSB, u_aux_PSIM, p_soil)
+    # FRSS uses only index 1, i.e. TopLayer...
     if (p_RSSA < 0.0001)
         FRSS = 1e20
         # NOTE: in original Brook FRSS = 10000000000
     else
-        if u_aux_PSIM_TopLayer < p_PSIF_TopLayer
-            FRSS = p_RSSA * (u_aux_PSIM_TopLayer / p_PSIF_TopLayer) ^ p_RSSB
+        if u_aux_PSIM[1] < p_soil.p_PSIF[1]
+            FRSS = p_RSSA * (u_aux_PSIM[1] / p_soil.p_PSIF[1]) ^ p_RSSB
         else
             FRSS = p_RSSA
         end
     end
 
-    if u_aux_PSIM_TopLayer < p_PsiCrit_TopLayer # NOTE: check not done in original Brook
+    if u_aux_PSIM[1] < p_soil.p_PsiCrit[1] # NOTE: check not done in original Brook
         FRSS = 1e20
     end
     return FRSS

@@ -85,7 +85,7 @@ function define_LWFB90_cb()
           p_fu_SHEAT,p_fu_SOLRADC, p_fu_TA, p_fu_TADTM, p_fu_TANTM, p_fu_UADTM, p_fu_UANTM,
           p_fT_SNOFRC,p_fu_TSNOW,p_fu_PSNVP, p_fu_ALBEDO,p_fu_RSS, p_fu_SNOEN =
           MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
-                     IMODEL,
+                     IMODEL, NLAYER, p_soil,
                      # for SUNDS:
                      p_LAT, p_ESLOPE, p_DOY(integrator.t), p_L1, p_L2,
                      # for LWFBrook90_CANOPY:
@@ -95,7 +95,7 @@ function define_LWFB90_cb()
                      # for ROUGH:
                      p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC, p_CS,
                      # for PLNTRES:
-                     NLAYER, p_soil.p_THICK, p_soil.p_STONEF, p_RELDEN.(integrator.t, 1:NLAYER), p_RTRAD, p_FXYLEM,
+                     p_RELDEN.(integrator.t, 1:NLAYER), p_RTRAD, p_FXYLEM,
                      # for WEATHER:
                      p_TMAX(integrator.t), p_TMIN(integrator.t), p_EA(integrator.t), p_UW(integrator.t), p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_SOLRAD(integrator.t),
                      # for SNOFRAC:
@@ -107,7 +107,7 @@ function define_LWFB90_cb()
                      #
                      p_ALBSN, p_ALB,
                      # for FRSS:
-                     p_RSSA, p_RSSB, p_soil.p_PSIF, u_aux_PSIM, p_soil.p_PsiCrit, #p_soil.p_PSIF[1], u_aux_PSIM[1]
+                     p_RSSA, p_RSSB, u_aux_PSIM, #u_aux_PSIM[1]
                      # for SNOENRGY:
                      p_CCFAC, p_MELFAC, p_LAIMLT, p_SAIMLT)
 

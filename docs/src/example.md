@@ -97,32 +97,13 @@ u_aux_PSIM_init = pfile_soil["PSIM_init"]
 
 ######
 # Transform initial value of auxiliary state u_aux_PSIM_init into state u_SWATIinit:
-u_SWATIinit  = fill(NaN, NLAYER)
 if any( u_aux_PSIM_init.> 0)
     error("Initial matrix psi must be negative or zero")
 end
-if IMODEL == 0
-    error("IMODEL==0 is not implemented to get initial SWATI.")
-    # TODO(bernhard): implement this.
-elseif IMODEL == 1
-    p_SWATMX = p[1][1][6].p_SWATMX
-    p_MvGα   = p[1][1][6].p_MvGα
-    p_MvGn   = p[1][1][6].p_MvGn
-    p_THSAT  = p[1][1][6].p_THSAT
-    p_θr     = p[1][1][6].p_θr
-    # TODO(bernhard): this hardcoded index is dangerous in case definition of p vector changes
+p_soil = p[1][1][6] # TODO(bernhard): this hardcoded index is dangerous in case definition of p vector changes
 
-    for i = 1:NLAYER
-        # Define initial u_SWATI based on input parameter
-        u_aux_WETNESinit_i = LWFBrook90.jl.KPT.FWETNES_MvG(u_aux_PSIM_init[i],
-                                                             p_MvGα[i],
-                                                             p_MvGn[i])
-        u_SWATIinit[i]     = p_SWATMX[i]/p_THSAT[i] *
-                             LWFBrook90.jl.KPT.FTheta_MvG(u_aux_WETNESinit_i,
-                                                            p_THSAT[i],
-                                                            p_θr[i])
-    end
-end
+u_aux_WETNESinit = LWFBrook90.KPT.FWETNES(u_aux_PSIM_init, p_soil)
+u_SWATIinit      = p_soil.p_SWATMX ./ p_soil.p_THSAT .* LWFBrook90.KPT.FTheta(u_aux_WETNESinit, p_soil)
 ######
 
 

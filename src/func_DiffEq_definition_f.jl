@@ -72,16 +72,16 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
         # Bypass fraction of infiltration to each layer
         p_fu_BYFRAC = LWFBrook90.WAT.BYFLFR(
-                      NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_soil.p_WETF)
+                      NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_soil)
 
         # Water movement through soil
         (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, DTI, aux_du_INFLI, aux_du_BYFLI,
         du_NTFLI, du_GWFL, du_SEEP) =
-            MSBITERATE(p_QLAYER, p_soil,
+            MSBITERATE(IMODEL, NLAYER, p_QLAYER, p_soil,
                     # for SRFLFR:
                     u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC,
                     #
-                    p_IMPERV, p_fu_RNET, aux_du_SMLT, NLAYER,
+                    p_IMPERV, p_fu_RNET, aux_du_SMLT,
                     p_LENGTH, p_DSLOPE,
                     # for DSLOP:
                     p_RHOWG, u_aux_PSIM, p_fu_KK,

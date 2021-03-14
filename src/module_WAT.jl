@@ -47,24 +47,24 @@ export INFPAR, LWFRootGrowth, ITER
 using ..KPT
 
 """
-    INFPAR(p_INFEXP, p_ILAYER, p_THICK, NLAYER)
+    INFPAR(p_INFEXP, p_ILAYER, p_soil, NLAYER)
 
 Compute fraction of infiltration to each soil layer.
 
 # Arguments:
 - `p_INFEXP`: infiltration exponent: 0 all to top, 1 uniform with depth, >1.0=more at bottom than at top
 - `p_ILAYER`: number of layers over which infiltration is distributed
-- `p_THICK`
+- `p_soil`
 - `NLAYER`
 """
-function INFPAR(p_INFEXP, p_ILAYER, p_THICK, NLAYER)
+function INFPAR(p_INFEXP, p_ILAYER, p_soil, NLAYER)
     p_INFRAC = fill(NaN, NLAYER) # fraction of infiltration to each layer
     if p_INFEXP <= 0
         p_INFRAC[1]         = 1
         p_INFRAC[2:NLAYER] .= 0
     else
-        THICKT =    sum(p_THICK[1:p_ILAYER])
-        THICKA = cumsum(p_THICK[1:p_ILAYER])
+        THICKT =    sum(p_soil.p_THICK[1:p_ILAYER])
+        THICKA = cumsum(p_soil.p_THICK[1:p_ILAYER])
 
         p_INFRAC[1]         = (THICKA[1]/THICKT)^p_INFEXP - (0/THICKT)^p_INFEXP
         for i=2:NLAYER
@@ -177,20 +177,20 @@ Note that BYFRAC is calculated from soil water prior to the input of water for t
 step.
 "
 """
-function BYFLFR(NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_WETF)
+function BYFLFR(NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_soil)
     # TODO(bernhard): could be optimized by not allocating each time new memory (versus in-place)
     p_fu_BYFRAC = fill(NaN, NLAYER)
     for i = 1:NLAYER
         if (isone(p_BYPAR))
             ####
             # variant Brook90: if (p_QFPAR > 0.01)
-            # variant Brook90:     p_fu_BYFRAC[i] = p_QFFC ^ (1 - (1 / p_QFPAR) * (u_aux_WETNES[i] - p_WETF[i]) / (1 - p_WETF[i]))
+            # variant Brook90:     p_fu_BYFRAC[i] = p_QFFC ^ (1 - (1 / p_QFPAR) * (u_aux_WETNES[i] - p_soil.p_WETF[i]) / (1 - p_soil.p_WETF[i]))
             # variant Brook90:     if (p_fu_BYFRAC[i] > 1)
             # variant Brook90:         p_fu_BYFRAC[i] = 1
             # variant Brook90:     end
             # variant Brook90: else
             # variant Brook90:     # bucket for the layer
-            # variant Brook90:     if (u_aux_WETNES[i] >= p_WETF[i])
+            # variant Brook90:     if (u_aux_WETNES[i] >= p_soil.p_WETF[i])
             # variant Brook90:         p_fu_BYFRAC[i] = 1
             # variant Brook90:     else
             # variant Brook90:         p_fu_BYFRAC[i] = 0
@@ -200,7 +200,7 @@ function BYFLFR(NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_WETF)
 
             ####
             # variant LWFBrook90R:
-            p_fu_BYFRAC[i] = p_QFFC ^ (1 - (1 / p_QFPAR) * (u_aux_WETNES[i] - p_WETF[i]) / (1 - p_WETF[i]))
+            p_fu_BYFRAC[i] = p_QFFC ^ (1 - (1 / p_QFPAR) * (u_aux_WETNES[i] - p_soil.p_WETF[i]) / (1 - p_soil.p_WETF[i]))
             if (p_fu_BYFRAC[i] > 1)
                 p_fu_BYFRAC[i] = 1
             end
@@ -224,17 +224,23 @@ end
 
 Compute downslope flow rate from layer.
 """
-function DSLOP(p_DSLOPE, p_LENGTH, p_THICK_i, p_STONEF_i, u_aux_PSIM_i, p_RHOWG, p_fu_KK_i)
+function DSLOP(p_DSLOPE, p_LENGTH, p_RHOWG, p_soil, u_aux_PSIM, p_fu_KK)
+
+    # p_THICK_i, p_STONEF_i, )
+    p_THICK = p_soil.p_THICK
+    p_STONEF = p_soil.p_STONEF
 
     LL = 1000 * p_LENGTH
-    GRAD = p_RHOWG * sin(p_DSLOPE) + (2 * u_aux_PSIM_i / LL) * cos(p_DSLOPE)
-    ARATIO = p_THICK_i * (1 - p_STONEF_i) * cos(p_DSLOPE) / LL
+    GRAD = p_RHOWG * sin(p_DSLOPE) .+ (2 .* u_aux_PSIM ./ LL) .* cos(p_DSLOPE)
+    ARATIO = p_THICK .* (1 .- p_STONEF) * cos(p_DSLOPE) ./ LL
 
-    aux_du_DSFLI = p_fu_KK_i * ARATIO * GRAD / p_RHOWG
+    aux_du_DSFLI = p_fu_KK .* ARATIO .* GRAD ./ p_RHOWG
 
     # no water uptake into dry soil because no free water at outflow face
-    if (aux_du_DSFLI < 0)
-        aux_du_DSFLI = 0.
+    for i = 1:length(aux_du_DSFLI)
+        if (aux_du_DSFLI[i] < 0)
+            aux_du_DSFLI[i] = 0.
+        end
     end
     return aux_du_DSFLI
 end
@@ -541,7 +547,7 @@ function SRFLFR(p_QLAYER, u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC)
     return SAFRAC
 end
 
-function ITER(DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMX, p_soil)
+function ITER(NLAYER, IMODEL, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMX, p_soil)
     # ITER() is a step size limiter
 
     # DTI       ! time step for iteration interval, d
@@ -556,12 +562,12 @@ function ITER(DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_
     # p_THSAT   ! θ at saturation == matrix porosity (-)
     # unused: p_SWATMX   maximum water storage for layer, mm
 
-    NLAYER = size(p_soil.p_SWATMX, 1)
-    if isa(p_soil, KPT.KPT_SOILPAR_Mvg1d)
-        IMODEL = 1
-    else # elseis isa(p_soil, KPT_SOILPAR_Ch1d)
-        IMODEL = 0
-    end
+    #NLAYER = size(p_soil.p_SWATMX, 1)
+    # if isa(p_soil, KPT_SOILPAR_Mvg1d)
+    #     IMODEL = 1
+    # else # elseis isa(p_soil, KPT_SOILPAR_Ch1d)
+    #     IMODEL = 0
+    # end
     A = zeros(NLAYER)
     temp = zeros(NLAYER)
     # first approximation to new total potential
