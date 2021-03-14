@@ -216,57 +216,6 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
         error("Unsupported IMODEL: $IMODEL")
     end
 
-
-    if IMODEL == 0
-        p_THICK   = p_soil.p_THICK    # TODO(bernhard): change code so that this is not necessary anymore
-        p_STONEF = p_soil.p_STONEF   # TODO(bernhard): change code so that this is not necessary anymore
-        p_THSAT  = p_soil.p_THSAT    # TODO(bernhard): change code so that this is not necessary anymore
-        p_Kθfc   = fill(NaN, NLAYER) # TODO(bernhard): change code so that this is not necessary anymore
-        p_KSAT   = fill(NaN, NLAYER) # TODO(bernhard): change code so that this is not necessary anymore
-        p_MvGα   = fill(NaN, NLAYER) # TODO(bernhard): change code so that this is not necessary anymore
-        p_MvGn   = fill(NaN, NLAYER) # TODO(bernhard): change code so that this is not necessary anymore
-        p_MvGl   = fill(NaN, NLAYER) # TODO(bernhard): change code so that this is not necessary anymore
-        p_θr     = fill(NaN, NLAYER) # TODO(bernhard): change code so that this is not necessary anymore
-        p_PSIF   = p_soil.p_PSIF     # TODO(bernhard): change code so that this is not necessary anymore
-        p_THETAF = p_soil.p_THETAF   # TODO(bernhard): change code so that this is not necessary anymore
-        p_CHM = p_soil.p_CHM # TODO(bernhard): change code so that this is not necessary anymore
-        p_CHN = p_soil.p_CHN # TODO(bernhard): change code so that this is not necessary anymore
-        p_PSIG = p_soil.p_PSIG # TODO(bernhard): change code so that this is not necessary anymore
-        p_SWATMX = p_soil.p_SWATMX # TODO(bernhard): change code so that this is not necessary anymore
-        p_WETF = p_soil.p_WETF # TODO(bernhard): change code so that this is not necessary anymore
-        p_PsiCrit= p_soil.p_PsiCrit  # TODO(bernhard): change code so that this is not necessary anymore
-        p_THETAF = p_soil.p_THETAF # TODO(bernhard): change code so that this is not necessary anymore
-        p_KF     = p_soil.p_KF       # TODO(bernhard): change code so that this is not necessary anymore
-        p_BEXP   = p_soil.p_BEXP     # TODO(bernhard): change code so that this is not necessary anymore
-        p_WETINF = p_soil.p_WETINF   # TODO(bernhard): change code so that this is not necessary anymore
-
-    elseif IMODEL == 1
-
-        p_THICK   = p_soil.p_THICK    # TODO(bernhard): change code so that this is not necessary anymore
-        p_STONEF  = p_soil.p_STONEF   # TODO(bernhard): change code so that this is not necessary anymore
-        p_THSAT   = p_soil.p_THSAT    # TODO(bernhard): change code so that this is not necessary anymore
-        p_Kθfc    = p_soil.p_Kθfc     # TODO(bernhard): change code so that this is not necessary anymore
-        p_KSAT    = p_soil.p_KSAT     # TODO(bernhard): change code so that this is not necessary anymore
-        p_MvGα    = p_soil.p_MvGα     # TODO(bernhard): change code so that this is not necessary anymore
-        p_MvGn    = p_soil.p_MvGn     # TODO(bernhard): change code so that this is not necessary anymore
-        p_MvGl    = p_soil.p_MvGl     # TODO(bernhard): change code so that this is not necessary anymore
-        p_θr      = p_soil.p_θr       # TODO(bernhard): change code so that this is not necessary anymore
-        # Derived:
-        p_PSIF    = p_soil.p_PSIF     # TODO(bernhard): change code so that this is not necessary anymore
-        p_THETAF  = p_soil.p_THETAF   # TODO(bernhard): change code so that this is not necessary anymore
-        p_PSIG    = p_soil.p_PSIG     # TODO(bernhard): change code so that this is not necessary anymore
-        p_SWATMX  = p_soil.p_SWATMX   # TODO(bernhard): change code so that this is not necessary anymore
-        p_WETF    = p_soil.p_WETF     # TODO(bernhard): change code so that this is not necessary anymore
-        p_PsiCrit = p_soil.p_PsiCrit  # TODO(bernhard): change code so that this is not necessary anymore
-        p_CHM    = fill(NaN, NLAYER)  # TODO(bernhard): change code so that this is not necessary anymore
-        p_CHN    = fill(NaN, NLAYER)  # TODO(bernhard): change code so that this is not necessary anymore
-        p_KF     = fill(NaN, NLAYER)  # TODO(bernhard): change code so that this is not necessary anymore
-        p_BEXP   = fill(NaN, NLAYER)  # TODO(bernhard): change code so that this is not necessary anymore
-        p_WETINF = fill(NaN, NLAYER)  # TODO(bernhard): change code so that this is not necessary anymore
-    else
-        error("Unsupported IMODEL: $IMODEL")
-    end
-
     # TODO(bernhard): treat following note:
     # NOTE(bernhard) the difference between p_PSICR and p_PsiCrit:
     # p_PSICR (Brook90): PSICR (Canopy parameter) - minimum plant leaf water
@@ -301,7 +250,7 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
     p_INFEXP = pfile_param["INFEXP"] # (Flow parameter), infiltration exponent that determines the distribution of infiltrated water with depth, dimensionless (from 0 to >1; 0 = all infiltration to top soil layer, 1 = uniform distribution down to ILAYER, >1 = more water in lower layers closer to ILAYER)
     p_ILAYER = pfile_param["ILAYER"] # (Flow parameter), number of layers over which infiltration is distributed
     p_QLAYER = pfile_param["QLAYER"] # (Flow parameter), number of soil layers for SRFL
-    p_INFRAC = LWFBrook90.WAT.INFPAR(p_INFEXP, p_ILAYER, p_THICK, NLAYER) # fraction of (preferential) infiltration to each layer
+    p_INFRAC = LWFBrook90.WAT.INFPAR(p_INFEXP, p_ILAYER, p_soil.p_THICK, NLAYER) # fraction of (preferential) infiltration to each layer
     # TODO(bernhard):switch to ILAYAER and QLAYER to IDEPTH and QDEPTH, which are independent of soil discretization.
     ### Flow generation
     p_BYPAR  = pfile_param["BYPAR"]  # (Flow parameter), flag to activate bypass flow (BYFL), (0/1)
@@ -314,11 +263,11 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
     p_QFPAR  = pfile_param["QFPAR"] # (Flow parameter), raction of the water content between field capacity (THETAF) and saturation (THSAT) at which the quick flow fraction is 1, dimensionless
 
     # source area parameters SRFPAR()
-    p_SWATQX = sum(p_SWATMX[1:p_QLAYER]) # maximum water storage for layers 1 through QLAYER, mm
+    p_SWATQX = sum(p_soil.p_SWATMX[1:p_QLAYER]) # maximum water storage for layers 1 through QLAYER, mm
     p_SWATQF = sum(
-        p_THETAF[1:p_QLAYER] .*
-        p_THICK[1:p_QLAYER] .*
-        (1 .- p_STONEF[1:p_QLAYER]))     # water storage at field capacity for layers 1 through QLAYER, mm
+        p_soil.p_THETAF[1:p_QLAYER] .*
+        p_soil.p_THICK[1:p_QLAYER] .*
+        (1 .- p_soil.p_STONEF[1:p_QLAYER]))     # water storage at field capacity for layers 1 through QLAYER, mm
 
     # Documentation from ecoshift:
     # BYPAR (Flow parameter) - either 0 to prevent bypass flow (BYFL), or 1 to allow BYFL . BYFL is zero when BYPAR = 0, unless the surface layer becomes saturated. When BYPAR = 1, a fraction of infiltration to each layer is immediately routed to bypass flow to simulate downslope macropore or pipe flow of new water. The fraction depends on QFFC and QFPAR. These are the same parameters used to determine source area flow (SRFL), so simulation with both SRFL and BYFL (QDEPTH > 0 and BYPAR = 1) is discouraged. The difference is that SRFL depends on the total water content down to QDEPTH whereas BYFL depends on water content in each layer down to IDEPTH. When NLAYER = 1, SRFL and BYFL are identical. [see WAT-BYFLFR]
@@ -343,14 +292,13 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
 
     # p_cst_1 for both RHS and CallBack in DiffEq.jl
     p_cst_1 = (constant_dt_solver, NLAYER, IMODEL, compute_intermediate_quantities, Reset,
-        p_SWATMX, p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_PSIG, p_KF,
-        p_THSAT, p_θr, p_MvGα, p_MvGn, p_MvGl, p_KSAT,
+        p_soil,
 
         # FOR MSBITERATE:
         p_QLAYER, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC, p_IMPERV,
         p_LENGTH, p_DSLOPE, LWFBrook90.CONSTANTS.p_RHOWG, p_DPSIMX,
         p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX,
-        p_GSC, p_GSP, p_THICK, p_STONEF,
+        p_GSC, p_GSP,
 
         # FOR UNIMPLEMENTED HEAT FLOW:
         p_HEAT, p_TopInfT,
@@ -373,7 +321,7 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
 
         LWFBrook90.CONSTANTS.p_WTOMJ, p_C1, p_C2, p_C3, p_CR,
         p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_TL, p_T1, p_T2, p_TH,
-        p_PSICR, NOOUTF, p_PsiCrit,
+        p_PSICR, NOOUTF,
 
         # for MSBPREINT:
         p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS,

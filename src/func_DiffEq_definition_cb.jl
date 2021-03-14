@@ -19,14 +19,14 @@ function define_LWFB90_cb()
         ### Compute parameters
         ## A) constant parameters:
         (p_DT, NLAYER, IMODEL, compute_intermediate_quantities, Reset,
-        p_SWATMX, p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_PSIG, p_KF,
-        p_THSAT, p_θr, p_MvGα, p_MvGn, p_MvGl, p_KSAT,
+        p_soil,
 
         _, _, _, _, _, _,
         _, _, _, _,
         _, _, _, _,
-        _, _, p_THICK, p_STONEF,
+        _, _,
 
+        _, _,
         _) = integrator.p[1][1]
 
         (p_LAT, p_ESLOPE, p_L1, p_L2,
@@ -44,7 +44,7 @@ function define_LWFB90_cb()
 
         p_WTOMJ, p_C1, p_C2, p_C3, p_CR,
         p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_TL, p_T1, p_T2, p_TH,
-        p_PSICR, NOOUTF, p_PsiCrit,
+        p_PSICR, NOOUTF,
 
         # for MSBPREINT:
         p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS,
@@ -75,10 +75,7 @@ function define_LWFB90_cb()
 
         # Derive (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) from u_SWATI
         (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-            LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_SWATMX, p_THSAT,
-                 p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_KF,
-                 p_θr, p_MvGα, p_MvGn, p_MvGl, p_KSAT,
-                 p_PSIG, NLAYER, IMODEL)
+            LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil)
 
         IDAY = floor(integrator.t) # TODO(bernhard) is just for debug, remove again after
 
@@ -98,7 +95,7 @@ function define_LWFB90_cb()
                      # for ROUGH:
                      p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC, p_CS,
                      # for PLNTRES:
-                     NLAYER, p_THICK, p_STONEF, p_RELDEN.(integrator.t, 1:NLAYER), p_RTRAD, p_FXYLEM,
+                     NLAYER, p_soil.p_THICK, p_soil.p_STONEF, p_RELDEN.(integrator.t, 1:NLAYER), p_RTRAD, p_FXYLEM,
                      # for WEATHER:
                      p_TMAX(integrator.t), p_TMIN(integrator.t), p_EA(integrator.t), p_UW(integrator.t), p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_SOLRAD(integrator.t),
                      # for SNOFRAC:
@@ -110,7 +107,7 @@ function define_LWFB90_cb()
                      #
                      p_ALBSN, p_ALB,
                      # for FRSS:
-                     p_RSSA, p_RSSB, p_PSIF, u_aux_PSIM, p_PsiCrit, #p_PSIF[1], u_aux_PSIM[1]
+                     p_RSSA, p_RSSB, p_soil.p_PSIF, u_aux_PSIM, p_soil.p_PsiCrit, #p_soil.p_PSIF[1], u_aux_PSIM[1]
                      # for SNOENRGY:
                      p_CCFAC, p_MELFAC, p_LAIMLT, p_SAIMLT)
 

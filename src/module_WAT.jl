@@ -44,6 +44,7 @@ In this section a subscript i is used to indicate individual layers.
 module WAT # WATER MOVEMENT IN SOIL
 
 export INFPAR, LWFRootGrowth, ITER
+using ..KPT
 
 """
     INFPAR(p_INFEXP, p_ILAYER, p_THICK, NLAYER)
@@ -540,8 +541,7 @@ function SRFLFR(p_QLAYER, u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC)
     return SAFRAC
 end
 
-function ITER(IMODEL, NLAYER, DTI, DTIMIN, DPSIDW,
-    du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMX, p_THICK, p_STONEF, p_THSAT, p_θr)
+function ITER(DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMX, p_soil)
     # ITER() is a step size limiter
 
     # DTI       ! time step for iteration interval, d
@@ -556,24 +556,28 @@ function ITER(IMODEL, NLAYER, DTI, DTIMIN, DPSIDW,
     # p_THSAT   ! θ at saturation == matrix porosity (-)
     # unused: p_SWATMX   maximum water storage for layer, mm
 
+    NLAYER = size(p_soil.p_SWATMX, 1)
+    if isa(p_soil, KPT.KPT_SOILPAR_Mvg1d)
+        IMODEL = 1
+    else # elseis isa(p_soil, KPT_SOILPAR_Ch1d)
+        IMODEL = 0
+    end
     A = zeros(NLAYER)
     temp = zeros(NLAYER)
     # first approximation to new total potential
     if (IMODEL == 0)
         for i = 1:NLAYER
             # A[i]    = du_NTFLI[i] * DPSIDW[i] / p_SWATMX[i]
-            # NOTE(bernhard): as p_SWATMX[i] = p_THICK[i] * p_THSAT[i] * (1 - p_STONEF[i])
-            A[i]    = du_NTFLI[i]/p_THICK[i] * DPSIDW[i] / (p_THSAT[i] -     0. )/ (1 - p_STONEF[i])
+            # NOTE(bernhard): as p_SWATMX[i] = p_soil.p_THICK[i] * p_soil.p_THSAT[i] * (1 - p_soil.p_STONEF[i])
+            A[i]    = du_NTFLI[i]/p_soil.p_THICK[i] * DPSIDW[i] / (p_soil.p_THSAT[i] -     0. )/ (1 - p_soil.p_STONEF[i])
             temp[i] = u_aux_PSITI[i] + A[i] * DTI
         end
-    elseif (IMODEL == 1)
+    else # elseif (IMODEL == 1)
         for i = 1:NLAYER
-            A[i]    = du_NTFLI[i]/p_THICK[i] * DPSIDW[i] / (p_THSAT[i] - p_θr[i])
+            A[i]    = du_NTFLI[i]/p_soil.p_THICK[i] * DPSIDW[i] / (p_soil.p_THSAT[i] - p_soil.p_θr[i])
             # TODO(bernhard): is ther no STONEF in IMODEL==1. Bug?
             temp[i] = u_aux_PSITI[i] + A[i] * DTI
         end
-    else
-        error("IMODEL unknown.")
     end
 
     # test to see if DTI should be reduced
@@ -583,13 +587,13 @@ function ITER(IMODEL, NLAYER, DTI, DTIMIN, DPSIDW,
         # prevent too large a change in water content
         # DTINEW = min(DTINEW, 0.01 * p_DSWMAX * p_SWATMX[i] / max(0.000001, abs(du_NTFLI[i])))
         DTINEW = min(DTINEW,
-                     0.01 * p_DSWMAX * p_THICK[i] * p_THSAT[i] * (1 - p_STONEF[i]) / max(0.000001, abs(du_NTFLI[i])))
+                     0.01 * p_DSWMAX * p_soil.p_THICK[i] * p_soil.p_THSAT[i] * (1 - p_soil.p_STONEF[i]) / max(0.000001, abs(du_NTFLI[i])))
 
         # prevent a change in water content larger than total available water
         if (IMODEL == 0)
-            available_water = (0.0     - u_aux_θ[i]) * p_THICK[i] # TODO(bernhard): is ther no STONEF in IMODEL==0. Bug?
+            available_water = (0.0     - u_aux_θ[i]) * p_soil.p_THICK[i] # TODO(bernhard): is ther no STONEF in IMODEL==0. Bug?
         else # IMODEL == 1
-            available_water = (p_θr[i] - u_aux_θ[i]) * p_THICK[i] # TODO(bernhard): is ther no STONEF in IMODEL==1. Bug?
+            available_water = (p_soil.p_θr[i] - u_aux_θ[i]) * p_soil.p_THICK[i] # TODO(bernhard): is ther no STONEF in IMODEL==1. Bug?
         end
 
         # If water is flowing out of cell: du_NTFLI < 0

@@ -78,13 +78,13 @@ if IMODEL == 0
     error("IMODEL==0 is not implemented to get initial SWATI.")
     # TODO(bernhard): implement this.
 elseif IMODEL == 1
-    p_SWATMX = p[1][1][6]
+    p_SWATMX = p[1][1][6].p_SWATMX
+    p_MvGα   = p[1][1][6].p_MvGα
+    p_MvGn   = p[1][1][6].p_MvGn
+    p_THSAT  = p[1][1][6].p_THSAT
+    p_θr     = p[1][1][6].p_θr
     # TODO(bernhard): this hardcoded index is dangerous in case definition of p vector changes
-    p_MvGα   = pfile_soil["PAR"][!,"α"]
-    p_MvGn   = pfile_soil["PAR"][!,"n"]
-    p_THSAT  = pfile_soil["PAR"][!,"θs"]
-    p_θr     = pfile_soil["PAR"][!,"θr"]
-    # TODO(bernhard): store above quantities somewhere else than p[1][1][3] and pfile_soil?
+
     for i = 1:NLAYER
         # Define initial u_SWATI based on input parameter
         u_aux_WETNESinit_i = LWFBrook90.KPT.FWETNES_MvG(u_aux_PSIM_init[i],
@@ -94,7 +94,6 @@ elseif IMODEL == 1
                              LWFBrook90.KPT.FTheta_MvG(u_aux_WETNESinit_i,
                                                             p_THSAT[i],
                                                             p_θr[i])
-
     end
 end
 ######

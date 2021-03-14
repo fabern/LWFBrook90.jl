@@ -284,93 +284,59 @@ end
 
 """
 
-    derive_auxiliary_SOILVAR(u_SWATI, p_SWATMX, p_THSAT,
-                 p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_KF,
-                 p_θr, p_MvGα, p_MvGn, p_MvGl, p_KSAT,
-                 p_PSIG, NLAYER, IMODEL)
+    derive_auxiliary_SOILVAR(u_SWATI, p_soil)
 
 Derive alternative representations of soil water status.
 
-Based on the state u_SWATI it returns (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, p_fu_KK)
+Based on the state `u_SWATI` it returns (`u_aux_WETNES`, `u_aux_PSIM`, `u_aux_PSITI`, `p_fu_KK`)
+- `u_aux_WETNES`: wetness, fraction of saturation
+- `u_aux_PSIM`:   matric soil water potential for layer, kPa
+- `p_PSIG`:       gravity potential, kPa
+- `u_aux_PSITI`:  total potential ψt = ψm + ψg (sum of matrix potential and gravity potential)
+- `u_aux_θ`:      volumetric soil water content, m3/m3
+- `p_fu_KK`:      unsaturated hydraulic conductivity: K(Se) a.k.a. K(W)
 """
-function derive_auxiliary_SOILVAR(u_SWATI, p_SWATMX, p_THSAT,
-                 p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_KF,
-                 p_θr, p_MvGα, p_MvGn, p_MvGl, p_KSAT,
-                 p_PSIG, NLAYER, IMODEL)
-        if IMODEL == 0
-            u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK =
-            SOILVAR_CH(u_SWATI, p_SWATMX, p_THSAT,
-                            p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_KF,
-                            p_PSIG, NLAYER)
-        else # IMODEL == 1
-            u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK =
-            SOILVAR_MvG(u_SWATI, p_SWATMX, p_THSAT,
-                            p_θr, p_MvGα, p_MvGn, p_MvGl, p_KSAT,
-                            p_PSIG, NLAYER)
-        end
-    return (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
-end
-function SOILVAR_MvG(u_SWATI,  p_SWATMX,
-                                   p_THSAT, p_θr, p_MvGα, p_MvGn, p_MvGl, p_KSAT,
-                                   p_PSIG, NLAYER)
-    # Case where IMODEL == 1
+function derive_auxiliary_SOILVAR(u_SWATI,  p::KPT_SOILPAR_Mvg1d)
+    NLAYER   = size(p.p_KSAT,1)
+
     u_aux_WETNES = fill(NaN, NLAYER)
     u_aux_PSIM   = fill(NaN, NLAYER)
     u_aux_θ      = fill(NaN, NLAYER)
     u_aux_PSITI  = fill(NaN, NLAYER)
     p_fu_KK      = fill(NaN, NLAYER)
-
     for i = 1:NLAYER
-        u_aux_WETNES[i] = (p_THSAT[i] * u_SWATI[i] / p_SWATMX[i] -p_θr[i]) / (p_THSAT[i] - p_θr[i])
+        u_aux_WETNES[i] = (p.p_THSAT[i] * u_SWATI[i] / p.p_SWATMX[i] -p.p_θr[i]) / (p.p_THSAT[i] - p.p_θr[i])
         u_aux_WETNES[i] = min(1, u_aux_WETNES[i])
 
-        u_aux_PSIM[i]   = FPSIM_MvG(u_aux_WETNES[i], p_MvGα[i], p_MvGn[i])
-        u_aux_θ[i]      = FTheta_MvG(u_aux_WETNES[i], p_THSAT[i], p_θr[i])
-        p_fu_KK[i]      = FK_MvG(u_aux_WETNES[i], p_KSAT[i], p_MvGl[i], p_MvGn[i])
+        u_aux_PSIM[i]   = FPSIM_MvG(u_aux_WETNES[i], p.p_MvGα[i], p.p_MvGn[i])
+        u_aux_θ[i]      = FTheta_MvG(u_aux_WETNES[i], p.p_THSAT[i], p.p_θr[i])
+        p_fu_KK[i]      = FK_MvG(u_aux_WETNES[i], p.p_KSAT[i], p.p_MvGl[i], p.p_MvGn[i])
 
-        u_aux_PSITI[i]  = u_aux_PSIM[i] + p_PSIG[i]
+        u_aux_PSITI[i]  = u_aux_PSIM[i] + p.p_PSIG[i]
     end
-
-    # u_aux_WETNES: wetness, fraction of saturation
-    # u_aux_PSIM:   matric soil water potential for layer, kPa
-    # p_PSIG:       gravity potential, kPa
-    # PSITI: total potential ψt = ψm + ψg (sum of matrix potential and gravity potential)
-    # KK:    unsaturated hydraulic conductivity: K(Se) a.k.a. K(W)
     return (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
 end
-function SOILVAR_CH(u_SWATI,  p_SWATMX,
-                                  p_THSAT, p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_KF,
-                                  p_PSIG, NLAYER)
-    # p_KF,         # hydraulic conductivity at field capacity, mm/d
-    # p_WETF,       # wetness at field capacity, dimensionless
-    # p_BEXP.       # exponent for psi-theta relation
+function derive_auxiliary_SOILVAR(u_SWATI,  p::KPT_SOILPAR_Ch1d)
+    NLAYER   = size(p.p_KSAT,1)
 
-    # Case where IMODEL == 0
-    u_aux_WETNES = u_SWATI./p_SWATMX
+    u_aux_WETNES = u_SWATI./p.p_SWATMX
 
-    u_aux_PSIM = fill(NaN, NLAYER)
-    u_aux_θ = fill(NaN, NLAYER)
-
-    u_aux_PSITI=fill(NaN, NLAYER)
-    p_fu_KK   =fill(NaN, NLAYER)
+    u_aux_PSIM  = fill(NaN, NLAYER)
+    u_aux_θ     = fill(NaN, NLAYER)
+    u_aux_PSITI = fill(NaN, NLAYER)
+    p_fu_KK     = fill(NaN, NLAYER)
 
     for i = 1:NLAYER
-        u_aux_PSIM[i] = FPSIMF_CH(u_aux_WETNES[i],
-                                       p_PSIF[i], p_BEXP[i], p_WETINF[i], p_WETF[i], p_CHM[i], p_CHN[i])
-        u_aux_θ[i]    = FTheta_CH(u_aux_WETNES[i], p_THSAT[i])
-
-        u_aux_PSITI[i] = u_aux_PSIM[i] + p_PSIG[i]
+        u_aux_PSIM[i]  = FPSIMF_CH(
+            u_aux_WETNES[i],p.p_PSIF[i], p.p_BEXP[i], p.p_WETINF[i], p.p_WETF[i], p.p_CHM[i], p.p_CHN[i])
+        u_aux_θ[i]     = FTheta_CH(u_aux_WETNES[i], p.p_THSAT[i])
+        u_aux_PSITI[i] = u_aux_PSIM[i] + p.p_PSIG[i]
         if u_aux_WETNES[i] > 0.00010
-            p_fu_KK[i] = p_KF[i] * (u_aux_WETNES[i] / p_WETF[i]) ^ (2 * p_BEXP[i] + 3)
-        else
-            # extremely dry
+            p_fu_KK[i] = p.p_KF[i] * (u_aux_WETNES[i] / p.p_WETF[i]) ^ (2 * p.p_BEXP[i] + 3)
+        else # extremely dry
             p_fu_KK[i] = 1E-10
         end
     end
-
-    # u_aux_WETNES, # wetness, fraction of saturation
-    # u_aux_PSIM,   # matric soil water potential for layer, kPa
-    # p_PSIG,       # gravity potential, kPa
     return (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
 end
 

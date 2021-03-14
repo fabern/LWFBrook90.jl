@@ -357,26 +357,24 @@ function MSBPREINT(#arguments:
 end
 
 
-function MSBITERATE(IMODEL, p_QLAYER,
+function MSBITERATE(p_QLAYER, p_soil,
                     # for SRFLFR:
                     u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC,
                     #
                     p_IMPERV, p_fu_RNET, aux_du_SMLT, NLAYER,
                     p_LENGTH, p_DSLOPE,
                     # for DSLOP:
-                    p_RHOWG, u_aux_PSIM, p_THICK, p_STONEF, p_fu_KK,
+                    p_RHOWG, u_aux_PSIM, p_fu_KK,
                     #
                     u_aux_PSITI, p_DPSIMX,
-                    # for VERT:
-                    p_KSAT,
                     #
                     p_DRAIN, DTRI, p_DTIMAX,
                     # for INFLOW:
-                    p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP, p_SWATMX,
+                    p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP,
                     # for FDPSIDW:
-                    u_aux_WETNES, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN, p_MvGα, p_MvGn,
+                    u_aux_WETNES,
                     # for ITER:
-                    p_DSWMAX, p_THSAT, p_θr, u_aux_θ,
+                    p_DSWMAX, u_aux_θ,
                     # for GWATER:
                     u_GWAT, p_GSC, p_GSP, p_DT)
 
@@ -406,7 +404,7 @@ function MSBITERATE(IMODEL, p_QLAYER,
             # added in Version 4
             aux_du_DSFLI[i] = 0
         else
-            aux_du_DSFLI[i] = LWFBrook90.WAT.DSLOP(p_DSLOPE, p_LENGTH, p_THICK[i], p_STONEF[i], u_aux_PSIM[i], p_RHOWG, p_fu_KK[i])
+            aux_du_DSFLI[i] = LWFBrook90.WAT.DSLOP(p_DSLOPE, p_LENGTH, p_soil.p_THICK[i], p_soil.p_STONEF[i], u_aux_PSIM[i], p_RHOWG, p_fu_KK[i])
         end
         # vertical flow rates
         if (i < NLAYER)
@@ -415,17 +413,17 @@ function MSBITERATE(IMODEL, p_QLAYER,
             else
                 aux_du_VRFLI[i] =
                     LWFBrook90.WAT.VERT(p_fu_KK[i],     p_fu_KK[i+1],
-                                            p_KSAT[i],      p_KSAT[i+1],
-                                            p_THICK[i],     p_THICK[i+1],
+                                            p_soil.p_KSAT[i],      p_soil.p_KSAT[i+1],
+                                            p_soil.p_THICK[i],     p_soil.p_THICK[i+1],
                                             u_aux_PSITI[i], u_aux_PSITI[i+1],
-                                            p_STONEF[i],    p_STONEF[i+1],
+                                            p_soil.p_STONEF[i],    p_soil.p_STONEF[i+1],
                                             p_RHOWG)
             end
         else
         # bottom layer i == NLAYER
             if (p_DRAIN > 0.00001)
             # gravity drainage only
-                aux_du_VRFLI[NLAYER] = p_DRAIN * p_fu_KK[NLAYER] * (1 - p_STONEF[NLAYER])
+                aux_du_VRFLI[NLAYER] = p_DRAIN * p_fu_KK[NLAYER] * (1 - p_soil.p_STONEF[NLAYER])
             else
             # bottom of profile sealed
                 aux_du_VRFLI[NLAYER] = 0
@@ -444,26 +442,28 @@ function MSBITERATE(IMODEL, p_QLAYER,
     # net inflow to each layer including E and T withdrawal adjusted for interception
     aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
         LWFBrook90.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
-                                    aux_du_SLVP, p_SWATMX, u_SWATI,
+                                    aux_du_SLVP, p_soil.p_SWATMX, u_SWATI,
                                     aux_du_VRFLI_1st_approx)
 
-    if IMODEL == 0
-        DPSIDW = LWFBrook90.KPT.FDPSIDWF_CH(u_aux_WETNES, p_WET∞, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN)
-    else # IMODEL == 1
-        DPSIDW = LWFBrook90.KPT.FDPSIDWF_MvG(u_aux_WETNES, p_MvGα, p_MvGn)
+    if isa(p_soil, LWFBrook90.KPT.KPT_SOILPAR_Mvg1d)
+        DPSIDW = LWFBrook90.KPT.FDPSIDWF_MvG(u_aux_WETNES, p_soil.p_MvGα, p_soil.p_MvGn)
+    else # elseis isa(p_soil, KPT_SOILPAR_Ch1d)
+        DPSIDW = LWFBrook90.KPT.FDPSIDWF_CH(u_aux_WETNES, p_soil.p_WETINF, p_soil.p_BEXP, p_soil.p_PSIF, p_soil.p_WETF, p_soil.p_CHM, p_soil.p_CHN)
     end
+
     # limit step size
     #   ITER computes DTI so that the potential difference (due to aux_du_VRFLI)
     #   between adjacent layers does not change sign during the iteration time step
-    DTINEW=LWFBrook90.WAT.ITER(IMODEL, NLAYER, DTI, LWFBrook90.CONSTANTS.p_DTIMIN, DPSIDW,
-                                    du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMX, p_THICK, p_STONEF, p_THSAT, p_θr)
+    DTINEW=LWFBrook90.WAT.ITER(DTI, LWFBrook90.CONSTANTS.p_DTIMIN, DPSIDW,
+                                    du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMX,
+                    p_soil)
     # recompute step
     if (DTINEW < DTI)
         # recalculate flow rates with new DTI
         DTI = DTINEW
         aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
             LWFBrook90.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
-                                        aux_du_SLVP, p_SWATMX, u_SWATI,
+                                        aux_du_SLVP, p_soil.p_SWATMX, u_SWATI,
                                         aux_du_VRFLI_1st_approx)
     end
 
