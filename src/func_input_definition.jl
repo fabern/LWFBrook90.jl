@@ -7,7 +7,7 @@ using Dates: DateTime, Millisecond, Second, Day, month, value, dayofyear
     read_LWFBrook90R_inputData(folder::String, prefix::String)
 
 Load different input files for LWFBrook90:
-- climveg
+- meteoveg
 - param
 - siteparam
 - pdur
@@ -19,10 +19,11 @@ takes the same arguements as the R funciton `LWFBrook90R::run_LWFB90()` and gene
 the corresponding Julia input functions.
 """
 function read_LWFBrook90R_inputData(folder::String, prefix::String)
+    # https://towardsdatascience.com/read-csv-to-data-frame-in-julia-programming-lang-77f3d0081c14
 
     ## A) Define paths of all input files
     # TODO(bernhard): prepend path_
-    path_meteo          = joinpath(folder, prefix*"_climveg.csv")
+    path_meteoveg       = joinpath(folder, prefix*"_meteoveg.csv")
     path_param          = joinpath(folder, prefix*"_param.csv")
     path_siteparam      = joinpath(folder, prefix*"_siteparam.csv")
     # unused path_precdat=joinpath(folder, prefix*"_precdat.csv")
@@ -32,26 +33,26 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
 
     ## B) Load input data (time- and/or space-varying parameters)
     # Load meteo
-    input_meteo = @linq read(path_meteo, DataFrame;
+    input_meteoveg = @linq DataFrame(File(path_meteoveg;
                             datarow=2, delim=',', ignorerepeated=true,
                             header=["dates", #"YY","MM","DD",
                                     "GLOBRAD","TMAX","TMIN","VAPPRES","WIND",
-                                    "PRECIN","MESFL","DENSEF","HEIGHT","LAI","SAI","AGE"]) |>
+                                    "PRECIN","MESFL","DENSEF","HEIGHT","LAI","SAI","AGE"])) |>
         transform(dates = DateTime.(:dates))
 
     # Identify period of interest
     # Starting date: latest among the input data
     # Stopping date: earliest among the input data
-    starting_date = maximum(minimum,[input_meteo[:,"dates"]])
-    stopping_date = minimum(maximum,[input_meteo[:,"dates"]])
+    starting_date = maximum(minimum,[input_meteoveg[:,"dates"]])
+    stopping_date = minimum(maximum,[input_meteoveg[:,"dates"]])
 
-    input_meteo = @linq input_meteo |>
+    input_meteoveg = @linq input_meteoveg |>
         where(:dates .>= starting_date, :dates .<= stopping_date)
 
     # Transform times from DateTimes to simulation time (Float of Days)
     reference_date = starting_date
 
-    input_meteo = @linq input_meteo |>
+    input_meteoveg = @linq input_meteoveg |>
         transform(dates = DateTime2RelativeDaysFloat.(:dates, reference_date)) |>
         rename(Dict(:dates => :days))
 
@@ -103,7 +104,7 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
                                  datarow=2, header=["layer","midpoint","thick","mat","psiini","rootden"],
                                  delim=','))# ignorerepeated=true
 
-    return (input_meteo,
+    return (input_meteoveg,
             input_param,
             input_siteparam,
             input_precdat,

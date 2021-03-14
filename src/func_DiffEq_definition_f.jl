@@ -16,40 +16,20 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # Parse parameters
         ## A) constant parameters:
         (p_DT, NLAYER, IMODEL, compute_intermediate_quantities, Reset,
-        p_SWATMX, p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_PSIG, p_KF,
-        p_THSAT, p_θr, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
+        p_soil,
 
         # FOR MSBITERATE:
         p_QLAYER, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC, p_IMPERV,
         p_LENGTH, p_DSLOPE, p_RHOWG, p_DPSIMX, #TODO(bernhard) p_RHOWG is a global constant
-        p_KSAT, p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX,
-        p_GSC, p_GSP, p_THICK, p_STONEF,
+        p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX,
+        p_GSC, p_GSP,
 
         p_BYPAR) = p[1][1]
-
         # unused are the constant parameters saved in: = p[1][2]
 
         ## B) time dependent parameters
-        (p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PRECIN, p_DTP, p_NPINT, p_MESFL,
+        (p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC, p_DTP, p_NPINT, p_MESFL,
         _, _, _, _, _) = p[2]
-
-        # Compute rate of rain (mm/day)
-        # TODO(bernhard): a) Do this outside of integration loop in define_LWFB90_p()
-        #                 b) And simplify it directly to rate p_fT_PREC in both cases
-        #                    i.e in case PREINT (PRECDAT) or in case
-        if (isequal(p_DTP, 1))
-            # p[2][9] # p_DTP
-            # p[2][10] # p_NPINT
-
-            # NOTE: Curently parameters overdetermine. We only need two out of the following three:
-            # p_DTP = p_DT/p_NPINT
-            # p_NPINT = p_DT/p_DTP
-
-            p_fT_PREINT = p_PRECIN(t) / p_DTP # (mm/day)
-        else
-            error("Case where input file PRECDAT is used is not implemented.
-                   Reading PRECDAT should result in PREINT (precipitation amount per interval)")
-        end
 
         DTRI = p_DTP
 
@@ -79,10 +59,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         u_SWATI    = u[7:(7+NLAYER-1)]
 
         (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-            LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_SWATMX, p_THSAT,
-                 p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_KF,
-                 p_θr, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
-                 p_PSIG, NLAYER, IMODEL)
+            LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil)
 
         ##################
         # Update soil limited boundary flows during iteration loop
@@ -95,31 +72,29 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
         # Bypass fraction of infiltration to each layer
         p_fu_BYFRAC = LWFBrook90.WAT.BYFLFR(
-                      NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_WETF)
+                      NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_soil)
 
         # Water movement through soil
         (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, DTI, aux_du_INFLI, aux_du_BYFLI,
         du_NTFLI, du_GWFL, du_SEEP) =
-            MSBITERATE(IMODEL, p_QLAYER,
+            MSBITERATE(IMODEL, NLAYER, p_QLAYER, p_soil,
                     # for SRFLFR:
                     u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC,
                     #
-                    p_IMPERV, p_fu_RNET, aux_du_SMLT, NLAYER,
+                    p_IMPERV, p_fu_RNET, aux_du_SMLT,
                     p_LENGTH, p_DSLOPE,
                     # for DSLOP:
-                    p_RHOWG, u_aux_PSIM, p_THICK, p_STONEF, p_fu_KK,
+                    p_RHOWG, u_aux_PSIM, p_fu_KK,
                     #
                     u_aux_PSITI, p_DPSIMX,
-                    # for VERT:
-                    p_KSAT,
                     #
                     p_DRAIN, DTRI, p_DTIMAX,
                     # for INFLOW:
-                    p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP, p_SWATMX,
+                    p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP,
                     # for FDPSIDW:
-                    u_aux_WETNES, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN, p_MvGα, p_MvGn,
+                    u_aux_WETNES,
                     # for ITER:
-                    p_DSWMAX, p_THSAT, p_θr, u_aux_θ,
+                    p_DSWMAX, u_aux_θ,
                     # for GWATER:
                     u_GWAT, p_GSC, p_GSP, p_DT)
 

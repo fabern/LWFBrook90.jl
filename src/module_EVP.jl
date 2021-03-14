@@ -141,7 +141,9 @@ absorbing roots per unit ground area in m/m2. Lr and R1 only affect rhizosphere 
 and thus are only important for dry soil or when Lr is small.
 "
 """
-function PLNTRES(NLAYER, p_THICK, p_STONEF, p_fu_RTLEN, p_fT_RELDEN, p_RTRAD, p_fu_RPLANT, p_FXYLEM, p_PI, p_RHOWG) # TODO(bernhard) find out how to import p_PI and p_RHOWG from the moduel CONSTANTS
+function PLNTRES(NLAYER, p_soil, p_fu_RTLEN, p_fT_RELDEN, p_RTRAD, p_fu_RPLANT, p_FXYLEM, p_PI, p_RHOWG) # TODO(bernhard) find out how to import p_PI and p_RHOWG from the moduel CONSTANTS
+    p_THICK = p_soil.p_THICK
+    p_STONEF = p_soil.p_STONEF
     # compute stone-free layer thickness D
     D = fill(NaN, NLAYER)
     for i = 1:NLAYER

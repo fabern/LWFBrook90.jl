@@ -5,16 +5,17 @@ using DiffEqCallbacks # instead of loading the full DifferentialEquations
 
 export read_LWFBrook90R_inputData, derive_params_from_inputData
 export define_LWFB90_p, define_LWFB90_u0, define_LWFB90_ODE
+export KPT_SOILPAR_Mvg1d, KPT_SOILPAR_Ch1d
 
 # on modules: https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
 include("module_CONSTANTS.jl");  # to bring into scope: using .CONSTANTS
-include("module_GLBLDECL.jl");   using .GLBLDECL # using to bring exports into scope
-include("module_KPT.jl");        # to bring into scope: using .KPT
-include("module_WAT.jl");        # to bring into scope: using .WAT
+include("module_KPT.jl");        using .KPT # using to bring exports into scope
+include("module_WAT.jl");        using .WAT # using to bring exports into scope
 include("module_SUN.jl");        # to bring into scope: using .SUN
 include("module_PET.jl");        # to bring into scope: using .PET
 include("module_SNO.jl");        # to bring into scope: using .SNO
 include("module_EVP.jl");        # to bring into scope: using .SNO
+include("module_GLBLDECL.jl");   using .GLBLDECL # using to bring exports into scope
 
 include("func_input_definition.jl")
 include("func_DiffEq_definition_u0.jl")

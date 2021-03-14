@@ -17,7 +17,7 @@ using OrdinaryDiffEq: solve, Tsit5
 input_prefix = "BEA2016-reset-FALSE"
 input_path = "example/"*input_prefix*"-input/"
 
-(input_meteo,
+(input_meteoveg,
     input_param,
     input_siteparam,
     input_precdat,    #TODO(bernhard): input_precdat is unused
@@ -36,8 +36,8 @@ After that the objects are further parsed and simulation parameters are defined.
 
 ```Julia
 # 1c) Parse loaded/redefined input files
-(pfile_meteo, pfile_param, pfile_siteparam, pfile_precdat, pfile_pdur, pfile_soil) =
-    derive_params_from_inputData(input_meteo,
+(pfile_meteoveg, pfile_param, pfile_siteparam, pfile_precdat, pfile_pdur, pfile_soil) =
+    derive_params_from_inputData(input_meteoveg,
                                  input_param,
                                  input_siteparam,
                                  input_precdat,
@@ -74,7 +74,7 @@ Then functions from the package are used to define the problem that will be hand
 # Define parameters for differential equation
 p = define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver,
                     NOOUTF, Reset, compute_intermediate_quantities,
-                    pfile_meteo,
+                    pfile_meteoveg,
                     pfile_siteparam,
                     pfile_param,
                     pfile_soil,
@@ -97,33 +97,13 @@ u_aux_PSIM_init = pfile_soil["PSIM_init"]
 
 ######
 # Transform initial value of auxiliary state u_aux_PSIM_init into state u_SWATIinit:
-u_SWATIinit  = fill(NaN, NLAYER)
 if any( u_aux_PSIM_init.> 0)
     error("Initial matrix psi must be negative or zero")
 end
-if IMODEL == 0
-    error("IMODEL==0 is not implemented to get initial SWATI.")
-    # TODO(bernhard): implement this.
-elseif IMODEL == 1
-    p_SWATMX = p[1][1][6]
-    # TODO(bernhard): this hardcoded index is dangerous in case definition of p vector changes
-    p_MvGα   = pfile_soil["PAR"][!,"α"]
-    p_MvGn   = pfile_soil["PAR"][!,"n"]
-    p_THSAT  = pfile_soil["PAR"][!,"θs"]
-    p_θr     = pfile_soil["PAR"][!,"θr"]
-    # TODO(bernhard): store above quantities somewhere else than p[1][1][3] and pfile_soil?
-    for i = 1:NLAYER
-        # Define initial u_SWATI based on input parameter
-        u_aux_WETNESinit_i = LWFBrook90.jl.KPT.FWETNES_MvG(u_aux_PSIM_init[i],
-                                                             p_MvGα[i],
-                                                             p_MvGn[i])
-        u_SWATIinit[i]     = p_SWATMX[i]/p_THSAT[i] *
-                             LWFBrook90.jl.KPT.FTheta_MvG(u_aux_WETNESinit_i,
-                                                            p_THSAT[i],
-                                                            p_θr[i])
+p_soil = p[1][1][6] # TODO(bernhard): this hardcoded index is dangerous in case definition of p vector changes
 
-    end
-end
+u_aux_WETNESinit = LWFBrook90.KPT.FWETNES(u_aux_PSIM_init, p_soil)
+u_SWATIinit      = p_soil.p_SWATMX ./ p_soil.p_THSAT .* LWFBrook90.KPT.FTheta(u_aux_WETNESinit, p_soil)
 ######
 
 
@@ -150,8 +130,8 @@ u0 = define_LWFB90_u0(u_GWAT_init,
 #   - p:      parameters
 
 # Define simulation time span:
-tspan = (minimum(input_meteo[:,"days"]),
-         maximum(input_meteo[:,"days"])) # simulate all available days
+tspan = (minimum(input_meteoveg[:,"days"]),
+         maximum(input_meteoveg[:,"days"])) # simulate all available days
 # Define ODE:
 ode_LWFBrook90 = define_LWFB90_ODE(u0, tspan, p)
 
