@@ -17,12 +17,12 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         ## A) constant parameters:
         (p_DT, NLAYER, IMODEL, compute_intermediate_quantities, Reset,
         p_SWATMX, p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_PSIG, p_KF,
-        p_THSAT, p_θr, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
+        p_THSAT, p_θr, p_MvGα, p_MvGn, p_MvGl, p_KSAT,
 
         # FOR MSBITERATE:
         p_QLAYER, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC, p_IMPERV,
         p_LENGTH, p_DSLOPE, p_RHOWG, p_DPSIMX, #TODO(bernhard) p_RHOWG is a global constant
-        p_KSAT, p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX,
+        p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX,
         p_GSC, p_GSP, p_THICK, p_STONEF,
 
         p_BYPAR) = p[1][1]
@@ -63,7 +63,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
             LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_SWATMX, p_THSAT,
                  p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_KF,
-                 p_θr, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
+                 p_θr, p_MvGα, p_MvGn, p_MvGl, p_KSAT,
                  p_PSIG, NLAYER, IMODEL)
 
         ##################

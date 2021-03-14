@@ -5,6 +5,7 @@ using DiffEqCallbacks # instead of loading the full DifferentialEquations
 
 export read_LWFBrook90R_inputData, derive_params_from_inputData
 export define_LWFB90_p, define_LWFB90_u0, define_LWFB90_ODE
+export KPT_SOILPAR_Mvg1d, KPT_SOILPAR_Ch1d
 
 # on modules: https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
 include("module_CONSTANTS.jl");  # to bring into scope: using .CONSTANTS

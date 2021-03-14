@@ -171,7 +171,7 @@ Note that the second row containing units is not contained in the input dataset.
 ## Calibration data (calibration not yet implemented)
 Roadmap to include calibration data intends to allow inclusion of:
 - Throughfall amounts (for parametrisation of interception)
-- Soil moisture (θ)
+- Soil moisture (volumetric water content, θ)
 - Soil matric potential (ψ)
 
 

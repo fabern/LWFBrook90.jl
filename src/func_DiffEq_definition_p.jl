@@ -189,65 +189,84 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
     p_RSSB   = pfile_param["RSSB"] # Exponent in relation of soil evaporation resistance (RSS) to soil water potential (PSIM) in the top layer, dimensionless, (BROOK90: RSSB is fixed at 1.0, which makes RSS directly proportional to PSIM)
     # unused u_aux_PSIMinit = pfile_soil["PSIM_init"]
     if IMODEL == 0
-        p_STONEF = pfile_soil["STONEF"]           # stone volume fraction in each soil layer, dimensionless
-        p_THSAT  = pfile_soil["PAR"][!,"θs"]      # THETA at saturation, m3/m3
-        p_THETAF = pfile_soil["PAR"][!,"θf"]      # volumetric water content at "field capacity" corresponding to KF and PSIF for soil layer, m3/m3
-        p_KF     = pfile_soil["PAR"][!,"kf"]      # hydraulic conductivity at field capacity corresponding to THETAF and PSIF for a soil layer, mm/d
-        p_PSIF   = pfile_soil["PAR"][!,"ψf"]      # matric potential at "field capacity" corresponding to KF and THETAF for a soil layer, kPa
-        p_BEXP   = pfile_soil["PAR"][!,"bexp"]    # Clapp-Hornberger exponent for ψ-θ relation
-        p_WETINF = pfile_soil["PAR"][!,"wetinf"]  # wetness at dry end of near-saturation range for a soil layer, dimensionless
-        p_Kθfc   = fill(NaN, NLAYER)
-        p_Ksat   = fill(NaN, NLAYER)
-        p_MvGα   = fill(NaN, NLAYER)
-        p_MvGn   = fill(NaN, NLAYER)
-        p_MvGl   = fill(NaN, NLAYER)
-        p_θr     = fill(NaN, NLAYER)
+        p_soil = LWFBrook90.KPT.KPT_SOILPAR_Ch1d(;
+            p_THICK = p_THICK,
+            p_STONEF = pfile_soil["STONEF"],           # stone volume fraction in each soil layer, dimensionless
+            p_THSAT  = pfile_soil["PAR"][!,"θs"],      # THETA at saturation, m3/m3
+            p_THETAF = pfile_soil["PAR"][!,"θf"],      # volumetric water content at "field capacity" corresponding to KF and PSIF for soil layer, m3/m3
+            p_KF     = pfile_soil["PAR"][!,"kf"],      # hydraulic conductivity at field capacity corresponding to THETAF and PSIF for a soil layer, mm/d
+            p_PSIF   = pfile_soil["PAR"][!,"ψf"],      # matric potential at "field capacity" corresponding to KF and THETAF for a soil layer, kPa
+            p_BEXP   = pfile_soil["PAR"][!,"bexp"],    # Clapp-Hornberger exponent for ψ-θ relation
+            p_WETINF = pfile_soil["PAR"][!,"wetinf"])  # wetness at dry end of near-saturation range for a soil layer, dimensionless
+
     elseif IMODEL == 1
-        p_THETAF = fill(NaN, NLAYER)
-        p_KF     = fill(NaN, NLAYER)
-        p_PSIF   = fill(NaN, NLAYER)
-        p_BEXP   = fill(NaN, NLAYER)
-        p_WETINF = fill(NaN, NLAYER)
-        p_STONEF = pfile_soil["STONEF"]
-        p_THSAT  = pfile_soil["PAR"][!,"θs"]
-        p_Kθfc   = pfile_soil["PAR"][!,"K(θ_fc)"]
-        p_Ksat   = pfile_soil["PAR"][!,"Ksat"]
-        p_MvGα   = pfile_soil["PAR"][!,"α"]
-        p_MvGn   = pfile_soil["PAR"][!,"n"]
-        p_MvGl   = pfile_soil["PAR"][!,"tort"]
-        p_θr     = pfile_soil["PAR"][!,"θr"]
+        # Instantiate soil parameters
+        p_soil = LWFBrook90.KPT.KPT_SOILPAR_Mvg1d(;
+            p_THICK  = p_THICK,
+            p_STONEF = pfile_soil["STONEF"],
+            p_THSAT  = pfile_soil["PAR"][!,"θs"],
+            p_Kθfc   = pfile_soil["PAR"][!,"K(θ_fc)"],
+            p_KSAT   = pfile_soil["PAR"][!,"Ksat"],
+            p_MvGα   = pfile_soil["PAR"][!,"α"],
+            p_MvGn   = pfile_soil["PAR"][!,"n"],
+            p_MvGl   = pfile_soil["PAR"][!,"tort"],
+            p_θr     = pfile_soil["PAR"][!,"θr"])
+
     else
         error("Unsupported IMODEL: $IMODEL")
     end
 
-    # Derive further soil params from input definitions
-    (p_PSIG, p_SWATMX, p_WETF, p_CHM, p_CHN, p_KSAT, p_PSIF, p_THETAF ) =
+
     if IMODEL == 0
-        LWFBrook90.KPT.SOILPAR_CH(LWFBrook90.CONSTANTS.p_RHOWG,
-                                  p_THICK,p_THETAF,p_THSAT,p_STONEF,p_BEXP,
-                                  p_KF,p_PSIF,p_WETINF,p_Kθfc,p_PSICR,p_Ksat,
-                                  p_MvGl, p_MvGn, p_MvGα, p_θr,
-                                  NLAYER)
+        p_THICK   = p_soil.p_THICK    # TODO(bernhard): change code so that this is not necessary anymore
+        p_STONEF = p_soil.p_STONEF   # TODO(bernhard): change code so that this is not necessary anymore
+        p_THSAT  = p_soil.p_THSAT    # TODO(bernhard): change code so that this is not necessary anymore
+        p_Kθfc   = fill(NaN, NLAYER) # TODO(bernhard): change code so that this is not necessary anymore
+        p_KSAT   = fill(NaN, NLAYER) # TODO(bernhard): change code so that this is not necessary anymore
+        p_MvGα   = fill(NaN, NLAYER) # TODO(bernhard): change code so that this is not necessary anymore
+        p_MvGn   = fill(NaN, NLAYER) # TODO(bernhard): change code so that this is not necessary anymore
+        p_MvGl   = fill(NaN, NLAYER) # TODO(bernhard): change code so that this is not necessary anymore
+        p_θr     = fill(NaN, NLAYER) # TODO(bernhard): change code so that this is not necessary anymore
+        p_PSIF   = p_soil.p_PSIF     # TODO(bernhard): change code so that this is not necessary anymore
+        p_THETAF = p_soil.p_THETAF   # TODO(bernhard): change code so that this is not necessary anymore
+        p_CHM = p_soil.p_CHM # TODO(bernhard): change code so that this is not necessary anymore
+        p_CHN = p_soil.p_CHN # TODO(bernhard): change code so that this is not necessary anymore
+        p_PSIG = p_soil.p_PSIG # TODO(bernhard): change code so that this is not necessary anymore
+        p_SWATMX = p_soil.p_SWATMX # TODO(bernhard): change code so that this is not necessary anymore
+        p_WETF = p_soil.p_WETF # TODO(bernhard): change code so that this is not necessary anymore
+        p_PsiCrit= p_soil.p_PsiCrit  # TODO(bernhard): change code so that this is not necessary anymore
+        p_THETAF = p_soil.p_THETAF # TODO(bernhard): change code so that this is not necessary anymore
+        p_KF     = p_soil.p_KF       # TODO(bernhard): change code so that this is not necessary anymore
+        p_BEXP   = p_soil.p_BEXP     # TODO(bernhard): change code so that this is not necessary anymore
+        p_WETINF = p_soil.p_WETINF   # TODO(bernhard): change code so that this is not necessary anymore
+
     elseif IMODEL == 1
-        LWFBrook90.KPT.SOILPAR_MvG(LWFBrook90.CONSTANTS.p_RHOWG,
-                                   p_THICK,p_THETAF,p_THSAT,p_STONEF,p_BEXP,
-                                   p_KF,p_PSIF,p_WETINF,p_Kθfc,p_PSICR, p_Ksat,
-                                   p_MvGl, p_MvGn, p_MvGα, p_θr,
-                                   NLAYER)
+
+        p_THICK   = p_soil.p_THICK    # TODO(bernhard): change code so that this is not necessary anymore
+        p_STONEF  = p_soil.p_STONEF   # TODO(bernhard): change code so that this is not necessary anymore
+        p_THSAT   = p_soil.p_THSAT    # TODO(bernhard): change code so that this is not necessary anymore
+        p_Kθfc    = p_soil.p_Kθfc     # TODO(bernhard): change code so that this is not necessary anymore
+        p_KSAT    = p_soil.p_KSAT     # TODO(bernhard): change code so that this is not necessary anymore
+        p_MvGα    = p_soil.p_MvGα     # TODO(bernhard): change code so that this is not necessary anymore
+        p_MvGn    = p_soil.p_MvGn     # TODO(bernhard): change code so that this is not necessary anymore
+        p_MvGl    = p_soil.p_MvGl     # TODO(bernhard): change code so that this is not necessary anymore
+        p_θr      = p_soil.p_θr       # TODO(bernhard): change code so that this is not necessary anymore
+        # Derived:
+        p_PSIF    = p_soil.p_PSIF     # TODO(bernhard): change code so that this is not necessary anymore
+        p_THETAF  = p_soil.p_THETAF   # TODO(bernhard): change code so that this is not necessary anymore
+        p_PSIG    = p_soil.p_PSIG     # TODO(bernhard): change code so that this is not necessary anymore
+        p_SWATMX  = p_soil.p_SWATMX   # TODO(bernhard): change code so that this is not necessary anymore
+        p_WETF    = p_soil.p_WETF     # TODO(bernhard): change code so that this is not necessary anymore
+        p_PsiCrit = p_soil.p_PsiCrit  # TODO(bernhard): change code so that this is not necessary anymore
+        p_CHM    = fill(NaN, NLAYER)  # TODO(bernhard): change code so that this is not necessary anymore
+        p_CHN    = fill(NaN, NLAYER)  # TODO(bernhard): change code so that this is not necessary anymore
+        p_KF     = fill(NaN, NLAYER)  # TODO(bernhard): change code so that this is not necessary anymore
+        p_BEXP   = fill(NaN, NLAYER)  # TODO(bernhard): change code so that this is not necessary anymore
+        p_WETINF = fill(NaN, NLAYER)  # TODO(bernhard): change code so that this is not necessary anymore
     else
-        error("Error in SOILPAR(), unexpected input IMODEL: $IMODEL. Valid values ar 0 or 1.")
+        error("Unsupported IMODEL: $IMODEL")
     end
-    # p_PsiCrit is the ψ value that corresponds to the constant, critical θ value p_ThCrit
-    # Note that p_PSICR is different!
-    if (IMODEL == 0)
-        p_PsiCrit = LWFBrook90.KPT.FPSIMF_CH.(LWFBrook90.CONSTANTS.p_ThCrit./p_THSAT,
-                                                   p_PSIF, p_BEXP, p_WET∞, p_WETF, p_CHM, p_CHN)
-    elseif (IMODEL == 1)
-        p_PsiCrit = LWFBrook90.KPT.FPSIM_MvG.(LWFBrook90.CONSTANTS.p_ThCrit./(p_THSAT .- p_θr),
-                                                   p_MvGα, p_MvGn)
-    else
-        error("Unknown IMODEL!")
-    end
+
     # TODO(bernhard): treat following note:
     # NOTE(bernhard) the difference between p_PSICR and p_PsiCrit:
     # p_PSICR (Brook90): PSICR (Canopy parameter) - minimum plant leaf water
@@ -325,12 +344,12 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
     # p_cst_1 for both RHS and CallBack in DiffEq.jl
     p_cst_1 = (constant_dt_solver, NLAYER, IMODEL, compute_intermediate_quantities, Reset,
         p_SWATMX, p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_PSIG, p_KF,
-        p_THSAT, p_θr, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
+        p_THSAT, p_θr, p_MvGα, p_MvGn, p_MvGl, p_KSAT,
 
         # FOR MSBITERATE:
         p_QLAYER, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC, p_IMPERV,
         p_LENGTH, p_DSLOPE, LWFBrook90.CONSTANTS.p_RHOWG, p_DPSIMX,
-        p_KSAT, p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX,
+        p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX,
         p_GSC, p_GSP, p_THICK, p_STONEF,
 
         # FOR UNIMPLEMENTED HEAT FLOW:

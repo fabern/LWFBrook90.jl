@@ -20,11 +20,11 @@ function define_LWFB90_cb()
         ## A) constant parameters:
         (p_DT, NLAYER, IMODEL, compute_intermediate_quantities, Reset,
         p_SWATMX, p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_PSIG, p_KF,
-        p_THSAT, p_θr, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
+        p_THSAT, p_θr, p_MvGα, p_MvGn, p_MvGl, p_KSAT,
 
         _, _, _, _, _, _,
         _, _, _, _,
-        p_KSAT, _, _, _, _,
+        _, _, _, _,
         _, _, p_THICK, p_STONEF,
 
         _) = integrator.p[1][1]
@@ -77,7 +77,7 @@ function define_LWFB90_cb()
         (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
             LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_SWATMX, p_THSAT,
                  p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN, p_KF,
-                 p_θr, p_MvGα, p_MvGn, p_MvGl, p_Ksat,
+                 p_θr, p_MvGα, p_MvGn, p_MvGl, p_KSAT,
                  p_PSIG, NLAYER, IMODEL)
 
         IDAY = floor(integrator.t) # TODO(bernhard) is just for debug, remove again after

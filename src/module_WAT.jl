@@ -549,7 +549,7 @@ function ITER(IMODEL, NLAYER, DTI, DTIMIN, DPSIDW,
     # DPSIDW(*) ! rate of change of total potential with water content, kPa/mm
     # NTFLI(*)  ! net flow rate into layer, mm/d
     # PSITI(*)  ! total potential, kPa
-    # u_aux_θ   ! volumetric soil moisture content, m3/m3
+    # u_aux_θ   ! volumetric soil water content, m3/m3
     # p_DSWMAX  ! maximum change allowed in SWATI, percent of SWATMX(i)
     # p_DPSIMX  ! maximum potential difference considered "equal", kPa
     # p_THICK   ! soil layer thicknesses, mm
