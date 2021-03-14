@@ -83,14 +83,14 @@ using ..CONSTANTS: p_ThCrit,p_RHOWG # https://discourse.julialang.org/t/large-pr
 # long INTRO: https://benlauwens.github.io/ThinkJulia.jl/latest/book.html#chap15
 # DOC: https://docs.julialang.org/en/v1/manual/types/#Composite-Types
 # Careful: https://docs.julialang.org/en/v1/manual/performance-tips/#The-dangers-of-abusing-multiple-dispatch-(aka,-more-on-types-with-values-as-parameters)
-abstract type AbstractSoilKPTParameters end
+abstract type AbstractKptSoilpar end
 """
 Represents a discretized 1D column of soil with Clapp-Hornberger parametrization.
 
 Input fields: p_THICK, p_STONEF, p_THSAT, p_PSIF, p_THETAF, p_KF, p_BEXP, p_WETINF
 Derived fields: p_CHM, p_CHN, p_THETAF, p_PSIG, p_SWATMX, p_WETF, p_PsiCrit
 """
-struct KPT_SOILPAR_Ch1d <: AbstractSoilKPTParameters
+struct KPT_SOILPAR_Ch1d <: AbstractKptSoilpar
     # Input fields
     p_THICK::AbstractVector
     p_STONEF::AbstractVector
@@ -195,7 +195,7 @@ Represents a discretized 1D column of soil with Mualem-van Genuchten parametriza
 Input fields: p_THICK, p_STONEF, p_THSAT, p_Kθfc, p_KSAT, p_MvGα, p_MvGn, p_MvGl, p_θr
 Derived fields: p_PSIF, p_THETAF, p_PSIG, p_SWATMX, p_WETF, p_PsiCrit
 """
-struct KPT_SOILPAR_Mvg1d <: AbstractSoilKPTParameters
+struct KPT_SOILPAR_Mvg1d <: AbstractKptSoilpar
     # Input fields
     p_THICK::AbstractVector
     p_STONEF::AbstractVector
