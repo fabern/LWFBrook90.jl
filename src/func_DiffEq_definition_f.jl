@@ -16,6 +16,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # Parse parameters
         ## A) constant parameters:
         (p_DT, NLAYER, IMODEL, compute_intermediate_quantities, Reset,
+        p_DTP, p_NPINT,
         p_soil,
 
         # FOR MSBITERATE:
@@ -28,7 +29,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # unused are the constant parameters saved in: = p[1][2]
 
         ## B) time dependent parameters
-        (p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC, p_DTP, p_NPINT, p_MESFL,
+        (p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC, p_MESFL,
         _, _, _, _, _) = p[2]
 
         DTRI = p_DTP

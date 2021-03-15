@@ -19,6 +19,7 @@ function define_LWFB90_cb()
         ### Compute parameters
         ## A) constant parameters:
         (p_DT, NLAYER, IMODEL, compute_intermediate_quantities, Reset,
+        p_DTP, p_NPINT,
         p_soil,
 
         _, _, _, _, _, _,
@@ -51,7 +52,7 @@ function define_LWFB90_cb()
         p_DURATN, p_MAXLQF, p_GRDMLT) = integrator.p[1][2]
 
         ## B) time dependent parameters
-        p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC, p_DTP, p_NPINT,
+        p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC,
             p_MESFL, p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE, p_RELDEN = integrator.p[2]
 
         p_fT_DENSEF = max(0.050, p_DENSEF(integrator.t))

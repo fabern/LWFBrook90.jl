@@ -14,11 +14,11 @@ input_path = "example/"*input_prefix*"-input/"
     input_soil_nodes,
     input_reference_date) = read_LWFBrook90R_inputData(input_path, input_prefix)
 
-# 1b) Here posibility to modify dataframes input_[...] manually
+# 1b) Here possibility to modify dataframes input_[...] manually
 # TODO
 
 # 1c) Parse loaded/redefined input files
-(pfile_meteoveg, pfile_param, pfile_siteparam, pfile_precdat, pfile_pdur, pfile_soil) =
+(pfile_param, pfile_siteparam, pfile_precdat, pfile_pdur, pfile_soil) =
     derive_params_from_inputData(input_meteoveg,
                                  input_param,
                                  input_siteparam,
@@ -31,15 +31,15 @@ input_path = "example/"*input_prefix*"-input/"
 ####################
 # Define simulation
 # Soil hydraulic model
-IMODEL = pfile_param[:IMODEL] # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
-NLAYER = pfile_param[:NLAYER]
+NOOUTF = 1 == input_param[1,"NOOUTF"] # 1 if outflow from roots prevented, 0 if allowed
 
-# Define solver options
-NOOUTF    = 1 == pfile_param[:NOOUTF] # 1 if no outflow allowed from roots, otherwise 0
-Reset     = 0 # currently only Reset = 0 implemented
+# Soil discretization
+IMODEL = input_param[1,"IMODEL"] # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
+NLAYER = input_param[1,"NLAYER"]
 
-constant_dt_solver = 1 # [days]
-
+# Solver options
+Reset = 0                              # currently only Reset = 0 implemented
+constant_dt_solver = 1                 # [days]
 compute_intermediate_quantities = true # Flag whether ODE containes additional quantities than only states
 ####################
 
@@ -47,25 +47,33 @@ compute_intermediate_quantities = true # Flag whether ODE containes additional q
 # Define parameters for differential equation
 p = define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver,
                     NOOUTF, Reset, compute_intermediate_quantities,
-                    pfile_meteoveg,
                     pfile_siteparam,
                     pfile_param,
                     pfile_soil,
                     pfile_pdur)
+            # TODO: check in define_LWFB90_p if IMODEL correctly defined, i.e. loaded soil data has correct column names
+            # TODO: check in define_LWFB90_p if NLAYER correctly defined, i.e. loaded soil data has correct number of rows
+            # TODO: check in define_LWFB90_p if input_param[1,"nmat"] correctly defined, i.e. loaded soil materials has correct number of rows size(input_soil_materials,1)
+            # TODO: check in define_LWFB90_p input_soil_materials
+            # # Check that all required column names are present in loaded data
+            # MvG_columnnames = ["ths", "thr", "alpha", "npar", "ksat", "tort", "gravel"]
+            # CH_columnnames  = ["mat", "thsat", "thetaf", "psif", "bexp", "kf", "wtinf", "gravel"]
+            # @assert length(setdiff(MvG_columnnames, names(input_soil_materials))) == 0 "Not all required column names found in soil materials input: $MvG_columnnames"
+            # @assert length(setdiff(CH_columnnames, names(input_soil_materials))) == 0  "Not all required column names found in soil materials input: $CH_columnnames"
+            # TODO: check in define_LWFB90_p
 ####################
 
 ####################
 # Define initial states of differential equation
 # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
-u_GWAT_init = pfile_siteparam["u_GWAT_init"]
-u_SNOW_init = pfile_siteparam["u_SNOW_init"]
-u_INTS_init = pfile_param[:INTS_init];
-u_INTR_init = pfile_param[:INTR_init];
+u_GWAT_init = input_siteparam[1, "GWAT_init"]
+u_SNOW_init = input_siteparam[1, "SNOW_init"]
+u_INTS_init = input_param[1,"INTS_init"]
+u_INTR_init = input_param[1,"INTR_init"]
 u_CC_init     = 0; # any initial snow has zero liquid water and cold content
 u_SNOWLQ_init = 0; # any initial snow has zero liquid water and cold content
 
-u_aux_PSIM_init = pfile_soil["PSIM_init"]
-
+u_aux_PSIM_init = input_soil_nodes[:,"psiini"]
 ######
 # Transform initial value of auxiliary state u_aux_PSIM_init into state u_SWATIinit:
 if any( u_aux_PSIM_init.> 0)

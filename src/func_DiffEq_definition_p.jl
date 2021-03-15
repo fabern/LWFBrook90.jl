@@ -39,6 +39,8 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
 
 
     ## Location / Meteo
+    p_DTP    = pfile_siteparam["p_DTP"]
+    p_NPINT  = pfile_siteparam["p_NPINT"]
     p_DURATN = pfile_pdur["DURATN"] # average storm duration, hr
     p_LAT    = pfile_siteparam["p_LAT"] # (Location parameter), latitude, degrees
     p_ASPECT = pfile_param[:ASPECT]    # (Location parameter), aspect, degrees through east from north
@@ -187,7 +189,6 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
     ## Soil hydraulics
     p_RSSA   = pfile_param[:RSSA] # Soil evaporation resistance (RSS) at field capacity, s/m (BROOK90: RSSA is fixed at 500 s/m following Shuttleworth and Gurney (1990))
     p_RSSB   = pfile_param[:RSSB] # Exponent in relation of soil evaporation resistance (RSS) to soil water potential (PSIM) in the top layer, dimensionless, (BROOK90: RSSB is fixed at 1.0, which makes RSS directly proportional to PSIM)
-    # unused u_aux_PSIMinit = pfile_soil["PSIM_init"]
     if IMODEL == 0
         p_soil = LWFBrook90.KPT.KPT_SOILPAR_Ch1d(;
             p_THICK = p_THICK,
@@ -292,6 +293,7 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
 
     # p_cst_1 for both RHS and CallBack in DiffEq.jl
     p_cst_1 = (constant_dt_solver, NLAYER, IMODEL, compute_intermediate_quantities, Reset,
+        p_DTP, p_NPINT,
         p_soil,
 
         # FOR MSBITERATE:
@@ -338,8 +340,6 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
             pfile_meteoveg["p_VAPPRES"],
             pfile_meteoveg["p_WIND"],
             pfile_meteoveg["p_PREC"],
-            pfile_meteoveg["p_DTP"],
-            pfile_meteoveg["p_NPINT"],
             pfile_meteoveg["p_MESFL"],
             pfile_meteoveg["p_DENSEF"], # canopy density multiplier between 0.05 and 1, dimensionless
             pfile_meteoveg["p_HEIGHT"],
