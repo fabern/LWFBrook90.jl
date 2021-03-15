@@ -240,24 +240,23 @@ function MSBDAYNIGHT_postprocess(IMODEL, NLAYER,
                                  p_fu_GIR, # ground evap. rate with intercep. for daytime or night (mm/d)
                                  p_fu_ATRI,# actual transp.rate from layer for daytime and night (mm/d)
                                  p_fT_DAYLEN,
-                                 p_fu_PGER,
-                                 p_DT)
+                                 p_fu_PGER)
 
     # average rates over day (mm/day)
-    # mm/day   =  mm/day      * day         + mm/day      *  (day - day)       / day
-    p_fu_PTRAN = (p_fu_PTR[1] * p_fT_DAYLEN + p_fu_PTR[2] * (1 - p_fT_DAYLEN)) / p_DT
-    p_fu_GEVP  = (p_fu_GER[1] * p_fT_DAYLEN + p_fu_GER[2] * (1 - p_fT_DAYLEN)) / p_DT
-    p_fu_PINT  = (p_fu_PIR[1] * p_fT_DAYLEN + p_fu_PIR[2] * (1 - p_fT_DAYLEN)) / p_DT
-    p_fu_GIVP  = (p_fu_GIR[1] * p_fT_DAYLEN + p_fu_GIR[2] * (1 - p_fT_DAYLEN)) / p_DT
+    # mm/day   =  mm/day      * day_fraction+ mm/day      *  day_fraction
+    p_fu_PTRAN = (p_fu_PTR[1] * p_fT_DAYLEN + p_fu_PTR[2] * (1 - p_fT_DAYLEN))
+    p_fu_GEVP  = (p_fu_GER[1] * p_fT_DAYLEN + p_fu_GER[2] * (1 - p_fT_DAYLEN))
+    p_fu_PINT  = (p_fu_PIR[1] * p_fT_DAYLEN + p_fu_PIR[2] * (1 - p_fT_DAYLEN))
+    p_fu_GIVP  = (p_fu_GIR[1] * p_fT_DAYLEN + p_fu_GIR[2] * (1 - p_fT_DAYLEN))
 
     if IMODEL==1
-        p_fu_PSLVP = (p_fu_PGER[1] * p_fT_DAYLEN + p_fu_PGER[2] * (1 - p_fT_DAYLEN)) / p_DT
+        p_fu_PSLVP = (p_fu_PGER[1] * p_fT_DAYLEN + p_fu_PGER[2] * (1 - p_fT_DAYLEN))
     end
 
     aux_du_TRANI=zeros(NLAYER)
 
     for i = 1:NLAYER
-        aux_du_TRANI[i] = (p_fu_ATRI[1, i] * p_fT_DAYLEN + p_fu_ATRI[2, i] * (1 - p_fT_DAYLEN)) / p_DT
+        aux_du_TRANI[i] = (p_fu_ATRI[1, i] * p_fT_DAYLEN + p_fu_ATRI[2, i] * (1 - p_fT_DAYLEN))
     end
 
     return (p_fu_PTRAN, # average potential transpiration rate for day (mm/d)
@@ -295,7 +294,7 @@ function MSBPREINT(#arguments:
         else
             aux_du_SINT, aux_du_ISVP = LWFBrook90.EVP.INTER(p_fT_SFAL, p_fu_PINT, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DTP, u_INTS)
         end
-        # rain interception,  note potential interception rate is PID/p_DT-aux_du_ISVP
+        # rain interception,  note potential interception rate is PID-aux_du_ISVP (mm/day)
         aux_du_RINT, aux_du_IRVP = LWFBrook90.EVP.INTER(p_fT_RFAL, p_fu_PINT - aux_du_ISVP, p_fu_LAI, p_fu_SAI, p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS, p_DTP, u_INTR)
     else
         # one precip interval in day, use storm p_DURATN and INTER24
@@ -306,7 +305,7 @@ function MSBPREINT(#arguments:
         else
             aux_du_SINT, aux_du_ISVP = LWFBrook90.EVP.INTER24(p_fT_SFAL, p_fu_PINT, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DURATN, u_INTS, MONTHN)
         end
-        # rain interception,  note potential interception rate is PID/p_DT-aux_du_ISVP
+        # rain interception,  note potential interception rate is PID-aux_du_ISVP (mm/day)
         aux_du_RINT, aux_du_IRVP = LWFBrook90.EVP.INTER24(p_fT_RFAL, p_fu_PINT - aux_du_ISVP, p_fu_LAI, p_fu_SAI, p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS, p_DURATN, u_INTR, MONTHN)
     end
 
@@ -376,7 +375,7 @@ function MSBITERATE(IMODEL, NLAYER, p_QLAYER, p_soil,
                     # for ITER:
                     p_DSWMAX, u_aux_θ,
                     # for GWATER:
-                    u_GWAT, p_GSC, p_GSP, p_DT)
+                    u_GWAT, p_GSC, p_GSP)
 
     ## On soil surface, partition incoming rain (RNET) and melt water (SMLT)
     # into either above ground source area flow (streamflow, SRFL) or
@@ -465,7 +464,7 @@ function MSBITERATE(IMODEL, NLAYER, p_QLAYER, p_soil,
     end
 
     # groundwater flow and seepage loss
-    du_GWFL, du_SEEP = LWFBrook90.WAT.GWATER(u_GWAT, p_GSC, p_GSP, p_DT, aux_du_VRFLI[NLAYER])
+    du_GWFL, du_SEEP = LWFBrook90.WAT.GWATER(u_GWAT, p_GSC, p_GSP, aux_du_VRFLI[NLAYER])
 
 
     return (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, DTI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI, du_GWFL, du_SEEP)

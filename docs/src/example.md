@@ -13,58 +13,38 @@ using OrdinaryDiffEq: solve, Tsit5
 
  Define and read in input data
  ```Julia
- # 1a) Read in input data
+# Read in input data
 input_prefix = "BEA2016-reset-FALSE"
 input_path = "example/"*input_prefix*"-input/"
 
+####################
 (input_meteoveg,
+    input_meteoveg_reference_date,
     input_param,
     input_siteparam,
     input_precdat,    #TODO(bernhard): input_precdat is unused
     input_pdur,
     input_soil_materials,
-    input_soil_nodes,
-    input_reference_date) = read_LWFBrook90R_inputData(input_path, input_prefix)
+    input_soil_nodes) = read_LWFBrook90R_inputData(input_path, input_prefix)
+####################
 ```
 
-Now the user has the possibility to modify these input objects:
-```Julia
-# 1b) Here posibility to modify dataframes input_[...] manually
-```
+Then simulation parameters are defined. The user has the possibility to modify the input variables before continuing with the simulation. Further the user can select whether intermediate quantities such as e.g. evaporation fluxes should be stored during simulation (`compute_intermediate_quantities = true`) or whether processing steps during simulation should be kept to a minimum for performance reasons (`compute_intermediate_quantities = false`).
 
-After that the objects are further parsed and simulation parameters are defined. The user can select whether intermediate quantities such as e.g. evaporation fluxes should be stored during simulation (`compute_intermediate_quantities = true`) or whether processing steps during simulation should be kept to a minimum for performance reasons (`compute_intermediate_quantities = false`).
-
-```Julia
-# 1c) Parse loaded/redefined input files
-(pfile_meteoveg, pfile_param, pfile_siteparam, pfile_precdat, pfile_pdur, pfile_soil) =
-    derive_params_from_inputData(input_meteoveg,
-                                 input_param,
-                                 input_siteparam,
-                                 input_precdat,
-                                 input_pdur,
-                                 input_soil_materials,
-                                 input_soil_nodes,
-                                 input_reference_date)
-
-```
 ```Julia
 ####################
-# Define simulation
-# Soil hydraulic model
-IMODEL = pfile_param[:IMODEL] # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
-NLAYER = pfile_param[:NLAYER]
-
 # Define solver options
-NOOUTF    = 1 == pfile_param[:NOOUTF] # 1 if no outflow allowed from roots, otherwise 0
-Reset     = 0 # currently only Reset = 0 implemented
+Reset = false                          # currently only Reset = 0 implemented
+compute_intermediate_quantities = true # Flag whether ODE containes additional quantities than only states
 
-constant_dt_solver = 1 # [days]
-
-# Flag whether ODE containes additional quantities than only states
-compute_intermediate_quantities = true
+# Override input file settings
+# Here possibility to check and override dataframes input_[...] manually
+    # # E.g:
+    # # Soil hydraulic model
+    # input_param[1,"NOOUTF"] = true # `true` if outflow from roots prevented, `false` if allowed
 ####################
-```
 
+```
 
 Then functions from the package are used to define the problem that will be handed to the solver from DifferentialEquations.jl. That is we need to define `p`, `u0`, and `tspan`
 
@@ -72,13 +52,17 @@ Then functions from the package are used to define the problem that will be hand
 ```Julia
 ####################
 # Define parameters for differential equation
-p = define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver,
-                    NOOUTF, Reset, compute_intermediate_quantities,
-                    pfile_meteoveg,
-                    pfile_siteparam,
-                    pfile_param,
-                    pfile_soil,
-                    pfile_pdur)
+p = define_LWFB90_p(
+    input_meteoveg,
+    input_meteoveg_reference_date,
+    input_param,
+    input_siteparam,
+    input_precdat,
+    input_pdur,
+    input_soil_materials,
+    input_soil_nodes;
+    Reset = Reset,
+    compute_intermediate_quantities = compute_intermediate_quantities)
 ####################
 ```
 `u0`:
@@ -86,26 +70,24 @@ p = define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver,
 ####################
 # Define initial states of differential equation
 # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
-u_GWAT_init = pfile_siteparam["u_GWAT_init"]
-u_SNOW_init = pfile_siteparam["u_SNOW_init"]
-u_INTS_init = pfile_param[:INTS_init];
-u_INTR_init = pfile_param[:INTR_init];
+u_GWAT_init = input_siteparam[1, "GWAT_init"]
+u_SNOW_init = input_siteparam[1, "SNOW_init"]
+u_INTS_init = input_param[1,"INTS_init"]
+u_INTR_init = input_param[1,"INTR_init"]
 u_CC_init     = 0; # any initial snow has zero liquid water and cold content
 u_SNOWLQ_init = 0; # any initial snow has zero liquid water and cold content
 
-u_aux_PSIM_init = pfile_soil["PSIM_init"]
-
+u_aux_PSIM_init = input_soil_nodes[:,"psiini"]
 ######
 # Transform initial value of auxiliary state u_aux_PSIM_init into state u_SWATIinit:
 if any( u_aux_PSIM_init.> 0)
     error("Initial matrix psi must be negative or zero")
 end
-p_soil = p[1][1][6] # TODO(bernhard): this hardcoded index is dangerous in case definition of p vector changes
 
+p_soil = p[1][1]
 u_aux_WETNESinit = LWFBrook90.KPT.FWETNES(u_aux_PSIM_init, p_soil)
 u_SWATIinit      = p_soil.p_SWATMX ./ p_soil.p_THSAT .* LWFBrook90.KPT.FTheta(u_aux_WETNESinit, p_soil)
 ######
-
 
 # Create u0 for DiffEq.jl
 u0 = define_LWFB90_u0(u_GWAT_init,
@@ -132,13 +114,13 @@ u0 = define_LWFB90_u0(u_GWAT_init,
 # Define simulation time span:
 tspan = (minimum(input_meteoveg[:,"days"]),
          maximum(input_meteoveg[:,"days"])) # simulate all available days
+
 # Define ODE:
 ode_LWFBrook90 = define_LWFB90_ODE(u0, tspan, p)
 
 # Alternative definitions of tspan:
-# tspan = (0.,  5.) # simulate 5 days
-# tspan = (0.,  100.) # simulate 100 days
-# simulates specific period:
+# tspan = (0.,  5.) # simulate days 0 to 5 (in the reference frame of the input data)
+# Simulation specific period (provided it is within the input data):
 # tspan = (LWFBrook90.jl.DateTime2RelativeDaysFloat(DateTime(1980,1,1), reference_date),
 #          LWFBrook90.jl.DateTime2RelativeDaysFloat(DateTime(1985,1,1), reference_date))
 ####################
@@ -151,16 +133,14 @@ Then the ODE problem can be solved:
 ## Solve ODE:
 sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
     progress = true,
-    saveat = tspan[1]:tspan[2], dt=1e-6, adaptive = true); # dt will be overwritten
+    saveat = tspan[1]:tspan[2], dt=1e-6, adaptive = true); # dt is initial dt, but adaptive
 ####################
 ```
 
 
-Note to use the progress bar during the solve the optional package should additionally be installed and loaded: `using ProgressLogging`.
+Note to use a progress bar indicating advancement of the solving is possible. It is sufficient to load the package `using ProgressLogging`.
 
-
-
-The generated solution can be plotted using the plotting recipes of DifferntialEquations.jl for Plots.jl ([see instructions](https://diffeq.sciml.ai/stable/basics/plot/))
+The generated solution can be plotted using the plotting recipes of DifferntialEquations.jl for Plots.jl ([see instructions](https://diffeq.sciml.ai/stable/basics/plot/)). An example is provided below:
 
 ```Julia
 ####################
@@ -169,7 +149,7 @@ using Plots
 sol_LWFBrook90_Dates =
     LWFBrook90.jl.RelativeDaysFloat2DateTime.(
         sol_LWFBrook90.t,
-        input_reference_date)
+        input_meteoveg_reference_date)
 
 # Plot scalar quantities
 # Using dates (but not interpolated)

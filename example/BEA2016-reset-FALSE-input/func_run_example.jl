@@ -70,61 +70,62 @@ function run_example()
     # input_path = "example/"*input_prefix*"-input/"
     input_path = @__DIR__ # https://stackoverflow.com/a/63021629
 
-    (input_meteoveg, input_param, input_siteparam, input_precdat, input_pdur,
-    input_soil_materials, input_soil_nodes, input_reference_date) =
-        read_LWFBrook90R_inputData(input_path, input_prefix)
-
-    # 1c) Parse loaded/redefined input files
-    (pfile_meteoveg, pfile_param, pfile_siteparam, pfile_precdat, pfile_pdur, pfile_soil) =
-        derive_params_from_inputData(
-            input_meteoveg, input_param, input_siteparam, input_precdat, input_pdur,
-            input_soil_materials, input_soil_nodes, input_reference_date)
+    ####################
+    (input_meteoveg,
+        input_meteoveg_reference_date,
+        input_param,
+        input_siteparam,
+        input_precdat,    #TODO(bernhard): input_precdat is unused
+        input_pdur,
+        input_soil_materials,
+        input_soil_nodes) = read_LWFBrook90R_inputData(input_path, input_prefix)
+    ####################
 
     ####################
-    # Define simulation
-    # Soil hydraulic model
-    IMODEL = pfile_param[:IMODEL] # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
-    NLAYER = pfile_param[:NLAYER]
-
     # Define solver options
-    NOOUTF    = 1 == pfile_param[:NOOUTF] # 1 if no outflow allowed from roots, otherwise 0
-    Reset     = 0 # currently only Reset = 0 implemented
+    Reset = false                          # currently only Reset = 0 implemented
+    compute_intermediate_quantities = true # Flag whether ODE containes additional quantities than only states
 
-    constant_dt_solver = 1 # [days]
-    # Flag whether ODE containes additional quantities than only states
-    compute_intermediate_quantities = true
+    # Override input file settings
+    # Here possibility to check and override dataframes input_[...] manually
+        # # E.g:
+        # # Soil hydraulic model
+        # input_param[1,"NOOUTF"] = true # `true` if outflow from roots prevented, `false` if allowed
     ####################
 
     ####################
     # Define parameters for differential equation
-    p = define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver,
-                        NOOUTF, Reset, compute_intermediate_quantities,
-                        pfile_meteoveg,
-                        pfile_siteparam,
-                        pfile_param,
-                        pfile_soil,
-                        pfile_pdur)
+    p = define_LWFB90_p(
+        input_meteoveg,
+        input_meteoveg_reference_date,
+        input_param,
+        input_siteparam,
+        input_precdat,
+        input_pdur,
+        input_soil_materials,
+        input_soil_nodes;
+        Reset = Reset,
+        compute_intermediate_quantities = compute_intermediate_quantities)
     ####################
 
     ####################
     # Define initial states of differential equation
     # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
-    u_GWAT_init = pfile_siteparam["u_GWAT_init"]
-    u_SNOW_init = pfile_siteparam["u_SNOW_init"]
-    u_INTS_init = pfile_param[:INTS_init];
-    u_INTR_init = pfile_param[:INTR_init];
+    u_GWAT_init = input_siteparam[1, "GWAT_init"]
+    u_SNOW_init = input_siteparam[1, "SNOW_init"]
+    u_INTS_init = input_param[1,"INTS_init"]
+    u_INTR_init = input_param[1,"INTR_init"]
     u_CC_init     = 0; # any initial snow has zero liquid water and cold content
     u_SNOWLQ_init = 0; # any initial snow has zero liquid water and cold content
 
-    u_aux_PSIM_init = pfile_soil["PSIM_init"]
-
+    u_aux_PSIM_init = input_soil_nodes[:,"psiini"]
     ######
     # Transform initial value of auxiliary state u_aux_PSIM_init into state u_SWATIinit:
     if any( u_aux_PSIM_init.> 0)
         error("Initial matrix psi must be negative or zero")
     end
-    p_soil = p[1][1][6] # TODO(bernhard): this hardcoded index is dangerous in case definition of p vector changes
 
+    p_soil = p[1][1]
     u_aux_WETNESinit = LWFBrook90.KPT.FWETNES(u_aux_PSIM_init, p_soil)
     u_SWATIinit      = p_soil.p_SWATMX ./ p_soil.p_THSAT .* LWFBrook90.KPT.FTheta(u_aux_WETNESinit, p_soil)
     ######
@@ -157,16 +158,16 @@ function run_example()
     ## Solve ODE:
     sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
         progress = true,
-        saveat = tspan[1]:tspan[2], dt=1e-6, adaptive = true); # dt will be overwritten
+        saveat = tspan[1]:tspan[2], dt=1e-6, adaptive = true); # dt is initial dt, but adaptive
     ####################
 
 
     return (
         Dict(["solution"      => sol_LWFBrook90,
               "solutionDates" => LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t,
-                                                                        input_reference_date),
-              "thickness" => pfile_soil["THICK"],
-              "NLAYER"    => NLAYER])
+                                                                        input_meteoveg_reference_date),
+              "thickness" => p_soil.p_THICK,
+              "NLAYER"    => p_soil.NLAYER])
         )
 
 end

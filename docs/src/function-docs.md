@@ -16,10 +16,10 @@ Modules = [LWFBrook90]
 Pages   = ["LWFBrook90.jl"]
 ```
 
-## Functions from file `func_input_definition.jl`
+## Functions from file `func_read_inputData.jl`
 ```@autodocs
 Modules = [LWFBrook90]
-Pages   = ["func_input_definition.jl"]
+Pages   = ["func_read_inputData.jl"]
 ```
 
 ## Functions defining the DiffEq.jl system of ODE (p, u0, f, callbacks, ...)

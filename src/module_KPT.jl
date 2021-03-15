@@ -106,7 +106,7 @@ abstract type AbstractKptSoilpar end
 Represents a discretized 1D column of soil with Clapp-Hornberger parametrization.
 
 Input fields: p_THICK, p_STONEF, p_THSAT, p_PSIF, p_THETAF, p_KF, p_BEXP, p_WETINF
-Derived fields: p_CHM, p_CHN, p_THETAF, p_PSIG, p_SWATMX, p_WETF, p_PsiCrit
+Derived fields: NLAYER, p_CHM, p_CHN, p_THETAF, p_PSIG, p_SWATMX, p_WETF, p_PsiCrit
 """
 struct KPT_SOILPAR_Ch1d{T<:AbstractVector} <: AbstractKptSoilpar
     # Input fields
@@ -119,6 +119,7 @@ struct KPT_SOILPAR_Ch1d{T<:AbstractVector} <: AbstractKptSoilpar
     p_BEXP::T
     p_WETINF::T
     # Derived fields
+    NLAYER::Int64
     p_CHM::T
     p_CHN::T
     p_PSIG::T
@@ -175,7 +176,7 @@ struct KPT_SOILPAR_Ch1d{T<:AbstractVector} <: AbstractKptSoilpar
 
         # Instantiate
         new(p_THICK, p_STONEF, p_THSAT, p_PSIF, p_THETAF, p_KF, p_BEXP, p_WETINF,
-            p_CHM, p_CHN, p_PSIG, p_SWATMX, p_WETF, p_PsiCrit)
+            NLAYER, p_CHM, p_CHN, p_PSIG, p_SWATMX, p_WETF, p_PsiCrit)
     end
 end
 KPT_SOILPAR_Ch1d(;p_THICK::T, p_STONEF::T, p_THSAT::T, p_PSIF::T, p_THETAF::T, p_KF::T, p_BEXP::T, p_WETINF::T) where {T<:AbstractVector} =
@@ -200,6 +201,7 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
     p_MvGl::T
     p_θr::T
     # Derived fields
+    NLAYER::Int64
     p_PSIF::T    # matric potential at field capacity, kPa
     p_THETAF::T  # soil moisture θ at field capacity, m3/m3
     p_PSIG::T    # gravity potential negative down from surface, kPa
@@ -254,7 +256,7 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
 
         # Instantiate
         new(p_THICK,p_STONEF,p_THSAT,p_Kθfc,p_KSAT,p_MvGα,p_MvGn,p_MvGl,p_θr,
-            p_PSIF, p_THETAF,p_PSIG,p_SWATMX,p_WETF,p_PsiCrit)
+            NLAYER, p_PSIF, p_THETAF,p_PSIG,p_SWATMX,p_WETF,p_PsiCrit)
     end
 end
 KPT_SOILPAR_Mvg1d(;p_THICK::T, p_STONEF::T, p_THSAT::T, p_Kθfc::T, p_KSAT::T, p_MvGα::T, p_MvGn::T, p_MvGl::T, p_θr::T) where {T<:AbstractVector} =

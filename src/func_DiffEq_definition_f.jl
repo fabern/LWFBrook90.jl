@@ -15,9 +15,9 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         ##################
         # Parse parameters
         ## A) constant parameters:
-        (p_DT, NLAYER, IMODEL, compute_intermediate_quantities, Reset,
+        p_soil = p[1][1]
+        (NLAYER, IMODEL, compute_intermediate_quantities, Reset,
         p_DTP, p_NPINT,
-        p_soil,
 
         # FOR MSBITERATE:
         p_QLAYER, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC, p_IMPERV,
@@ -25,8 +25,8 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX,
         p_GSC, p_GSP,
 
-        p_BYPAR) = p[1][1]
-        # unused are the constant parameters saved in: = p[1][2]
+        p_BYPAR) = p[1][2]
+        # unused are the constant parameters saved in: = p[1][3]
 
         ## B) time dependent parameters
         (p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC, p_MESFL,
@@ -97,7 +97,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
                     # for ITER:
                     p_DSWMAX, u_aux_θ,
                     # for GWATER:
-                    u_GWAT, p_GSC, p_GSP, p_DT)
+                    u_GWAT, p_GSC, p_GSP)
 
         # Transport flow (heat, solutes, isotopes, ...)
         # TODO(bernhard): see initial prototype code... (script3)
