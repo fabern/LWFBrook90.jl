@@ -22,6 +22,8 @@ function define_DiffEq_timestep_cb()
         p_KSAT, p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX,
         p_GSC, p_GSP, p_THICK, p_STONEF,
 
+        _,_, # "_" were for: p_HEAT, p_TopInfT,
+
         p_BYPAR) = integrator.p[1][1]
 
         # unused are the constant parameters saved in: = integrator.p[1][2]

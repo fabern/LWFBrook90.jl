@@ -23,7 +23,7 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
 
     ## A) Define paths of all input files
     # TODO(bernhard): prepend path_
-    path_meteo          = joinpath(folder, prefix*"_climveg.csv")
+    path_meteo          = joinpath(folder, prefix*"_meteoveg.csv")
     path_param          = joinpath(folder, prefix*"_param.csv")
     path_siteparam      = joinpath(folder, prefix*"_siteparam.csv")
     # unused path_precdat=joinpath(folder, prefix*"_precdat.csv")
@@ -59,7 +59,7 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
     ## C) Load other parameters
     # Load model input parameters
     #' @param param A numeric vector of model input parameters. Order (derived from param_to_rlwfbrook90()):
-    input_param = DataFrame(CSV.File(path_param; types=[Float64, String], strict=true))
+    input_param = DataFrame(CSV.File(path_param; types=[String,Float64], strict=true))
 
     # Load site parameters
     #' @param siteparam A [1,6] matrix with site level information:

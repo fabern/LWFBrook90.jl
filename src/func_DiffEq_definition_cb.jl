@@ -25,6 +25,8 @@ function define_DiffEq_daily_cb()
         p_KSAT, _, _, _, _,
         _, _, p_THICK, p_STONEF,
 
+        _,_, # "_" were for: p_HEAT, p_TopInfT,
+
         _) = integrator.p[1][1]
 
         (p_LAT, p_ESLOPE, p_L1, p_L2,

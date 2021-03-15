@@ -338,121 +338,121 @@ function derive_params_from_input_param(input_param)
     # TODO(bernhard): modify this to make use of param names instead of numbers will be more robust
 
     # output specifications -------
-    NDAYS = Int( input_param[ 1,1] )
-    HEAT  = Int( input_param[ 2,1] ) # flag to include (1) or to exclude (0) soil heat flow
+    NDAYS = Int( input_param[ 1,2] )
+    HEAT  = Int( input_param[ 2,2] ) # flag to include (1) or to exclude (0) soil heat flow
 
     # Meteorologic parameters -------
-    ESLOPE = input_param[ 3,1]
-    ASPECT = input_param[ 4,1]
+    ESLOPE = input_param[ 3,2]
+    ASPECT = input_param[ 4,2]
 
     # Convert to radians
     ESLOPE = ESLOPE / 57.296
     ASPECT = ASPECT / 57.296
 
-    ALB = input_param[ 5,1]
-    ALBSN = input_param[ 6,1]
-    C1 = input_param[ 7,1]
-    C2 = input_param[ 8,1]
-    C3 = input_param[ 9,1]
-    WNDRAT = input_param[10,1]
-    FETCH = input_param[11,1]
-    Z0W = input_param[12,1]
-    ZW = input_param[13,1]
+    ALB = input_param[ 5,2]
+    ALBSN = input_param[ 6,2]
+    C1 = input_param[ 7,2]
+    C2 = input_param[ 8,2]
+    C3 = input_param[ 9,2]
+    WNDRAT = input_param[10,2]
+    FETCH = input_param[11,2]
+    Z0W = input_param[12,2]
+    ZW = input_param[13,2]
 
     # Canopy parameters -------
-    LWIDTH = input_param[14,1]
-    Z0G = input_param[15,1]
-    Z0S = input_param[16,1]
-    LPC = input_param[17,1]
-    CS = input_param[18,1]
-    CZS = input_param[19,1]
-    CZR = input_param[20,1]
-    HS = input_param[21,1]
-    HR = input_param[22,1]
-    ZMINH = input_param[23,1]
-    RHOTP = input_param[24,1]
-    NN = input_param[25,1]
+    LWIDTH = input_param[14,2]
+    Z0G = input_param[15,2]
+    Z0S = input_param[16,2]
+    LPC = input_param[17,2]
+    CS = input_param[18,2]
+    CZS = input_param[19,2]
+    CZR = input_param[20,2]
+    HS = input_param[21,2]
+    HR = input_param[22,2]
+    ZMINH = input_param[23,2]
+    RHOTP = input_param[24,2]
+    NN = input_param[25,2]
 
     # Interception parameters -------
     # DURATN = input_pdur[:,1]
 
-    RSTEMP = input_param[26,1]
-    INTR_init = input_param[27,1] # initial state
-    INTS_init = input_param[28,1] # initial state
-    FRINTL = input_param[29,1]
-    FSINTL = input_param[30,1]
-    FRINTS = input_param[31,1]
-    FSINTS = input_param[32,1]
-    CINTRL = input_param[33,1]
-    CINTRS = input_param[34,1]
-    CINTSL = input_param[35,1]
-    CINTSS = input_param[36,1]
+    RSTEMP = input_param[26,2]
+    INTR_init = input_param[27,2] # initial state
+    INTS_init = input_param[28,2] # initial state
+    FRINTL = input_param[29,2]
+    FSINTL = input_param[30,2]
+    FRINTS = input_param[31,2]
+    FSINTS = input_param[32,2]
+    CINTRL = input_param[33,2]
+    CINTRS = input_param[34,2]
+    CINTSL = input_param[35,2]
+    CINTSS = input_param[36,2]
 
     # Snow parameters -------
-    MELFAC = input_param[37,1]
-    CCFAC = input_param[38,1]
-    LAIMLT = input_param[39,1]
-    SAIMLT = input_param[40,1]
-    GRDMLT = input_param[41,1]
-    MAXLQF = input_param[42,1]
-    KSNVP = input_param[43,1]
-    SNODEN = input_param[44,1]
+    MELFAC = input_param[37,2]
+    CCFAC = input_param[38,2]
+    LAIMLT = input_param[39,2]
+    SAIMLT = input_param[40,2]
+    GRDMLT = input_param[41,2]
+    MAXLQF = input_param[42,2]
+    KSNVP = input_param[43,2]
+    SNODEN = input_param[44,2]
 
     # leaf parameters affecting PE -------
-    GLMAX = input_param[45,1]
-    CR = input_param[46,1]
-    GLMIN = input_param[47,1]
-    RM = input_param[48,1]
-    R5 = input_param[49,1]
-    CVPD = input_param[50,1]
-    TL = input_param[51,1]
-    T1 = input_param[52,1]
-    T2 = input_param[53,1]
-    TH = input_param[54,1]
+    GLMAX = input_param[45,2]
+    CR = input_param[46,2]
+    GLMIN = input_param[47,2]
+    RM = input_param[48,2]
+    R5 = input_param[49,2]
+    CVPD = input_param[50,2]
+    TL = input_param[51,2]
+    T1 = input_param[52,2]
+    T2 = input_param[53,2]
+    TH = input_param[54,2]
 
     # plant parameters affecting soil-water supply -------
-    MXKPL = input_param[55,1]
-    MXRTLN = input_param[56,1]
-    inirlen = input_param[57,1]
-    inirdep = input_param[58,1]  # only exported for derive_params_from_input_soil()
-    rgrorate = input_param[59,1] # vertical root grow rate [m a-1] #TODO(bernhard): only exported for derive_params_from_input_soil()
-    rgroper = input_param[60,1]
-    FXYLEM = input_param[61,1]
-    PSICR = input_param[62,1]
-    RTRAD = input_param[63,1]
-    NOOUTF = Int( input_param[64,1] )
+    MXKPL = input_param[55,2]
+    MXRTLN = input_param[56,2]
+    inirlen = input_param[57,2]
+    inirdep = input_param[58,2]  # only exported for derive_params_from_input_soil()
+    rgrorate = input_param[59,2] # vertical root grow rate [m a-1] #TODO(bernhard): only exported for derive_params_from_input_soil()
+    rgroper = input_param[60,2]
+    FXYLEM = input_param[61,2]
+    PSICR = input_param[62,2]
+    RTRAD = input_param[63,2]
+    NOOUTF = Int( input_param[64,2] )
 
-    FXYLEM  = max(FXYLEM, 0.990)
-    inirlen = min(inirlen, 0.010)
-    inirdep = min(inirdep, 0.010)
+    FXYLEM  = min(FXYLEM, 0.990)
+    inirlen = max(inirlen, 0.010)
+    inirdep = max(inirdep, 0.010)
 
     # soil parameters -------
-    NLAYER = Int( input_param[65,1] )
-    nmat = Int( input_param[66,1] )    # number of materials #TODO(bernhard): only exported for derive_params_from_input_soil()
-    ILAYER = Int( input_param[67,1] )
-    QLAYER = Int( input_param[68,1] )
-    IMODEL = Int( input_param[69,1] )
+    NLAYER = Int( input_param[65,2] )
+    nmat = Int( input_param[66,2] )    # number of materials #TODO(bernhard): only exported for derive_params_from_input_soil()
+    ILAYER = Int( input_param[67,2] )
+    QLAYER = Int( input_param[68,2] )
+    IMODEL = Int( input_param[69,2] )
 
-    RSSA = input_param[70,1]
-    RSSB = input_param[71,1]
+    RSSA = input_param[70,2]
+    RSSB = input_param[71,2]
 
 
     # flow parameters -------
-    INFEXP = input_param[72,1]
-    BYPAR = Int( input_param[73,1] )
-    QFPAR = input_param[74,1]
-    QFFC = input_param[75,1]
-    IMPERV = input_param[76,1]
-    DSLOPE = input_param[77,1]
-    LENGTH = input_param[78,1]
-    DRAIN = input_param[79,1]
-    GSC = input_param[80,1]
-    GSP = input_param[81,1]
+    INFEXP = input_param[72,2]
+    BYPAR = Int( input_param[73,2] )
+    QFPAR = input_param[74,2]
+    QFFC = input_param[75,2]
+    IMPERV = input_param[76,2]
+    DSLOPE = input_param[77,2]
+    LENGTH = input_param[78,2]
+    DRAIN = input_param[79,2]
+    GSC = input_param[80,2]
+    GSP = input_param[81,2]
 
     # integration parameters -------
-    DTIMAX = input_param[82,1]
-    DSWMAX = input_param[83,1]
-    DPSIMX = input_param[84,1]
+    DTIMAX = input_param[82,2]
+    DSWMAX = input_param[83,2]
+    DPSIMX = input_param[84,2]
 
     return Dict([("NDAYS",NDAYS),
                 ("HEAT",HEAT),
