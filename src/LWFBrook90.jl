@@ -15,7 +15,6 @@ include("module_SUN.jl");        # to bring into scope: using .SUN
 include("module_PET.jl");        # to bring into scope: using .PET
 include("module_SNO.jl");        # to bring into scope: using .SNO
 include("module_EVP.jl");        # to bring into scope: using .SNO
-include("module_GLBLDECL.jl");   using .GLBLDECL # using to bring exports into scope
 
 include("func_read_inputData.jl")
 include("func_DiffEq_definition_u0.jl")
