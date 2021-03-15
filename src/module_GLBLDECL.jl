@@ -30,7 +30,7 @@ function derive_params_from_inputData(input_meteoveg::DataFrame,
                                   input_reference_date::DateTime)
 
     pfile_param = derive_params_from_input_param(input_param)
-    # Defines: pfile_param["ILAYER"], pfile_param["NDAYS"], pfile_param["HEAT"], pfile_param["ESLOPE"], pfile_param["ASPECT"], pfile_param["ALB"], pfile_param["ALBSN"], pfile_param["C1"], pfile_param["C2"], pfile_param["C3"], pfile_param["WNDRAT"], pfile_param["FETCH"], pfile_param["Z0W"], pfile_param["ZW"], pfile_param["LWIDTH"], pfile_param["Z0G"], pfile_param["Z0S"], pfile_param["LPC"], pfile_param["CS"], pfile_param["CZS"], pfile_param["CZR"], pfile_param["HS"], pfile_param["HR"], pfile_param["ZMINH"], pfile_param["RHOTP"], pfile_param["NN"], pfile_param["RSTEMP"], pfile_param["INTR_init"], pfile_param["INTS_init"], pfile_param["FRINTL"], pfile_param["FSINTL"], pfile_param["FRINTS"], pfile_param["FSINTS"], pfile_param["CINTRL"], pfile_param["CINTRS"], pfile_param["CINTSL"], pfile_param["CINTSS"], pfile_param["MELFAC"], pfile_param["CCFAC"], pfile_param["LAIMLT"], pfile_param["SAIMLT"], pfile_param["GRDMLT"], pfile_param["MAXLQF"], pfile_param["KSNVP"], pfile_param["SNODEN"], pfile_param["GLMAX"], pfile_param["CR"], pfile_param["GLMIN"], pfile_param["RM"], pfile_param["R5"], pfile_param["CVPD"], pfile_param["TL"], pfile_param["T1"], pfile_param["T2"], pfile_param["TH"], pfile_param["MXKPL"], pfile_param["MXRTLN"], pfile_param["inirlen"], pfile_param["inirdep"], pfile_param["rgroper"], pfile_param["FXYLEM"], pfile_param["PSICR"], pfile_param["RTRAD"], pfile_param["NOOUTF"], pfile_param["FXYLEM"], pfile_param["inirlen"], pfile_param["NLAYER"], pfile_param["ILAYER"], pfile_param["QLAYER"], pfile_param["IMODEL"], pfile_param["RSSA"], pfile_param["RSSB"], pfile_param["INFEXP"], pfile_param["BYPAR"], pfile_param["QFPAR"], pfile_param["QFFC"], pfile_param["IMPERV"], pfile_param["DSLOPE"], pfile_param["LENGTH"], pfile_param["DRAIN"], pfile_param["GSC"], pfile_param["GSP"], pfile_param["DTIMAX"], pfile_param["DSWMAX"], pfile_param["DPSIMX"], )
+    # Defines: pfile_param[:ILAYER], pfile_param[:NDAYS], pfile_param[:HEAT], pfile_param[:ESLOPE], pfile_param[:ASPECT], pfile_param[:ALB], pfile_param[:ALBSN], pfile_param[:C1], pfile_param[:C2], pfile_param[:C3], pfile_param[:WNDRAT], pfile_param[:FETCH], pfile_param[:Z0W], pfile_param[:ZW], pfile_param[:LWIDTH], pfile_param[:Z0G], pfile_param[:Z0S], pfile_param[:LPC], pfile_param[:CS], pfile_param[:CZS], pfile_param[:CZR], pfile_param[:HS], pfile_param[:HR], pfile_param[:ZMINH], pfile_param[:RHOTP], pfile_param[:NN], pfile_param[:RSTEMP], pfile_param[:INTR_init], pfile_param[:INTS_init], pfile_param[:FRINTL], pfile_param[:FSINTL], pfile_param[:FRINTS], pfile_param[:FSINTS], pfile_param[:CINTRL], pfile_param[:CINTRS], pfile_param[:CINTSL], pfile_param[:CINTSS], pfile_param[:MELFAC], pfile_param[:CCFAC], pfile_param[:LAIMLT], pfile_param[:SAIMLT], pfile_param[:GRDMLT], pfile_param[:MAXLQF], pfile_param[:KSNVP], pfile_param[:SNODEN], pfile_param[:GLMAX], pfile_param[:CR], pfile_param[:GLMIN], pfile_param[:RM], pfile_param[:R5], pfile_param[:CVPD], pfile_param[:TL], pfile_param[:T1], pfile_param[:T2], pfile_param[:TH], pfile_param[:MXKPL], pfile_param[:MXRTLN], pfile_param[:inirlen], pfile_param[:inirdep], pfile_param[:rgroper], pfile_param[:FXYLEM], pfile_param[:PSICR], pfile_param[:RTRAD], pfile_param[:NOOUTF], pfile_param[:FXYLEM], pfile_param[:inirlen], pfile_param[:NLAYER], pfile_param[:ILAYER], pfile_param[:QLAYER], pfile_param[:IMODEL], pfile_param[:RSSA], pfile_param[:RSSB], pfile_param[:INFEXP], pfile_param[:BYPAR], pfile_param[:QFPAR], pfile_param[:QFFC], pfile_param[:IMPERV], pfile_param[:DSLOPE], pfile_param[:LENGTH], pfile_param[:DRAIN], pfile_param[:GSC], pfile_param[:GSP], pfile_param[:DTIMAX], pfile_param[:DSWMAX], pfile_param[:DPSIMX], )
     pfile_siteparam = derive_params_from_input_siteparam(input_siteparam)
     # Defines pfile_siteparam["p_LAT"]
     pfile_precdat = Nothing # derive_params_from_input_precdat(input_precdat)
@@ -39,24 +39,24 @@ function derive_params_from_inputData(input_meteoveg::DataFrame,
     # Defines: pfile_pdur["DURATN"]
     pfile_soil = derive_params_from_input_soil(input_soil_materials,
                                                input_soil_nodes,
-                                               pfile_param["IMODEL"],#IMODEL,
-                                               pfile_param["ILAYER"],#ILAYER,
-                                               pfile_param["QLAYER"],#QLAYER,
-                                               pfile_param["NLAYER"],#NLAYER,
-                                               pfile_param["HEAT"],#HEAT,
-                                               pfile_param["nmat"],#nmat)
-                                               pfile_param["inirdep"],
-                                               pfile_param["rgrorate"])
+                                               pfile_param[:IMODEL],#IMODEL,
+                                               pfile_param[:ILAYER],#ILAYER,
+                                               pfile_param[:QLAYER],#QLAYER,
+                                               pfile_param[:NLAYER],#NLAYER,
+                                               pfile_param[:HEAT],#HEAT,
+                                               pfile_param[:nmat],#nmat)
+                                               pfile_param[:inirdep],
+                                               pfile_param[:rgrorate])
     # Defines: pfile_soil["THICK"],pfile_soil["PSIM_init"],pfile_soil["frelden"],pfile_soil["PAR"],pfile_soil["STONEF"],pfile_soil["tini"],pfile_soil["HeatCapOld"],pfile_soil["TopInfT"],
 
     pfile_meteoveg = derive_params_from_input_meteoveg(input_meteoveg, input_reference_date,
                                                 # for precipitation:
                                                 pfile_siteparam["p_NPINT"],
                                                 # for RootGrowth in LWFBrook90.jl:
-                                                pfile_param["NLAYER"],
-                                                pfile_param["inirdep"],
-                                                pfile_param["inirlen"],
-                                                pfile_param["rgroper"],
+                                                pfile_param[:NLAYER],
+                                                pfile_param[:inirdep],
+                                                pfile_param[:inirlen],
+                                                pfile_param[:rgroper],
                                                 pfile_soil["tini"],
                                                 pfile_soil["frelden"])
     # Defines: pfile_meteoveg["p_GLOBRAD"], pfile_meteoveg["p_TMAX"], pfile_meteoveg["p_TMIN"],
@@ -201,7 +201,7 @@ function derive_params_from_input_siteparam(input_siteparam)
 
     u_GWAT_init = input_siteparam[1,5]
     u_SNOW_init = input_siteparam[1,4]
-    p_NPINT = input_siteparam[1,6] # was precip_interval
+    p_NPINT     = input_siteparam[1,6] # was precip_interval
 
     return Dict([("p_LAT",p_LAT),
                  ("u_GWAT_init",u_GWAT_init),
@@ -407,216 +407,10 @@ end
 """
     derive_params_from_input_param(input_param)
 
-unction that defines constant parameters from input_param. TO BE REDEFINED
+Defines constant parameters from input_param. TO BE REDEFINED
 """
 function derive_params_from_input_param(input_param)
-    # from LWFBrook90R:PFILE.h
-
-    # TODO(bernhard): modify this to make use of param names instead of numbers will be more robust
-
-    # output specifications -------
-    NDAYS::Int64 = Int( input_param[ 1,2] )
-    HEAT::Int64  = Int( input_param[ 2,2] ) # flag to include (1) or to exclude (0) soil heat flow
-
-    # Meteorologic parameters -------
-    ESLOPE::Float64 = input_param[ 3,2]
-    ASPECT::Float64 = input_param[ 4,2]
-
-    # Convert to radians
-    ESLOPE = ESLOPE / 57.296
-    ASPECT = ASPECT / 57.296
-
-    ALB::Float64 = input_param[ 5,2]
-    ALBSN::Float64 = input_param[ 6,2]
-    C1::Float64 = input_param[ 7,2]
-    C2::Float64 = input_param[ 8,2]
-    C3::Float64 = input_param[ 9,2]
-    WNDRAT::Float64 = input_param[10,2]
-    FETCH::Float64 = input_param[11,2]
-    Z0W::Float64 = input_param[12,2]
-    ZW::Float64 = input_param[13,2]
-
-    # Canopy parameters -------
-    LWIDTH::Float64 = input_param[14,2]
-    Z0G::Float64 = input_param[15,2]
-    Z0S::Float64 = input_param[16,2]
-    LPC::Float64 = input_param[17,2]
-    CS::Float64 = input_param[18,2]
-    CZS::Float64 = input_param[19,2]
-    CZR::Float64 = input_param[20,2]
-    HS::Float64 = input_param[21,2]
-    HR::Float64 = input_param[22,2]
-    ZMINH::Float64 = input_param[23,2]
-    RHOTP::Float64 = input_param[24,2]
-    NN::Float64 = input_param[25,2]
-
-    # Interception parameters -------
-    # DURATN = input_pdur[:,1]
-
-    RSTEMP::Float64 = input_param[26,2]
-    INTR_init::Float64 = input_param[27,2] # initial state
-    INTS_init::Float64 = input_param[28,2] # initial state
-    FRINTL::Float64 = input_param[29,2]
-    FSINTL::Float64 = input_param[30,2]
-    FRINTS::Float64 = input_param[31,2]
-    FSINTS::Float64 = input_param[32,2]
-    CINTRL::Float64 = input_param[33,2]
-    CINTRS::Float64 = input_param[34,2]
-    CINTSL::Float64 = input_param[35,2]
-    CINTSS::Float64 = input_param[36,2]
-
-    # Snow parameters -------
-    MELFAC::Float64 = input_param[37,2]
-    CCFAC::Float64 = input_param[38,2]
-    LAIMLT::Float64 = input_param[39,2]
-    SAIMLT::Float64 = input_param[40,2]
-    GRDMLT::Float64 = input_param[41,2]
-    MAXLQF::Float64 = input_param[42,2]
-    KSNVP::Float64 = input_param[43,2]
-    SNODEN::Float64 = input_param[44,2]
-
-    # leaf parameters affecting PE -------
-    GLMAX::Float64 = input_param[45,2]
-    CR::Float64 = input_param[46,2]
-    GLMIN::Float64 = input_param[47,2]
-    RM::Float64 = input_param[48,2]
-    R5::Float64 = input_param[49,2]
-    CVPD::Float64 = input_param[50,2]
-    TL::Float64 = input_param[51,2]
-    T1::Float64 = input_param[52,2]
-    T2::Float64 = input_param[53,2]
-    TH::Float64 = input_param[54,2]
-
-    # plant parameters affecting soil-water supply -------
-    MXKPL::Float64 = input_param[55,2]
-    MXRTLN::Float64 = input_param[56,2]
-    inirlen::Float64 = input_param[57,2]
-    inirdep::Float64 = input_param[58,2]  # only exported for derive_params_from_input_soil()
-    rgrorate::Float64 = input_param[59,2] # vertical root grow rate [m a-1] #TODO(bernhard): only exported for derive_params_from_input_soil()
-    rgroper::Float64 = input_param[60,2]
-    FXYLEM::Float64 = input_param[61,2]
-    PSICR::Float64 = input_param[62,2]
-    RTRAD::Float64 = input_param[63,2]
-    NOOUTF::Int64 = Int( input_param[64,2] )
-
-    FXYLEM  = min(FXYLEM, 0.990)
-    inirlen = max(inirlen, 0.010)
-    inirdep = max(inirdep, 0.010)
-
-    # soil parameters -------
-    NLAYER::Int64 = Int( input_param[65,2] )
-    nmat::Int64 = Int( input_param[66,2] )    # number of materials #TODO(bernhard): only exported for derive_params_from_input_soil()
-    ILAYER::Int64 = Int( input_param[67,2] )
-    QLAYER::Int64 = Int( input_param[68,2] )
-    IMODEL::Int64 = Int( input_param[69,2] )
-
-    RSSA::Float64 = input_param[70,2]
-    RSSB::Float64 = input_param[71,2]
-
-
-    # flow parameters -------
-    INFEXP::Float64 = input_param[72,2]
-    BYPAR::Int64 = Int( input_param[73,2] )
-    QFPAR::Float64 = input_param[74,2]
-    QFFC::Float64 = input_param[75,2]
-    IMPERV::Float64 = input_param[76,2]
-    DSLOPE::Float64 = input_param[77,2]
-    LENGTH::Float64 = input_param[78,2]
-    DRAIN::Float64 = input_param[79,2]
-    GSC::Float64 = input_param[80,2]
-    GSP::Float64 = input_param[81,2]
-
-    # integration parameters -------
-    DTIMAX::Float64 = input_param[82,2]
-    DSWMAX::Float64 = input_param[83,2]
-    DPSIMX::Float64 = input_param[84,2]
-
-    return Dict([("NDAYS",NDAYS),
-                ("HEAT",HEAT),
-                ("ESLOPE",ESLOPE),
-                ("ASPECT",ASPECT),
-                ("ALB",ALB),
-                ("ALBSN",ALBSN),
-                ("C1",C1),
-                ("C2",C2),
-                ("C3",C3),
-                ("WNDRAT",WNDRAT),
-                ("FETCH",FETCH),
-                ("Z0W",Z0W),
-                ("ZW",ZW),
-                ("LWIDTH",LWIDTH),
-                ("Z0G",Z0G),
-                ("Z0S",Z0S),
-                ("LPC",LPC),
-                ("CS",CS),
-                ("CZS",CZS),
-                ("CZR",CZR),
-                ("HS",HS),
-                ("HR",HR),
-                ("ZMINH",ZMINH),
-                ("RHOTP",RHOTP),
-                ("NN",NN),
-                ("RSTEMP",RSTEMP),
-                ("INTR_init",INTR_init),
-                ("INTS_init",INTS_init),
-                ("FRINTL",FRINTL),
-                ("FSINTL",FSINTL),
-                ("FRINTS",FRINTS),
-                ("FSINTS",FSINTS),
-                ("CINTRL",CINTRL),
-                ("CINTRS",CINTRS),
-                ("CINTSL",CINTSL),
-                ("CINTSS",CINTSS),
-                ("MELFAC",MELFAC),
-                ("CCFAC",CCFAC),
-                ("LAIMLT",LAIMLT),
-                ("SAIMLT",SAIMLT),
-                ("GRDMLT",GRDMLT),
-                ("MAXLQF",MAXLQF),
-                ("KSNVP",KSNVP),
-                ("SNODEN",SNODEN),
-                ("GLMAX",GLMAX),
-                ("CR",CR),
-                ("GLMIN",GLMIN),
-                ("RM",RM),
-                ("R5",R5),
-                ("CVPD",CVPD),
-                ("TL",TL),
-                ("T1",T1),
-                ("T2",T2),
-                ("TH",TH),
-                ("MXKPL",MXKPL),
-                ("MXRTLN",MXRTLN),
-                ("inirlen",inirlen),
-                ("inirdep",inirdep), # TODO(bernhard): only exported for derive_params_from_input_soil()
-                ("rgrorate",rgrorate),
-                ("rgroper",rgroper),
-                ("FXYLEM",FXYLEM),
-                ("PSICR",PSICR),
-                ("RTRAD",RTRAD),
-                ("NOOUTF",NOOUTF),
-                ("FXYLEM",FXYLEM),
-                ("inirlen",inirlen),
-                ("NLAYER",NLAYER),
-                ("nmat", nmat), # TODO(bernhard): only exported for derive_params_from_input_soil()
-                ("ILAYER",ILAYER),
-                ("QLAYER",QLAYER),
-                ("IMODEL",IMODEL),
-                ("RSSA",RSSA),
-                ("RSSB",RSSB),
-                ("INFEXP",INFEXP),
-                ("BYPAR",BYPAR),
-                ("QFPAR",QFPAR),
-                ("QFFC",QFFC),
-                ("IMPERV",IMPERV),
-                ("DSLOPE",DSLOPE),
-                ("LENGTH",LENGTH),
-                ("DRAIN",DRAIN),
-                ("GSC",GSC),
-                ("GSP",GSP),
-                ("DTIMAX",DTIMAX),
-                ("DSWMAX",DSWMAX),
-                ("DPSIMX",DPSIMX)])
+    return copy(input_param[1,:])
 end
 
 

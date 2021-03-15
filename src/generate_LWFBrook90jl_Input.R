@@ -96,8 +96,8 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
                           "imperv"=imperv, "dslope"=dslope, "slopelen"=slopelen,
                           "drain"=drain, "gsc"=gsc, "gsp"=gsp, "dtimax"=dtimax,
                           "dswmax"=dswmax, "dpsimax"=dpsimax))
-  out_csv_param <- data.frame(x=unname(out_param),
-                              param_id=names(out_param))
+  out_csv_param <- data.frame(param_id=names(out_param),
+                              x=unname(out_param))
 
   # Write out CSVs:
   input_folder   <- file.path(Julia_target_dir,paste0(Julia_prefix,"-input"))

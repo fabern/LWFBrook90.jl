@@ -51,11 +51,11 @@ After that the objects are further parsed and simulation parameters are defined.
 ####################
 # Define simulation
 # Soil hydraulic model
-IMODEL = pfile_param["IMODEL"] # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
-NLAYER = pfile_param["NLAYER"]
+IMODEL = pfile_param[:IMODEL] # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
+NLAYER = pfile_param[:NLAYER]
 
 # Define solver options
-NOOUTF    = 1 == pfile_param["NOOUTF"] # 1 if no outflow allowed from roots, otherwise 0
+NOOUTF    = 1 == pfile_param[:NOOUTF] # 1 if no outflow allowed from roots, otherwise 0
 Reset     = 0 # currently only Reset = 0 implemented
 
 constant_dt_solver = 1 # [days]
@@ -88,8 +88,8 @@ p = define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver,
 # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
 u_GWAT_init = pfile_siteparam["u_GWAT_init"]
 u_SNOW_init = pfile_siteparam["u_SNOW_init"]
-u_INTS_init = pfile_param["INTS_init"];
-u_INTR_init = pfile_param["INTR_init"];
+u_INTS_init = pfile_param[:INTS_init];
+u_INTR_init = pfile_param[:INTR_init];
 u_CC_init     = 0; # any initial snow has zero liquid water and cold content
 u_SNOWLQ_init = 0; # any initial snow has zero liquid water and cold content
 
