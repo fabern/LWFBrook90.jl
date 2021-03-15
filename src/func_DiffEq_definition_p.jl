@@ -300,9 +300,6 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
         p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX,
         p_GSC, p_GSP,
 
-        # FOR UNIMPLEMENTED HEAT FLOW:
-        p_HEAT, p_TopInfT,
-
         p_BYPAR)
 
     # p_cst_2 only for CallBack in DiffEq.jl

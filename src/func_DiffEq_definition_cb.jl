@@ -26,7 +26,6 @@ function define_LWFB90_cb()
         _, _, _, _,
         _, _,
 
-        _, _,
         _) = integrator.p[1][1]
 
         (p_LAT, p_ESLOPE, p_L1, p_L2,
