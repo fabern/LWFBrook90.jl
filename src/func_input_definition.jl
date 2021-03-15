@@ -59,7 +59,7 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
     ## C) Load other parameters
     # Load model input parameters
     #' @param param A numeric vector of model input parameters. Order (derived from param_to_rlwfbrook90()):
-    input_param = DataFrame(File(path_param; types=[Float64, String], strict=true))
+    input_param = DataFrame(File(path_param; types=[String, Float64], strict=true))
 
     # Load site parameters
     #' @param siteparam A [1,6] matrix with site level information:

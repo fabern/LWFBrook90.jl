@@ -415,121 +415,121 @@ function derive_params_from_input_param(input_param)
     # TODO(bernhard): modify this to make use of param names instead of numbers will be more robust
 
     # output specifications -------
-    NDAYS::Int64 = Int( input_param[ 1,1] )
-    HEAT::Int64  = Int( input_param[ 2,1] ) # flag to include (1) or to exclude (0) soil heat flow
+    NDAYS::Int64 = Int( input_param[ 1,2] )
+    HEAT::Int64  = Int( input_param[ 2,2] ) # flag to include (1) or to exclude (0) soil heat flow
 
     # Meteorologic parameters -------
-    ESLOPE::Float64 = input_param[ 3,1]
-    ASPECT::Float64 = input_param[ 4,1]
+    ESLOPE::Float64 = input_param[ 3,2]
+    ASPECT::Float64 = input_param[ 4,2]
 
     # Convert to radians
     ESLOPE = ESLOPE / 57.296
     ASPECT = ASPECT / 57.296
 
-    ALB::Float64 = input_param[ 5,1]
-    ALBSN::Float64 = input_param[ 6,1]
-    C1::Float64 = input_param[ 7,1]
-    C2::Float64 = input_param[ 8,1]
-    C3::Float64 = input_param[ 9,1]
-    WNDRAT::Float64 = input_param[10,1]
-    FETCH::Float64 = input_param[11,1]
-    Z0W::Float64 = input_param[12,1]
-    ZW::Float64 = input_param[13,1]
+    ALB::Float64 = input_param[ 5,2]
+    ALBSN::Float64 = input_param[ 6,2]
+    C1::Float64 = input_param[ 7,2]
+    C2::Float64 = input_param[ 8,2]
+    C3::Float64 = input_param[ 9,2]
+    WNDRAT::Float64 = input_param[10,2]
+    FETCH::Float64 = input_param[11,2]
+    Z0W::Float64 = input_param[12,2]
+    ZW::Float64 = input_param[13,2]
 
     # Canopy parameters -------
-    LWIDTH::Float64 = input_param[14,1]
-    Z0G::Float64 = input_param[15,1]
-    Z0S::Float64 = input_param[16,1]
-    LPC::Float64 = input_param[17,1]
-    CS::Float64 = input_param[18,1]
-    CZS::Float64 = input_param[19,1]
-    CZR::Float64 = input_param[20,1]
-    HS::Float64 = input_param[21,1]
-    HR::Float64 = input_param[22,1]
-    ZMINH::Float64 = input_param[23,1]
-    RHOTP::Float64 = input_param[24,1]
-    NN::Float64 = input_param[25,1]
+    LWIDTH::Float64 = input_param[14,2]
+    Z0G::Float64 = input_param[15,2]
+    Z0S::Float64 = input_param[16,2]
+    LPC::Float64 = input_param[17,2]
+    CS::Float64 = input_param[18,2]
+    CZS::Float64 = input_param[19,2]
+    CZR::Float64 = input_param[20,2]
+    HS::Float64 = input_param[21,2]
+    HR::Float64 = input_param[22,2]
+    ZMINH::Float64 = input_param[23,2]
+    RHOTP::Float64 = input_param[24,2]
+    NN::Float64 = input_param[25,2]
 
     # Interception parameters -------
     # DURATN = input_pdur[:,1]
 
-    RSTEMP::Float64 = input_param[26,1]
-    INTR_init::Float64 = input_param[27,1] # initial state
-    INTS_init::Float64 = input_param[28,1] # initial state
-    FRINTL::Float64 = input_param[29,1]
-    FSINTL::Float64 = input_param[30,1]
-    FRINTS::Float64 = input_param[31,1]
-    FSINTS::Float64 = input_param[32,1]
-    CINTRL::Float64 = input_param[33,1]
-    CINTRS::Float64 = input_param[34,1]
-    CINTSL::Float64 = input_param[35,1]
-    CINTSS::Float64 = input_param[36,1]
+    RSTEMP::Float64 = input_param[26,2]
+    INTR_init::Float64 = input_param[27,2] # initial state
+    INTS_init::Float64 = input_param[28,2] # initial state
+    FRINTL::Float64 = input_param[29,2]
+    FSINTL::Float64 = input_param[30,2]
+    FRINTS::Float64 = input_param[31,2]
+    FSINTS::Float64 = input_param[32,2]
+    CINTRL::Float64 = input_param[33,2]
+    CINTRS::Float64 = input_param[34,2]
+    CINTSL::Float64 = input_param[35,2]
+    CINTSS::Float64 = input_param[36,2]
 
     # Snow parameters -------
-    MELFAC::Float64 = input_param[37,1]
-    CCFAC::Float64 = input_param[38,1]
-    LAIMLT::Float64 = input_param[39,1]
-    SAIMLT::Float64 = input_param[40,1]
-    GRDMLT::Float64 = input_param[41,1]
-    MAXLQF::Float64 = input_param[42,1]
-    KSNVP::Float64 = input_param[43,1]
-    SNODEN::Float64 = input_param[44,1]
+    MELFAC::Float64 = input_param[37,2]
+    CCFAC::Float64 = input_param[38,2]
+    LAIMLT::Float64 = input_param[39,2]
+    SAIMLT::Float64 = input_param[40,2]
+    GRDMLT::Float64 = input_param[41,2]
+    MAXLQF::Float64 = input_param[42,2]
+    KSNVP::Float64 = input_param[43,2]
+    SNODEN::Float64 = input_param[44,2]
 
     # leaf parameters affecting PE -------
-    GLMAX::Float64 = input_param[45,1]
-    CR::Float64 = input_param[46,1]
-    GLMIN::Float64 = input_param[47,1]
-    RM::Float64 = input_param[48,1]
-    R5::Float64 = input_param[49,1]
-    CVPD::Float64 = input_param[50,1]
-    TL::Float64 = input_param[51,1]
-    T1::Float64 = input_param[52,1]
-    T2::Float64 = input_param[53,1]
-    TH::Float64 = input_param[54,1]
+    GLMAX::Float64 = input_param[45,2]
+    CR::Float64 = input_param[46,2]
+    GLMIN::Float64 = input_param[47,2]
+    RM::Float64 = input_param[48,2]
+    R5::Float64 = input_param[49,2]
+    CVPD::Float64 = input_param[50,2]
+    TL::Float64 = input_param[51,2]
+    T1::Float64 = input_param[52,2]
+    T2::Float64 = input_param[53,2]
+    TH::Float64 = input_param[54,2]
 
     # plant parameters affecting soil-water supply -------
-    MXKPL::Float64 = input_param[55,1]
-    MXRTLN::Float64 = input_param[56,1]
-    inirlen::Float64 = input_param[57,1]
-    inirdep::Float64 = input_param[58,1]  # only exported for derive_params_from_input_soil()
-    rgrorate::Float64 = input_param[59,1] # vertical root grow rate [m a-1] #TODO(bernhard): only exported for derive_params_from_input_soil()
-    rgroper::Float64 = input_param[60,1]
-    FXYLEM::Float64 = input_param[61,1]
-    PSICR::Float64 = input_param[62,1]
-    RTRAD::Float64 = input_param[63,1]
-    NOOUTF::Int64 = Int( input_param[64,1] )
+    MXKPL::Float64 = input_param[55,2]
+    MXRTLN::Float64 = input_param[56,2]
+    inirlen::Float64 = input_param[57,2]
+    inirdep::Float64 = input_param[58,2]  # only exported for derive_params_from_input_soil()
+    rgrorate::Float64 = input_param[59,2] # vertical root grow rate [m a-1] #TODO(bernhard): only exported for derive_params_from_input_soil()
+    rgroper::Float64 = input_param[60,2]
+    FXYLEM::Float64 = input_param[61,2]
+    PSICR::Float64 = input_param[62,2]
+    RTRAD::Float64 = input_param[63,2]
+    NOOUTF::Int64 = Int( input_param[64,2] )
 
     FXYLEM  = min(FXYLEM, 0.990)
     inirlen = max(inirlen, 0.010)
     inirdep = max(inirdep, 0.010)
 
     # soil parameters -------
-    NLAYER::Int64 = Int( input_param[65,1] )
-    nmat::Int64 = Int( input_param[66,1] )    # number of materials #TODO(bernhard): only exported for derive_params_from_input_soil()
-    ILAYER::Int64 = Int( input_param[67,1] )
-    QLAYER::Int64 = Int( input_param[68,1] )
-    IMODEL::Int64 = Int( input_param[69,1] )
+    NLAYER::Int64 = Int( input_param[65,2] )
+    nmat::Int64 = Int( input_param[66,2] )    # number of materials #TODO(bernhard): only exported for derive_params_from_input_soil()
+    ILAYER::Int64 = Int( input_param[67,2] )
+    QLAYER::Int64 = Int( input_param[68,2] )
+    IMODEL::Int64 = Int( input_param[69,2] )
 
-    RSSA::Float64 = input_param[70,1]
-    RSSB::Float64 = input_param[71,1]
+    RSSA::Float64 = input_param[70,2]
+    RSSB::Float64 = input_param[71,2]
 
 
     # flow parameters -------
-    INFEXP::Float64 = input_param[72,1]
-    BYPAR::Int64 = Int( input_param[73,1] )
-    QFPAR::Float64 = input_param[74,1]
-    QFFC::Float64 = input_param[75,1]
-    IMPERV::Float64 = input_param[76,1]
-    DSLOPE::Float64 = input_param[77,1]
-    LENGTH::Float64 = input_param[78,1]
-    DRAIN::Float64 = input_param[79,1]
-    GSC::Float64 = input_param[80,1]
-    GSP::Float64 = input_param[81,1]
+    INFEXP::Float64 = input_param[72,2]
+    BYPAR::Int64 = Int( input_param[73,2] )
+    QFPAR::Float64 = input_param[74,2]
+    QFFC::Float64 = input_param[75,2]
+    IMPERV::Float64 = input_param[76,2]
+    DSLOPE::Float64 = input_param[77,2]
+    LENGTH::Float64 = input_param[78,2]
+    DRAIN::Float64 = input_param[79,2]
+    GSC::Float64 = input_param[80,2]
+    GSP::Float64 = input_param[81,2]
 
     # integration parameters -------
-    DTIMAX::Float64 = input_param[82,1]
-    DSWMAX::Float64 = input_param[83,1]
-    DPSIMX::Float64 = input_param[84,1]
+    DTIMAX::Float64 = input_param[82,2]
+    DSWMAX::Float64 = input_param[83,2]
+    DPSIMX::Float64 = input_param[84,2]
 
     return Dict([("NDAYS",NDAYS),
                 ("HEAT",HEAT),
