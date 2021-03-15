@@ -499,9 +499,9 @@ function derive_params_from_input_param(input_param)
     RTRAD = input_param[63,1]
     NOOUTF = Int( input_param[64,1] )
 
-    FXYLEM  = max(FXYLEM, 0.990)
-    inirlen = min(inirlen, 0.010)
-    inirdep = min(inirdep, 0.010)
+    FXYLEM  = min(FXYLEM, 0.990)
+    inirlen = max(inirlen, 0.010)
+    inirdep = max(inirdep, 0.010)
 
     # soil parameters -------
     NLAYER = Int( input_param[65,1] )
