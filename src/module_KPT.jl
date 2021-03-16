@@ -106,7 +106,7 @@ abstract type AbstractKptSoilpar end
 Represents a discretized 1D column of soil with Clapp-Hornberger parametrization.
 
 Input fields: p_THICK, p_STONEF, p_THSAT, p_PSIF, p_THETAF, p_KF, p_BEXP, p_WETINF
-Derived fields: p_CHM, p_CHN, p_THETAF, p_PSIG, p_SWATMX, p_WETF, p_PsiCrit
+Derived fields: NLAYER, p_CHM, p_CHN, p_THETAF, p_PSIG, p_SWATMX, p_WETF, p_PsiCrit
 """
 struct KPT_SOILPAR_Ch1d{T<:AbstractVector} <: AbstractKptSoilpar
     # Input fields
@@ -119,6 +119,7 @@ struct KPT_SOILPAR_Ch1d{T<:AbstractVector} <: AbstractKptSoilpar
     p_BEXP::T
     p_WETINF::T
     # Derived fields
+    NLAYER::Int64
     p_CHM::T
     p_CHN::T
     p_PSIG::T
@@ -175,7 +176,7 @@ struct KPT_SOILPAR_Ch1d{T<:AbstractVector} <: AbstractKptSoilpar
 
         # Instantiate
         new(p_THICK, p_STONEF, p_THSAT, p_PSIF, p_THETAF, p_KF, p_BEXP, p_WETINF,
-            p_CHM, p_CHN, p_PSIG, p_SWATMX, p_WETF, p_PsiCrit)
+            NLAYER, p_CHM, p_CHN, p_PSIG, p_SWATMX, p_WETF, p_PsiCrit)
     end
 end
 KPT_SOILPAR_Ch1d(;p_THICK::T, p_STONEF::T, p_THSAT::T, p_PSIF::T, p_THETAF::T, p_KF::T, p_BEXP::T, p_WETINF::T) where {T<:AbstractVector} =
@@ -200,6 +201,7 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
     p_MvGl::T
     p_θr::T
     # Derived fields
+    NLAYER::Int64
     p_PSIF::T    # matric potential at field capacity, kPa
     p_THETAF::T  # soil moisture θ at field capacity, m3/m3
     p_PSIG::T    # gravity potential negative down from surface, kPa
@@ -236,6 +238,7 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
         for i = 1:NLAYER
             # Find wetness at field capacity based on hydraulic conductivity
             # using a nonlinear solver for: find θ such that: K(θ) - p_Kθfc = 0
+            # Actually not finding θ but wetness = θ/porosity.
             # plot(-0.15:0.01:1.0, FK_MvG.(-0.15:0.01:1.0, p_KSAT[i], p_MvGl[i], p_MvGn[i]))
             f(x) = - p_Kθfc[i] + FK_MvG(x, p_KSAT[i], p_MvGl[i], p_MvGn[i])
             p_WETF[i] = find_zero(f, (0.0, 1.0), Bisection())
@@ -254,7 +257,7 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
 
         # Instantiate
         new(p_THICK,p_STONEF,p_THSAT,p_Kθfc,p_KSAT,p_MvGα,p_MvGn,p_MvGl,p_θr,
-            p_PSIF, p_THETAF,p_PSIG,p_SWATMX,p_WETF,p_PsiCrit)
+            NLAYER, p_PSIF, p_THETAF,p_PSIG,p_SWATMX,p_WETF,p_PsiCrit)
     end
 end
 KPT_SOILPAR_Mvg1d(;p_THICK::T, p_STONEF::T, p_THSAT::T, p_Kθfc::T, p_KSAT::T, p_MvGα::T, p_MvGn::T, p_MvGl::T, p_θr::T) where {T<:AbstractVector} =
@@ -532,6 +535,44 @@ function FWETNES(u_aux_PSIM, p::KPT_SOILPAR_Ch1d)
         end
     end
     return WETNES
+end
+
+
+
+"""
+    SWCHEK(u_SWATI)
+
+Correct u_SWATI and throw error if too far away.
+"""
+function SWCHEK!(u_SWATI, p_SWATMX, t)
+    # test for u_SWATI < 0 or u_SWATI > SWATMX(I)
+
+    # TODO(bernhard): instead of this manual correction, do it the DiffEq.jl way by using
+    #                 a callback imposing the boundaries.
+    #                 QUESTION: will the callback approach reduce the time step if boundaries are hit?
+    #                           will this ensure zero mass balance error?
+
+    for i in 1:length(u_SWATI)
+        if u_SWATI[i] <= 0.0
+            # @error "You lose! u_SWATI = $(u_SWATI[i]) for layer $i at time $t."*
+            # " Examine input and parameters to try to determine the cause"
+            u_SWATI[i] = 0.0 # TODO(bernhard): remove correction and reactivate error
+
+            # TODO(bernhard): This manual correction goes against the mass balance
+
+        elseif u_SWATI[i] > p_SWATMX[i]
+
+            if u_SWATI[i] > p_SWATMX[i] + 0.00001
+                # TODO(bernhard): reactivate
+                # @error "u_SWATI > SWATMX ($(u_SWATI[i]) > $(p_SWATMX[i])) for layer $iat time $t."*
+                # " Examine input and parameters to try to determine the cause"
+                u_SWATI[i] = p_SWATMX[i] # TODO(bernhard): remove correction and reactivate error
+            else
+                # rounding error only
+                u_SWATI[i] = p_SWATMX[i]
+            end
+        end
+    end
 end
 
 end

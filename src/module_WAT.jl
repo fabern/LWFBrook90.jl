@@ -180,6 +180,7 @@ step.
 function BYFLFR(NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_soil)
     # TODO(bernhard): could be optimized by not allocating each time new memory (versus in-place)
     p_fu_BYFRAC = fill(NaN, NLAYER)
+    # TODO(bernhard): put check outside of for loop
     for i = 1:NLAYER
         if (isone(p_BYPAR))
             ####
@@ -636,11 +637,11 @@ function ITER(NLAYER, IMODEL, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSITI, u_aux_
 end
 
 """
-    GWATER(u_GWAT, p_GSC, p_GSP, p_DT, aux_du_VRFLIN)
+    GWATER(u_GWAT, p_GSC, p_GSP, aux_du_VRFLIN)
 
 Calculate groundwater flow and seepage loss.
 """
-function GWATER(u_GWAT, p_GSC, p_GSP, p_DT, aux_du_VRFLIN)
+function GWATER(u_GWAT, p_GSC, p_GSP, aux_du_VRFLIN)
     if (p_GSC < 1.0e-8)
         # no groundwater
         du_SEEP = p_GSP * aux_du_VRFLIN
@@ -649,6 +650,7 @@ function GWATER(u_GWAT, p_GSC, p_GSP, p_DT, aux_du_VRFLIN)
         du_SEEP = u_GWAT * p_GSC * p_GSP
         du_GWFL = u_GWAT * p_GSC * (1. - p_GSP)
         # prevent negative GWAT
+        p_DT = 1 # day, BROOK90 and LWFBrook90R used p_DT fixed to 1 day
         if (u_GWAT - (du_GWFL + du_SEEP)*p_DT < 0)
             # if groundwater would be more than emptied
             # reduce fluxes so that it is just emptied completely during p_DT

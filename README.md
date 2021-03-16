@@ -56,18 +56,18 @@ Further documentation of LWFBrook90.jl and BROOK90 are available [here](https://
 ### Example data set:
 Following plots illustrate results of the provided data set. The scalar state variables and depth-depenedent (vector) state variables can be plotted:
 
-<p align="center"><img src="https://github.com/fabern/LWFBrook90.jl/blob/develop/docs/src/assets/git-hash-b3f7183/2021-02-24_16h56_LWFBrook90Julia_plot_u_scalar.png?raw=true" width="400"><p>
+<p align="center"><img src="https://github.com/fabern/LWFBrook90.jl/blob/develop/docs/src/assets/example-results/2021-03-16_11h27-Reset0-git+6e6946d+clean_LWFBrook90Julia_plot_u_scalar.png?raw=true" width="400"><p>
 <p align="center">Figure 2: Example simulation: scalar results<p>
 
-<p align="center"><img src="https://github.com/fabern/LWFBrook90.jl/blob/develop/docs/src/assets/git-hash-b3f7183/2021-02-24_16h56_LWFBrook90Julia_plot_u_vector.png?raw=true" width="400"><p>
+<p align="center"><img src="https://github.com/fabern/LWFBrook90.jl/blob/develop/docs/src/assets/example-results/2021-03-16_11h27-Reset0-git+6e6946d+clean_LWFBrook90Julia_plot_u_vector.png?raw=true" width="400"><p>
 <p align="center">Figure 3: Example simulation: vector results soil water<p>
 
 Tests are run to assert agreement with results from LWFBrook90R. Visualizations are reported below. Note that minor discrepancies are still present linked to the adaptive time stepping and intermediate updates of state variables.
-<p align="center"><img src="https://github.com/fabern/LWFBrook90.jl/blob/develop/docs/src/assets/git-hash-b3f7183/2021-02-24_16h56_R-vs-Julia_comparison_DailyRawValues.png?raw=true" width="400"><p>
+<p align="center"><img src="https://github.com/fabern/LWFBrook90.jl/blob/develop/docs/src/assets/example-results/2021-03-16_11h27-Reset0-git+6e6946d+clean_R-vs-Julia_Daily_first12M.png?raw=true" width="400"><p>
 <p align="center">Figure 4: Comparing daily outputs of LWFBrook90R and LWFBrook90.jl for example data set over a year<p>
 
-<p align="center"><img src="https://github.com/fabern/LWFBrook90.jl/blob/develop/docs/src/assets/git-hash-b3f7183/2021-02-24_16h56_R-vs-Julia_comparison_DailyRawValues_first3months.png?raw=true" width="400"><p>
-<p align="center">Figure 5: Comparing daily outputs of LWFBrook90R and LWFBrook90.jl for example data set over 3 months<p>
+<p align="center"><img src="https://github.com/fabern/LWFBrook90.jl/blob/develop/docs/src/assets/example-results/2021-03-16_11h27-Reset0-git+6e6946d+clean_R-vs-Julia_Daily_first2M.png?raw=true" width="400"><p>
+<p align="center">Figure 5: Comparing daily outputs of LWFBrook90R and LWFBrook90.jl for example data set over 2 months<p>
 
 
 
@@ -77,13 +77,7 @@ Tests are run to assert agreement with results from LWFBrook90R. Visualizations 
 - Currently a part of LWFBrook90R activated when `Reset==1`, is not implemented in LWFBrook90.jl. (A test implementation of this is available in the branch `005-simplify-time-step-control`.)
 
 ### Improve agreement with LWFBrook90R
-Note that some features of LWFBrook90R are not implemented in the main version of LWFBrook90.jl. The time step adaptivity and `Reset==1` of LWFBrook90R would require code refactoring, which goes slightly against the intended use of the library for ODEs DifferentialEquations.jl. Because of this, implementation of these features is left away from the main version. However, an attempt at their implementation resides currently in a feature branch `005`. Below are some of the results generated with that branch:
-
-<p align="center"><img src="https://github.com/fabern/LWFBrook90.jl/blob/develop/docs/src/assets/git-hash-2-55ca42d-feature005/2021-02-24_19h10_R-vs-Julia_comparison_DailyRawValues.png?raw=true" width="400"><p>
-<p align="center">Figure 6: Comparing daily outputs of LWFBrook90R and experimental LWFBrook90.jl:feature-005 for example data set over a year<p>
-
-<p align="center"><img src="https://github.com/fabern/LWFBrook90.jl/blob/develop/docs/src/assets/git-hash-2-55ca42d-feature005/2021-02-24_19h10_R-vs-Julia_comparison_DailyRawValues_first3months.png?raw=true" width="400"><p>
-<p align="center">Figure 7: Comparing daily outputs of LWFBrook90R and experimental LWFBrook90.jl:feature-005 for example data set over 3 months<p>
+Note that some features of LWFBrook90R are not implemented in the main version of LWFBrook90.jl. The time step adaptivity and `Reset==1` of LWFBrook90R would require code refactoring, which goes slightly against the intended use of the library for ODEs DifferentialEquations.jl. Because of this, implementation of these features is left away from the main version. However, an attempt at their implementation resides currently in a feature branch `005`.
 
 
 

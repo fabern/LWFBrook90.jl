@@ -32,7 +32,7 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
     path_soil_nodes     = joinpath(folder, prefix*"_soil_nodes.csv")
 
     ## B) Load input data (time- and/or space-varying parameters)
-    input_meteoveg, reference_date = read_path_meteoveg(path_meteoveg)
+    input_meteoveg, input_meteoveg_reference_date = read_path_meteoveg(path_meteoveg)
 
     ## C) Load other parameters
     # Load model input parameters
@@ -79,15 +79,14 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
                                  types=[Int64,Float64, Float64, Int64, Float64, Float64],
                                  datarow=2, header=["layer","midpoint","thick","mat","psiini","rootden"],
                                  delim=','))# ignorerepeated=true
-
     return (input_meteoveg,
+            input_meteoveg_reference_date,
             input_param,
             input_siteparam,
             input_precdat,
             input_pdur,
             input_soil_materials,
-            input_soil_nodes,
-            reference_date)
+            input_soil_nodes)
 end
 
 

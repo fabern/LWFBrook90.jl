@@ -1,3 +1,5 @@
+using Interpolations: interpolate, BSpline, Constant, Previous, scale, extrapolate, NoInterp
+
 """
     define_diff_eq_parameters()
 
@@ -10,22 +12,71 @@ Generate vector p needed for ODE() problem in DiffEq.jl package.
 - `NOOUTF::...`: TODO argument description.
 - `Reset::...`: TODO argument description.
 - `compute_intermediate_quantities::...`: TODO argument description.
-- `pfile_meteoveg::...`: TODO argument description.
-- `pfile_siteparam::...`: TODO argument description.
-- `pfile_param::...`: TODO argument description.
-- `pfile_soil::...`: TODO argument description.
-- `pfile_pdur::...`: TODO argument description.
+- `input_meteoveg::...`: TODO argument description.
+- `input_siteparam::...`: TODO argument description.
+- `input_param::...`: TODO argument description.
+- `input_soil::...`: TODO argument description.
+- `input_pdur::...`: TODO argument description.
 """
-function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, compute_intermediate_quantities,
-    pfile_meteoveg, pfile_siteparam, pfile_param, pfile_soil, pfile_pdur)
+function define_LWFB90_p(
+    input_meteoveg,
+    input_meteoveg_reference_date,
+    input_param,
+    input_siteparam,
+    input_precdat, # TODO(bernhard): Note that input_precdat is unused
+    input_pdur,
+    input_soil_materials,
+    input_soil_nodes
+    ;
+    Reset = false,
+    compute_intermediate_quantities = false,
+    constant_dt_solver = 1)
+
+            # TODO: check in define_LWFB90_p if IMODEL correctly defined, i.e. loaded soil data has correct column names
+            # TODO: check in define_LWFB90_p if NLAYER correctly defined, i.e. loaded soil data has correct number of rows
+            # TODO: check in define_LWFB90_p if input_param[1,"nmat"] correctly defined, i.e. loaded soil materials has correct number of rows size(input_soil_materials,1)
+            # TODO: check in define_LWFB90_p input_soil_materials
+            # # Check that all required column names are present in loaded data
+            # MvG_columnnames = ["ths", "thr", "alpha", "npar", "ksat", "tort", "gravel"]
+            # CH_columnnames  = ["mat", "thsat", "thetaf", "psif", "bexp", "kf", "wtinf", "gravel"]
+            # @assert length(setdiff(MvG_columnnames, names(input_soil_materials))) == 0 "Not all required column names found in soil materials input: $MvG_columnnames"
+            # @assert length(setdiff(CH_columnnames, names(input_soil_materials))) == 0  "Not all required column names found in soil materials input: $CH_columnnames"
+            # TODO: check in define_LWFB90_p
 
     ########
-    # 1) Parse pfile inputs:
+    ## Discretize soil parameters and interpolate meteo and vegetation parameters
+    soil_discr =
+        LWFBrook90.discretize_soil_params(
+            input_soil_materials,
+            input_soil_nodes,
+            input_param[1,"IMODEL"],
+            input_param[1,"ILAYER"],
+            input_param[1,"QLAYER"],
+            input_param[1,"NLAYER"],
+            input_param[1,"HEAT"],
+            input_param[1,"nmat"],
+            input_param[1,"inirdep"],
+            input_param[1,"rgrorate"])
 
+    interpolated_meteoveg =
+        LWFBrook90.interpolate_meteoveg(
+            input_meteoveg,
+            input_meteoveg_reference_date,
+            input_param[1,"NLAYER"],
+            input_param[1,"inirdep"],
+            input_param[1,"inirlen"],
+            input_param[1,"rgroper"],
+            soil_discr["tini"],
+            soil_discr["frelden"])
+    # TODO(bernhard): document input parameters: inirdep, inirlen, rgroper, tini, frelden,
+    ########
+
+
+    ########
     ## Solver algorithm options
-    p_DPSIMX = pfile_param[:DPSIMX] # maximum potential difference considered "equal", kPa               (BROOK90: DPSIMX is fixed at 0.01 kPa)
-    p_DSWMAX = pfile_param[:DSWMAX] # maximum change allowed in soil wetness SWATI, percent of SWATMX(i) (BROOK90: DSWMAX is fixed at 2 %)
-    p_DTIMAX = pfile_param[:DTIMAX] # maximum iteration time step, d (BROOK90: DTIMAX is fixed at 0.5 d)
+    p_DPSIMX = input_param[1,"DPSIMX"] # maximum potential difference considered "equal", kPa               (BROOK90: DPSIMX is fixed at 0.01 kPa)
+    p_DSWMAX = input_param[1,"DSWMAX"] # maximum change allowed in soil wetness SWATI, percent of SWATMX(i) (BROOK90: DSWMAX is fixed at 2 %)
+    p_DTIMAX = input_param[1,"DTIMAX"] # maximum iteration time step, d (BROOK90: DTIMAX is fixed at 0.5 d)
     # Documentation from ecoshift:
     # DPSIMX (Fixed parameter) - maximum potential difference considered equal during soil water integration, kPa. There is no vertical flow between layers whose potentials differ by less than DPSIMX. This reduces oscillation initiated by flows that are the product of large conductivities and large time steps, but small gradients. The number of iterations used is not at all linearly related to the three iteration parameters DPSIMX, DSWMAX, and DTIMAX. Selection of values depends on whether the user only wants monthly or daily totals, or is concerned with behaviour at shorter time steps. Generally, faster runs are obtained by using fewer thicker soil layers rather than by using large values of DSWMAX and DPSIMX. DPSIMX is fixed at 0.01 kPa. [see WAT-ITER]
     # DSWMAX (Fixed parameter) - maximum change allowed in soil wetness for any layer during an iteration, percent. DSWMAX sets the maximum change in soil wetness or saturation fraction (SWATI / SWATMX(i)) allowed for any layer in an iteration. See also DPSIMX. DSWMAX is fixed at 2 %. [see WAT-ITER]
@@ -33,18 +84,26 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
 
 
     ## Heat flow (unimplemented)
-    # p_HEAT    = pfile_param[:HEAT]
-    # p_TopInfT = pfile_soil["TopInfT"]
-    # unused p_HeatCapOld = pfile_soil["HeatCapOld"]
+    # p_HEAT    = input_param[1,"HEAT"]
+    # p_TopInfT = soil_discr["TopInfT"]
+    # unused p_HeatCapOld = soil_discr["HeatCapOld"]
 
 
     ## Location / Meteo
-    p_DURATN = pfile_pdur["DURATN"] # average storm duration, hr
-    p_LAT    = pfile_siteparam["p_LAT"] # (Location parameter), latitude, degrees
-    p_ASPECT = pfile_param[:ASPECT]    # (Location parameter), aspect, degrees through east from north
-    p_ESLOPE = pfile_param[:ESLOPE]    # (Location parameter), slope for evapotranspiration and snowmelt, degrees
-    p_MELFAC = pfile_param[:MELFAC]    # (Location parameter), degree day melt factor for open land, MJ m-2 d-1 K-1
-    p_RSTEMP = pfile_param[:RSTEMP]    # (Location parameter), base temperature for snow-rain transition, °C
+    p_NPINT  = input_siteparam[1,"precip_interval"]
+    if p_NPINT == 1
+        p_DTP = 1 / p_NPINT
+    else
+        error("Case with multiple precipitation intervals (using PRECDAT) is not implemented.")
+    end
+    p_DURATN = input_pdur[:,"pdur_h"]   # average storm duration, hr
+    p_LAT    =                          # (Location parameter), latitude, degrees
+        input_siteparam[1,"lat"]/57.296  # = x / (180/pi)# TODO(bernhard) is this a bug? shouldn't it be in degrees?
+
+    p_ASPECT = input_param[1,"ASPECT"]    # (Location parameter), aspect, degrees through east from north
+    p_ESLOPE = input_param[1,"ESLOPE"]    # (Location parameter), slope for evapotranspiration and snowmelt, degrees
+    p_MELFAC = input_param[1,"MELFAC"]    # (Location parameter), degree day melt factor for open land, MJ m-2 d-1 K-1
+    p_RSTEMP = input_param[1,"RSTEMP"]    # (Location parameter), base temperature for snow-rain transition, °C
     # removed for LWFBrook90: RELHT
     # removed for LWFBrook90: RELLAI
     # Documentation from ecoshift:
@@ -62,20 +121,20 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
 
 
     ## Meteo
-    p_C3     = pfile_param[:C3]     # Ratio of net longwave radiation for overcast sky (sunshine duration = 0) to that for clear sky (sunshine duration = 1). (BROOK90: C3 is fixed at 0.2 following Brutsaert (1982))
-    p_FETCH  = pfile_param[:FETCH]  # Fetch upwind of the weather station at which wind speed was measured, m (BROOK90: FETCH is fixed at 5000 m)
-    p_WNDRAT = pfile_param[:WNDRAT] # Average ratio of nighttime to daytime wind speed, dimensionless (BROOK90: WNDRAT is fixed at 0.3)
-    p_Z0G    = pfile_param[:Z0G]    # Ground surface roughness, m ()
-    p_Z0S    = pfile_param[:Z0S]    # Roughness parameter of snow surface, m (BROOK90: Z0S is fixed at 0.001 m)
-    p_Z0W    = pfile_param[:Z0W]    # Roughness parameter at the weather station where wind speed was measured, m
-    p_ZMINH  = pfile_param[:ZMINH]  # Reference height for weather data above canopy HEIGHT, m (BROOK90: ZMINH is fixed at 2 m)
-    p_ZW     = pfile_param[:ZW]     # Weather station measurement height for wind, m (BROOK90: W is fixed at 10 m)
-    p_HS     = pfile_param[:HS]     # Lower height limit, for roughness parameter interpolation, if canopy HEIGHT is below -> CZS (BROOK90: HS is fixed at 1 m)
-    p_HR     = pfile_param[:HR]     # Upper height limit, for roughness parameter interpolation, if canopy HEIGHT is above -> CZR (BROOK90: HR is fixed at 10 m)
-    p_CZS    = pfile_param[:CZS]    # Ratio of roughness parameter to HEIGHT (canopy) for HEIGHT < HS, dimensionless (BROOK90: CZS is fixed at 0.13)
-    p_CZR    = pfile_param[:CZR]    # Ratio of roughness parameter to HEIGHT (canopy) for HEIGHT > HR, dimensionless (BROOK90: CZR is fixed at 0.05)
-    p_C1     = pfile_param[:C1]     # intercept of linear relation between the ratio of actual to potential solar radiation for the day and sunshine duration (BROOK90: C1 is fixed at 0.25 following Brutsaert (1982))
-    p_C2     = pfile_param[:C2]     # slope     of linear relation between the ratio of actual to potential solar radiation for the day and sunshine duration (BROOK90: C2 is fixed at 0.5 following Brutsaert (1982))
+    p_C3     = input_param[1,"C3"]     # Ratio of net longwave radiation for overcast sky (sunshine duration = 0) to that for clear sky (sunshine duration = 1). (BROOK90: C3 is fixed at 0.2 following Brutsaert (1982))
+    p_FETCH  = input_param[1,"FETCH"]  # Fetch upwind of the weather station at which wind speed was measured, m (BROOK90: FETCH is fixed at 5000 m)
+    p_WNDRAT = input_param[1,"WNDRAT"] # Average ratio of nighttime to daytime wind speed, dimensionless (BROOK90: WNDRAT is fixed at 0.3)
+    p_Z0G    = input_param[1,"Z0G"]    # Ground surface roughness, m ()
+    p_Z0S    = input_param[1,"Z0S"]    # Roughness parameter of snow surface, m (BROOK90: Z0S is fixed at 0.001 m)
+    p_Z0W    = input_param[1,"Z0W"]    # Roughness parameter at the weather station where wind speed was measured, m
+    p_ZMINH  = input_param[1,"ZMINH"]  # Reference height for weather data above canopy HEIGHT, m (BROOK90: ZMINH is fixed at 2 m)
+    p_ZW     = input_param[1,"ZW"]     # Weather station measurement height for wind, m (BROOK90: W is fixed at 10 m)
+    p_HS     = input_param[1,"HS"]     # Lower height limit, for roughness parameter interpolation, if canopy HEIGHT is below -> CZS (BROOK90: HS is fixed at 1 m)
+    p_HR     = input_param[1,"HR"]     # Upper height limit, for roughness parameter interpolation, if canopy HEIGHT is above -> CZR (BROOK90: HR is fixed at 10 m)
+    p_CZS    = input_param[1,"CZS"]    # Ratio of roughness parameter to HEIGHT (canopy) for HEIGHT < HS, dimensionless (BROOK90: CZS is fixed at 0.13)
+    p_CZR    = input_param[1,"CZR"]    # Ratio of roughness parameter to HEIGHT (canopy) for HEIGHT > HR, dimensionless (BROOK90: CZR is fixed at 0.05)
+    p_C1     = input_param[1,"C1"]     # intercept of linear relation between the ratio of actual to potential solar radiation for the day and sunshine duration (BROOK90: C1 is fixed at 0.25 following Brutsaert (1982))
+    p_C2     = input_param[1,"C2"]     # slope     of linear relation between the ratio of actual to potential solar radiation for the day and sunshine duration (BROOK90: C2 is fixed at 0.5 following Brutsaert (1982))
     # Documentation from ecoshift:
     # C3 (Fixed parameter) - ratio of net longwave radiation for overcast sky (sunshine duration = 0) to that for clear sky (sunshine duration = 1). C3 is fixed at 0.2 following Brutsaert (1982). [see SUN-AVAILEN]
     # FETCH (Fixed parameter) - fetch upwind of the weather station at which wind speed was measured, m. Sensitivity to FETCH is small if it is > 1000 m. See also Z0W. FETCH is fixed at 5000 m. FETCH is ignored if Z0W = 0. [see PET-WNDADJ]
@@ -95,12 +154,12 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
 
     ## Snowpack
     # SNODEN is the snowpack density or the ratio of water content to depth. SNODEN is used only to correct leaf area index and stem area index to the fraction of them that is above the snow. It does not vary with time or snowpack ripeness in BROOK90. [see PET-CANOPY]
-    p_SNODEN = pfile_param[:SNODEN] # snowpack density, mm/mm (BROOK90: SNODEN is fixed at 0.3)
-    p_CCFAC  = pfile_param[:CCFAC]  # cold content factor, MJ m-2 d-1 K-1 (BROOK90: CCFAC is fixed at 0.3 MJ m-2 d-1 K-1)
-    p_GRDMLT = pfile_param[:GRDMLT] # rate of groundmelt of snowpack, mm/d (BROOK90: GRDMLT is fixed at 0.35 mm/d from Hubbard Brook (Federer 1965))
-    p_LAIMLT = pfile_param[:LAIMLT] # dependence of snowmelt on LAI, dimensionless (BROOK90: LAIMLT is fixed at 0.2)
-    p_SAIMLT = pfile_param[:SAIMLT] # dependence of snowmelt on SAI, dimensionless (BROOK90: SAIMLT is fixed at 0.5)
-    p_MAXLQF = pfile_param[:MAXLQF] # maximum liquid water fraction of SNOW, dimensionless (BROOK90: MAXLQF is fixed at 0.05)
+    p_SNODEN = input_param[1,"SNODEN"] # snowpack density, mm/mm (BROOK90: SNODEN is fixed at 0.3)
+    p_CCFAC  = input_param[1,"CCFAC"]  # cold content factor, MJ m-2 d-1 K-1 (BROOK90: CCFAC is fixed at 0.3 MJ m-2 d-1 K-1)
+    p_GRDMLT = input_param[1,"GRDMLT"] # rate of groundmelt of snowpack, mm/d (BROOK90: GRDMLT is fixed at 0.35 mm/d from Hubbard Brook (Federer 1965))
+    p_LAIMLT = input_param[1,"LAIMLT"] # dependence of snowmelt on LAI, dimensionless (BROOK90: LAIMLT is fixed at 0.2)
+    p_SAIMLT = input_param[1,"SAIMLT"] # dependence of snowmelt on SAI, dimensionless (BROOK90: SAIMLT is fixed at 0.5)
+    p_MAXLQF = input_param[1,"MAXLQF"] # maximum liquid water fraction of SNOW, dimensionless (BROOK90: MAXLQF is fixed at 0.05)
     # Documentation from ecoshift:
     # SNODEN (Fixed parameter) - snow density, mm/mm. SNODEN is the snowpack density or the ratio of water content to depth. SNODEN is used only to correct leaf area index and stem area index to the fraction of them that is above the snow. It does not vary with time or snowpack ripeness in BROOK90. SNODEN is fixed at 0.3. [see PET-CANOPY]
     # CCFAC (Fixed parameter) - cold content factor, MJ m-2 d-1 K-1. CCFAC is a degree day factor for accumulation of cold content for a day with daylength of 0.5 d. It controls the snow energy balance when TA is less than 0°C. Larger values make the snow temperature lag farther behind the air temperature. Sensitivity of snowmelt to CCFAC is small unless CCFAC is less than 0.05 MJ m-2 d-1 K-1. CCFAC = 0 means there is no cold content and snow temperature is always 0°C. CCFAC is fixed at 0.3 MJ m-2 d-1 K-1. [see SNO-SNOENRGY]
@@ -112,39 +171,39 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
 
     ## Vegetation (canopy)
     ### Vegetation dimensions
-    p_CR     = pfile_param[:CR]     # (Canopy parameter), ratio of projected stem area index (SAI) to HEIGHT when DENSEF = 1, (SAI = CS * HEIGHT * DENSEF)
-    p_RHOTP  = pfile_param[:RHOTP]  # (Fixed  parameter), Ratio of total leaf area to projected area, dimensionless (BROOK90: RHOTP is fixed at 2)
-    p_LWIDTH = pfile_param[:LWIDTH] # (Canopy parameter), average leaf width, m
-    p_LPC    = pfile_param[:LPC]    # (Fixed  parameter), Minimum LAI defining a closed canopy, dimensionless (BROOK90: LPC is fixed at 4.0)
+    p_CR     = input_param[1,"CR"]     # (Canopy parameter), ratio of projected stem area index (SAI) to HEIGHT when DENSEF = 1, (SAI = CS * HEIGHT * DENSEF)
+    p_RHOTP  = input_param[1,"RHOTP"]  # (Fixed  parameter), Ratio of total leaf area to projected area, dimensionless (BROOK90: RHOTP is fixed at 2)
+    p_LWIDTH = input_param[1,"LWIDTH"] # (Canopy parameter), average leaf width, m
+    p_LPC    = input_param[1,"LPC"]    # (Fixed  parameter), Minimum LAI defining a closed canopy, dimensionless (BROOK90: LPC is fixed at 4.0)
     ### Vegetation influence on atmosphere and meteorology
-    p_KSNVP  = pfile_param[:KSNVP]  # (Canopy parameter), reduction factor to reduce snow evaporation (SNVP), (0.05 - 1)
-    p_ALBSN  = pfile_param[:ALBSN]  # (Canopy parameter), albedo or surface reflectivity with snow on the ground, (typically 0.1-0.9)
-    p_ALB    = pfile_param[:ALB]    # (Canopy parameter), albedo or surface reflectivity without snow on the ground, (typically 0.1-0.3)
-    p_NN     = pfile_param[:NN]     # (Fixed  parameter), Wind/diffusivity extinction coefficient, dimensionless (BROOK90: NN is fixed at 2.5 following Shuttleworth and Gurney (1990))
-    p_CS     = pfile_param[:CS]     # (Canopy parameter), extinction coefficient for photosynthetically-active radiation in the canopy, (unit?)
-    p_RM     = pfile_param[:RM]     # (Fixed  parameter), Nominal maximum solar radiation possible on a leaf, W/m2 (BROOK90: RM is fixed at 1000 W/m2)
+    p_KSNVP  = input_param[1,"KSNVP"]  # (Canopy parameter), reduction factor to reduce snow evaporation (SNVP), (0.05 - 1)
+    p_ALBSN  = input_param[1,"ALBSN"]  # (Canopy parameter), albedo or surface reflectivity with snow on the ground, (typically 0.1-0.9)
+    p_ALB    = input_param[1,"ALB"]    # (Canopy parameter), albedo or surface reflectivity without snow on the ground, (typically 0.1-0.3)
+    p_NN     = input_param[1,"NN"]     # (Fixed  parameter), Wind/diffusivity extinction coefficient, dimensionless (BROOK90: NN is fixed at 2.5 following Shuttleworth and Gurney (1990))
+    p_CS     = input_param[1,"CS"]     # (Canopy parameter), extinction coefficient for photosynthetically-active radiation in the canopy, (unit?)
+    p_RM     = input_param[1,"RM"]     # (Fixed  parameter), Nominal maximum solar radiation possible on a leaf, W/m2 (BROOK90: RM is fixed at 1000 W/m2)
     ### Interception
-    p_CINTRL = pfile_param[:CINTRL] # (Fixed  parameter), Maximum interception storage of rain       per unit LAI, mm (BROOK90: CINTRL and CINTRS are both fixed at 0.15 mm)
-    p_CINTRS = pfile_param[:CINTRS] # (Fixed  parameter), Maximum interception storage of rain       per unit SAI, mm (BROOK90: CINTRL and CINTRS are both fixed at 0.15 mm)
-    p_CINTSL = pfile_param[:CINTSL] # (Fixed  parameter), Maximum interception storage of snow water per unit LAI, mm (BROOK90: CINTSL and CINTSS are both fixed at 0.6 mm)
-    p_CINTSS = pfile_param[:CINTSS] # (Fixed  parameter), Maximum interception storage of snow water per unit SAI, mm (BROOK90: CINTSL and CINTSS are both fixed at 0.6 mm)
-    p_FRINTL = pfile_param[:FRINTL] # (Fixed  parameter), Intercepted fraction of rain per unit LAI, dimensionless (BROOK90: FRINTL and FRINTS are both fixed at 0.06)
-    p_FRINTS = pfile_param[:FRINTS] # (Fixed  parameter), Intercepted fraction of rain per unit SAI, dimensionless (BROOK90: FRINTL and FRINTS are both fixed at 0.06)
-    p_FSINTL = pfile_param[:FSINTL] # (Fixed  parameter), Intercepted fraction of snow per unit LAI, dimensionless (BROOK90: FSINTL and FSINTS are both fixed at 0.04)
-    p_FSINTS = pfile_param[:FSINTS] # (Fixed  parameter), Intercepted fraction of snow per unit SAI, dimensionless (BROOK90: FSINTL and FSINTS are both fixed at 0.04)
+    p_CINTRL = input_param[1,"CINTRL"] # (Fixed  parameter), Maximum interception storage of rain       per unit LAI, mm (BROOK90: CINTRL and CINTRS are both fixed at 0.15 mm)
+    p_CINTRS = input_param[1,"CINTRS"] # (Fixed  parameter), Maximum interception storage of rain       per unit SAI, mm (BROOK90: CINTRL and CINTRS are both fixed at 0.15 mm)
+    p_CINTSL = input_param[1,"CINTSL"] # (Fixed  parameter), Maximum interception storage of snow water per unit LAI, mm (BROOK90: CINTSL and CINTSS are both fixed at 0.6 mm)
+    p_CINTSS = input_param[1,"CINTSS"] # (Fixed  parameter), Maximum interception storage of snow water per unit SAI, mm (BROOK90: CINTSL and CINTSS are both fixed at 0.6 mm)
+    p_FRINTL = input_param[1,"FRINTL"] # (Fixed  parameter), Intercepted fraction of rain per unit LAI, dimensionless (BROOK90: FRINTL and FRINTS are both fixed at 0.06)
+    p_FRINTS = input_param[1,"FRINTS"] # (Fixed  parameter), Intercepted fraction of rain per unit SAI, dimensionless (BROOK90: FRINTL and FRINTS are both fixed at 0.06)
+    p_FSINTL = input_param[1,"FSINTL"] # (Fixed  parameter), Intercepted fraction of snow per unit LAI, dimensionless (BROOK90: FSINTL and FSINTS are both fixed at 0.04)
+    p_FSINTS = input_param[1,"FSINTS"] # (Fixed  parameter), Intercepted fraction of snow per unit SAI, dimensionless (BROOK90: FSINTL and FSINTS are both fixed at 0.04)
     ### Vegetation conductivity
-    p_MXKPL  = pfile_param[:MXKPL]  # (Canopy parameter), maximum plant conductivity, mm d-1 MPa-1.
-    p_FXYLEM = pfile_param[:FXYLEM] # (Canopy parameter), fraction of plant resistance that is in the xylem (above ground) and not in the roots, (0-1)
-    p_GLMAX  = pfile_param[:GLMAX]  # (Canopy parameter), maximum leaf conductance, cm/s
-    p_GLMIN  = pfile_param[:GLMIN]  # (Canopy parameter), minimum leaf conductance, cm/s
+    p_MXKPL  = input_param[1,"MXKPL"]  # (Canopy parameter), maximum plant conductivity, mm d-1 MPa-1.
+    p_FXYLEM = input_param[1,"FXYLEM"] # (Canopy parameter), fraction of plant resistance that is in the xylem (above ground) and not in the roots, (0-1)
+    p_GLMAX  = input_param[1,"GLMAX"]  # (Canopy parameter), maximum leaf conductance, cm/s
+    p_GLMIN  = input_param[1,"GLMIN"]  # (Canopy parameter), minimum leaf conductance, cm/s
     ### Stomatal regulation
-    p_TH     = pfile_param[:TH]     # (Canopy parameter), temperature controlling closing of stomates,°C
-    p_T1     = pfile_param[:T1]     # (Canopy parameter), temperature controlling closing of stomates,°C
-    p_T2     = pfile_param[:T2]     # (Canopy parameter), temperature controlling closing of stomates,°C
-    p_TL     = pfile_param[:TL]     # (Canopy parameter), temperature controlling closing of stomates,°C
-    p_CVPD   = pfile_param[:CVPD]   # (Fixed  parameter), Vapor pressure deficit at which stomatal conductance is halved, kPa (BROOK90: CVPD is fixed at 2 kPa for all cover types)
-    p_R5     = pfile_param[:R5]     # (Fixed  parameter), Solar radiation at which stomatal conductance is half of its value at RM, W/m2 (BROOK90: BROOK90 fixes R5 = 100 W/m2 as the default for all cover types)
-    p_PSICR  = pfile_param[:PSICR]  # (Canopy parameter), minimum plant leaf water potential, MPa.
+    p_TH     = input_param[1,"TH"]     # (Canopy parameter), temperature controlling closing of stomates,°C
+    p_T1     = input_param[1,"T1"]     # (Canopy parameter), temperature controlling closing of stomates,°C
+    p_T2     = input_param[1,"T2"]     # (Canopy parameter), temperature controlling closing of stomates,°C
+    p_TL     = input_param[1,"TL"]     # (Canopy parameter), temperature controlling closing of stomates,°C
+    p_CVPD   = input_param[1,"CVPD"]   # (Fixed  parameter), Vapor pressure deficit at which stomatal conductance is halved, kPa (BROOK90: CVPD is fixed at 2 kPa for all cover types)
+    p_R5     = input_param[1,"R5"]     # (Fixed  parameter), Solar radiation at which stomatal conductance is half of its value at RM, W/m2 (BROOK90: BROOK90 fixes R5 = 100 W/m2 as the default for all cover types)
+    p_PSICR  = input_param[1,"PSICR"]  # (Canopy parameter), minimum plant leaf water potential, MPa.
     # Documentation from ecoshift:
     # MXKPL The internal resistance to water flow through the plants RPLANT = 1 / (MXKPL * RELHT * DENSEF). MXKPL is the main controller of soil-water availability and is a property of all of the plants on a unit area, not of any one plant. When the canopy is at its maximum seasonal LAI and height, and when soil is wet so that soil water potential is effectively zero, and when the leaf water potential is at its critical value, PSICR, then MXKPL is the transpiration rate divided by PSICR. Abdul-Jabbar et al. (1988) found that MXKPL ranges only from 7 to 30 mm d-1 MPa-1 over a wide range of vegetations, a surprisingly constant parameter. A transpiration rate of 0.5 mm/hr at a gradient of -1.5 MPa is typical, giving MXKPL of 8 mm d-1 MPa-1 (Hunt et al. 1991). MXKPL controls the rate of water supply to the leaves and thus the transpiration when soil water supply is limiting. Decreasing MXKPL makes soil water less available and thus reduces actual transpiration below potential transpiration at higher soil water content. [see PET-CANOPY] [see EVP-PLNTRES]
     # CR (Canopy parameter) - extinction coefficient for photosynthetically-active radiation in the canopy. Values usually range from 0.5 to 0.7. Values outside this range should be used very cautiously. The extinction coefficient can be determined from the canopy transmissivity, t, as CR = - (ln t) / (Lp + Sp). For a canopy of Lp = 6 and Sp = 0.7, PAR penetration at the ground of 1, 3, and 5% gives CR = 0.69, 0.52, and 0.45 respectively. I use CR values of 0.5 for conifer forest, 0.6 for broadleaved forest, and 0.7 for short vegetation covers. CR is also used to calculate the extinction of net radiation, though this is theoretically incorrect. [see PET-SRSC] [see SUN-AVAILEN]
@@ -169,48 +228,48 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
     # FSINTL and FSINTS (Fixed parameters) - intercepted fraction of snow per unit LAI and per unit SAI respectively, dimensionless. See also FRINTL. FSINTL and FSINTS are both fixed at 0.04. For LAI = 6 and SAI = 0.7 these values catch snow at 27%. For leafless deciduous forest with LAI = 0 and SAI = 0.7 the snowfall catch rate is 3%. To turn off SINT, set both FSINTL and FSINTS to zero. [see EVP-INTER]
 
     ## Soil vegetation (roots)
-    # NOOUTF                        # flag to prevent outflow from roots (hydraulic redistribution), (0/1)
-    p_RTRAD  = pfile_param[:RTRAD] # average root radius, mm (BROOK90: RTRAD is fixed at 0.35 mm)
-    p_MXRTLN = pfile_param[:MXRTLN] # (Canopy parameter), maximum length of fine roots per unit ground area, m/m2.
+    NOOUTF   = 1 == input_param[1,"NOOUTF"] # flag to prevent outflow from roots (hydraulic redistribution), (0/1)
+    p_RTRAD  = input_param[1,"RTRAD"] # average root radius, mm (BROOK90: RTRAD is fixed at 0.35 mm)
+    p_MXRTLN = input_param[1,"MXRTLN"] # (Canopy parameter), maximum length of fine roots per unit ground area, m/m2.
     # Documentation from ecoshift:
     # NOOUTF (Fixed parameter) - 0 to allow outflow from roots, 1 for no outflow. NOOUTF is a switch that when set to 1 prevents outflow from the plant roots to the soil when soil is dry. NOOUTF = 0 allows such outflow, so water can move from wet soil layers to dry soil layers through the roots. [see EVP-TBYLAYER]
     # RTRAD (Fixed parameter) - average root radius, mm. RTRAD is the average radius of the fine or water-absorbing roots. It is only relevant to transpiration from dry soil. RTRAD is fixed at 0.35 mm. [see EVP-PLNTRES]
     # MXRTLN Total root length per unit area (RTLEN) is MXRTLN * RELHT * DENSEF. MXRTLN is used to calculate rhizosphere resistance and is only important when soil is dry or roots are sparse. Values of MXRTLN are not frequent in the literature, especially for forests. Newman (1974) reported a range of 1700 to 11000 m/m2 for 5 woody plants. Safford (1974) found fine root masses of 1200 g/m2 for northern hardwoods, and Safford and Bell (1972) found 700 g/m2 for white spruce; with a mean diameter of 0.7 mm and density of 0.5 g/cm3, these become 6200 and 3600 m/m2. To turn off TRAN set MXRTLN to zero. [see PET-CANOPY] [see EVP-PLNTRES]
 
     ## Soil discretization
-    #NLAYER                          # Number of soil layers to be used
-    p_THICK  = pfile_soil["THICK"]   # (Soil parameter),  layer thicknesses, mm
+    IMODEL   = input_param[1,"IMODEL"] # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
+    NLAYER   = input_param[1,"NLAYER"] # Number of soil layers used
+    p_THICK  = soil_discr["THICK"]   # (Soil parameter),  layer thicknesses, mm
     # Documentation from ecoshift:
     # NLAYER (Soil parameter) - number of soil layers to be used, dimensionless. NLAYER is the number of soil layers to be used in the model run. It can vary from 1 to ML. Run time is more or less proportional to NLAYER. Soil parameter values for layers greater than NLAYER can be 0.
     # THICK(1 To ML) (Soil parameter) - layer thicknesses, mm. THICK is the vertical thickness of each soil layer. Each layer can have a different thickness, but the number of iterations goes up as the thickness of any layer goes down. THICK should probably not be less than 50 mm unless run time is not important. [see EVP-PLNTRES] [see KPT] [see WAT-VERT]
 
     ## Soil hydraulics
-    p_RSSA   = pfile_param[:RSSA] # Soil evaporation resistance (RSS) at field capacity, s/m (BROOK90: RSSA is fixed at 500 s/m following Shuttleworth and Gurney (1990))
-    p_RSSB   = pfile_param[:RSSB] # Exponent in relation of soil evaporation resistance (RSS) to soil water potential (PSIM) in the top layer, dimensionless, (BROOK90: RSSB is fixed at 1.0, which makes RSS directly proportional to PSIM)
-    # unused u_aux_PSIMinit = pfile_soil["PSIM_init"]
+    p_RSSA   = input_param[1,"RSSA"] # Soil evaporation resistance (RSS) at field capacity, s/m (BROOK90: RSSA is fixed at 500 s/m following Shuttleworth and Gurney (1990))
+    p_RSSB   = input_param[1,"RSSB"] # Exponent in relation of soil evaporation resistance (RSS) to soil water potential (PSIM) in the top layer, dimensionless, (BROOK90: RSSB is fixed at 1.0, which makes RSS directly proportional to PSIM)
     if IMODEL == 0
         p_soil = LWFBrook90.KPT.KPT_SOILPAR_Ch1d(;
             p_THICK = p_THICK,
-            p_STONEF = pfile_soil["STONEF"],           # stone volume fraction in each soil layer, dimensionless
-            p_THSAT  = pfile_soil["PAR"][!,"θs"],      # THETA at saturation, m3/m3
-            p_THETAF = pfile_soil["PAR"][!,"θf"],      # volumetric water content at "field capacity" corresponding to KF and PSIF for soil layer, m3/m3
-            p_KF     = pfile_soil["PAR"][!,"kf"],      # hydraulic conductivity at field capacity corresponding to THETAF and PSIF for a soil layer, mm/d
-            p_PSIF   = pfile_soil["PAR"][!,"ψf"],      # matric potential at "field capacity" corresponding to KF and THETAF for a soil layer, kPa
-            p_BEXP   = pfile_soil["PAR"][!,"bexp"],    # Clapp-Hornberger exponent for ψ-θ relation
-            p_WETINF = pfile_soil["PAR"][!,"wetinf"])  # wetness at dry end of near-saturation range for a soil layer, dimensionless
+            p_STONEF = soil_discr["STONEF"],           # stone volume fraction in each soil layer, dimensionless
+            p_THSAT  = soil_discr["PAR"][!,"θs"],      # THETA at saturation, m3/m3
+            p_THETAF = soil_discr["PAR"][!,"θf"],      # volumetric water content at "field capacity" corresponding to KF and PSIF for soil layer, m3/m3
+            p_KF     = soil_discr["PAR"][!,"kf"],      # hydraulic conductivity at field capacity corresponding to THETAF and PSIF for a soil layer, mm/d
+            p_PSIF   = soil_discr["PAR"][!,"ψf"],      # matric potential at "field capacity" corresponding to KF and THETAF for a soil layer, kPa
+            p_BEXP   = soil_discr["PAR"][!,"bexp"],    # Clapp-Hornberger exponent for ψ-θ relation
+            p_WETINF = soil_discr["PAR"][!,"wetinf"])  # wetness at dry end of near-saturation range for a soil layer, dimensionless
 
     elseif IMODEL == 1
         # Instantiate soil parameters
         p_soil = LWFBrook90.KPT.KPT_SOILPAR_Mvg1d(;
             p_THICK  = p_THICK,
-            p_STONEF = pfile_soil["STONEF"],
-            p_THSAT  = pfile_soil["PAR"][!,"θs"],
-            p_Kθfc   = pfile_soil["PAR"][!,"K(θ_fc)"],
-            p_KSAT   = pfile_soil["PAR"][!,"Ksat"],
-            p_MvGα   = pfile_soil["PAR"][!,"α"],
-            p_MvGn   = pfile_soil["PAR"][!,"n"],
-            p_MvGl   = pfile_soil["PAR"][!,"tort"],
-            p_θr     = pfile_soil["PAR"][!,"θr"])
+            p_STONEF = soil_discr["STONEF"],
+            p_THSAT  = soil_discr["PAR"][!,"θs"],
+            p_Kθfc   = soil_discr["PAR"][!,"K(θ_fc)"],
+            p_KSAT   = soil_discr["PAR"][!,"Ksat"],
+            p_MvGα   = soil_discr["PAR"][!,"α"],
+            p_MvGn   = soil_discr["PAR"][!,"n"],
+            p_MvGl   = soil_discr["PAR"][!,"tort"],
+            p_θr     = soil_discr["PAR"][!,"θr"])
 
     else
         error("Unsupported IMODEL: $IMODEL")
@@ -246,21 +305,22 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
 
     ## FLOW Infiltration, groundwater, and overland flow
     ### Infiltration (incl. preferential flow)
-    p_IMPERV = pfile_param[:IMPERV] # (Flow parameter), fraction of impervious surface area generating surface or source area flow (SRFL), dimensionless
-    p_INFEXP = pfile_param[:INFEXP] # (Flow parameter), infiltration exponent that determines the distribution of infiltrated water with depth, dimensionless (from 0 to >1; 0 = all infiltration to top soil layer, 1 = uniform distribution down to ILAYER, >1 = more water in lower layers closer to ILAYER)
-    p_ILAYER = pfile_param[:ILAYER] # (Flow parameter), number of layers over which infiltration is distributed
-    p_QLAYER = pfile_param[:QLAYER] # (Flow parameter), number of soil layers for SRFL
+    p_IMPERV = input_param[1,"IMPERV"] # (Flow parameter), fraction of impervious surface area generating surface or source area flow (SRFL), dimensionless
+    p_INFEXP = input_param[1,"INFEXP"] # (Flow parameter), infiltration exponent that determines the distribution of infiltrated water with depth, dimensionless (from 0 to >1; 0 = all infiltration to top soil layer, 1 = uniform distribution down to ILAYER, >1 = more water in lower layers closer to ILAYER)
+    p_ILAYER = input_param[1,"ILAYER"] # (Flow parameter), number of layers over which infiltration is distributed
+    p_QLAYER = input_param[1,"QLAYER"] # (Flow parameter), number of soil layers for SRFL
     p_INFRAC = LWFBrook90.WAT.INFPAR(p_INFEXP, p_ILAYER, p_soil, NLAYER) # fraction of (preferential) infiltration to each layer
     # TODO(bernhard):switch to ILAYAER and QLAYER to IDEPTH and QDEPTH, which are independent of soil discretization.
+
     ### Flow generation
-    p_BYPAR  = pfile_param[:BYPAR]  # (Flow parameter), flag to activate bypass flow (BYFL), (0/1)
-    p_DRAIN  = pfile_param[:DRAIN] # (Flow parameter), continuous flag to activate drainge VRFLI(n), (between 0 and 1; 1 = gravity drainage, 0 = no drainage)
-    p_DSLOPE = pfile_param[:DSLOPE] # (Flow parameter), hillslope angle for downslope matric flow (DSFL), degrees
-    p_GSC    = pfile_param[:GSC] # (Flow parameter), fraction of groundwater storage (GWAT), that is transferred to groundwater flow (GWFL) and deep seepage (SEEP) each day, d-1
-    p_GSP    = pfile_param[:GSP] # (Flow parameter), fraction of groundwater discharge produced by GSC that goes to deep seepage (SEEP) and is not added to streamflow (FLOW), dimensionless
-    p_LENGTH = pfile_param[:LENGTH] # (Flow parameter), slope length for downslope flow (DSFL), m
-    p_QFFC   = pfile_param[:QFFC] # (Flow parameter), quick flow fraction for SRFL and BYFL at THETAF, dimensionless
-    p_QFPAR  = pfile_param[:QFPAR] # (Flow parameter), raction of the water content between field capacity (THETAF) and saturation (THSAT) at which the quick flow fraction is 1, dimensionless
+    p_BYPAR  = input_param[1,"BYPAR"]  # (Flow parameter), flag to activate bypass flow (BYFL), (0/1)
+    p_DRAIN  = input_param[1,"DRAIN"] # (Flow parameter), continuous flag to activate drainge VRFLI(n), (between 0 and 1; 1 = gravity drainage, 0 = no drainage)
+    p_DSLOPE = input_param[1,"DSLOPE"] # (Flow parameter), hillslope angle for downslope matric flow (DSFL), degrees
+    p_GSC    = input_param[1,"GSC"] # (Flow parameter), fraction of groundwater storage (GWAT), that is transferred to groundwater flow (GWFL) and deep seepage (SEEP) each day, d-1
+    p_GSP    = input_param[1,"GSP"] # (Flow parameter), fraction of groundwater discharge produced by GSC that goes to deep seepage (SEEP) and is not added to streamflow (FLOW), dimensionless
+    p_LENGTH = input_param[1,"LENGTH"] # (Flow parameter), slope length for downslope flow (DSFL), m
+    p_QFFC   = input_param[1,"QFFC"] # (Flow parameter), quick flow fraction for SRFL and BYFL at THETAF, dimensionless
+    p_QFPAR  = input_param[1,"QFPAR"] # (Flow parameter), raction of the water content between field capacity (THETAF) and saturation (THSAT) at which the quick flow fraction is 1, dimensionless
 
     # source area parameters SRFPAR()
     p_SWATQX = sum(p_soil.p_SWATMX[1:p_QLAYER]) # maximum water storage for layers 1 through QLAYER, mm
@@ -290,9 +350,10 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
     # 2) Define parameters for differential equation:
     # 2a) Constant parameters
 
-    # p_cst_1 for both RHS and CallBack in DiffEq.jl
-    p_cst_1 = (constant_dt_solver, NLAYER, IMODEL, compute_intermediate_quantities, Reset,
-        p_soil,
+    # p_cst_1 and p_cst_2 for both RHS and CallBack in DiffEq.jl
+    p_cst_1 = p_soil
+    p_cst_2 = (NLAYER, IMODEL, compute_intermediate_quantities, Reset,
+        p_DTP, p_NPINT,
 
         # FOR MSBITERATE:
         p_QLAYER, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC, p_IMPERV,
@@ -302,8 +363,8 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
 
         p_BYPAR)
 
-    # p_cst_2 only for CallBack in DiffEq.jl
-    p_cst_2 = (p_LAT, p_ESLOPE, p_L1, p_L2,
+    # p_cst_3 only for CallBack in DiffEq.jl
+    p_cst_3 = (p_LAT, p_ESLOPE, p_L1, p_L2,
         p_SNODEN, p_MXRTLN, p_MXKPL, p_CS,
         p_Z0S, p_Z0G,
         p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC,
@@ -325,28 +386,26 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
         p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS,
         p_DURATN, p_MAXLQF, p_GRDMLT)
 
-    p_cst = (p_cst_1, p_cst_2)
+    p_cst = (p_cst_1, p_cst_2, p_cst_3)
 
     # 2b) Time varying parameters (e.g. meteorological forcings)
-    p_DOY_inclRef = (t) -> LWFBrook90.p_DOY(t, pfile_meteoveg["input_reference_date"])
-    p_MONTHN_inclRef = (t) -> LWFBrook90.p_MONTHN(t, pfile_meteoveg["input_reference_date"])
-    p_fT = (p_DOY_inclRef,
-            p_MONTHN_inclRef,
-            pfile_meteoveg["p_GLOBRAD"],
-            pfile_meteoveg["p_TMAX"],
-            pfile_meteoveg["p_TMIN"],
-            pfile_meteoveg["p_VAPPRES"],
-            pfile_meteoveg["p_WIND"],
-            pfile_meteoveg["p_PREC"],
-            pfile_meteoveg["p_DTP"],
-            pfile_meteoveg["p_NPINT"],
-            pfile_meteoveg["p_MESFL"],
-            pfile_meteoveg["p_DENSEF"], # canopy density multiplier between 0.05 and 1, dimensionless
-            pfile_meteoveg["p_HEIGHT"],
-            pfile_meteoveg["p_LAI"],
-            pfile_meteoveg["p_SAI"],
-            pfile_meteoveg["p_AGE"],
-            pfile_meteoveg["p_RELDEN"])
+    p_DOY_REF    = (t) -> LWFBrook90.p_DOY(t,    interpolated_meteoveg["REFERENCE_DATE"])
+    p_MONTHN_REF = (t) -> LWFBrook90.p_MONTHN(t, interpolated_meteoveg["REFERENCE_DATE"])
+    p_fT = (p_DOY_REF,
+            p_MONTHN_REF,
+            interpolated_meteoveg["p_GLOBRAD"],
+            interpolated_meteoveg["p_TMAX"],
+            interpolated_meteoveg["p_TMIN"],
+            interpolated_meteoveg["p_VAPPRES"],
+            interpolated_meteoveg["p_WIND"],
+            interpolated_meteoveg["p_PREC"],
+            interpolated_meteoveg["p_MESFL"],
+            interpolated_meteoveg["p_DENSEF"], # canopy density multiplier between 0.05 and 1, dimensionless
+            interpolated_meteoveg["p_HEIGHT"],
+            interpolated_meteoveg["p_LAI"],
+            interpolated_meteoveg["p_SAI"],
+            interpolated_meteoveg["p_AGE"],
+            interpolated_meteoveg["p_RELDEN"])
     # Documentation from ecoshift:
     # DENSEF (Fixed parameter) - canopy density multiplier between 0.05 and 1, dimensionless. DENSEF is normally 1; it should be reduced below this ONLY to simulate thinning of the existing canopy by cutting. It multiplies MAXLAI, CS, MXRTLN, and MXKPL and thus proportionally reduces LAI, SAI, and RTLEN, and increases RPLANT. However it does NOT reduce canopy HEIGHT and thus will give erroneous aerodynamic resistances if it is less than about 0.05. It should NOT be set to 0 to simulate a clearcut. [see PET-CANOPY]
 
@@ -360,4 +419,274 @@ function define_LWFB90_p(NLAYER, IMODEL, constant_dt_solver, NOOUTF, Reset, comp
 
     # 3) Return different types of parameters as a single object
     return (p_cst, p_fT, p_fu)
+end
+
+
+
+
+
+
+"""
+    interpolate_meteoveg(input_meteoveg::DataFrame, input_meteoveg_reference_date::DateTime)
+
+Take climate and vegetation parameters in `input_meteoveg` and generates continuous parameters.
+"""
+function interpolate_meteoveg(
+    input_meteoveg::DataFrame,
+    input_meteoveg_reference_date::DateTime,
+    # root density parameters
+    NLAYER,
+    p_inirdep,
+    p_inirlen,
+    p_rgroper,
+    p_tini,
+    p_frelden)
+
+    # 2) Interpolate input data in time
+    time_range = range(minimum(input_meteoveg.days), maximum(input_meteoveg.days), length=length(input_meteoveg.days))
+
+    # using Plots
+    # time_range = range(minimum(input_meteoveg.days), maximum(input_meteoveg.days), length=length(input_meteoveg.days))
+    # ts = 0:0.01:365
+    # scatter(input_meteoveg.days, input_meteoveg.PRECIN)
+    # plot!(ts, scale(interpolate(input_meteoveg.PRECIN, (BSpline(Constant{Previous}()))), time_range)(ts), label = "PRECIN {Previous}",  xlims=(0,30))
+    # plot!(ts, scale(interpolate(input_meteoveg.PRECIN, (BSpline(Constant{Next}()))),     time_range)(ts), label = "PRECIN {Next}",      xlims=(0,30))
+    # plot!(ts, scale(interpolate(input_meteoveg.PRECIN, (BSpline(Constant()))),           time_range)(ts), label = "PRECIN {Nearest}",   xlims=(0,30))
+    # # plot!(ts, scale(interpolate(input_meteoveg.PRECIN, (BSpline(Linear()))),             time_range)(ts), label = "PRECIN Linear",   xlims=(0,30))
+
+    p_GLOBRAD = extrapolate(scale(interpolate(input_meteoveg.GLOBRAD, (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_TMAX    = extrapolate(scale(interpolate(input_meteoveg.TMAX,    (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_TMIN    = extrapolate(scale(interpolate(input_meteoveg.TMIN,    (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_VAPPRES = extrapolate(scale(interpolate(input_meteoveg.VAPPRES, (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_WIND    = extrapolate(scale(interpolate(input_meteoveg.WIND,    (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_MESFL   = extrapolate(scale(interpolate(input_meteoveg.MESFL,   (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_DENSEF  = extrapolate(scale(interpolate(input_meteoveg.DENSEF,  (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_HEIGHT  = extrapolate(scale(interpolate(input_meteoveg.HEIGHT,  (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_LAI     = extrapolate(scale(interpolate(input_meteoveg.LAI,     (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_SAI     = extrapolate(scale(interpolate(input_meteoveg.SAI,     (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_AGE     = extrapolate(scale(interpolate(input_meteoveg.AGE,     (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_PREC    = extrapolate(scale(interpolate(input_meteoveg.PRECIN,  (BSpline(Constant{Previous}()))), time_range) ,0)
+    # NOTE: PRECIN is already in mm/day from the input data set. No transformation is needed for p_PREC.
+
+    # 2a Compute time dependent root density parameters
+    # Which is a vector quantity that is dependent on time:
+    p_RELDEN_2Darray = fill(NaN, nrow(input_meteoveg), NLAYER)
+    for i in 1:nrow(input_meteoveg)
+        p_RELDEN_2Darray[i,:] = LWFBrook90.WAT.LWFRootGrowth(p_frelden, p_tini, input_meteoveg.AGE[i], p_rgroper, p_inirdep, p_inirlen, NLAYER)
+    end
+    p_RELDEN =  extrapolate(scale(interpolate(p_RELDEN_2Darray, (BSpline(Constant{Previous}()), NoInterp()) ),# 1st dimension: ..., 2nd dimension NoInterp()
+                            time_range, 1:size(p_RELDEN_2Darray,2)),
+                    0) # extrapolate with fillvalue = 0
+
+    return Dict([("p_GLOBRAD",p_GLOBRAD),
+                 ("p_TMAX",p_TMAX),
+                 ("p_TMIN",p_TMIN),
+                 ("p_VAPPRES",p_VAPPRES),
+                 ("p_WIND",p_WIND),
+                 ("p_PREC",p_PREC),
+                 ("p_MESFL",p_MESFL),
+                 ("p_DENSEF",p_DENSEF),
+                 ("p_HEIGHT",p_HEIGHT),
+                 ("p_LAI",p_LAI),
+                 ("p_SAI",p_SAI),
+                 ("p_AGE",p_AGE),
+                 ("p_RELDEN",p_RELDEN),
+                 ("REFERENCE_DATE", input_meteoveg_reference_date)])
+end
+
+"""
+    discretize_soil_params(input_soil_materials,IMODEL, ILAYER, QLAYER, NLAYER)
+
+Define constant parameters from input_pdur. TO BE REDEFINED
+"""
+function discretize_soil_params(
+    input_soil_materials, input_soil_nodes,
+    IMODEL, ILAYER, QLAYER, NLAYER, HEAT, nmat, inirdep, rgrorate)
+    # Parse soil parameter according to material at different depth given by
+    # arguments:
+    # input_soil_materials: A matrix of the 8 soil materials parameters.
+    #                 When imodel = 1 (Mualem-van Genuchten), these refer to:
+    #                       mat, ths, thr, alpha (m-1), npar, ksat (mm d-1), tort (-), stonef (-).
+    #                 When imodel = 0 (Clapp-Hornberger):
+    #                       mat, thsat, thetaf, psif (kPa), bexp, kf (mm d-1), wetinf (-), stonef (-).
+
+
+    #if (NLAYER > ML) || (ILAYER > NLAYER) || (QLAYER > NLAYER)
+    if (ILAYER > NLAYER) || (QLAYER > NLAYER)
+        error("Failure of QLAYER and ILAYER < NLAYER < ML")
+    end
+
+    # Parse the parameters for each material depending on wheter we use iModel ==1 or ==2
+    ParMat    = fill(NaN, (nmat, 10))
+    StonefMat = fill(NaN, (nmat, 1))
+    for i = 1:nmat
+        if IMODEL == 0
+        # Clapp-Hornberger
+        #             input_soil_materials[i,1]  # mat
+        ParMat[i,1] = input_soil_materials[i,2]  # θs
+        ParMat[i,2] = input_soil_materials[i,3]  # θf
+        ParMat[i,4] = input_soil_materials[i,4]  # ψf (kPa)
+        ParMat[i,9] = input_soil_materials[i,5]  # bexp (-)
+        ParMat[i,3] = input_soil_materials[i,6]  # kf (mm d-1)
+        ParMat[i,10] = input_soil_materials[i,7] # wetinf (-)
+        StonefMat[i,1] = input_soil_materials[i,8] # stonef (-)
+        ParMat[i,5] = 0.
+        ParMat[i,6] = 0.
+        ParMat[i,7] = 0.
+        ParMat[i,8] = 0.
+        # ParMat[i,CH]> (θs, θf, kf, ψf, 0, 0, 0, 0, bexp, wetinf)
+        end
+
+        if IMODEL == 1
+            # Mualem-van Genuchten
+            #             input_soil_materials[i,1]  # mat
+            ParMat[i,1] = input_soil_materials[i,2]  # θs
+            ParMat[i,10] = input_soil_materials[i,3] # θr
+            ParMat[i,7] = input_soil_materials[i,4]  # α (m-1)
+            ParMat[i,8] = input_soil_materials[i,5]  # npar
+            ParMat[i,6] = input_soil_materials[i,6]  # ksat (mm d-1)
+            ParMat[i,9] = input_soil_materials[i,7]  # tort (-)
+            StonefMat[i,1] = input_soil_materials[i,8] # stonef (-)
+            ParMat[i,2] = 0.
+            ParMat[i,4] = 0.
+            ParMat[i,5] = 0.
+            # ..it's a sin......
+            # Hard default [mm d-1] for saturated hydraulic conductivity at field capacity
+            ParMat[i,3] = 2            # K(θ_fc) = 2 (mm d-1)
+            # ParMat_MvG ==> (θs,  0, K(θ_fc), 0, 0, ksat, α, npar, tort, θr)
+        end
+        # ParMat_CH  ==> (θs, θf, kf,     ψf, 0, 0,    0,    0, bexp, wetinf)
+        # ParMat_MvG ==> (θs,  0, K(θ_fc), 0, 0, ksat, α, npar, tort, θr)
+    end
+    dep       = fill(NaN, NLAYER) # soil depth [m]  #TODO(bernhard): not exported
+    THICK     = fill(NaN, NLAYER)
+    mat       = fill(0, NLAYER)   # material_id for each soil layer #TODO(bernhard): not exported
+    PSIM_init = fill(NaN, NLAYER)
+    frelden   = fill(NaN, NLAYER)
+    for i = 1:NLAYER
+        if HEAT == 1
+            dep[i]       = input_soil_nodes[i,2]
+            THICK[i]     = input_soil_nodes[i,3]
+            mat[i]       = Int( input_soil_nodes[i,4] )
+            PSIM_init[i] = input_soil_nodes[i,5]
+            frelden[i]   = input_soil_nodes[i,6]
+            # TemperatureNew(i)       = input_soil_nodes[i,7] we don't have it in the input file!!!
+            if i > NLAYER
+                MUE[i] = THICK[i] / ( THICK[i] + THICK(I+1) )
+                ZL[i]  = 0.5 * ( THICK[i] + THICK(I+1) )
+            else
+                MUE[i] = 0.5
+                ZL[i]  = THICK[i]
+            end
+            TMean[i]   = 0.
+        else
+            dep[i]       = input_soil_nodes[i,2]
+            THICK[i]     = input_soil_nodes[i,3]
+            mat[i]       = Int( input_soil_nodes[i,4] )
+            PSIM_init[i] = input_soil_nodes[i,5]
+            frelden[i]   = input_soil_nodes[i,6]
+        end
+    end
+    depmax = dep[1] - THICK[1] / 1000.
+
+    #..from material-specific to layer-specific parameter values
+    PAR    = fill(NaN, (NLAYER, 10)) # MPAR=10
+    STONEF = fill(NaN, (NLAYER))
+    for i = 1:NLAYER
+        for j = 1:10 # MPAR=10
+            PAR[i,j] = ParMat[mat[i], j]
+            # PAR_CH  ==> (θs, θf, kf,     ψf, 0, 0,    0,    0, bexp, wetinf)
+            # PAR_MvG ==> (θs,  0, K(θ_fc), 0, 0, ksat, α, npar, tort, θr)
+        end
+        STONEF[i] = StonefMat[ mat[i] ]
+    end
+    if IMODEL == 0
+        # Clapp-Hornberger
+        PAR = DataFrame(PAR, ["θs","θf","kf","ψf","dummy1","dummy2","dummy3","dummy4","bexp","wetinf"])
+    elseif IMODEL == 1
+        # Mualem-van Genuchten
+        PAR = DataFrame(PAR, ["θs","dummy1","K(θ_fc)","dummy2","dummy3","Ksat","α","n","tort","θr"])
+    end
+
+    # find thickness of maximum root zone
+    # frelden: relative values of final root density per unit volume
+    i1 = findfirst(frelden .> 1.e-6) # first layer where frelden[i] is >=1.e-6
+    i2 = findlast(frelden .> 1.e-6)  # last layer (in 1:NLAYER) where frelden[i] is >=1.e-6
+    if !isnothing(i1) && isnothing(i2)
+        i2 = NLAYER
+    end
+
+    tini = fill(NaN, NLAYER)
+    for i = 1:NLAYER
+        tini[i] = 1.e+20 # initial time for root growth in layer
+        if i >= i1 && i <= i2
+            frelden[i] = max( frelden[i], 1.01e-6)
+        end
+        if frelden[i] >= 1.e-6 && (depmax-dep[i]) <= inirdep
+            tini[i] = 0.
+        end
+        if frelden[i] >= 1.e-6 && (depmax-dep[i]) > inirdep
+            if rgrorate > 0
+                tini[i] = (depmax-dep[i]-inirdep)/rgrorate
+            end
+        end
+        # write(*,*)'dep= ',dep[i],' tini= ',tini[i]
+    end
+
+
+    # heat flow -------
+    # we assign some so compilation does not complain
+    TopInfT = 1
+    #       if (HEAT == 1)
+    #        READ (12,*) Comment
+    #        READ (12,*) tTop, Comment
+    #        tTop=tTop
+    #        READ (12,*) tBot, Comment
+    #        tBot=tBot
+    #        READ (12,*) TopInfT, Comment
+    #        READ (12,*) BotInfT, Comment
+    #        READ (12,*) kTopT, Comment
+    #        READ (12,*) kBotT, Comment
+    #        DO 207 I = 1, 7
+    #         READ (12,*) Comment
+    # 207    CONTINUE
+    #        DO 208 I = 1, nmat
+    #         READ (12,*) ilay, SV[i], OV[i], HB1[i], HB2[i], HB3[i]
+    #         TPar[1,I) = SV[i]
+    #         TPar[2,I) = OV[i]
+    #         TPar[3,I) = THDis
+    # C        thermal conductivities -- transfer from [J m-1 s-1 K-1] to  [J mm-1 d-1 K-1]
+    #         TPar[4,I) = HB1[i] * 86.400
+    #         TPar[5,I) = HB2[i] * 86.400
+    #         TPar[6,I) = HB3[i] * 86.400
+    # C         volumetric heat capacities for solid, water and organic -- transfer from [MJ m-2 mm-1 K-1] to [J mm-3 K-1]
+    #         TPar[7,I) = p_CVSOL   # To define in module_CONSTANTS.jl: p_CVSOL = ?  # CVSOL  - volumetric heat capacity of solid (MJ m-2 mm-1 K-1)
+    #         TPar[8,I) = p_CVORG   # To define in module_CONSTANTS.jl: p_CVORG = ?  # volumetric heat capacity of organic material (MJ m-2 mm-1 K-1) (hillel98)
+    #         TPar[9,I) = LWFBrook90.CONSTANTS.p_CVLQ
+    # 208    CONTINUE
+    #        READ (12,*) C
+    #       end
+
+    ### # from LWFBrook90R:md_brook90.f95 (lines 105)
+    TPar = fill(NaN, (nmat, 10))
+    TPar .= -1
+    HeatCapOld = fill(NaN, NLAYER)
+    for i = 1:NLAYER
+        HeatCapOld[i] = TPar[mat[i],7] * TPar[mat[i],1] + TPar[mat[i],8]
+                    # TPar[2,mat[i])+TPar[9,mat[i])*SWATI[i]/THICK[i]
+    end
+    ###
+
+
+
+    return Dict([
+                ("THICK",THICK),
+                ("PSIM_init",PSIM_init),
+                ("frelden",frelden),
+                ("PAR",PAR),
+                ("STONEF",STONEF),
+                ("tini",tini),
+                #
+                ("HeatCapOld",HeatCapOld),
+                ("TopInfT", TopInfT)])
 end
