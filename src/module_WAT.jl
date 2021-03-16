@@ -180,6 +180,7 @@ step.
 function BYFLFR(NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_soil)
     # TODO(bernhard): could be optimized by not allocating each time new memory (versus in-place)
     p_fu_BYFRAC = fill(NaN, NLAYER)
+    # TODO(bernhard): put check outside of for loop
     for i = 1:NLAYER
         if (isone(p_BYPAR))
             ####

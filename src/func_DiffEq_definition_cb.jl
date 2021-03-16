@@ -73,6 +73,8 @@ function define_LWFB90_cb()
         u_SNOWLQ   = integrator.u[6]
         u_SWATI    = integrator.u[7:(7+NLAYER-1)]
 
+        LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMX, integrator.t)
+
         # Derive (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) from u_SWATI
         (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
             LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil)

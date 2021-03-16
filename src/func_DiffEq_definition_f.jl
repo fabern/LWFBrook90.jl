@@ -59,6 +59,8 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         #u_SNOWLQ   = u[6]
         u_SWATI    = u[7:(7+NLAYER-1)]
 
+        LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMX, t)
+
         (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
             LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil)
 
