@@ -38,20 +38,29 @@ Further model description can be found in the [documentation](https://fabern.git
 ## Acknowledgements
 Development of LWFBrook90.jl builds on the following works:
 - BROOK90 (v4.8) by C. Anthony Federer, Licensed under CC0 1.0, http://www.ecoshift.net/brook/brook90.htm
-- LWFBrook90R (v0.4.3) by Paul Schmidt-Walter, Volodymyr Trotsiuk, Klaus Hammel, Martin Kennel, Anthony Federer, Robert Nuske, Licensed under GPL-3.0
+- LWFBrook90R (v0.4.3) by Paul Schmidt-Walter, Volodymyr Trotsiuk, Klaus Hammel, Martin Kennel, Anthony Federer, Robert Nuske, Licensed under GPL-3.0, https://github.com/pschmidtwalter/LWFBrook90R
 
-Furthermore, Matthias Häni, Katrin Meusburger, Peter Waldner, Lorenz Walthert, Stephan Zimmermann of [WSL](http://www.wsl.ch) and its Long-term Forest Ecosystem Research (LWF) project gratefully acknowledged for providing example data files located in `example/BEA2016*`.
+Matthias Häni, Katrin Meusburger, Peter Waldner, Lorenz Walthert, Stephan Zimmermann of [WSL](http://www.wsl.ch) and its Long-term Forest Ecosystem Research (LWF) project gratefully acknowledged for providing example data files located in `example/BEA2016*`.
 
 LWFBrook90.jl is licensed under GPL-3.0 (for details see the file `LICENSE`).
 
+### References
+Federer, C. A., Vörösmarty, C., & Fekete, B. (2003). Sensitivity of Annual Evaporation to Soil and Root Properties in Two Models of Contrasting Complexity. *Journal of Hydrometeorology*, 4(6), 1276–1290. https://doi.org/10.1175/1525-7541(2003)004<1276:SOAETS>2.0.CO;2
 
+Federer, C. A. (2002). BROOK 90: A simulation model output for evaporation, soil water, and streamflow. http://www.ecoshift.net/brook/brook90.htm
+
+Hammel, K., & Kennel, M. (2001). Charakterisierung und Analyse der Wasserverfügbarkeit und des Wasserhaushalts von Waldstandorten in Bayern mit dem Simulationsmodell BROOK90 (No. 185; *Forstliche Forschungsberichte München*, p. 135). Technische Uni München Wissenschaftszentrum Weihenstephan. ISBN 3-933506-16-6
+
+Schmidt-Walter, P., Trotsiuk, V., Meusburger, K., Zacios, M., & Meesenburg, H. (2020). Advancing simulations of water fluxes, soil moisture and drought stress by using the LWF-Brook90 hydrological model in R. *Agricultural and Forest Meteorology*, 291, 108023. https://doi.org/10.1016/j.agrformet.2020.108023
 
 ## For Users: getting started
+To get started with Julia: see the section [Installation](https://fabern.github.io/LWFBrook90.jl/stable/user-guide/#Installation) in the documentation.
+
 An example data set `BEA2016*` was generated using the R package LWFBrook90R and is located in the folder `example/`. See outputs in the next section.
 
 To run this example simulation simply call `LWFBrook90.run_example()`. Note, that the first time might take some time to load and compile the package. Another possibility is to follow the script `main.jl`, which sets up a simulation and shows some simple plotting commands. See documentation section [Example](https://fabern.github.io/LWFBrook90.jl/stable/example/).
 
-Further documentation of LWFBrook90.jl and BROOK90 are available [here](https://fabern.github.io/LWFBrook90.jl/stable) and [here](http://www.ecoshift.net/brook/b90doc.html).
+Further documentation for LWFBrook90.jl is available [here](https://fabern.github.io/LWFBrook90.jl/stable) and for BROOK90 [here](http://www.ecoshift.net/brook/b90doc.html).
 
 ### Example data set:
 Following plots illustrate results of the provided data set. The scalar state variables and depth-depenedent (vector) state variables can be plotted:

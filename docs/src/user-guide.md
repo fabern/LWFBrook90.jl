@@ -5,13 +5,14 @@
 ## Installation and usage
 
 ### Installation
-First, download and install Julia: [https://julialang.org/downloads/](https://julialang.org/downloads/). If you like you can also install [julia-vscode.org](https://www.julia-vscode.org) to get a complete IDE. Installation instructions for the VS Code Julia Extension are a bit hidden in their documentation. They can be found here: [https://www.julia-vscode.org/docs/dev/gettingstarted/#Installation-and-Configuration-1](https://www.julia-vscode.org/docs/dev/gettingstarted/#Installation-and-Configuration-1).
+First, download and install Julia: [https://julialang.org/downloads/](https://julialang.org/downloads/). If you like you can also install [julia-vscode.org](https://www.julia-vscode.org) to get a complete IDE. Both these steps are nicely summarized by https://techytok.com/julia-vscode/. ALternatively, you can also follow the official documentation of the VS Code Julia: [https://www.julia-vscode.org/docs/dev/gettingstarted/#Installation-and-Configuration-1](https://www.julia-vscode.org/docs/dev/gettingstarted/#Installation-and-Configuration-1).
 
 To install LWFBrook90.jl open a Julia REPL, enter the Pkg REPL by pressing `]` and add the package:
 ```
 (@v1.5) pkg> add LWFBrook90
+(@v1.5) pkg> status
 ```
-Dependencies of LWFBrookJulia.jl should automatically be installed.
+Dependencies of LWFBrookJulia.jl should automatically be installed. After that hit `Ctrl-C` to quit the Pkg REPL and return to the default Julia REPL.
 
 ### Usage
 Check out a step-by-step in guide for a simulation in section [Example](@ref)
