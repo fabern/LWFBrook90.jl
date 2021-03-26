@@ -41,7 +41,7 @@ Matthias Häni, Katrin Meusburger, Peter Waldner, Lorenz Walthert, Stephan Zimme
 
 
 ## References
-Federer, C. A., Vörösmarty, C., & Fekete, B. (2003). Sensitivity of Annual Evaporation to Soil and Root Properties in Two Models of Contrasting Complexity. *Journal of Hydrometeorology*, 4(6), 1276–1290. https://doi.org/10.1175/1525-7541(2003)004<1276:SOAETS>2.0.CO;2
+Federer, C. A., Vörösmarty, C., & Fekete, B. (2003). Sensitivity of Annual Evaporation to Soil and Root Properties in Two Models of Contrasting Complexity. *Journal of Hydrometeorology*, 4(6), 1276–1290. [https://doi.org/10.1175/1525-7541(2003)004<1276:SOAETS>2.0.CO;2](https://doi.org/10.1175/1525-7541(2003)004<1276:SOAETS>2.0.CO;2)
 
 Federer, C. A. (2002). BROOK 90: A simulation model output for evaporation, soil water, and streamflow. http://www.ecoshift.net/brook/brook90.htm
 
