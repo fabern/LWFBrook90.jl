@@ -37,7 +37,6 @@ Pages   = ["func_DiffEq_definition_u0.jl",
 ## Functions from the different modules defining LWF-BROOK90
 ```@autodocs
 Modules = [LWFBrook90.CONSTANTS,
-           LWFBrook90.GLBLDECL,
            LWFBrook90.KPT,
            LWFBrook90.WAT,
            LWFBrook90.SUN,
@@ -46,7 +45,6 @@ Modules = [LWFBrook90.CONSTANTS,
            LWFBrook90.EVP
            ]
 Pages   = ["module_CONSTANTS.jl",
-           "module_GLBLDECL.jl",
            "module_KPT.jl",
            "module_WAT.jl",
            "module_SUN.jl",

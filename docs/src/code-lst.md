@@ -8,7 +8,6 @@ LWFBrook90.jl is organised in different modules. They are documented below:
 ```@autodocs
 Modules = [LWFBrook90,
            LWFBrook90.CONSTANTS,
-           LWFBrook90.GLBLDECL,
            LWFBrook90.KPT,
            LWFBrook90.WAT,
            LWFBrook90.SUN,

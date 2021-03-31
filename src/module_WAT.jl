@@ -596,9 +596,14 @@ function ITER(NLAYER, IMODEL, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSITI, u_aux_
         end
     else # elseif (IMODEL == 1)
         for i = 1:NLAYER
-            A[i]    = du_NTFLI[i]/p_soil.p_THICK[i] * DPSIDW[i] / (p_soil.p_THSAT[i] - p_soil.p_θr[i])
-            # TODO(bernhard): is ther no STONEF in IMODEL==1. Bug?
-            temp[i] = u_aux_PSITI[i] + A[i] * DTI
+            # A[i]    = du_NTFLI[i]/p_soil.p_THICK[i] * DPSIDW[i] / (p_soil.p_THSAT[i] - p_soil.p_θr[i])
+            # # TODO(bernhard): is there no STONEF in IMODEL==1. Bug?
+            # #                 2021-03-24: yes, this seems like a bug. But it doesn't seem
+            # #                             to be used anywhere further down.
+            # temp[i] = u_aux_PSITI[i] + A[i] * DTI
+
+            # NOTE Bernhard: deactivated computation of A and temp as they are unused anyway
+            #                if IMODEL==1
         end
     end
 
