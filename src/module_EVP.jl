@@ -73,7 +73,7 @@ is determined in subroutine CANOPY.
 
 Fig. EVP-1. Resistances and potentials in the liquid flow path for transpiration, for 3
 layers with roots. ψ is the leaf potential, ψx is potential at gorund level, and ψti are
-total soil water potentials. rs is xylem resistance, rri are root resistances, and rsi are
+total soil water potentials. rₓ is xylem resistance, rᵣᵢ are root resistances, and rₛᵢ are
 rhizosphere resistances.
 
 Figure EVP-1 shows the resistance network used in BROOK90. Each soil layer is considered to
@@ -141,7 +141,7 @@ absorbing roots per unit ground area in m/m2. Lr and R1 only affect rhizosphere 
 and thus are only important for dry soil or when Lr is small.
 "
 """
-function PLNTRES(NLAYER, p_soil, p_fu_RTLEN, p_fT_RELDEN, p_RTRAD, p_fu_RPLANT, p_FXYLEM, p_PI, p_RHOWG) # TODO(bernhard) find out how to import p_PI and p_RHOWG from the moduel CONSTANTS
+function PLNTRES(NLAYER, p_soil, p_RTLEN, p_fT_RELDEN, p_RTRAD, p_RPLANT, p_FXYLEM, p_PI, p_RHOWG) # TODO(bernhard) find out how to import p_PI and p_RHOWG from the moduel CONSTANTS
     p_THICK = p_soil.p_THICK
     p_STONEF = p_soil.p_STONEF
     # compute stone-free layer thickness D
@@ -154,20 +154,20 @@ function PLNTRES(NLAYER, p_soil, p_fu_RTLEN, p_fT_RELDEN, p_RTRAD, p_fu_RPLANT, 
     RTFRAC = p_fT_RELDEN[1:NLAYER].*D[1:NLAYER] ./ sum(p_fT_RELDEN[1:NLAYER].*D[1:NLAYER])
 
     # compute xylem resistance, MPa d/mm
-    RXYLEM = p_FXYLEM * p_fu_RPLANT
+    RXYLEM = p_FXYLEM * p_RPLANT
     # compute RROOTI and ALPHA
     RROOTI = zeros(NLAYER)
     ALPHA  = zeros(NLAYER)
     for i = 1:NLAYER
-        if (p_fT_RELDEN[i] < 0.00001 || p_fu_RTLEN < 0.1)
+        if (p_fT_RELDEN[i] < 0.00001 || p_RTLEN < 0.1)
             # no roots in layer
             RROOTI[i] = 1E+20
             ALPHA[i]  = 1E+20
         else
             # root resistance for layer
-            RROOTI[i] = (p_fu_RPLANT - RXYLEM) / RTFRAC[i]
+            RROOTI[i] = (p_RPLANT - RXYLEM) / RTFRAC[i]
             # rhizosphere resistance for layer
-            RTDENI = RTFRAC[i] * 0.001 * p_fu_RTLEN / D[i] # .001 is (mm/mm2)/(m/m2) conversion
+            RTDENI = RTFRAC[i] * 0.001 * p_RTLEN / D[i] # .001 is (mm/mm2)/(m/m2) conversion
             DELT = p_PI * p_RTRAD ^ 2 * RTDENI
             ALPHA[i] = (1 / (8 * p_PI * RTDENI)) * (DELT - 3 - 2 * (log(DELT)) / (1 - DELT))
             ALPHA[i] = ALPHA[i] * 0.001 * p_RHOWG / D[i] # .001 is MPa/kPa conversion
@@ -285,11 +285,11 @@ eliminated and new values of rt , ψt , T, and Ti are obtained. If any Ti are st
 the elimination process is repeated. This elimination procedure causes transpiration from a
 layer to cease when its potential is still greater than PSICR.
 """
-function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fu_ALPHA, p_fu_KK, p_fu_RROOTI, p_fu_RXYLEM, u_aux_PSITI, NLAYER, p_PSICR, NOOUTF)
+function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, NLAYER, p_PSICR, NOOUTF)
 
     FLAG = zeros(NLAYER)
     for i = 1:NLAYER
-        if p_fu_RROOTI[i] > 1E+15
+        if p_fT_RROOTI[i] > 1E+15
             # This layer has no roots
             FLAG[i] = 1
         elseif (NOOUTF && u_aux_PSITI[i] / 1000. <= p_PSICR)
@@ -314,7 +314,7 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fu_ALPHA, p_fu_KK, p_fu_RROOTI, p_f
         SUM = 0
         for i = 1:NLAYER
             if (FLAG[i] == 0)
-                RI[i] = p_fu_RROOTI[i] + p_fu_ALPHA[i] / p_fu_KK[i]
+                RI[i] = p_fT_RROOTI[i] + p_fT_ALPHA[i] / p_fu_KK[i]
                 SUM = SUM + 1.0 / RI[i]
             else
                 ATRANI[i] = 0.0
@@ -339,7 +339,7 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fu_ALPHA, p_fu_KK, p_fu_RROOTI, p_f
         end
 
         # soil water supply rate, assumed constant over day
-        SUPPLY = (PSIT / 1000 - p_PSICR - p_RHOWG * p_fu_DISPC) / (RT + p_fu_RXYLEM)
+        SUPPLY = (PSIT / 1000 - p_PSICR - p_RHOWG * p_fu_DISPC) / (RT + p_fT_RXYLEM)
         # transpiration rate limited by either PTR or SUPPLY
 
         if J == 1

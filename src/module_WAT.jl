@@ -574,8 +574,23 @@ function ITER(NLAYER, IMODEL, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSITI, u_aux_
     # first approximation to new total potential
     if (IMODEL == 0)
         for i = 1:NLAYER
+            # A is dψ/dt
+            # du_NTFLI (mm/d)
+            # p_THICK (mm)
+            # DPSIDW (kPa/mm)
+            # p_THSAT (θ at saturation == matrix porosity (-))
+            # p_STONEF ()
+            # p_SWATMX (mm) = p_THICK .* p_THSAT .* (1.0 .- p_STONEF)
+
+            # TODO: bernhard collect definitions of:
+            # WETNES = SWATI/SWATMX
+            # θ  = f2(WETNES)
+            # ψM = f1(WETNES)
+            # ψT = ψM + ψG
+
             # A[i]    = du_NTFLI[i] * DPSIDW[i] / p_SWATMX[i]
-            # NOTE(bernhard): as p_SWATMX[i] = p_soil.p_THICK[i] * p_soil.p_THSAT[i] * (1 - p_soil.p_STONEF[i])
+            # NOTE(bernhard): using p_SWATMX[i] = p_soil.p_THICK[i] * p_soil.p_THSAT[i] * (1 - p_soil.p_STONEF[i])
+            #                 above expression can be extended to:
             A[i]    = du_NTFLI[i]/p_soil.p_THICK[i] * DPSIDW[i] / (p_soil.p_THSAT[i] -     0. )/ (1 - p_soil.p_STONEF[i])
             temp[i] = u_aux_PSITI[i] + A[i] * DTI
         end

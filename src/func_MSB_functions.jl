@@ -41,7 +41,7 @@ function MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
     p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY = LWFBrook90.SUN.SUNDS(p_LAT, p_ESLOPE, DOY, p_L1, p_L2, LWFBrook90.CONSTANTS.p_SC, LWFBrook90.CONSTANTS.p_PI, LWFBrook90.CONSTANTS.p_WTOMJ)
 
     # canopy parameters depending on DOY as well as different state depending parameters
-    p_fu_HEIGHTeff, p_fu_LAIeff, p_fT_SAIeff, p_fu_RTLEN, p_fu_RPLANT =
+    p_fu_HEIGHTeff, p_fu_LAIeff, p_fT_SAIeff, p_RTLEN, p_RPLANT =
         LWFBrook90.PET.LWFBrook90_CANOPY(p_fT_HEIGHT,
                           p_fT_LAI,  # leaf area index, m2/m2, minimum of 0.00001
                           p_fT_SAI,  # stem area index, m2/m2
@@ -62,7 +62,7 @@ function MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
                                       p_CZS, p_CZR, p_HS, p_HR, p_LPC, p_CS, p_fu_Z0GS)
 
     # plant resistance components
-    p_fu_RXYLEM, p_fu_RROOTI, p_fu_ALPHA = LWFBrook90.EVP.PLNTRES(NLAYER, p_soil, p_fu_RTLEN, p_fT_RELDEN, p_RTRAD, p_fu_RPLANT, p_FXYLEM, LWFBrook90.CONSTANTS.p_PI, LWFBrook90.CONSTANTS.p_RHOWG)
+    p_fT_RXYLEM, p_fT_RROOTI, p_fT_ALPHA = LWFBrook90.EVP.PLNTRES(NLAYER, p_soil, p_RTLEN, p_fT_RELDEN, p_RTRAD, p_RPLANT, p_FXYLEM, LWFBrook90.CONSTANTS.p_PI, LWFBrook90.CONSTANTS.p_RHOWG)
 
     # calculated weather data
     p_fu_SHEAT = 0
@@ -95,9 +95,9 @@ function MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
     p_fu_SNOEN = LWFBrook90.SNO.SNOENRGY(p_fu_TSNOW, p_fu_TA, p_fT_DAYLEN, p_CCFAC, p_MELFAC, p_fT_SLFDAY, p_fu_LAIeff, p_fT_SAIeff, p_LAIMLT, p_SAIMLT)
 
     return (p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY,
-            p_fu_HEIGHTeff, p_fu_LAIeff, p_fT_SAIeff, p_fu_RTLEN, p_fu_RPLANT,
+            p_fu_HEIGHTeff, p_fu_LAIeff, p_fT_SAIeff, p_RTLEN, p_RPLANT,
             p_fu_Z0GS, p_fu_Z0C, p_fu_DISPC, p_fu_Z0, p_fu_DISP, p_fu_ZA,
-            p_fu_RXYLEM, p_fu_RROOTI, p_fu_ALPHA,
+            p_fT_RXYLEM, p_fT_RROOTI, p_fT_ALPHA,
             p_fu_SHEAT,
             p_fu_SOLRADC, p_fu_TA, p_fu_TADTM, p_fu_TANTM, p_fu_UADTM, p_fu_UANTM,
             p_fT_SNOFRC,
@@ -120,7 +120,7 @@ function MSBDAYNIGHT(IDAY, #TODO(bernhard) just for debug... remove again!
                      # for SWPE:
                      p_fu_RSS,
                      # for TBYLAYER:
-                     p_fu_ALPHA, p_fu_KK, p_fu_RROOTI, p_fu_RXYLEM, u_aux_PSITI, NLAYER, p_PSICR, NOOUTF)
+                     p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, NLAYER, p_PSICR, NOOUTF)
     # MSBDAYNIGHT() computes the five components of evaporation:
     # - aux_du_ISVP: evaporation of intercepted snow
     # - aux_du_IRVP: evaporation of intercepted rain
@@ -194,7 +194,7 @@ function MSBDAYNIGHT(IDAY, #TODO(bernhard) just for debug... remove again!
         end
         # actual transpiration and ground evaporation rates
         if (p_fu_PTR[J] > 0.001)
-            ATR[J], ATRANI = LWFBrook90.EVP.TBYLAYER(J, p_fu_PTR[J], p_fu_DISPC, p_fu_ALPHA, p_fu_KK, p_fu_RROOTI, p_fu_RXYLEM, u_aux_PSITI, NLAYER, p_PSICR, NOOUTF)
+            ATR[J], ATRANI = LWFBrook90.EVP.TBYLAYER(J, p_fu_PTR[J], p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, NLAYER, p_PSICR, NOOUTF)
             for i = 1:NLAYER
                 p_fu_ATRI[J,i] = ATRANI[i]
             end

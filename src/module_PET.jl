@@ -176,12 +176,12 @@ Subroutine CANOPY calculates plant "parameters" that can vary with day of the ye
 
 The height of the canopy above any snowpack, h (HEIGHT), is
 
-HEIGHT = RELHIT * MAXHT - SNODEP
+HEIGHT = RELHIT * MAXHT - p_fu_SNODEP
 
 where MAXHT is the maximum height for the year, which is an input parameter, and RELHIT is
 the relative height for the day of the year (doy), as obtained with function INTERP from the
 RELHT parameter array. HEIGHT is not allowed to be less than 0.01 m, which gives an
-appropriate roughness parameter for "smooth" surfaces. The snowpack depth (SNODEP, m) is the
+appropriate roughness parameter for "smooth" surfaces. The snowpack depth (p_fu_SNODEP, m) is the
 snow water content (SNOW, mm) divided by 1000 times snow density (SNODEN), which is assumed
 constant. Although snow density can actually vary from 0.05 to 0.5, the constant value is
 good enough to account for burying of the canopy in BROOK90. The RATIO of uncovered HEIGHT
@@ -240,29 +240,33 @@ function LWFBrook90_CANOPY(p_fT_HEIGHT,
     #  m   m   m     -------------- -                -
     #  \B  |  /b                    |                |
     #   \B | /b                     |                |
-    #    \B|/B          CANOPY      | HSNO           |
-    #      |                        |                | HNOSNO (at least 0.01)
+    #    \B|/B          CANOPY      | p_fu_HSNO           |
+    #      |                        |                | p_fT_HNOSNO (at least 0.01)
     #------|----------------------- -                |
-    #      |             SNOW       | SNODEP         |
+    #      |             SNOW       | p_fu_SNODEP         |
     #------|----------------------- -                -
     #     /|\            SOIL
     #   / /|\\           ...
 
-    SNODEP      = 0.001 * u_SNOW / p_SNODEN   # snow depth (u_SNOW in mm) (SNODEP in m)
-    HNOSNO      = max(p_fT_HEIGHT, 0.01)      # height of canopy above soil (i.e. without snow)
-    HSNO        = max(HNOSNO - SNODEP, 0)     # height of canopy above snow
-    RATIO       = HSNO / HNOSNO               # fraction of canopy above snow
-    p_fu_HEIGHTeff = max(HSNO,0.01)           # effective canopy height, i.e. above any snow, m, minimum of 0.01 m
+    # Parameters depenedent on snow depth:
+    p_fu_SNODEP = 0.001 * u_SNOW / p_SNODEN   # snow depth (u_SNOW in mm) (p_fu_SNODEP in m)
+    p_fT_HNOSNO = max(p_fT_HEIGHT, 0.01)      # height of canopy above soil (i.e. without snow)
+    p_fu_HSNO   = max(p_fT_HNOSNO - p_fu_SNODEP, 0) # height of canopy above snow
+    p_fu_RATIO  = p_fu_HSNO / p_fT_HNOSNO           # fraction of canopy above snow
+    p_fu_HEIGHTeff = max(p_fu_HSNO,0.01)           # effective canopy height, i.e. above any snow, m, minimum of 0.01 m
 
-    p_fu_LAIeff = max(RATIO*p_DENSEF*p_fT_LAI,   # effective leaf area index, m2/m2, minimum of 0.00001
+    p_fu_LAIeff = max(p_fu_RATIO*p_DENSEF*p_fT_LAI, # effective leaf area index, m2/m2, minimum of 0.00001
                       0.00001)
+
+    # Parameters independent of snow depth or other state variables:
     p_fT_SAIeff = p_DENSEF*p_fT_SAI              # effective stem area index, m2/m2 (NOTE: not dependent on state u_SNOW)
 
-    p_fu_RTLEN  = p_DENSEF*p_MXRTLN           # root length per unit land area, m/m2
-    KPL         = max(p_DENSEF*p_MXKPL, 1E-8) # plant conductivity, mm d-1 MPa-1
-    p_fu_RPLANT = 1 / KPL                     # plant resistivity to water flow, MPa d/mm
+    p_RTLEN  =     p_DENSEF*p_MXRTLN       # root length per unit land area, m/m2
+    KPL      = max(p_DENSEF*p_MXKPL, 1E-8) # plant conductivity, mm d-1 MPa-1
+    p_RPLANT = 1 / KPL                     # plant resistivity to water flow, MPa d/mm
 
-    return (p_fu_HEIGHTeff, p_fu_LAIeff, p_fT_SAIeff, p_fu_RTLEN, p_fu_RPLANT)
+    return (p_fu_HEIGHTeff, p_fu_LAIeff,
+            p_fT_SAIeff, p_RTLEN, p_RPLANT)
 end
 
 """
