@@ -14,14 +14,14 @@ OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
 
 [compat]
-julia = "1"
 CSV = "0.8"
-DataFrames = "0.22"
+DataFrames = "0.22, 1.1"
 DataFramesMeta = "0.6"
 DiffEqCallbacks = "2"
 Interpolations = "0.13"
 OrdinaryDiffEq = "5"
 Roots = "1"
+julia = "1"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
