@@ -132,30 +132,6 @@ may make the top layer water content go negative, which crashes the model. These
 changes may increase SLVP a lot, and will reduce PTRAN and ISVP a little, but will not
 change ISVP and SNVP. An estimate of PEs can then be obtained as: PEs = PTRAN + SLVP + IRVP
 + ISVP + SNVP.
-
-Function PM - Penman-Monteith equation
-
-The Penman-Monteith equation is
-```math
-L_v ρ_w E = \frac{Δ(Rn - S) + c_p ρ D_a / r_a}{Δ + γ + γ(r_c/r_a)}
-```
-
-where E is the evaporation rate in volume of water per unit land area per unit time, Lv is
-the latent heat of vaporization for water, ρw is the density of water, Δ is the rate of
-change of vapor pressure with temperature, Rn is the net radiation above the surface, S is
-the subsurface heat flux, cp is the heat capacity of air, ρr is the density of air, Da is
-the vapor pressure deficit in the air, γ is the psychrometer constant, rc is the "canopy
-resistance", and ra is the aerodynamic resistance between the canopy and a reference height
-za at which Da is measured. The vapor pressure deficit, Da, is ea* - ea. The equation
-assumes that the vapor pressure at the effective evaporating surface, e0, is the saturated
-vapor pressure at the surface temperature. Then rc and ra are the two "resistances" through
-which water vapor passes as it moves down the vapor pressure gradient from e0 to ea. The
-canopy resistance, rc, represents resistance to flow of vapor through the stomates and
-cuticle of individual leaves and through the air around each leaf to some "effective" source
-height of water vapor in the plant canopy. The aerodynamic resistance, ra, is a measure of
-the turbulent transfer capability of the atmosphere between the effective source height and
-za. The Penman-Monteith equation is derived from the energy balance equation and the mass
-transfer equations for sensible and latent heat fluxes (e.g. Brutsaert 1982).
 "
 """
 module PET
@@ -1015,8 +991,7 @@ function SRSC(RAD, p_fu_TA, VPD, p_fu_LAI, p_fu_SAI, p_GLMIN, p_GLMAX, p_R5, p_C
     return RSC
 end
 
-
-"""
+@doc raw"""
     PM(AA, VPD, DELTA, RA, RC)
 
 Compute Penman-Monteith latent heat flux density, W/m2.
@@ -1024,8 +999,9 @@ Compute Penman-Monteith latent heat flux density, W/m2.
 # Ecoshift
 "
 The Penman-Monteith equation is
-
-Lv ρw E = (Δ (Rn-S) + c_p ρ Da / ra ) / (Δ + γ + γ (rc/ra))
+```math
+L_v ρ_w E = \frac{Δ(Rn - S) + c_p ρ D_a / r_a}{Δ + γ + γ(r_c/r_a)}
+```
 
 where E is the evaporation rate in volume of water per unit land area per unit time, Lv is
 the latent heat of vaporization for water, ρw is the density of water, Δ is the rate of

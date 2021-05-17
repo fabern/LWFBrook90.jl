@@ -217,7 +217,7 @@ T = ΣTi = Σ( ψti / ri ) - ψx Σ ( 1 / ri ) = ( ψt - ψx ) / rt
 
 where ψt is a weighted mean soil water potential defined as
 
-ψt = ψt Σ (ψti / ri ) .
+ψt = rt Σ (ψti / ri ).
 
 Eliminating ψx from the Ti and T equations gives
 
