@@ -15,7 +15,7 @@ Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
 
 [compat]
 CSV = "0.8"
-DataFrames = "0.22, 1.0"
+DataFrames = "0.22, 1.1"
 DataFramesMeta = "0.6"
 DiffEqCallbacks = "2"
 Interpolations = "0.13"
