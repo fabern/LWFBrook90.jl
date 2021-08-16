@@ -227,8 +227,8 @@ function read_path_param(path_param)
     input_param = rename(input_param,
         :ndays => :NDAYS,             # TODO(bernhard): unused, remove from _param.csv
         Symbol("0_heat") => :HEAT,
-        :eslope => :ESLOPE,
-        :aspect => :ASPECT,
+        :eslope => :ESLOPE_DEG,
+        :aspect => :ASPECT_DEG,
         :alb => :ALB,
         :albsn => :ALBSN,
         :c1 => :C1,
@@ -311,10 +311,6 @@ function read_path_param(path_param)
         :dpsimax => :DPSIMX)
 
     # from LWFBrook90R:PFILE.h
-    # Convert to radians
-    input_param[:,:ESLOPE] = input_param[:,:ESLOPE] ./ 57.296
-    input_param[:,:ASPECT] = input_param[:,:ASPECT] ./ 57.296
-
     input_param[:,:FXYLEM]  = min.(input_param[:,:FXYLEM], 0.990)
     input_param[:,:inirlen] = max.(input_param[:,:inirlen], 0.010)
     input_param[:,:inirdep] = max.(input_param[:,:inirdep], 0.010)
@@ -325,6 +321,6 @@ end
 function read_path_siteparam(path_siteparam)
     DataFrame(File(path_siteparam;
                             types=[Int64, Int64, Float64, Float64, Float64, Int64], strict=true,
-                            datarow=2, header=["start_year","start_doy","lat","SNOW_init","GWAT_init","precip_interval"],
+                            datarow=2, header=["start_year","start_doy","lat_deg","SNOW_init","GWAT_init","precip_interval"],
                             delim=',')) # ignorerepeated=true
 end

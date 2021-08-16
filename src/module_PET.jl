@@ -358,7 +358,7 @@ the west (U.S. Department of Commerce 1968). As of Version 4.8 this value can be
 the BROOK90 main window.
 
 If vapor pressure (EA) is input as zero, it is estimated as the saturated vapor pressure at
-the minimum daily temperatire (TMIN) using subroutine ESAT.
+the minimum daily temperature (TMIN) using subroutine ESAT.
 
 If daily average wind speed at a weather station (UW) is input as zero, it is estimated as 3
 m s-1. This is a surprisingly good approximation for most weather stations in the United
