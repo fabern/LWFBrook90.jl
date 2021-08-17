@@ -62,7 +62,7 @@ function define_LWFB90_p(
         LWFBrook90.interpolate_meteoveg(
             input_meteoveg,
             input_meteoveg_reference_date,
-            input_param[1,"NLAYER"],
+            nrow(input_soil_nodes),
             input_param[1,"inirdep"],
             input_param[1,"inirlen"],
             input_param[1,"rgroper"],
@@ -238,7 +238,7 @@ function define_LWFB90_p(
 
     ## Soil discretization
     IMODEL   = input_param[1,"IMODEL"] # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
-    NLAYER   = input_param[1,"NLAYER"] # Number of soil layers used
+    NLAYER   = nrow(input_soil_nodes) # Number of soil layers used
     p_THICK  = soil_discr["THICK"]   # (Soil parameter),  layer thicknesses, mm
     # Documentation from ecoshift:
     # NLAYER (Soil parameter) - number of soil layers to be used, dimensionless. NLAYER is the number of soil layers to be used in the model run. It can vary from 1 to ML. Run time is more or less proportional to NLAYER. Soil parameter values for layers greater than NLAYER can be 0.
