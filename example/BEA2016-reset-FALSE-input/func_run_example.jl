@@ -28,8 +28,8 @@ object of DifferentialEquations.jl) and other variables useful for plotting.
     heatmap(x, y, z,
         yflip = true,
         xlabel = "Date",
-        ylabel = "Depth",
-        colorbar_title = "θ")
+        ylabel = "Depth [mm]",
+        colorbar_title = "θ [-]")
 
 """
 function run_example()
@@ -60,8 +60,8 @@ function run_example()
     heatmap(x, y, z,
         yflip = true,
         xlabel = "Date",
-        ylabel = "Depth",
-        colorbar_title = "θ")
+        ylabel = "Depth [mm]",
+        colorbar_title = "θ [-]")
 
     """
 

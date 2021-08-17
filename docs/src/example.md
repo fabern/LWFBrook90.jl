@@ -170,8 +170,8 @@ z = sol_LWFBrook90[7 .+ (0:example["NLAYER"]-1), :]./pfile_soil["THICK"]
 heatmap(x, y, z,
     yflip = true,
     xlabel = "Date",
-    ylabel = "Depth",
-    colorbar_title = "θ")
+    ylabel = "Depth [mm]",
+    colorbar_title = "θ [-]")
 ```
 
 ## Plotting results

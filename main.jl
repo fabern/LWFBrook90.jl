@@ -124,10 +124,10 @@ sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
 # # Plot 2
 # # http://docs.juliaplots.org/latest/generated/gr/#gr-ref43
 # x = LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date)
-# y = cumsum(pfile_soil["THICK"])
-# z = sol_LWFBrook90[6 .+ (1:NLAYER), :]./pfile_soil["THICK"]
+# y = cumsum(p_soil.p_THICK)
+# z = sol_LWFBrook90[7 .+ (0:p_soil.NLAYER-1), :]./p_soil.p_THICK
 # heatmap(x, y, z, yflip = true,
 #         xlabel = "Date",
-#         ylabel = "Depth",
-#         colorbar_title = "θ")
+#         ylabel = "Depth [mm]",
+#         colorbar_title = "θ [-]")
 ####################
