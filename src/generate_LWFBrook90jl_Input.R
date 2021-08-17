@@ -67,11 +67,12 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
   #       1. soil_nodes
   #       2. soil_materials
   # out_csv_param <- input_Data$param_b90
-  # names(out_csv_param) %in% c("soil_nodes", "soil_materials")
+  # out_csv_param["soil_nodes"]     <- NULL
+  # out_csv_param["soil_materials"] <- NULL
 
   # Variant 2: (ugly but finished and compatible with current Julia code)
   out_param <- with(input_Data$param_b90,
-                        c("ndays"=ndays, "0_heat"=0, "eslope"=eslope, "aspect"=aspect,
+                        c("0_heat"=0, "eslope"=eslope, "aspect"=aspect,
                           "alb"=alb, "albsn"=albsn, "c1"=c1, "c2"=c2, "c3"=c3,
                           "wndrat"=wndrat, "fetch"=fetch, "z0w"=z0w,
                           "zw"=zw, "lwidth"=lwidth, "obsheight_x_czs" = obsheight * czs, "z0s"=z0s, "lpc"=lpc, "cs"=cs,
@@ -88,8 +89,8 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
                           "t2"=t2, "th"=th, "mxkpl"=mxkpl, "maxrlen"=maxrlen,
                           "initrlen"=initrlen, "initrdep"=initrdep, "rgrorate"=rgrorate,
                           "rgroper"=rgroper, "fxylem"=fxylem, "psicr"=psicr,
-                          "rrad"=rrad, "nooutf"=nooutf, "N_soil_nodes"=nrow(soil_nodes),
-                          "N_soil_materials"=nrow(soil_materials), "ilayer"=ilayer, "qlayer"=qlayer,
+                          "rrad"=rrad, "nooutf"=nooutf,
+                          "ilayer"=ilayer, "qlayer"=qlayer,
                           "is_MvG_aka_iModel"=ifelse(input_Data$options_b90$imodel == "MvG", 1, 0),
                           "rssa"=rssa, "rssb"=rssb,
                           "infexp"=infexp, "bypar"=bypar, "qfpar"=qfpar, "qffc"=qffc,

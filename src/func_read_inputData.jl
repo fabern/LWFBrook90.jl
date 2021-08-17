@@ -180,7 +180,7 @@ function read_path_param(path_param)
     input_param = DataFrame(File(path_param;
         transpose=true, drop=[1],
         types = Dict(# output specifications -------
-                    "ndays" => Int64  ,            "0_heat" => Int64  ,
+                    "0_heat" => Int64,
                     # Meteorologic parameters -------
                     "eslope" => Float64,           "aspect" => Float64,
                     "alb" => Float64,              "albsn" => Float64,
@@ -209,8 +209,6 @@ function read_path_param(path_param)
                     "rgrorate" => Float64,         "rgroper" => Float64,          "fxylem" => Float64,
                     "psicr" => Float64,            "rrad" => Float64,             "nooutf" => Int64,    # TODO(bernhard): make boolena
                     # soil parameters -------
-                    "N_soil_nodes" => Int64  ,
-                    "N_soil_materials" => Int64  ,
                     "ilayer" => Int64  ,            # TODO(bernhard): switch to depth in mm
                     "qlayer" => Int64  ,            # TODO(bernhard): switch to depth in mm
                     "is_MvG_aka_iModel" => Int64  , # TODO(bernhard): make boolena
@@ -225,7 +223,6 @@ function read_path_param(path_param)
 
     # Rename
     input_param = rename(input_param,
-        :ndays => :NDAYS,             # TODO(bernhard): unused, remove from _param.csv
         Symbol("0_heat") => :HEAT,
         :eslope => :ESLOPE_DEG,
         :aspect => :ASPECT_DEG,
@@ -289,8 +286,6 @@ function read_path_param(path_param)
         :psicr => :PSICR,
         :rrad => :RTRAD,
         :nooutf => :NOOUTF,
-        :N_soil_nodes => :NLAYER,    # TODO(bernhard): unused, remove from _param.csv
-        :N_soil_materials => :nmat,  # TODO(bernhard): unused, remove from _param.csv
         :ilayer => :ILAYER,
         :qlayer => :QLAYER,
         :is_MvG_aka_iModel => :IMODEL,

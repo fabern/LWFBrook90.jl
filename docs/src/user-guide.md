@@ -101,7 +101,6 @@ Note that the second and third rows containing description and unit headers is n
 
 ```
 "param_id","x"
-"ndays",366
 "0_heat",0
 "eslope",18.26
 "aspect",225
