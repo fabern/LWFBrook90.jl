@@ -53,7 +53,7 @@ function define_LWFB90_p(
             input_param[1,"ILAYER"],
             input_param[1,"QLAYER"],
             nrow(input_soil_nodes),
-            input_param[1,"HEAT"],
+            0, # flag for heat balance; not implemented; input_param[1,"HEAT"],
             nrow(input_soil_materials),
             input_param[1,"inirdep"],
             input_param[1,"rgrorate"])
@@ -564,28 +564,24 @@ function discretize_soil_params(
     PSIM_init = fill(NaN, NLAYER)
     frelden   = fill(NaN, NLAYER)
     for i = 1:NLAYER
-        if HEAT == 1
-            dep[i]       = input_soil_nodes[i,2]
-            THICK[i]     = input_soil_nodes[i,3]
-            mat[i]       = Int( input_soil_nodes[i,4] )
-            PSIM_init[i] = input_soil_nodes[i,5]
-            frelden[i]   = input_soil_nodes[i,6]
-            # TemperatureNew(i)       = input_soil_nodes[i,7] we don't have it in the input file!!!
-            if i > NLAYER
-                MUE[i] = THICK[i] / ( THICK[i] + THICK(I+1) )
-                ZL[i]  = 0.5 * ( THICK[i] + THICK(I+1) )
-            else
-                MUE[i] = 0.5
-                ZL[i]  = THICK[i]
-            end
-            TMean[i]   = 0.
-        else
-            dep[i]       = input_soil_nodes[i,2]
-            THICK[i]     = input_soil_nodes[i,3]
-            mat[i]       = Int( input_soil_nodes[i,4] )
-            PSIM_init[i] = input_soil_nodes[i,5]
-            frelden[i]   = input_soil_nodes[i,6]
-        end
+        dep[i]       = input_soil_nodes[i,2]
+        THICK[i]     = input_soil_nodes[i,3]
+        mat[i]       = Int( input_soil_nodes[i,4] )
+        PSIM_init[i] = input_soil_nodes[i,5]
+        frelden[i]   = input_soil_nodes[i,6]
+
+        if (HEAT != 0) @error "HEAT must be set to zero, as heat balance is not implemented." end
+        # if (HEAT == 1)
+        #     # TemperatureNew(i)       = input_soil_nodes[i,7] we don't have it in the input file!!!
+        #     if i > NLAYER
+        #         MUE[i] = THICK[i] / ( THICK[i] + THICK(I+1) )
+        #         ZL[i]  = 0.5 * ( THICK[i] + THICK(I+1) )
+        #     else
+        #         MUE[i] = 0.5
+        #         ZL[i]  = THICK[i]
+        #     end
+        #     TMean[i]   = 0.
+        # end
     end
     depmax = dep[1] - THICK[1] / 1000.
 
@@ -635,8 +631,7 @@ function discretize_soil_params(
 
 
     # heat flow -------
-    # we assign some so compilation does not complain
-    TopInfT = 1
+    if (HEAT != 0) @error "HEAT must be set to zero, as heat balance is not implemented." end
     #       if (HEAT == 1)
     #        READ (12,*) Comment
     #        READ (12,*) tTop, Comment
@@ -667,14 +662,14 @@ function discretize_soil_params(
     #        READ (12,*) C
     #       end
 
-    ### # from LWFBrook90R:md_brook90.f95 (lines 105)
-    TPar = fill(NaN, (nmat, 10))
-    TPar .= -1
-    HeatCapOld = fill(NaN, NLAYER)
-    for i = 1:NLAYER
-        HeatCapOld[i] = TPar[mat[i],7] * TPar[mat[i],1] + TPar[mat[i],8]
-                    # TPar[2,mat[i])+TPar[9,mat[i])*SWATI[i]/THICK[i]
-    end
+    # ### # from LWFBrook90R:md_brook90.f95 (lines 105)
+    # TPar = fill(NaN, (nmat, 10))
+    # TPar .= -1
+    # HeatCapOld = fill(NaN, NLAYER)
+    # for i = 1:NLAYER
+    #     HeatCapOld[i] = TPar[mat[i],7] * TPar[mat[i],1] + TPar[mat[i],8]
+    #                 # TPar[2,mat[i])+TPar[9,mat[i])*SWATI[i]/THICK[i]
+    # end
     ###
 
 
@@ -685,8 +680,8 @@ function discretize_soil_params(
                 ("frelden",frelden),
                 ("PAR",PAR),
                 ("STONEF",STONEF),
-                ("tini",tini),
+                ("tini",tini)])#,
                 #
-                ("HeatCapOld",HeatCapOld),
-                ("TopInfT", TopInfT)])
+                #("HeatCapOld",HeatCapOld),
+                #("TopInfT", TopInfT)])
 end

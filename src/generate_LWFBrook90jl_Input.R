@@ -72,7 +72,7 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
 
   # Variant 2: (ugly but finished and compatible with current Julia code)
   out_param <- with(input_Data$param_b90,
-                        c("0_heat"=0, "eslope"=eslope, "aspect"=aspect,
+                        c("eslope"=eslope, "aspect"=aspect,
                           "alb"=alb, "albsn"=albsn, "c1"=c1, "c2"=c2, "c3"=c3,
                           "wndrat"=wndrat, "fetch"=fetch, "z0w"=z0w,
                           "zw"=zw, "lwidth"=lwidth, "obsheight_x_czs" = obsheight * czs, "z0s"=z0s, "lpc"=lpc, "cs"=cs,

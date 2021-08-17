@@ -36,7 +36,7 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
 
     ## C) Load other parameters
     # Load model input parameters
-    #' @param param A numeric vector of model input parameters. Order (derived from param_to_rlwfbrook90()):
+    #' @param param A numeric vector of model input parameters. Order:
     input_param = read_path_param(path_param)
 
     # Load site parameters
@@ -179,9 +179,7 @@ function read_path_param(path_param)
     # input_param = DataFrame(File(path_param; types=[String, Float64], strict=true))
     input_param = DataFrame(File(path_param;
         transpose=true, drop=[1],
-        types = Dict(# output specifications -------
-                    "0_heat" => Int64,
-                    # Meteorologic parameters -------
+        types = Dict(# Meteorologic site parameters -------
                     "eslope" => Float64,           "aspect" => Float64,
                     "alb" => Float64,              "albsn" => Float64,
                     "c1" => Float64,               "c2" => Float64,               "c3" => Float64,
@@ -223,7 +221,6 @@ function read_path_param(path_param)
 
     # Rename
     input_param = rename(input_param,
-        Symbol("0_heat") => :HEAT,
         :eslope => :ESLOPE_DEG,
         :aspect => :ASPECT_DEG,
         :alb => :ALB,
