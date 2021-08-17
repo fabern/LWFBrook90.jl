@@ -315,6 +315,11 @@ function read_path_param(path_param)
     input_param[:,:inirlen] = max.(input_param[:,:inirlen], 0.010)
     input_param[:,:inirdep] = max.(input_param[:,:inirdep], 0.010)
 
+    # N_soil_nodes and N_soil_materials are not used, they will be taken from
+    # _soil_nodes.csv and _soil_materials.csv.
+    # Remove them from input_param:
+    input_param = select(input_param, Not([:NLAYER, :nmat]))
+
     return input_param
 end
 

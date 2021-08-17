@@ -52,9 +52,9 @@ function define_LWFB90_p(
             input_param[1,"IMODEL"],
             input_param[1,"ILAYER"],
             input_param[1,"QLAYER"],
-            input_param[1,"NLAYER"],
+            nrow(input_soil_nodes),
             input_param[1,"HEAT"],
-            input_param[1,"nmat"],
+            nrow(input_soil_materials),
             input_param[1,"inirdep"],
             input_param[1,"rgrorate"])
 
