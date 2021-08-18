@@ -42,7 +42,11 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
 
   # B) time-independent parameters:
   # B1) climate data
-  out_csv_pdur <- input_Data$param_b90$pdur
+  out_pdur <- input_Data$param_b90$pdur
+  out_csv_pdur <- data.frame(month = c("January", "Februrary", "March", "April", 
+                                       "May", "June", "July", "August", 
+                                       "September", "October", "November", "December"),
+                             average_storm_duration_h = out_pdur)
   # out_csv_precdat <- NULL # TODO(bernhard): currently not implemented
 
   # B2) soil parameters

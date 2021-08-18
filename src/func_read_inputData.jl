@@ -57,9 +57,7 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
     # unused:           ignorerepeated=true)
 
     #' @param pdur a [1,12]-matrix of precipitation durations (hours) for each month.
-    input_pdur = DataFrame(File(path_pdur;
-                           types=[Int64], strict=true,
-                           datarow=2, header=["pdur_h"], delim=',')) # ignorerepeated=true
+    input_pdur = read_path_pdur(path_pdur)
 
     # Load soil data
 
@@ -76,7 +74,7 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
     #' @param soil_nodes A matrix of the soil model layers with columns
     #'                   nl (layer number), layer midpoint (m), thickness (mm), mat, psiini (kPa), rootden (-).
     input_soil_nodes = DataFrame(File(path_soil_nodes;
-                                 types=[Int64,Float64, Float64, Int64, Float64, Float64],
+                                 types=[Int64, Float64, Float64, Int64, Float64, Float64],
                                  datarow=2, header=["layer","midpoint","thick","mat","psiini","rootden"],
                                  delim=','))# ignorerepeated=true
     return (input_meteoveg,
@@ -260,4 +258,19 @@ function read_path_siteparam(path_siteparam)
                             types=[Int64, Int64, Int64, Float64, Float64, Float64], strict=true,
                             #datarow=2, header=["start_year","start_doy","precip_interval_NPINT","LAT_DEG","u_SNOW_init","u_GWAT_init"],
                             delim=',')) # ignorerepeated=true
+end
+function read_path_pdur(path_pdur)
+    input_pdur = DataFrame(File(path_pdur;
+                           types=[String, Int64], strict=true,
+                           datarow=2, header=["month", "pdur_h"], delim=',')) # ignorerepeated=true
+    received_month_names = input_pdur[!,"month"]
+    expected_month_names = ["January", "Februrary", "March", "April", "May", "June", "July",
+                            "August", "September", "October", "November", "December"]
+    @assert received_month_names == expected_month_names """
+        Input file '$path_pdur' does not contain the months in the expected order.
+        Please correct the input file.
+        \n\nExpected:\n$expected_month_names\nReceived:\n$received_month_names\n
+        """
+
+    return input_pdur
 end
