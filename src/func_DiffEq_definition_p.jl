@@ -12,7 +12,6 @@ Generate vector p needed for ODE() problem in DiffEq.jl package.
 - `Reset::...`: TODO argument description.
 - `compute_intermediate_quantities::...`: TODO argument description.
 - `input_meteoveg::...`: TODO argument description.
-- `input_siteparam::...`: TODO argument description.
 - `input_param::...`: TODO argument description.
 - `input_soil::...`: TODO argument description.
 - `input_pdur::...`: TODO argument description.
@@ -21,8 +20,6 @@ function define_LWFB90_p(
     input_meteoveg,
     input_meteoveg_reference_date,
     input_param,
-    input_siteparam,
-    input_precdat, # TODO(bernhard): Note that input_precdat is unused
     input_pdur,
     input_soil_materials,
     input_soil_nodes
@@ -89,7 +86,8 @@ function define_LWFB90_p(
 
 
     ## Location / Meteo
-    p_NPINT  = input_siteparam[1,"precip_interval_NPINT"]
+    p_NPINT  = 1 # Hardcoded. If p_NPINT>1, then multiple precipitation intervals would need
+                 #            to be defined in an additional input data set PRECDAT.
     if p_NPINT == 1
         p_DTP = 1 / p_NPINT
     else

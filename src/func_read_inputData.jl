@@ -9,7 +9,6 @@ using Dates: DateTime, Millisecond, Second, Day, month, value, dayofyear
 Load different input files for LWFBrook90:
 - meteoveg
 - param
-- siteparam
 - pdur
 - soil_materials.csv
 - soil_nodes.csv
@@ -22,10 +21,8 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
     # https://towardsdatascience.com/read-csv-to-data-frame-in-julia-programming-lang-77f3d0081c14
 
     ## A) Define paths of all input files
-    # TODO(bernhard): prepend path_
     path_meteoveg       = joinpath(folder, prefix*"_meteoveg.csv")
     path_param          = joinpath(folder, prefix*"_param.csv")
-    path_siteparam      = joinpath(folder, prefix*"_siteparam.csv")
     # unused path_precdat=joinpath(folder, prefix*"_precdat.csv")
     path_pdur           = joinpath(folder, prefix*"_pdur.csv")
     path_soil_materials = joinpath(folder, prefix*"_soil_materials.csv")
@@ -39,15 +36,10 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
     #' @param param A numeric vector of model input parameters. Order:
     input_param = read_path_param(path_param)
 
-    # Load site parameters
-    #' @param siteparam A [1,6] matrix with site level information:
-    #'                  start year, start doy, latitude, initial condition snow, initial condition groundwater, precipitation interval.
-    input_siteparam = read_path_siteparam(path_siteparam)
-
     # Load precipitation data
     #' @param precdat A matrix of precipitation interval data with 6 columns:
     #'                   year, month, day, interval-number (1:precint), prec, mesflp.
-    input_precdat = DataFrame(a = Nothing, b = Nothing)
+    # input_precdat = DataFrame(a = Nothing, b = Nothing)
     # TODO(bernhard): currently not implemented.
     #                 Only using PRECIN (resolution daily).
     #                 PRECDAT would allow to have smaller resolution (would require changes).
@@ -80,8 +72,6 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
     return (input_meteoveg,
             input_meteoveg_reference_date,
             input_param,
-            input_siteparam,
-            input_precdat,
             input_pdur,
             input_soil_materials,
             input_soil_nodes)
@@ -188,8 +178,10 @@ function read_path_param(path_param)
                     "LPC" => Float64,              "CS" => Float64,               "CZS" => Float64,
                     "CZR" => Float64,              "HS" => Float64,               "HR" => Float64,
                     "ZMINH" => Float64,            "RHOTP" => Float64,            "NN" => Float64,
-                    # Interception initial conditions -------
-                    "u_INTR_init" => Float64,       "u_INTS_init" => Float64,
+                    # Initial conditions (except for depth-dependent u_aux_PSIM) -------
+                    "u_GWAT_init" => Float64,       "u_INTS_init" => Float64,
+                    "u_INTR_init" => Float64,       "u_SNOW_init" => Float64,
+                    "u_CC_init" => Float64,         "u_SNOWLQ_init" => Float64,
                     # Interception parameters -------
                     "FRINTLAI" => Float64,         "FSINTLAI" => Float64,
                     "FRINTSAI" => Float64,         "FSINTSAI" => Float64,
@@ -228,7 +220,8 @@ function read_path_param(path_param)
         "LAT_DEG","ESLOPE_DEG","ASPECT_DEG",
         "ALB","ALBSN","C1","C2","C3","WNDRAT","FETCH","Z0W","ZW",
         "LWIDTH","Z0G","Z0S","LPC","CS","CZS","CZR","HS","HR","ZMINH","RHOTP","NN",
-        "u_INTR_init","u_INTS_init","FRINTLAI","FSINTLAI","FRINTSAI","FSINTSAI","CINTRL",
+        "u_GWAT_init","u_INTS_init","u_INTR_init","u_SNOW_init","u_CC_init","u_SNOWLQ_init",
+        "FRINTLAI","FSINTLAI","FRINTSAI","FSINTSAI","CINTRL",
         "CINTRS","CINTSL","CINTSS","RSTEMP","MELFAC","CCFAC","LAIMLT","SAIMLT","GRDMLT",
         "MAXLQF","KSNVP","SNODEN","GLMAX","CR","GLMIN","RM","R5","CVPD","TL","T1","T2",
         "TH","MXKPL","MXRTLN","INITRLEN","INITRDEP","RGRORATE","RGROPER","FXYLEM","PSICR",
@@ -255,14 +248,6 @@ function read_path_param(path_param)
     return input_param
 end
 
-function read_path_siteparam(path_siteparam)
-    DataFrame(File(path_siteparam;
-                            ##datarow=2, header=["start_year","start_doy","precip_interval_NPINT","LAT_DEG","u_SNOW_init","u_GWAT_init"],
-                            #types=[Int64, Int64, Int64, Float64, Float64, Float64], strict=true,
-                            datarow=2, header=["precip_interval_NPINT","u_SNOW_init","u_GWAT_init"],
-                            types=[Int64, Float64, Float64], strict=true,
-                            delim=',')) # ignorerepeated=true
-end
 function read_path_pdur(path_pdur)
     input_pdur = DataFrame(File(path_pdur;
                            types=[String, Int64], strict=true,

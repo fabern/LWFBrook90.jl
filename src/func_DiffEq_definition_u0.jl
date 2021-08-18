@@ -13,7 +13,6 @@ function define_LWFB90_u0(u_GWAT_init,
                             compute_intermediate_quantities)
 
     if compute_intermediate_quantities
-    # TODO(bernhard): are these store somewhere else than input_siteparam and pfile_param
         u0 = [u_GWAT_init;
             u_INTS_init;
             u_INTR_init;

@@ -74,8 +74,6 @@ function run_example()
     (input_meteoveg,
         input_meteoveg_reference_date,
         input_param,
-        input_siteparam,
-        input_precdat,    #TODO(bernhard): input_precdat is unused
         input_pdur,
         input_soil_materials,
         input_soil_nodes) = read_LWFBrook90R_inputData(input_path, input_prefix)
@@ -99,8 +97,6 @@ function run_example()
         input_meteoveg,
         input_meteoveg_reference_date,
         input_param,
-        input_siteparam,
-        input_precdat,
         input_pdur,
         input_soil_materials,
         input_soil_nodes;
@@ -111,32 +107,25 @@ function run_example()
     ####################
     # Define initial states of differential equation
     # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
-    u_GWAT_init = input_siteparam[1, "u_GWAT_init"]
-    u_SNOW_init = input_siteparam[1, "u_SNOW_init"]
-    u_INTS_init = input_param[1,"u_INTS_init"]
-    u_INTR_init = input_param[1,"u_INTR_init"]
-    u_CC_init     = 0; # any initial snow has zero liquid water and cold content
-    u_SNOWLQ_init = 0; # any initial snow has zero liquid water and cold content
 
-    u_aux_PSIM_init = input_soil_nodes[:,"psiini"]
     ######
     # Transform initial value of auxiliary state u_aux_PSIM_init into state u_SWATIinit:
+    u_aux_PSIM_init = input_soil_nodes[:,"psiini"]
     if any( u_aux_PSIM_init.> 0)
         error("Initial matrix psi must be negative or zero")
     end
-
     p_soil = p[1][1]
     u_aux_WETNESinit = LWFBrook90.KPT.FWETNES(u_aux_PSIM_init, p_soil)
     u_SWATIinit      = p_soil.p_SWATMAX ./ p_soil.p_THSAT .* LWFBrook90.KPT.FTheta(u_aux_WETNESinit, p_soil)
     ######
 
     # Create u0 for DiffEq.jl
-    u0 = define_LWFB90_u0(u_GWAT_init,
-                        u_INTS_init,
-                        u_INTR_init,
-                        u_SNOW_init,
-                        u_CC_init,
-                        u_SNOWLQ_init,
+    u0 = define_LWFB90_u0(input_param[1,"u_GWAT_init"],
+                        input_param[1,"u_INTS_init"],
+                        input_param[1,"u_INTR_init"],
+                        input_param[1,"u_SNOW_init"],
+                        input_param[1,"u_CC_init"],
+                        input_param[1,"u_SNOWLQ_init"],
                         u_SWATIinit,
                         compute_intermediate_quantities)
     ####################

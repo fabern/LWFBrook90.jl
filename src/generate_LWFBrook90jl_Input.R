@@ -54,20 +54,6 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
     select(layer, midpoint, thick, mat, psiini, rootden)
   out_csv_soil_materials <- input_Data$param_b90$soil_materials
 
-  # B3) site parameters
-  #simyears <- seq(from = as.integer(format(input_Data$options_b90$startdate,"%Y")),
-  #                to = as.integer(format(input_Data$options_b90$enddate,"%Y")),
-  #                by = 1)
-  out_siteparam <- data.frame(#start_year            = format(input_Data$options_b90$startdate,"%Y"),
-                              #start_doy             = format(input_Data$options_b90$startdate,"%j"),
-                              precip_interval_NPINT = input_Data$options_b90$prec_interval,
-                              # LAT_DEG               = input_Data$param_b90$coords_y,
-                              u_SNOW_init           = input_Data$param_b90$snowini,
-                              u_GWAT_init           = input_Data$param_b90$gwatini)
-  # out_csv_siteparam <- data.frame(param_id = names(out_siteparam),
-  #                                 x        = unname(out_siteparam))
-  out_csv_siteparam <- out_siteparam
-
   # B4) other model parameters
   # Variant 1: (unfinished)
   # NOTE: from input_Data$param_b90 remove:
@@ -89,8 +75,14 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
                           "LPC"=lpc,          "CS"=cs,                  "CZS"=czs,
                           "CZR"=czr,          "HS"=hs,                  "HR"=hr,
                           "ZMINH"=zminh,      "RHOTP"=rhotp,            "NN"=nn,
-                          "### Interception initial conditions -------" = NA,
-                          "u_INTR_init"=intrainini, "u_INTS_init"=intsnowini,
+                          "### Initial conditions (except for depth-dependent u_aux_PSIM) -------" = NA,
+                          "u_GWAT_init"=gwatini,
+                          "u_INTS_init"=intsnowini,
+                          "u_INTR_init"=intrainini,
+                          "u_SNOW_init"=snowini,
+                          "u_CC_init"    =0,
+                          "u_SNOWLQ_init"=0,
+                          # Note: u_aux_PSIM_init is not defined here as it is a vector quantity
                           "### Interception parameters -------" = NA,
                           "FRINTLAI"=frintlai, "FSINTLAI"=fsintlai,
                           "FRINTSAI"=frintsai, "FSINTSAI"=fsintsai,
@@ -136,7 +128,6 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
   #   write.csv(out_csv_param,          file.path(input_folder, paste0(Julia_prefix, "_param.csv")),          row.names = FALSE, quote = FALSE)
   #   # write.csv(out_csv_precdat,      file.path(input_folder, paste0(Julia_prefix, "_precdat.csv")),        row.names = FALSE, quote = FALSE)
   #   write.csv(out_csv_meteoveg,       file.path(input_folder, paste0(Julia_prefix, "_meteoveg.csv")),       row.names = FALSE, quote = FALSE)
-  #   write.csv(out_csv_siteparam,      file.path(input_folder, paste0(Julia_prefix, "_siteparam.csv")),      row.names = FALSE, quote = FALSE)
   # })
   withr::with_options(c(scipen=100), { # temporarily switches off scientific notation
     require(dplyr)
@@ -145,12 +136,8 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
     out_csv_param          %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_param.csv")),         row.names=FALSE, quote=FALSE)
     out_csv_meteoveg       %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_meteoveg.csv")),      row.names=FALSE, quote=FALSE)
     out_csv_pdur           %>%                                                 write.csv(file.path(input_folder, paste0(Julia_prefix, "_pdur.csv")),          row.names=FALSE, quote=FALSE)
-    out_csv_siteparam      %>%                                                 write.csv(file.path(input_folder, paste0(Julia_prefix, "_siteparam.csv")),     row.names=FALSE, quote=FALSE)
     # out_csv_precdat        %>%                                                 write.csv(file.path(input_folder, paste0(Julia_prefix, "_precdat.csv")),       row.names=FALSE, quote=FALSE)
   })
-
-  #TODO: siteparam rename columns: out_csv_siteparam
-
 
   # If run is requested also run LWFBrook90R and save results
   if(run_LWFBrook90R) {
