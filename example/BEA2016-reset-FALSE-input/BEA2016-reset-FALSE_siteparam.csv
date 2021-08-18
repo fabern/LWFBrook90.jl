@@ -1,2 +1,2 @@
-start_year,start_doy,precip_interval_NPINT,LAT_DEG,u_SNOW_init,u_GWAT_init
-2016,001,1,46.70052,0,0
+precip_interval_NPINT,u_SNOW_init,u_GWAT_init
+1,0,0

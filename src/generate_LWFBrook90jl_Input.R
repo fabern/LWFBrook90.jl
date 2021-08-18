@@ -43,8 +43,8 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
   # B) time-independent parameters:
   # B1) climate data
   out_pdur <- input_Data$param_b90$pdur
-  out_csv_pdur <- data.frame(month = c("January", "Februrary", "March", "April", 
-                                       "May", "June", "July", "August", 
+  out_csv_pdur <- data.frame(month = c("January", "Februrary", "March", "April",
+                                       "May", "June", "July", "August",
                                        "September", "October", "November", "December"),
                              average_storm_duration_h = out_pdur)
   # out_csv_precdat <- NULL # TODO(bernhard): currently not implemented
@@ -55,13 +55,13 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
   out_csv_soil_materials <- input_Data$param_b90$soil_materials
 
   # B3) site parameters
-  simyears <- seq(from = as.integer(format(input_Data$options_b90$startdate,"%Y")),
-                  to = as.integer(format(input_Data$options_b90$enddate,"%Y")),
-                  by = 1)
-  out_siteparam <- data.frame(start_year            = format(input_Data$options_b90$startdate,"%Y"),
-                              start_doy             = format(input_Data$options_b90$startdate,"%j"),
+  #simyears <- seq(from = as.integer(format(input_Data$options_b90$startdate,"%Y")),
+  #                to = as.integer(format(input_Data$options_b90$enddate,"%Y")),
+  #                by = 1)
+  out_siteparam <- data.frame(#start_year            = format(input_Data$options_b90$startdate,"%Y"),
+                              #start_doy             = format(input_Data$options_b90$startdate,"%j"),
                               precip_interval_NPINT = input_Data$options_b90$prec_interval,
-                              LAT_DEG               = input_Data$param_b90$coords_y,
+                              # LAT_DEG               = input_Data$param_b90$coords_y,
                               u_SNOW_init           = input_Data$param_b90$snowini,
                               u_GWAT_init           = input_Data$param_b90$gwatini)
   # out_csv_siteparam <- data.frame(param_id = names(out_siteparam),
@@ -80,7 +80,7 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
   # Variant 2: (ugly but finished and compatible with current Julia code)
   out_param <- with(input_Data$param_b90,
                         c("### Meteorologic site parameters -------" = NA,
-                          "ESLOPE_DEG"=eslope,"ASPECT_DEG"=aspect,
+                          "LAT_DEG"=coords_y, "ESLOPE_DEG"=eslope,"ASPECT_DEG"=aspect,
                           "ALB"=alb,          "ALBSN"=albsn,
                           "C1"=c1,            "C2"=c2,          "C3"=c3,
                           "WNDRAT"=wndrat,    "FETCH"=fetch,    "Z0W"=z0w,   "ZW"=zw,

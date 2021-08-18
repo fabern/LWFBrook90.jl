@@ -178,7 +178,8 @@ function read_path_param(path_param)
     input_param = DataFrame(File(path_param;
         transpose=true, drop=[1], comment = "###",
         types = Dict(# Meteorologic site parameters -------
-                    "ESLOPE_DEG" => Float64,           "ASPECT_DEG" => Float64,
+                    "LAT_DEG" => Float64,
+                    "ESLOPE_DEG" => Float64,       "ASPECT_DEG" => Float64,
                     "ALB" => Float64,              "ALBSN" => Float64,
                     "C1" => Float64,               "C2" => Float64,               "C3" => Float64,
                     "WNDRAT" => Float64,           "FETCH" => Float64,            "Z0W" => Float64,              "ZW" => Float64,
@@ -224,7 +225,8 @@ function read_path_param(path_param)
     # Assert that inputs are correct:
     received_names = names(input_param)
     expected_names = [
-        "ESLOPE_DEG","ASPECT_DEG","ALB","ALBSN","C1","C2","C3","WNDRAT","FETCH","Z0W","ZW",
+        "LAT_DEG","ESLOPE_DEG","ASPECT_DEG",
+        "ALB","ALBSN","C1","C2","C3","WNDRAT","FETCH","Z0W","ZW",
         "LWIDTH","Z0G","Z0S","LPC","CS","CZS","CZR","HS","HR","ZMINH","RHOTP","NN",
         "u_INTR_init","u_INTS_init","FRINTLAI","FSINTLAI","FRINTSAI","FSINTSAI","CINTRL",
         "CINTRS","CINTSL","CINTSS","RSTEMP","MELFAC","CCFAC","LAIMLT","SAIMLT","GRDMLT",
@@ -255,8 +257,10 @@ end
 
 function read_path_siteparam(path_siteparam)
     DataFrame(File(path_siteparam;
-                            types=[Int64, Int64, Int64, Float64, Float64, Float64], strict=true,
-                            #datarow=2, header=["start_year","start_doy","precip_interval_NPINT","LAT_DEG","u_SNOW_init","u_GWAT_init"],
+                            ##datarow=2, header=["start_year","start_doy","precip_interval_NPINT","LAT_DEG","u_SNOW_init","u_GWAT_init"],
+                            #types=[Int64, Int64, Int64, Float64, Float64, Float64], strict=true,
+                            datarow=2, header=["precip_interval_NPINT","u_SNOW_init","u_GWAT_init"],
+                            types=[Int64, Float64, Float64], strict=true,
                             delim=',')) # ignorerepeated=true
 end
 function read_path_pdur(path_pdur)
