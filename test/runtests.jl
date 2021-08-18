@@ -17,6 +17,14 @@ end
     @test LWFBrook90.PET.ESAT(25)[1] ≈ 3.1674898302368564  #(3.1674898302368564, 0.18866467946037985)
     @test LWFBrook90.PET.ESAT(25)[2] ≈ 0.18866467946037985 #(3.1674898302368564, 0.18866467946037985)
 
+    # using Plots
+    # plot(x -> x, x -> LWFBrook90.PET.ESAT(x)[1], -30, 45,
+    #     xlabel = "T °C",
+    #     ylabel = "ES [kPa] or dES/dT [kPa/°C]",
+    #     label = "Saturation vapour pressure (ES)")
+    # plot!(x -> x, x -> LWFBrook90.PET.ESAT(x)[2], -30, 45,
+    #     label = "DELTA (dES/dT)")
+
     @test LWFBrook90.PET.PM(150., -0.43, 0.06, 146., 19640.) ≈ 0.58512224
     @test LWFBrook90.PET.PM(150., 0.30, 0.06, 23.8, 578.) ≈ 14.0411894
 end

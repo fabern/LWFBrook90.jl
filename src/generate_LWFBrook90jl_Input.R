@@ -67,35 +67,52 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
   #       1. soil_nodes
   #       2. soil_materials
   # out_csv_param <- input_Data$param_b90
-  # names(out_csv_param) %in% c("soil_nodes", "soil_materials")
+  # out_csv_param["soil_nodes"]     <- NULL
+  # out_csv_param["soil_materials"] <- NULL
 
   # Variant 2: (ugly but finished and compatible with current Julia code)
   out_param <- with(input_Data$param_b90,
-                        c("ndays"=ndays, "0_heat"=0, "eslope"=eslope, "aspect"=aspect,
-                          "alb"=alb, "albsn"=albsn, "c1"=c1, "c2"=c2, "c3"=c3,
-                          "wndrat"=wndrat, "fetch"=fetch, "z0w"=z0w,
-                          "zw"=zw, "lwidth"=lwidth, "obsheight_x_czs" = obsheight * czs, "z0s"=z0s, "lpc"=lpc, "cs"=cs,
-                          "czs"=czs, "czr"=czr, "hs"=hs, "hr"=hr,
-                          "zminh"=zminh, "rhotp"=rhotp, "nn"=nn, "rstemp"=rstemp,
-                          "intrainini"=intrainini, "intsnowini"=intsnowini, "frintlai"=frintlai,
-                          "fsintlai"=fsintlai, "frintsai"=frintsai, "fsintsai"=fsintsai,
-                          "cintrl"=cintrl, "cintrs"=cintrs, "cintsl"=cintsl,
-                          "cintss"=cintss, "melfac"=melfac, "ccfac"=ccfac,
-                          "laimlt"=laimlt, "saimlt"=saimlt, "grdmlt"=grdmlt,
-                          "maxlqf"=maxlqf, "ksnvp"=ksnvp, "snoden"=snoden,
-                          "glmax"=glmax, "radex"=radex, "glmin"=glmin, "rm"=rm,
-                          "r5"=r5, "cvpd"=cvpd, "tl"=tl, "t1"=t1,
-                          "t2"=t2, "th"=th, "mxkpl"=mxkpl, "maxrlen"=maxrlen,
-                          "initrlen"=initrlen, "initrdep"=initrdep, "rgrorate"=rgrorate,
-                          "rgroper"=rgroper, "fxylem"=fxylem, "psicr"=psicr,
-                          "rrad"=rrad, "nooutf"=nooutf, "N_soil_nodes"=nrow(soil_nodes),
-                          "N_soil_materials"=nrow(soil_materials), "ilayer"=ilayer, "qlayer"=qlayer,
+                        c("### Meteorologic site parameters -------" = NA,
+                          "eslope"=eslope,    "aspect"=aspect,
+                          "alb"=alb,          "albsn"=albsn,
+                          "c1"=c1,            "c2"=c2,          "c3"=c3,
+                          "wndrat"=wndrat,    "fetch"=fetch,    "z0w"=z0w,   "zw"=zw,
+                          "### Canopy parameters -------" = NA,
+                          "lwidth"=lwidth,    "obsheight_x_czs" = obsheight * czs,  "z0s"=z0s,
+                          "lpc"=lpc,          "cs"=cs,                              "czs"=czs,
+                          "czr"=czr,          "hs"=hs,                              "hr"=hr,
+                          "zminh"=zminh,      "rhotp"=rhotp,                        "nn"=nn,
+                          "### Interception initial conditions -------" = NA,
+                          "intrainini"=intrainini, "intsnowini"=intsnowini,
+                          "### Interception parameters -------" = NA,
+                          "frintlai"=frintlai, "fsintlai"=fsintlai,
+                          "frintsai"=frintsai, "fsintsai"=fsintsai,
+                          "cintrl"=cintrl,     "cintrs"=cintrs,
+                          "cintsl"=cintsl,     "cintss"=cintss,
+                          "rstemp"=rstemp,
+                          "### Snowpack parameters -------" = NA,
+                          "melfac"=melfac,     "ccfac"=ccfac,    "laimlt"=laimlt,
+                          "saimlt"=saimlt,     "grdmlt"=grdmlt,  "maxlqf"=maxlqf,
+                          "ksnvp"=ksnvp,       "snoden"=snoden,
+                          "### Leaf evaporation parameters (affecting PE) -------" = NA,
+                          "glmax"=glmax,  "radex"=radex,  "glmin"=glmin,  "rm"=rm,
+                          "r5"=r5,        "cvpd"=cvpd,    "tl"=tl,        "t1"=t1,
+                          "t2"=t2,        "th"=th,
+                          "### Plant parameters (affecting soil-water supply) -------" = NA,
+                          "mxkpl"=mxkpl,
+                          "maxrlen"=maxrlen,   "initrlen"=initrlen, "initrdep"=initrdep,
+                          "rgrorate"=rgrorate, "rgroper"=rgroper,   "fxylem"=fxylem,
+                          "psicr"=psicr,       "rrad"=rrad,         "nooutf"=nooutf,
+                          "### Soil parameters -------" = NA,
+                          "ilayer"=ilayer, #TODO(bernhard): switch to depth in mm"
+                          "qlayer"=qlayer, #TODO(bernhard): switch to depth in mm"
                           "is_MvG_aka_iModel"=ifelse(input_Data$options_b90$imodel == "MvG", 1, 0),
-                          "rssa"=rssa, "rssb"=rssb,
-                          "infexp"=infexp, "bypar"=bypar, "qfpar"=qfpar, "qffc"=qffc,
+                          "rssa"=rssa,     "rssb"=rssb,     "infexp"=infexp,
+                          "bypar"=bypar,   "qfpar"=qfpar,   "qffc"=qffc,
                           "imperv"=imperv, "dslope"=dslope, "slopelen"=slopelen,
-                          "drain"=drain, "gsc"=gsc, "gsp"=gsp, "dtimax"=dtimax,
-                          "dswmax"=dswmax, "dpsimax"=dpsimax))
+                          "drain"=drain,   "gsc"=gsc,       "gsp"=gsp,
+                          "### Numerical solver parameters -------" = NA,
+                          "dtimax"=dtimax, "dswmax"=dswmax, "dpsimax"=dpsimax))
   out_csv_param <- data.frame(param_id=names(out_param),
                               x=unname(out_param))
 
@@ -107,7 +124,7 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
   write.csv(out_csv_soil_nodes,     file.path(input_folder, paste0(Julia_prefix, "_soil_nodes.csv")),     row.names = FALSE)
   write.csv(out_csv_soil_materials, file.path(input_folder, paste0(Julia_prefix, "_soil_materials.csv")), row.names = FALSE)
   write.csv(out_csv_pdur,           file.path(input_folder, paste0(Julia_prefix, "_pdur.csv")),           row.names = FALSE)
-  write.csv(out_csv_param,          file.path(input_folder, paste0(Julia_prefix, "_param.csv")),          row.names = FALSE)
+  write.csv(out_csv_param,          file.path(input_folder, paste0(Julia_prefix, "_param.csv")),          row.names = FALSE, quote = FALSE)
   # write.csv(out_csv_precdat,        file.path(input_folder, paste0(Julia_prefix, "_precdat.csv")),        row.names = FALSE)
   write.csv(out_csv_meteoveg,        file.path(input_folder, paste0(Julia_prefix, "_meteoveg.csv")),        row.names = FALSE)
   write.csv(out_csv_siteparam,      file.path(input_folder, paste0(Julia_prefix, "_siteparam.csv")),      row.names = FALSE)
@@ -136,48 +153,48 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
 }
 #######
 
-####### Test function
-# BEA
-# 1) run first "LWFBrook90R-LWFSite-BEA-testdata.R" to prepare arguments
-# 2) then run following:
-generate_LWFBrook90Julia_Input(Julia_target_dir = ".", Julia_prefix = paste0("BEA2016-reset-", Reset),
-                               run_LWFBrook90R = TRUE,
-
-                               options_b90 = options,
-                               param_b90 = param,
-                               climate = meteo,
-                               soil = soilPuh,
-                               output= output,
-                               rtrn.output = TRUE, verbose = FALSE)
-
-# ALV8101
-# 1) run first "LWFBrook90R-TestScript-for-LWFSites_based_on_ALV8101_sen2.R" to prepare arguments
-# 2) then run following:
-generate_LWFBrook90Julia_Input(Julia_target_dir = ".", Julia_prefix = paste0("ALV8101_sen2-reset-", Reset),
-                               run_LWFBrook90R = TRUE,
-
-                    options_b90 = options,
-                    param_b90 = param,
-                    climate = meteo,
-                    soil = soilPuh,
-                    output= output,
-                    rtrn.output = TRUE, verbose = FALSE)
-
-# KAUFENRING
-# 1) run first "Schmidt-Walter-2020-Agric_For_Meteorol_results_fig_1.R" to prepare arguments
-# 2) then run following:
-
-generate_LWFBrook90Julia_Input(Julia_target_dir = ".", Julia_prefix = paste0("SW-2020_fig_1_evergreen-reset-", Reset),
-                               run_LWFBrook90R = TRUE,
-
-                               project.dir = "evergreen/",
-                               options_b90 = options_forest,
-                               #options_b90 = options_forest2, # FB modified
-                               param_b90 = parms_evergreen,
-                               climate = dplyr::rename(kau_meteo_d, windspeed=wind),
-                               soil = soil,
-                               chk_input = TRUE,
-                               output = output)
-#######
+# ####### Test function
+# # BEA
+# # 1) run first "LWFBrook90R-LWFSite-BEA-testdata.R" to prepare arguments
+# # 2) then run following:
+# generate_LWFBrook90Julia_Input(Julia_target_dir = ".", Julia_prefix = paste0("BEA2016-reset-", Reset),
+#                                run_LWFBrook90R = TRUE,
+#
+#                                options_b90 = options,
+#                                param_b90 = param,
+#                                climate = meteo,
+#                                soil = soilPuh,
+#                                output= output,
+#                                rtrn.output = TRUE, verbose = FALSE)
+#
+# # ALV8101
+# # 1) run first "LWFBrook90R-TestScript-for-LWFSites_based_on_ALV8101_sen2.R" to prepare arguments
+# # 2) then run following:
+# generate_LWFBrook90Julia_Input(Julia_target_dir = ".", Julia_prefix = paste0("ALV8101_sen2-reset-", Reset),
+#                                run_LWFBrook90R = TRUE,
+#
+#                     options_b90 = options,
+#                     param_b90 = param,
+#                     climate = meteo,
+#                     soil = soilPuh,
+#                     output= output,
+#                     rtrn.output = TRUE, verbose = FALSE)
+#
+# # KAUFENRING
+# # 1) run first "Schmidt-Walter-2020-Agric_For_Meteorol_results_fig_1.R" to prepare arguments
+# # 2) then run following:
+#
+# generate_LWFBrook90Julia_Input(Julia_target_dir = ".", Julia_prefix = paste0("SW-2020_fig_1_evergreen-reset-", Reset),
+#                                run_LWFBrook90R = TRUE,
+#
+#                                project.dir = "evergreen/",
+#                                options_b90 = options_forest,
+#                                #options_b90 = options_forest2, # FB modified
+#                                param_b90 = parms_evergreen,
+#                                climate = dplyr::rename(kau_meteo_d, windspeed=wind),
+#                                soil = soil,
+#                                chk_input = TRUE,
+#                                output = output)
+# #######
 
 

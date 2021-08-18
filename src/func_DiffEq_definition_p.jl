@@ -52,9 +52,9 @@ function define_LWFB90_p(
             input_param[1,"IMODEL"],
             input_param[1,"ILAYER"],
             input_param[1,"QLAYER"],
-            input_param[1,"NLAYER"],
-            input_param[1,"HEAT"],
-            input_param[1,"nmat"],
+            nrow(input_soil_nodes),
+            0, # flag for heat balance; not implemented; input_param[1,"HEAT"],
+            nrow(input_soil_materials),
             input_param[1,"inirdep"],
             input_param[1,"rgrorate"])
 
@@ -62,7 +62,7 @@ function define_LWFB90_p(
         LWFBrook90.interpolate_meteoveg(
             input_meteoveg,
             input_meteoveg_reference_date,
-            input_param[1,"NLAYER"],
+            nrow(input_soil_nodes),
             input_param[1,"inirdep"],
             input_param[1,"inirlen"],
             input_param[1,"rgroper"],
@@ -97,20 +97,20 @@ function define_LWFB90_p(
         error("Case with multiple precipitation intervals (using PRECDAT) is not implemented.")
     end
     p_DURATN = input_pdur[:,"pdur_h"]   # average storm duration, hr
-    p_LAT    =                          # (Location parameter), latitude, degrees
-        input_siteparam[1,"lat"]/57.296  # = x / (180/pi)# TODO(bernhard) is this a bug? shouldn't it be in degrees?
+    p_LAT_DEG= input_siteparam[1,"lat_deg"]        # (Location parameter), latitude, degrees
+    p_LAT    = p_LAT_DEG/57.296 # = /(180/Pi)      # (Location parameter), latitude, radians
+    p_ASPECT = input_param[1,"ASPECT_DEG"]/57.296  # (Location parameter), aspect, radians through east from north
+    p_ESLOPE = input_param[1,"ESLOPE_DEG"]/57.296  # (Location parameter), slope for evapotranspiration and snowmelt, radians
 
-    p_ASPECT = input_param[1,"ASPECT"]    # (Location parameter), aspect, degrees through east from north
-    p_ESLOPE = input_param[1,"ESLOPE"]    # (Location parameter), slope for evapotranspiration and snowmelt, degrees
     p_MELFAC = input_param[1,"MELFAC"]    # (Location parameter), degree day melt factor for open land, MJ m-2 d-1 K-1
     p_RSTEMP = input_param[1,"RSTEMP"]    # (Location parameter), base temperature for snow-rain transition, °C
     # removed for LWFBrook90: RELHT
     # removed for LWFBrook90: RELLAI
     # Documentation from ecoshift:
     # DURATN(1 To 12) (Location parameter) - average duration of daily precipitation by month, hr. When a precipitation input file is not used, DURATN is used in subroutine INTER24 to estimate interception processes hourly. It is the average number of hours per day with precipitation. Do not use a DURATN of 1, or no interception will be produced. Fractional values are truncated to the next lower even integer. Provision of 12 monthly values for DURATN allows seasonal variation of storm type from low intensity, long DURATN, to high intensity, short DURATN. In reality, though, this seasonal difference is not large. The number of hours a day that precipitation exceeds 0.5 mm varies only from 2 to 6 for most seasons and locations in the United States (see EVP-INTER24. DURATN = 4 for all months is a satisfactory approximation. DURATN is ignored when a precipitation interval file is provided; then precipitation is assumed constant over the precipitation interval, and subroutine INTER is used. [see EVP-INTER24]
-    # LAT and LATD (Location parameter) - latitude, degrees. In code, LATD is in degrees and LAT in radians. LAT is the location latitude in degrees north for solar radiation calculations Negative values are used in the southern hemisphere. This is the only parameter that is specific to geographic location. [see SUN-EQUIVSLP]
-    # ASPECT and ASPECTD (Location parameter) - aspect, degrees through east from north. Used in radiation calculations. In code ASPECTD is in degrees, ASPECT is in radians. If ESLOPE = 0, ASPECT is ignored. [see SUN-EQIVSLP]
-    # ESLOPE and ESLOPED (Location parameter) - slope for evapotranspiration and snowmelt, degrees. In code ESLOPED is in degrees, ESLOPE is in radians. ESLOPE is used for net radiation and snowmelt. See also DSLOPE. [see SUN-EQUIVSLP]
+    # LAT and LAT_DEG (Location parameter)       - latitude, degrees.                                                          In code LAT_DEG    is in degrees, LAT    is in radians. LAT is the location latitude in degrees north for solar radiation calculations Negative values are used in the southern hemisphere. This is the only parameter that is specific to geographic location. [see SUN-EQUIVSLP]
+    # ASPECT and ASPECT_DEG (Location parameter) - aspect, degrees through east from north. Used in radiation calculations.    In code ASPECT_DEG is in degrees, ASPECT is in radians. If ESLOPE = 0, ASPECT is ignored. [see SUN-EQIVSLP]
+    # ESLOPE and ESLOPE_DEG (Location parameter) - slope for evapotranspiration and snowmelt, degrees.                         In code ESLOPE_DEG is in degrees, ESLOPE is in radians. ESLOPE is used for net radiation and snowmelt. See also DSLOPE. [see SUN-EQUIVSLP]
     # MELFAC (Location parameter) - degree day melt factor for open land, MJ m-2 d-1 K-1. MELFAC is the degree-day snowmelt factor for a day with daylength of 0.5 d and no plant canopy. Dividing MELFAC by the heat of fusion of water, LF (= 0.335 MJ m-2 mm-1), gives the more usual degree day factor in mm d-1 K-1. MELFAC = 1.5 MJ m-2 d-1 K-1, or 4.5 mm d-1 K-1, is a good starting value; it is in the lower end of the range given by Federer et al. (1973) and is close to the 4.2 mm d-1 K-1 used by Anderson (1976). Lower values will slow snowmelt. To turn off SMLT, set MELFAC to zero. [see SNO-SNOENRGY]
     # RSTEMP (Location parameter) - base temperature for snow-rain transition, °C. The fraction of daily precipitation as snow is (RSTEMP - TMIN) / (TMAX - TMIN) when TMIN < RSTEMP < TMAX. Lowering RSTEMP produces more snow. RSTEMP = -100 turns off SFAL and makes all precipitation rain. [see SNO-SNOFRAC]
     # RELHT(1 To 20) (Location parameter) - array of ten pairs of day of the year (DOY) and relative height between 0 and 1, dimensionless. RELHT allows canopy height to vary through the year and is a multiplier of MAXHT. The DOY values must increase; intermediate values are interpolated linearly. The first DOY used must be 1 and a later DOY value must be 366. Any remaining pairs after DOY 366 are ignored. RELHT different from 1 would generally be used for herbaceous plant covers. The phenology of RELHT must be determined externally to BROOK90, and is location as well as cover type dependent. [see PET-CANOPY]
@@ -238,7 +238,7 @@ function define_LWFB90_p(
 
     ## Soil discretization
     IMODEL   = input_param[1,"IMODEL"] # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
-    NLAYER   = input_param[1,"NLAYER"] # Number of soil layers used
+    NLAYER   = nrow(input_soil_nodes) # Number of soil layers used
     p_THICK  = soil_discr["THICK"]   # (Soil parameter),  layer thicknesses, mm
     # Documentation from ecoshift:
     # NLAYER (Soil parameter) - number of soil layers to be used, dimensionless. NLAYER is the number of soil layers to be used in the model run. It can vary from 1 to ML. Run time is more or less proportional to NLAYER. Soil parameter values for layers greater than NLAYER can be 0.
@@ -564,28 +564,24 @@ function discretize_soil_params(
     PSIM_init = fill(NaN, NLAYER)
     frelden   = fill(NaN, NLAYER)
     for i = 1:NLAYER
-        if HEAT == 1
-            dep[i]       = input_soil_nodes[i,2]
-            THICK[i]     = input_soil_nodes[i,3]
-            mat[i]       = Int( input_soil_nodes[i,4] )
-            PSIM_init[i] = input_soil_nodes[i,5]
-            frelden[i]   = input_soil_nodes[i,6]
-            # TemperatureNew(i)       = input_soil_nodes[i,7] we don't have it in the input file!!!
-            if i > NLAYER
-                MUE[i] = THICK[i] / ( THICK[i] + THICK(I+1) )
-                ZL[i]  = 0.5 * ( THICK[i] + THICK(I+1) )
-            else
-                MUE[i] = 0.5
-                ZL[i]  = THICK[i]
-            end
-            TMean[i]   = 0.
-        else
-            dep[i]       = input_soil_nodes[i,2]
-            THICK[i]     = input_soil_nodes[i,3]
-            mat[i]       = Int( input_soil_nodes[i,4] )
-            PSIM_init[i] = input_soil_nodes[i,5]
-            frelden[i]   = input_soil_nodes[i,6]
-        end
+        dep[i]       = input_soil_nodes[i,2]
+        THICK[i]     = input_soil_nodes[i,3]
+        mat[i]       = Int( input_soil_nodes[i,4] )
+        PSIM_init[i] = input_soil_nodes[i,5]
+        frelden[i]   = input_soil_nodes[i,6]
+
+        if (HEAT != 0) @error "HEAT must be set to zero, as heat balance is not implemented." end
+        # if (HEAT == 1)
+        #     # TemperatureNew(i)       = input_soil_nodes[i,7] we don't have it in the input file!!!
+        #     if i > NLAYER
+        #         MUE[i] = THICK[i] / ( THICK[i] + THICK(I+1) )
+        #         ZL[i]  = 0.5 * ( THICK[i] + THICK(I+1) )
+        #     else
+        #         MUE[i] = 0.5
+        #         ZL[i]  = THICK[i]
+        #     end
+        #     TMean[i]   = 0.
+        # end
     end
     depmax = dep[1] - THICK[1] / 1000.
 
@@ -635,8 +631,7 @@ function discretize_soil_params(
 
 
     # heat flow -------
-    # we assign some so compilation does not complain
-    TopInfT = 1
+    if (HEAT != 0) @error "HEAT must be set to zero, as heat balance is not implemented." end
     #       if (HEAT == 1)
     #        READ (12,*) Comment
     #        READ (12,*) tTop, Comment
@@ -667,14 +662,14 @@ function discretize_soil_params(
     #        READ (12,*) C
     #       end
 
-    ### # from LWFBrook90R:md_brook90.f95 (lines 105)
-    TPar = fill(NaN, (nmat, 10))
-    TPar .= -1
-    HeatCapOld = fill(NaN, NLAYER)
-    for i = 1:NLAYER
-        HeatCapOld[i] = TPar[mat[i],7] * TPar[mat[i],1] + TPar[mat[i],8]
-                    # TPar[2,mat[i])+TPar[9,mat[i])*SWATI[i]/THICK[i]
-    end
+    # ### # from LWFBrook90R:md_brook90.f95 (lines 105)
+    # TPar = fill(NaN, (nmat, 10))
+    # TPar .= -1
+    # HeatCapOld = fill(NaN, NLAYER)
+    # for i = 1:NLAYER
+    #     HeatCapOld[i] = TPar[mat[i],7] * TPar[mat[i],1] + TPar[mat[i],8]
+    #                 # TPar[2,mat[i])+TPar[9,mat[i])*SWATI[i]/THICK[i]
+    # end
     ###
 
 
@@ -685,8 +680,8 @@ function discretize_soil_params(
                 ("frelden",frelden),
                 ("PAR",PAR),
                 ("STONEF",STONEF),
-                ("tini",tini),
+                ("tini",tini)])#,
                 #
-                ("HeatCapOld",HeatCapOld),
-                ("TopInfT", TopInfT)])
+                #("HeatCapOld",HeatCapOld),
+                #("TopInfT", TopInfT)])
 end

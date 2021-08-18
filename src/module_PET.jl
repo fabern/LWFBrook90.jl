@@ -358,7 +358,7 @@ the west (U.S. Department of Commerce 1968). As of Version 4.8 this value can be
 the BROOK90 main window.
 
 If vapor pressure (EA) is input as zero, it is estimated as the saturated vapor pressure at
-the minimum daily temperatire (TMIN) using subroutine ESAT.
+the minimum daily temperature (TMIN) using subroutine ESAT.
 
 If daily average wind speed at a weather station (UW) is input as zero, it is estimated as 3
 m s-1. This is a surprisingly good approximation for most weather stations in the United
@@ -458,14 +458,22 @@ end
     ESAT(p_fu_TA)
 
 Calculate saturated vp (kPa) and DELTA=dES/dTA (kPa/K) from temperature based on
-Murray J Applied Meteorol 6:203 using as input p_fu_TA (air temperature in °C).
+Murray J Applied Meteorol 6:203 (Magnus-Tetens) using as input p_fu_TA (air temperature in °C).
 """
 function ESAT(p_fu_TA)
-    #
-    ES = 0.61078 * exp(17.26939 * p_fu_TA / (p_fu_TA + 237.3))
+    # Above water (if T >= 0 )
+    # Eq. 6 (Murray 1967)
+    ES = 0.61078 * exp(17.26939 * p_fu_TA / (p_fu_TA + 237.3)) # T+273.16-35.86 = T+237.3
+    # Derivative: dES/dTA = d/dTA c * exp(a*T/(b+T)) = c * exp(a*T/(b+T)) * d/dTA {a*T/(b+T)} =
+    #                       c * exp(a*T/(b+T)) * a*b/(b+T)^2 = ES * a*b/(b+T)^2
+    # DELTA = 17.26939 * 237.3 * ES / (p_fu_TA + 237.3) ^ 2
     DELTA = 4098 * ES / (p_fu_TA + 237.3) ^ 2
+
+    # Above ice (if T < 0 )
     if (p_fu_TA < 0)
-      ES = 0.61078 * exp(21.87456 * p_fu_TA / (p_fu_TA + 265.5))
+      # Eq. 6 (Murray 1967)
+      ES = 0.61078 * exp(21.87456 * p_fu_TA / (p_fu_TA + 265.5)) # T+273.16-7.66 = T+265.5
+      # DELTA = 21.87456 * 265.5 * ES / (p_fu_TA + 265.5) ^ 2
       DELTA = 5808 * ES / (p_fu_TA + 265.5) ^ 2
     end
     return (ES, DELTA)

@@ -36,7 +36,7 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
 
     ## C) Load other parameters
     # Load model input parameters
-    #' @param param A numeric vector of model input parameters. Order (derived from param_to_rlwfbrook90()):
+    #' @param param A numeric vector of model input parameters. Order:
     input_param = read_path_param(path_param)
 
     # Load site parameters
@@ -178,10 +178,8 @@ end
 function read_path_param(path_param)
     # input_param = DataFrame(File(path_param; types=[String, Float64], strict=true))
     input_param = DataFrame(File(path_param;
-        transpose=true, drop=[1],
-        types = Dict(# output specifications -------
-                    "ndays" => Int64  ,            "0_heat" => Int64  ,
-                    # Meteorologic parameters -------
+        transpose=true, drop=[1], comment = "###",
+        types = Dict(# Meteorologic site parameters -------
                     "eslope" => Float64,           "aspect" => Float64,
                     "alb" => Float64,              "albsn" => Float64,
                     "c1" => Float64,               "c2" => Float64,               "c3" => Float64,
@@ -191,26 +189,28 @@ function read_path_param(path_param)
                     "lpc" => Float64,              "cs" => Float64,               "czs" => Float64,
                     "czr" => Float64,              "hs" => Float64,               "hr" => Float64,
                     "zminh" => Float64,            "rhotp" => Float64,            "nn" => Float64,
+                    # Interception initial conditions -------
+                    "intrainini" => Float64,       "intsnowini" => Float64,
                     # Interception parameters -------
-                    "rstemp" => Float64,           "intrainini" => Float64,       "intsnowini" => Float64,
-                    "frintlai" => Float64,         "fsintlai" => Float64,         "frintsai" => Float64,         "fsintsai" => Float64,
-                    "cintrl" => Float64,           "cintrs" => Float64,           "cintsl" => Float64,           "cintss" => Float64,
-                    # Snow parameters -------
+                    "rstemp" => Float64,
+                    "frintlai" => Float64,         "fsintlai" => Float64,
+                    "frintsai" => Float64,         "fsintsai" => Float64,
+                    "cintrl" => Float64,           "cintrs" => Float64,
+                    "cintsl" => Float64,           "cintss" => Float64,
+                    # Snowpack parameters -------
                     "melfac" => Float64,           "ccfac" => Float64,            "laimlt" => Float64,
                     "saimlt" => Float64,           "grdmlt" => Float64,           "maxlqf" => Float64,
                     "ksnvp" => Float64,            "snoden" => Float64,
-                    # leaf parameters affecting PE -------
+                    # Leaf evaporation parameters (affecting PE) -------
                     "glmax" => Float64,            "radex" => Float64,            "glmin" => Float64,            "rm" => Float64,
                     "r5" => Float64,               "cvpd" => Float64,             "tl" => Float64,               "t1" => Float64,
                     "t2" => Float64,               "th" => Float64,
-                    # plant parameters affecting soil-water supply -------
+                    # Plant parameters (affecting soil-water supply) -------
                     "mxkpl" => Float64,
                     "maxrlen" => Float64,          "initrlen" => Float64,         "initrdep" => Float64,
                     "rgrorate" => Float64,         "rgroper" => Float64,          "fxylem" => Float64,
                     "psicr" => Float64,            "rrad" => Float64,             "nooutf" => Int64,    # TODO(bernhard): make boolena
-                    # soil parameters -------
-                    "N_soil_nodes" => Int64  ,
-                    "N_soil_materials" => Int64  ,
+                    # Soil parameters -------
                     "ilayer" => Int64  ,            # TODO(bernhard): switch to depth in mm
                     "qlayer" => Int64  ,            # TODO(bernhard): switch to depth in mm
                     "is_MvG_aka_iModel" => Int64  , # TODO(bernhard): make boolena
@@ -219,102 +219,126 @@ function read_path_param(path_param)
                     "qfpar" => Float64,            "qffc" => Float64,
                     "imperv" => Float64,           "dslope" => Float64,           "slopelen" => Float64,
                     "drain" => Float64,            "gsc" => Float64,              "gsp" => Float64,
-                    # integration parameters -------
+                    # Numerical solver parameters -------
                     "dtimax" => Float64,           "dswmax" => Float64,           "dpsimax" => Float64)
     ))
 
+    # Assert that inputs are correct:
+    received_names = names(input_param)
+    expected_names = [
+        "eslope","aspect","alb","albsn","c1","c2","c3","wndrat","fetch","z0w","zw","lwidth",
+        "obsheight_x_czs","z0s","lpc","cs","czs","czr","hs","hr","zminh","rhotp","nn",
+        "intrainini","intsnowini","frintlai","fsintlai","frintsai","fsintsai","cintrl",
+        "cintrs","cintsl","cintss","rstemp","melfac","ccfac","laimlt","saimlt","grdmlt",
+        "maxlqf","ksnvp","snoden","glmax","radex","glmin","rm","r5","cvpd","tl","t1","t2",
+        "th","mxkpl","maxrlen","initrlen","initrdep","rgrorate","rgroper","fxylem","psicr",
+        "rrad","nooutf","ilayer","qlayer","is_MvG_aka_iModel","rssa","rssb","infexp","bypar",
+        "qfpar","qffc","imperv","dslope","slopelen","drain","gsc","gsp",
+        "dtimax","dswmax","dpsimax"]
+    @assert all(expected_names .∈ (received_names,)) """
+    Input file '$path_param' does not contain all the expected 80 entries.
+    \nExpected but missing:\n$(expected_names[(!).(expected_names .∈ (received_names,))])
+    \n\nExpected:\n$expected_names\nReceived:\n$received_names\n
+    """
+    @assert all(received_names .∈ (expected_names,)) """
+    Input file '$path_param' contains other than the expected 80 entries.
+    \nReceived unexpected: $(received_names[(!).(received_names .∈ (expected_names,))])
+    \nExpected:\n$expected_names\nReceived:\n$received_names\n
+    """
+
     # Rename
     input_param = rename(input_param,
-        :ndays => :NDAYS,             # TODO(bernhard): unused, remove from _param.csv
-        Symbol("0_heat") => :HEAT,
-        :eslope => :ESLOPE,
-        :aspect => :ASPECT,
-        :alb => :ALB,
-        :albsn => :ALBSN,
-        :c1 => :C1,
-        :c2 => :C2,
-        :c3 => :C3,
-        :wndrat => :WNDRAT,
-        :fetch => :FETCH,
-        :z0w => :Z0W,
-        :zw => :ZW,
-        :lwidth => :LWIDTH,
-        :obsheight_x_czs => :Z0G,
-        :z0s => :Z0S,
-        :lpc => :LPC,
-        :cs => :CS,
-        :czs => :CZS,
-        :czr => :CZR,
-        :hs => :HS,
-        :hr => :HR,
-        :zminh => :ZMINH,
-        :rhotp => :RHOTP,
-        :nn => :NN,
-        :rstemp => :RSTEMP,
-        :intrainini => :INTR_init,
-        :intsnowini => :INTS_init,
-        :frintlai => :FRINTL,
-        :fsintlai => :FSINTL,
-        :frintsai => :FRINTS,
-        :fsintsai => :FSINTS,
-        :cintrl => :CINTRL,
-        :cintrs => :CINTRS,
-        :cintsl => :CINTSL,
-        :cintss => :CINTSS,
-        :melfac => :MELFAC,
-        :ccfac => :CCFAC,
-        :laimlt => :LAIMLT,
-        :saimlt => :SAIMLT,
-        :grdmlt => :GRDMLT,
-        :maxlqf => :MAXLQF,
-        :ksnvp => :KSNVP,
-        :snoden => :SNODEN,
-        :glmax => :GLMAX,
-        :radex => :CR,
-        :glmin => :GLMIN,
-        :rm => :RM,
-        :r5 => :R5,
-        :cvpd => :CVPD,
-        :tl => :TL,
-        :t1 => :T1,
-        :t2 => :T2,
-        :th => :TH,
-        :mxkpl => :MXKPL,
-        :maxrlen => :MXRTLN,
-        :initrlen => :inirlen,
-        :initrdep => :inirdep,
-        :rgrorate => :rgrorate,
-        :rgroper => :rgroper,
-        :fxylem => :FXYLEM,
-        :psicr => :PSICR,
-        :rrad => :RTRAD,
-        :nooutf => :NOOUTF,
-        :N_soil_nodes => :NLAYER,    # TODO(bernhard): unused, remove from _param.csv
-        :N_soil_materials => :nmat,  # TODO(bernhard): unused, remove from _param.csv
-        :ilayer => :ILAYER,
-        :qlayer => :QLAYER,
+        # Meteorologic site parameters -------
+        :eslope            => :ESLOPE_DEG,
+        :aspect            => :ASPECT_DEG,
+        :alb               => :ALB,
+        :albsn             => :ALBSN,
+        :c1                => :C1,
+        :c2                => :C2,
+        :c3                => :C3,
+        :wndrat            => :WNDRAT,
+        :fetch             => :FETCH,
+        :z0w               => :Z0W,
+        :zw                => :ZW,
+        # Canopy parameters -------
+        :lwidth            => :LWIDTH,
+        :obsheight_x_czs   => :Z0G,
+        :z0s               => :Z0S,
+        :lpc               => :LPC,
+        :cs                => :CS,
+        :czs               => :CZS,
+        :czr               => :CZR,
+        :hs                => :HS,
+        :hr                => :HR,
+        :zminh             => :ZMINH,
+        :rhotp             => :RHOTP,
+        :nn                => :NN,
+        # Interception initial conditions -------
+        :intrainini        => :INTR_init,
+        :intsnowini        => :INTS_init,
+        # Interception parameters -------
+        :frintlai          => :FRINTL,
+        :fsintlai          => :FSINTL,
+        :frintsai          => :FRINTS,
+        :fsintsai          => :FSINTS,
+        :cintrl            => :CINTRL,
+        :cintrs            => :CINTRS,
+        :cintsl            => :CINTSL,
+        :cintss            => :CINTSS,
+        :rstemp            => :RSTEMP,
+        # Snowpack parameters -------
+        :melfac            => :MELFAC,
+        :ccfac             => :CCFAC,
+        :laimlt            => :LAIMLT,
+        :saimlt            => :SAIMLT,
+        :grdmlt            => :GRDMLT,
+        :maxlqf            => :MAXLQF,
+        :ksnvp             => :KSNVP,
+        :snoden            => :SNODEN,
+        # Leaf evaporation parameters (affecting PE) -------
+        :glmax             => :GLMAX,
+        :radex             => :CR,
+        :glmin             => :GLMIN,
+        :rm                => :RM,
+        :r5                => :R5,
+        :cvpd              => :CVPD,
+        :tl                => :TL,
+        :t1                => :T1,
+        :t2                => :T2,
+        :th                => :TH,
+        # Plant parameters (affecting soil-water supply) -------
+        :mxkpl             => :MXKPL,
+        :maxrlen           => :MXRTLN,
+        :initrlen          => :inirlen,
+        :initrdep          => :inirdep,
+        :rgrorate          => :rgrorate,
+        :rgroper           => :rgroper,
+        :fxylem            => :FXYLEM,
+        :psicr             => :PSICR,
+        :rrad              => :RTRAD,
+        :nooutf            => :NOOUTF,
+        # Soil parameters -------
+        :ilayer            => :ILAYER,
+        :qlayer            => :QLAYER,
         :is_MvG_aka_iModel => :IMODEL,
-        :rssa => :RSSA,
-        :rssb => :RSSB,
-        :infexp => :INFEXP,
-        :bypar => :BYPAR,
-        :qfpar => :QFPAR,
-        :qffc => :QFFC,
-        :imperv => :IMPERV,
-        :dslope => :DSLOPE,
-        :slopelen => :LENGTH,
-        :drain => :DRAIN,
-        :gsc => :GSC,
-        :gsp => :GSP,
-        :dtimax => :DTIMAX,
-        :dswmax => :DSWMAX,
-        :dpsimax => :DPSIMX)
+        :rssa              => :RSSA,
+        :rssb              => :RSSB,
+        :infexp            => :INFEXP,
+        :bypar             => :BYPAR,
+        :qfpar             => :QFPAR,
+        :qffc              => :QFFC,
+        :imperv            => :IMPERV,
+        :dslope            => :DSLOPE,
+        :slopelen          => :LENGTH,
+        :drain             => :DRAIN,
+        :gsc               => :GSC,
+        :gsp               => :GSP,
+        # Numerical solver parameters -------
+        :dtimax            => :DTIMAX,
+        :dswmax            => :DSWMAX,
+        :dpsimax           => :DPSIMX)
 
     # from LWFBrook90R:PFILE.h
-    # Convert to radians
-    input_param[:,:ESLOPE] = input_param[:,:ESLOPE] ./ 57.296
-    input_param[:,:ASPECT] = input_param[:,:ASPECT] ./ 57.296
-
     input_param[:,:FXYLEM]  = min.(input_param[:,:FXYLEM], 0.990)
     input_param[:,:inirlen] = max.(input_param[:,:inirlen], 0.010)
     input_param[:,:inirdep] = max.(input_param[:,:inirdep], 0.010)
@@ -325,6 +349,6 @@ end
 function read_path_siteparam(path_siteparam)
     DataFrame(File(path_siteparam;
                             types=[Int64, Int64, Float64, Float64, Float64, Int64], strict=true,
-                            datarow=2, header=["start_year","start_doy","lat","SNOW_init","GWAT_init","precip_interval"],
+                            datarow=2, header=["start_year","start_doy","lat_deg","SNOW_init","GWAT_init","precip_interval"],
                             delim=',')) # ignorerepeated=true
 end

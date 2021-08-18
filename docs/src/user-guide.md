@@ -97,34 +97,99 @@ Note that the second and third rows containing description and unit headers is n
 4
 ```
 
-`param.csv`:
+`param.csv` (header line and lines starting with ### are ignored):
 
 ```
-"param_id","x"
-"ndays",366
-"0_heat",0
-"eslope",18.26
-"aspect",225
-"alb",0.2
-"albsn",0.5
-"c1",0.25
-"c2",0.5
-"c3",0.2
-"wndrat",0.3
-"fetch",5000
-"z0w",0.005
-"zw",2
-"lwidth",0.1
-"obsheight_x_czs",0.00325
-"z0s",0.001
-"lpc",4
-"cs",0.035
-"czs",0.13
-"czr",0.05
-...
-"dtimax",0.5
-"dswmax",0.05
-"dpsimax",5e-04
+param_id,x
+### Meteorologic site parameters -------,NA
+eslope,18.26
+aspect,225
+alb,0.2
+albsn,0.5
+c1,0.25
+c2,0.5
+c3,0.2
+wndrat,0.3
+fetch,5000
+z0w,0.005
+zw,2
+### Canopy parameters -------,NA
+lwidth,0.1
+obsheight_x_czs,0.00325
+z0s,0.001
+lpc,4
+cs,0.035
+czs,0.13
+czr,0.05
+hs,1
+hr,10
+zminh,2
+rhotp,2
+nn,2.5
+### Interception initial conditions -------,NA
+intrainini,0
+intsnowini,0
+### Interception parameters -------,NA
+frintlai,0.06
+fsintlai,0.04
+frintsai,0.06
+fsintsai,0.04
+cintrl,0.15
+cintrs,0.15
+cintsl,0.6
+cintss,0.6
+rstemp,-0.5
+### Snowpack parameters -------,NA
+melfac,1.5
+ccfac,0.3
+laimlt,0.2
+saimlt,0.5
+grdmlt,0.35
+maxlqf,0.05
+ksnvp,0.3
+snoden,0.3
+### Leaf evaporation parameters (affecting PE) -------,NA
+glmax,0.0053
+radex,0.5
+glmin,3e-04
+rm,1000
+r5,100
+cvpd,2
+tl,0
+t1,10
+t2,30
+th,40
+### Plant parameters (affecting soil-water supply) -------,NA
+mxkpl,8
+maxrlen,3000
+initrlen,12
+initrdep,0.25
+rgrorate,0.03
+rgroper,30
+fxylem,0.5
+psicr,-2
+rrad,0.35
+nooutf,1
+### Soil parameters -------,NA
+ilayer,1
+qlayer,0
+is_MvG_aka_iModel,1
+rssa,100
+rssb,1
+infexp,0
+bypar,0
+qfpar,1
+qffc,0
+imperv,0
+dslope,0
+slopelen,200
+drain,1
+gsc,0
+gsp,0
+### Numerical solver parameters -------,NA
+dtimax,0.5
+dswmax,0.05
+dpsimax,5e-04
 ```
 
 
