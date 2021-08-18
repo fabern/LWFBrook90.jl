@@ -1,2 +1,2 @@
-simyears.1.,as.integer.format.input_Data.options_b90.startdate....j...,input_Data.param_b90.coords_y,input_Data.param_b90.snowini,input_Data.param_b90.gwatini,input_Data.options_b90.prec_interval
-2016,1,46.70052,0,0,1
+start_year,start_doy,precip_interval_NPINT,LAT_DEG,u_SNOW_init,u_GWAT_init
+2016,001,1,46.70052,0,0

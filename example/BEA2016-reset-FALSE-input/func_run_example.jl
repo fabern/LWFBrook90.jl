@@ -111,8 +111,8 @@ function run_example()
     ####################
     # Define initial states of differential equation
     # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
-    u_GWAT_init = input_siteparam[1, "GWAT_init"]
-    u_SNOW_init = input_siteparam[1, "SNOW_init"]
+    u_GWAT_init = input_siteparam[1, "u_GWAT_init"]
+    u_SNOW_init = input_siteparam[1, "u_SNOW_init"]
     u_INTS_init = input_param[1,"u_INTS_init"]
     u_INTR_init = input_param[1,"u_INTR_init"]
     u_CC_init     = 0; # any initial snow has zero liquid water and cold content

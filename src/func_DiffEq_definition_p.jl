@@ -89,14 +89,14 @@ function define_LWFB90_p(
 
 
     ## Location / Meteo
-    p_NPINT  = input_siteparam[1,"precip_interval"]
+    p_NPINT  = input_siteparam[1,"precip_interval_NPINT"]
     if p_NPINT == 1
         p_DTP = 1 / p_NPINT
     else
-        error("Case with multiple precipitation intervals (using PRECDAT) is not implemented.")
+        error("Case with multiple precipitation intervals (using PRECDAT and precip_interval != 1) is not implemented.")
     end
     p_DURATN = input_pdur[:,"pdur_h"]   # average storm duration, hr
-    p_LAT_DEG= input_siteparam[1,"lat_deg"]        # (Location parameter), latitude, degrees
+    p_LAT_DEG= input_siteparam[1,"LAT_DEG"]        # (Location parameter), latitude, degrees
     p_LAT    = p_LAT_DEG/57.296 # = /(180/Pi)      # (Location parameter), latitude, radians
     p_ASPECT = input_param[1,"ASPECT_DEG"]/57.296  # (Location parameter), aspect, radians through east from north
     p_ESLOPE = input_param[1,"ESLOPE_DEG"]/57.296  # (Location parameter), slope for evapotranspiration and snowmelt, radians

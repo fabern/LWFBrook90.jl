@@ -54,12 +54,15 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
   simyears <- seq(from = as.integer(format(input_Data$options_b90$startdate,"%Y")),
                   to = as.integer(format(input_Data$options_b90$enddate,"%Y")),
                   by = 1)
-  out_csv_siteparam <- data.frame(simyears[1],
-                                  as.integer(format(input_Data$options_b90$startdate, "%j")),
-                                  input_Data$param_b90$coords_y,
-                                  input_Data$param_b90$snowini,
-                                  input_Data$param_b90$gwatini,
-                                  input_Data$options_b90$prec_interval)
+  out_siteparam <- data.frame(start_year            = format(input_Data$options_b90$startdate,"%Y"),
+                              start_doy             = format(input_Data$options_b90$startdate,"%j"),
+                              precip_interval_NPINT = input_Data$options_b90$prec_interval,
+                              LAT_DEG               = input_Data$param_b90$coords_y,
+                              u_SNOW_init           = input_Data$param_b90$snowini,
+                              u_GWAT_init           = input_Data$param_b90$gwatini)
+  # out_csv_siteparam <- data.frame(param_id = names(out_siteparam),
+  #                                 x        = unname(out_siteparam))
+  out_csv_siteparam <- out_siteparam
 
   # B4) other model parameters
   # Variant 1: (unfinished)
@@ -114,8 +117,8 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
                           "DRAIN"=drain,   "GSC"=gsc,       "GSP"=gsp,
                           "### Numerical solver parameters -------" = NA,
                           "DTIMAX"=dtimax, "DSWMAX"=dswmax, "DPSIMAX"=dpsimax))
-  out_csv_param <- data.frame(param_id=names(out_param),
-                              x=unname(out_param))
+  out_csv_param <- data.frame(param_id = names(out_param),
+                              x        = unname(out_param))
 
   # Write out CSVs:
   input_folder   <- file.path(Julia_target_dir,paste0(Julia_prefix,"-input"))

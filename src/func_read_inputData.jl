@@ -257,7 +257,7 @@ end
 
 function read_path_siteparam(path_siteparam)
     DataFrame(File(path_siteparam;
-                            types=[Int64, Int64, Float64, Float64, Float64, Int64], strict=true,
-                            datarow=2, header=["start_year","start_doy","lat_deg","SNOW_init","GWAT_init","precip_interval"],
+                            types=[Int64, Int64, Int64, Float64, Float64, Float64], strict=true,
+                            #datarow=2, header=["start_year","start_doy","precip_interval_NPINT","LAT_DEG","u_SNOW_init","u_GWAT_init"],
                             delim=',')) # ignorerepeated=true
 end
