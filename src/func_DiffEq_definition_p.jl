@@ -554,18 +554,17 @@ function discretize_soil_params(
         # ParMat_CH  ==> (θs, θf, kf,     ψf, 0, 0,    0,    0, bexp, wetinf)
         # ParMat_MvG ==> (θs,  0, K(θ_fc), 0, 0, ksat, α, npar, tort, θr)
     end
-    dep       = fill(NaN, NLAYER) # soil depth [m]  #TODO(bernhard): not exported
-    THICK     = fill(NaN, NLAYER)
-    mat       = fill(0, NLAYER)   # material_id for each soil layer #TODO(bernhard): not exported
-    PSIM_init = fill(NaN, NLAYER)
-    frelden   = fill(NaN, NLAYER)
-    for i = 1:NLAYER
-        dep[i]       = input_soil_nodes[i,2]
-        THICK[i]     = input_soil_nodes[i,3]
-        mat[i]       = Int( input_soil_nodes[i,4] )
-        PSIM_init[i] = input_soil_nodes[i,5]
-        frelden[i]   = input_soil_nodes[i,6]
 
+    # THICK     = input_soil_nodes[!,"thick"]                                 # thickness of soil layer [mm]
+    # dep       = input_soil_nodes[!,"midpoint"]                              # soil depth [m] (midpoint, i.e. average depth of layer)
+    THICK_m   = input_soil_nodes[!,"upper_m"] - input_soil_nodes[!,"lower_m"] # thickness of soil layer [m]
+    THICK     = 1000*(THICK_m)                                                # thickness of soil layer [mm]
+    dep       = input_soil_nodes[!,"upper_m"] - THICK/1000/2                  # soil depth [m] (midpoint, i.e. average depth of layer)
+    mat       = input_soil_nodes[!,"mat"]                                     # material_id for each soil layer #TODO(bernhard): not exported
+    PSIM_init = input_soil_nodes[!,"psiini_kPa"]                              # initial condition PSIM [kPa]
+    frelden   = input_soil_nodes[!,"rootden"]                                 # root density
+
+    for i = 1:NLAYER
         if (HEAT != 0) @error "HEAT must be set to zero, as heat balance is not implemented." end
         # if (HEAT == 1)
         #     # TemperatureNew(i)       = input_soil_nodes[i,7] we don't have it in the input file!!!

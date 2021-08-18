@@ -25,9 +25,13 @@ HR,10
 ZMINH,2
 RHOTP,2
 NN,2.5
-### Interception initial conditions -------,NA
-u_INTR_init,0
+### Initial conditions (except for depth-dependent u_aux_PSIM) -------,NA
+u_GWAT_init,0
 u_INTS_init,0
+u_INTR_init,0
+u_SNOW_init,0
+u_CC_init,0
+u_SNOWLQ_init,0
 ### Interception parameters -------,NA
 FRINTLAI,0.06
 FSINTLAI,0.04

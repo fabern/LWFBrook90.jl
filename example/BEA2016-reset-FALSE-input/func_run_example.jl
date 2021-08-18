@@ -110,7 +110,7 @@ function run_example()
 
     ######
     # Transform initial value of auxiliary state u_aux_PSIM_init into state u_SWATIinit:
-    u_aux_PSIM_init = input_soil_nodes[:,"psiini"]
+    u_aux_PSIM_init = input_soil_nodes[:,"psiini_kPa"]
     if any( u_aux_PSIM_init.> 0)
         error("Initial matrix psi must be negative or zero")
     end

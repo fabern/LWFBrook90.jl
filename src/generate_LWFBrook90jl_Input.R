@@ -38,7 +38,20 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
 
   out_csv_meteoveg <- clim_daily %>%
     dplyr::left_join(mesfl_daily, by="dates") %>%
-    dplyr::left_join(veg_daily, by="dates")
+    dplyr::left_join(veg_daily, by="dates") %>%
+    select("dates",	
+           "globrad_MJDayM2" = globrad,	
+           "tmax_degC" = tmax,
+           "tmin_degC" = tmin,
+           "vappres_kPa" = vappres,
+           "windspeed_ms" = windspeed,
+           "prec_mmDay" = prec,
+           "mesfl_unknownUnits" = mesfl,
+           "densef_" = densef,
+           "height_m" = height,
+           "lai_" = lai,
+           "sai_" = sai,
+           "age_yrs" = age)
 
   # B) time-independent parameters:
   # B1) climate data
@@ -51,7 +64,8 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
 
   # B2) soil parameters
   out_csv_soil_nodes     <- input_Data$param_b90$soil_nodes %>%
-    select(layer, midpoint, thick, mat, psiini, rootden)
+    # select(layer, midpoint, thick, mat, psiini, rootden)
+    select(layer, upper_m = upper, lower_m = lower, mat, psiini_kPa = psiini, rootden)
   out_csv_soil_materials <- input_Data$param_b90$soil_materials
 
   # B4) other model parameters

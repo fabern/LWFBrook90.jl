@@ -65,10 +65,8 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
 
     #' @param soil_nodes A matrix of the soil model layers with columns
     #'                   nl (layer number), layer midpoint (m), thickness (mm), mat, psiini (kPa), rootden (-).
-    input_soil_nodes = DataFrame(File(path_soil_nodes;
-                                 types=[Int64, Float64, Float64, Int64, Float64, Float64],
-                                 datarow=2, header=["layer","midpoint","thick","mat","psiini","rootden"],
-                                 delim=','))# ignorerepeated=true
+    input_soil_nodes = read_path_soil_nodes(path_soil_nodes)
+
     return (input_meteoveg,
             input_meteoveg_reference_date,
             input_param,
@@ -262,4 +260,20 @@ function read_path_pdur(path_pdur)
         """
 
     return input_pdur
+end
+
+function read_path_soil_nodes(path_soil_nodes)
+    path_soil_nodes = "example/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_soil_nodes.csv"
+    input_soil_nodes = DataFrame(File(path_soil_nodes;
+                                 types=[Int64, Float64, Float64, Int64, Float64, Float64],
+                                 datarow=2, header=["layer","upper_m","lower_m","mat","psiini_kPa","rootden"],
+                                #  datarow=2, header=["layer","midpoint","thick","mat","psiini","rootden"],
+                                 delim=','))# ignorerepeated=true
+
+    # Check that defined layers do not overlap
+    @assert input_soil_nodes[1:end-1,"lower_m"] == input_soil_nodes[2:end,"upper_m"] """
+        Input file '$path_soil_nodes' contains overlapping layers.
+        Please check and correct the input file.
+        """
+    return input_soil_nodes
 end
