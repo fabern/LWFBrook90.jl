@@ -162,10 +162,10 @@ th,40
 ### Plant parameters (affecting soil-water supply) -------,NA
 mxkpl,8
 maxrlen,3000
-initrlen,12
-initrdep,0.25
-rgrorate,0.03
-rgroper,30
+INITRLEN,12
+INITRDEP,0.25
+RGRORATE,0.03
+RGROPER,30
 fxylem,0.5
 psicr,-2
 rrad,0.35
@@ -173,7 +173,7 @@ nooutf,1
 ### Soil parameters -------,NA
 ilayer,1
 qlayer,0
-is_MvG_aka_iModel,1
+FLAG_MualVanGen,1
 rssa,100
 rssb,1
 infexp,0

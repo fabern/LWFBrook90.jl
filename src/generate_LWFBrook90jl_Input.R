@@ -73,46 +73,47 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
   # Variant 2: (ugly but finished and compatible with current Julia code)
   out_param <- with(input_Data$param_b90,
                         c("### Meteorologic site parameters -------" = NA,
-                          "eslope"=eslope,    "aspect"=aspect,
-                          "alb"=alb,          "albsn"=albsn,
-                          "c1"=c1,            "c2"=c2,          "c3"=c3,
-                          "wndrat"=wndrat,    "fetch"=fetch,    "z0w"=z0w,   "zw"=zw,
+                          "ESLOPE_DEG"=eslope,"ASPECT_DEG"=aspect,
+                          "ALB"=alb,          "ALBSN"=albsn,
+                          "C1"=c1,            "C2"=c2,          "C3"=c3,
+                          "WNDRAT"=wndrat,    "FETCH"=fetch,    "Z0W"=z0w,   "ZW"=zw,
                           "### Canopy parameters -------" = NA,
-                          "lwidth"=lwidth,    "obsheight_x_czs" = obsheight * czs,  "z0s"=z0s,
-                          "lpc"=lpc,          "cs"=cs,                              "czs"=czs,
-                          "czr"=czr,          "hs"=hs,                              "hr"=hr,
-                          "zminh"=zminh,      "rhotp"=rhotp,                        "nn"=nn,
+                          "LWIDTH"=lwidth,    "Z0G" = obsheight * czs,  "Z0S"=z0s,
+                          "LPC"=lpc,          "CS"=cs,                  "CZS"=czs,
+                          "CZR"=czr,          "HS"=hs,                  "HR"=hr,
+                          "ZMINH"=zminh,      "RHOTP"=rhotp,            "NN"=nn,
                           "### Interception initial conditions -------" = NA,
-                          "intrainini"=intrainini, "intsnowini"=intsnowini,
+                          "u_INTR_init"=intrainini, "u_INTS_init"=intsnowini,
                           "### Interception parameters -------" = NA,
-                          "frintlai"=frintlai, "fsintlai"=fsintlai,
-                          "frintsai"=frintsai, "fsintsai"=fsintsai,
-                          "cintrl"=cintrl,     "cintrs"=cintrs,
-                          "cintsl"=cintsl,     "cintss"=cintss,
-                          "rstemp"=rstemp,
+                          "FRINTLAI"=frintlai, "FSINTLAI"=fsintlai,
+                          "FRINTSAI"=frintsai, "FSINTSAI"=fsintsai,
+                          "CINTRL"=cintrl,     "CINTRS"=cintrs,
+                          "CINTSL"=cintsl,     "CINTSS"=cintss,
+                          "RSTEMP"=rstemp,
                           "### Snowpack parameters -------" = NA,
-                          "melfac"=melfac,     "ccfac"=ccfac,    "laimlt"=laimlt,
-                          "saimlt"=saimlt,     "grdmlt"=grdmlt,  "maxlqf"=maxlqf,
-                          "ksnvp"=ksnvp,       "snoden"=snoden,
+                          "MELFAC"=melfac,     "CCFAC"=ccfac,
+                          "LAIMLT"=laimlt,     "SAIMLT"=saimlt,
+                          "GRDMLT"=grdmlt,     "MAXLQF"=maxlqf,
+                          "KSNVP"=ksnvp,       "SNODEN"=snoden,
                           "### Leaf evaporation parameters (affecting PE) -------" = NA,
-                          "glmax"=glmax,  "radex"=radex,  "glmin"=glmin,  "rm"=rm,
-                          "r5"=r5,        "cvpd"=cvpd,    "tl"=tl,        "t1"=t1,
-                          "t2"=t2,        "th"=th,
+                          "GLMAX"=glmax,  "GLMIN"=glmin,  "CR"=radex,     "RM"=rm,
+                          "R5"=r5,        "CVPD"=cvpd,    "TL"=tl,        "T1"=t1,
+                          "T2"=t2,        "TH"=th,
                           "### Plant parameters (affecting soil-water supply) -------" = NA,
-                          "mxkpl"=mxkpl,
-                          "maxrlen"=maxrlen,   "initrlen"=initrlen, "initrdep"=initrdep,
-                          "rgrorate"=rgrorate, "rgroper"=rgroper,   "fxylem"=fxylem,
-                          "psicr"=psicr,       "rrad"=rrad,         "nooutf"=nooutf,
+                          "MXKPL"=mxkpl,       "MXRTLN"=maxrlen,
+                          "INITRLEN"=initrlen, "INITRDEP"=initrdep,
+                          "RGRORATE"=rgrorate, "RGROPER"=rgroper,   "FXYLEM"=fxylem,
+                          "PSICR"=psicr,       "RTRAD"=rrad,        "NOOUTF"=nooutf,
                           "### Soil parameters -------" = NA,
-                          "ilayer"=ilayer, #TODO(bernhard): switch to depth in mm"
-                          "qlayer"=qlayer, #TODO(bernhard): switch to depth in mm"
-                          "is_MvG_aka_iModel"=ifelse(input_Data$options_b90$imodel == "MvG", 1, 0),
-                          "rssa"=rssa,     "rssb"=rssb,     "infexp"=infexp,
-                          "bypar"=bypar,   "qfpar"=qfpar,   "qffc"=qffc,
-                          "imperv"=imperv, "dslope"=dslope, "slopelen"=slopelen,
-                          "drain"=drain,   "gsc"=gsc,       "gsp"=gsp,
+                          "ILAYER"=ilayer, #TODO(bernhard): switch to depth in mm"
+                          "QLAYER"=qlayer, #TODO(bernhard): switch to depth in mm"
+                          "FLAG_MualVanGen"=ifelse(input_Data$options_b90$imodel == "MvG", 1, 0),
+                          "RSSA"=rssa,     "RSSB"=rssb,     "INFEXP"=infexp,
+                          "BYPAR"=bypar,   "QFPAR"=qfpar,   "QFFC"=qffc,
+                          "IMPERV"=imperv, "DSLOPE"=dslope, "LENGTH_SLOPE"=slopelen,
+                          "DRAIN"=drain,   "GSC"=gsc,       "GSP"=gsp,
                           "### Numerical solver parameters -------" = NA,
-                          "dtimax"=dtimax, "dswmax"=dswmax, "dpsimax"=dpsimax))
+                          "DTIMAX"=dtimax, "DSWMAX"=dswmax, "DPSIMAX"=dpsimax))
   out_csv_param <- data.frame(param_id=names(out_param),
                               x=unname(out_param))
 
@@ -121,13 +122,28 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
   results_folder <- file.path(Julia_target_dir,paste0(Julia_prefix,"-LWFBrook90R_result"))
   dir.create(input_folder, showWarnings = TRUE, recursive = T)
 
-  write.csv(out_csv_soil_nodes,     file.path(input_folder, paste0(Julia_prefix, "_soil_nodes.csv")),     row.names = FALSE)
-  write.csv(out_csv_soil_materials, file.path(input_folder, paste0(Julia_prefix, "_soil_materials.csv")), row.names = FALSE)
-  write.csv(out_csv_pdur,           file.path(input_folder, paste0(Julia_prefix, "_pdur.csv")),           row.names = FALSE)
-  write.csv(out_csv_param,          file.path(input_folder, paste0(Julia_prefix, "_param.csv")),          row.names = FALSE, quote = FALSE)
-  # write.csv(out_csv_precdat,        file.path(input_folder, paste0(Julia_prefix, "_precdat.csv")),        row.names = FALSE)
-  write.csv(out_csv_meteoveg,        file.path(input_folder, paste0(Julia_prefix, "_meteoveg.csv")),        row.names = FALSE)
-  write.csv(out_csv_siteparam,      file.path(input_folder, paste0(Julia_prefix, "_siteparam.csv")),      row.names = FALSE)
+  # withr::with_options(c(scipen=100), { # temporarily swichtes off scientific notation
+  #   write.csv(out_csv_soil_nodes,     file.path(input_folder, paste0(Julia_prefix, "_soil_nodes.csv")),     row.names = FALSE, quote = FALSE)
+  #   write.csv(out_csv_soil_materials, file.path(input_folder, paste0(Julia_prefix, "_soil_materials.csv")), row.names = FALSE, quote = FALSE)
+  #   write.csv(out_csv_pdur,           file.path(input_folder, paste0(Julia_prefix, "_pdur.csv")),           row.names = FALSE, quote = FALSE)
+  #   write.csv(out_csv_param,          file.path(input_folder, paste0(Julia_prefix, "_param.csv")),          row.names = FALSE, quote = FALSE)
+  #   # write.csv(out_csv_precdat,      file.path(input_folder, paste0(Julia_prefix, "_precdat.csv")),        row.names = FALSE, quote = FALSE)
+  #   write.csv(out_csv_meteoveg,       file.path(input_folder, paste0(Julia_prefix, "_meteoveg.csv")),       row.names = FALSE, quote = FALSE)
+  #   write.csv(out_csv_siteparam,      file.path(input_folder, paste0(Julia_prefix, "_siteparam.csv")),      row.names = FALSE, quote = FALSE)
+  # })
+  withr::with_options(c(scipen=100), { # temporarily switches off scientific notation
+    require(dplyr)
+    out_csv_soil_nodes     %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_soil_nodes.csv")),    row.names=FALSE, quote=FALSE)
+    out_csv_soil_materials %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_soil_materials.csv")),row.names=FALSE, quote=FALSE)
+    out_csv_param          %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_param.csv")),         row.names=FALSE, quote=FALSE)
+    out_csv_meteoveg       %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_meteoveg.csv")),      row.names=FALSE, quote=FALSE)
+    out_csv_pdur           %>%                                                 write.csv(file.path(input_folder, paste0(Julia_prefix, "_pdur.csv")),          row.names=FALSE, quote=FALSE)
+    out_csv_siteparam      %>%                                                 write.csv(file.path(input_folder, paste0(Julia_prefix, "_siteparam.csv")),     row.names=FALSE, quote=FALSE)
+    # out_csv_precdat        %>%                                                 write.csv(file.path(input_folder, paste0(Julia_prefix, "_precdat.csv")),       row.names=FALSE, quote=FALSE)
+  })
+
+  #TODO: siteparam rename columns: out_csv_siteparam
+
 
   # If run is requested also run LWFBrook90R and save results
   if(run_LWFBrook90R) {

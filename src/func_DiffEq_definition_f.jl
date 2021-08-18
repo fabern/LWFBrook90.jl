@@ -16,12 +16,12 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # Parse parameters
         ## A) constant parameters:
         p_soil = p[1][1]
-        (NLAYER, IMODEL, compute_intermediate_quantities, Reset,
+        (NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, Reset,
         p_DTP, p_NPINT,
 
         # FOR MSBITERATE:
         p_QLAYER, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC, p_IMPERV,
-        p_LENGTH, p_DSLOPE, p_RHOWG, p_DPSIMX, #TODO(bernhard) p_RHOWG is a global constant
+        p_LENGTH_SLOPE, p_DSLOPE, p_RHOWG, p_DPSIMAX, #TODO(bernhard) p_RHOWG is a global constant
         p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX,
         p_GSC, p_GSP,
 
@@ -59,7 +59,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         #u_SNOWLQ   = u[6]
         u_SWATI    = u[7:(7+NLAYER-1)]
 
-        LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMX, t)
+        LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, t)
 
         (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
             LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil)
@@ -80,16 +80,16 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # Water movement through soil
         (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, DTI, aux_du_INFLI, aux_du_BYFLI,
         du_NTFLI, du_GWFL, du_SEEP) =
-            MSBITERATE(IMODEL, NLAYER, p_QLAYER, p_soil,
+            MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
                     # for SRFLFR:
                     u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC,
                     #
                     p_IMPERV, p_fu_RNET, aux_du_SMLT,
-                    p_LENGTH, p_DSLOPE,
+                    p_LENGTH_SLOPE, p_DSLOPE,
                     # for DSLOP:
                     p_RHOWG, u_aux_PSIM, p_fu_KK,
                     #
-                    u_aux_PSITI, p_DPSIMX,
+                    u_aux_PSITI, p_DPSIMAX,
                     #
                     p_DRAIN, DTRI, p_DTIMAX,
                     # for INFLOW:

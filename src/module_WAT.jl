@@ -83,7 +83,7 @@ end
 
 
 """
-    LWFRootGrowth(frelden, tini, age, rgroper, inirdep, inirlen, NLAYER)
+    LWFRootGrowth(frelden, tini, age, RGROPER, INITRDEP, INITRLEN, NLAYER)
 
 Compute root growth according to LWF root growth model, (Hammel and Kennel 2000).
 
@@ -91,25 +91,25 @@ Compute root growth according to LWF root growth model, (Hammel and Kennel 2000)
     - `frelden[]`:  final relative values of root length per unit volume
     - `tini[]`   :  initial time for root growth in layer
     - `age`      :  age of vegetation
-    - `rgroper`  :  period of root growth in layer, a
-    - `inirdep`  :  intial root depth, m
-    - `inirlen`  :  intial total root length, m m-2
+    - `RGROPER`  :  period of root growth in layer, a
+    - `INITRDEP`  :  intial root depth, m
+    - `INITRLEN`  :  intial total root length, m m-2
     - `NLAYER`   :  number of soil layers
 Returns:
     - `RELDEN[]`  : current, age-dependent relative values of root length per unit volume
 """
-function LWFRootGrowth(frelden, tini, age, rgroper, inirdep, inirlen, NLAYER)
+function LWFRootGrowth(frelden, tini, age, RGROPER, INITRDEP, INITRLEN, NLAYER)
 
     p_fT_RELDEN = fill(NaN, NLAYER)
-    if rgroper > zero(rgroper)
+    if RGROPER > zero(RGROPER)
         for i = 1:NLAYER
             if age < tini[i]
                 p_fT_RELDEN[i]=0.0
-            elseif age >= tini[i] && age <= tini[i] + rgroper
+            elseif age >= tini[i] && age <= tini[i] + RGROPER
                 # rl0:  constant intial root length density, m m-3
-                rl0=inirlen/inirdep
-                p_fT_RELDEN[i]=rl0*(frelden[i]/rl0)^((age-tini[i])/rgroper)
-            elseif age > tini[i] + rgroper
+                rl0=INITRLEN/INITRDEP
+                p_fT_RELDEN[i]=rl0*(frelden[i]/rl0)^((age-tini[i])/RGROPER)
+            elseif age > tini[i] + RGROPER
                 p_fT_RELDEN[i]=frelden[i]
             else
                 error("In RootGrowth() unexpected error occurred.")
@@ -225,13 +225,13 @@ end
 
 Compute downslope flow rate from layer.
 """
-function DSLOP(p_DSLOPE, p_LENGTH, p_RHOWG, p_soil, u_aux_PSIM, p_fu_KK)
+function DSLOP(p_DSLOPE, p_LENGTH_SLOPE, p_RHOWG, p_soil, u_aux_PSIM, p_fu_KK)
 
     # p_THICK_i, p_STONEF_i, )
     p_THICK = p_soil.p_THICK
     p_STONEF = p_soil.p_STONEF
 
-    LL = 1000 * p_LENGTH
+    LL = 1000 * p_LENGTH_SLOPE
     GRAD = p_RHOWG * sin(p_DSLOPE) .+ (2 .* u_aux_PSIM ./ LL) .* cos(p_DSLOPE)
     ARATIO = p_THICK .* (1 .- p_STONEF) * cos(p_DSLOPE) ./ LL
 
@@ -304,7 +304,7 @@ end
 
 """
     INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
-    aux_du_DSFLI, aux_du_TRANI, aux_du_SLVP, p_SWATMX, u_SWATI, VRFLI_prior)
+    aux_du_DSFLI, aux_du_TRANI, aux_du_SLVP, p_SWATMAX, u_SWATI, VRFLI_prior)
 
 Compute net inflow to soil layer.
 
@@ -337,7 +337,7 @@ in the iteration time-step. The vertical flow to the next layer down (VRFLIi ) (
 negative), the transpiration withdrawal (TRANIi ), and the downslope flow (DSFLIi ) are
 fixed. So
 
-MAXINi = (SWATMXi - SWATIi) / DTI + VRFLIi + DSFLIi + TRANIi
+MAXINi = (SWATMAXi - SWATIi) / DTI + VRFLIi + DSFLIi + TRANIi
 
 where DTI is the iteration time step.
 
@@ -359,7 +359,7 @@ original VRFLIi are needed again if the iteration time step (DTI) is reduced.
 "
 """
 function INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
-                aux_du_DSFLI, aux_du_TRANI, aux_du_SLVP, p_SWATMX, u_SWATI, VRFLI_prior)
+                aux_du_DSFLI, aux_du_TRANI, aux_du_SLVP, p_SWATMAX, u_SWATI, VRFLI_prior)
                 # This function a) computes all the fluxes involved in the
                 # balance of a single soil layer and b) corrects the fluxes of
                 # VRFLI, INFLI and BYFLI.
@@ -411,7 +411,7 @@ function INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
     # DSFLI(*)  - downslope flow rate from layer, mm/d
     # TRANI(*)  - transpiration rate from layer, mm/d
     # SLVP      - evaporation rate from soil, mm/d
-    # SWATMX(*) - maximum water storage for layer, mm
+    # SWATMAX(*) - maximum water storage for layer, mm
     # SWATI(*)  - water volume in layer, mm
     # VRFLI(*)  - vertical drainage rate from layer, mm/d
 
@@ -440,7 +440,7 @@ function INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
     for i = NLAYER:-1:1
         # Compute maximum possible inflow during time interval DTI:
         # maximum allowed rate of input of water to layer, mm/d:
-        MAXIN = (p_SWATMX[i] - u_SWATI[i]) / DTI + VRFLI_posterior[i] + aux_du_DSFLI[i] + aux_du_TRANI[i]
+        MAXIN = (p_SWATMAX[i] - u_SWATI[i]) / DTI + VRFLI_posterior[i] + aux_du_DSFLI[i] + aux_du_TRANI[i]
         # inflow is constitued by INFLI(i), VRFLI(i-1) for any layer i
         # inflow is constitued by INFLI(1)             for the first layer 1
         if (i == 1)
@@ -548,7 +548,7 @@ function SRFLFR(p_QLAYER, u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC)
     return SAFRAC
 end
 
-function ITER(NLAYER, IMODEL, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMX, p_soil)
+function ITER(NLAYER, FLAG_MualVanGen, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMAX, p_soil)
     # ITER() is a step size limiter
 
     # DTI       ! time step for iteration interval, d
@@ -557,22 +557,22 @@ function ITER(NLAYER, IMODEL, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSITI, u_aux_
     # NTFLI(*)  ! net flow rate into layer, mm/d
     # PSITI(*)  ! total potential, kPa
     # u_aux_θ   ! volumetric soil water content, m3/m3
-    # p_DSWMAX  ! maximum change allowed in SWATI, percent of SWATMX(i)
-    # p_DPSIMX  ! maximum potential difference considered "equal", kPa
+    # p_DSWMAX  ! maximum change allowed in SWATI, percent of SWATMAX(i)
+    # p_DPSIMAX  ! maximum potential difference considered "equal", kPa
     # p_THICK   ! soil layer thicknesses, mm
     # p_THSAT   ! θ at saturation == matrix porosity (-)
-    # unused: p_SWATMX   maximum water storage for layer, mm
+    # unused: p_SWATMAX   maximum water storage for layer, mm
 
-    #NLAYER = size(p_soil.p_SWATMX, 1)
+    #NLAYER = size(p_soil.p_SWATMAX, 1)
     # if isa(p_soil, KPT_SOILPAR_Mvg1d)
-    #     IMODEL = 1
+    #     FLAG_MualVanGen = 1
     # else # elseis isa(p_soil, KPT_SOILPAR_Ch1d)
-    #     IMODEL = 0
+    #     FLAG_MualVanGen = 0
     # end
     A = zeros(NLAYER)
     temp = zeros(NLAYER)
     # first approximation to new total potential
-    if (IMODEL == 0)
+    if (FLAG_MualVanGen == 0)
         for i = 1:NLAYER
             # A is dψ/dt
             # du_NTFLI (mm/d)
@@ -580,30 +580,30 @@ function ITER(NLAYER, IMODEL, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSITI, u_aux_
             # DPSIDW (kPa/mm)
             # p_THSAT (θ at saturation == matrix porosity (-))
             # p_STONEF ()
-            # p_SWATMX (mm) = p_THICK .* p_THSAT .* (1.0 .- p_STONEF)
+            # p_SWATMAX (mm) = p_THICK .* p_THSAT .* (1.0 .- p_STONEF)
 
             # TODO: bernhard collect definitions of:
-            # WETNES = SWATI/SWATMX
+            # WETNES = SWATI/SWATMAX
             # θ  = f2(WETNES)
             # ψM = f1(WETNES)
             # ψT = ψM + ψG
 
-            # A[i]    = du_NTFLI[i] * DPSIDW[i] / p_SWATMX[i]
-            # NOTE(bernhard): using p_SWATMX[i] = p_soil.p_THICK[i] * p_soil.p_THSAT[i] * (1 - p_soil.p_STONEF[i])
+            # A[i]    = du_NTFLI[i] * DPSIDW[i] / p_SWATMAX[i]
+            # NOTE(bernhard): using p_SWATMAX[i] = p_soil.p_THICK[i] * p_soil.p_THSAT[i] * (1 - p_soil.p_STONEF[i])
             #                 above expression can be extended to:
             A[i]    = du_NTFLI[i]/p_soil.p_THICK[i] * DPSIDW[i] / (p_soil.p_THSAT[i] -     0. )/ (1 - p_soil.p_STONEF[i])
             temp[i] = u_aux_PSITI[i] + A[i] * DTI
         end
-    else # elseif (IMODEL == 1)
+    else # elseif (FLAG_MualVanGen == 1)
         for i = 1:NLAYER
             # A[i]    = du_NTFLI[i]/p_soil.p_THICK[i] * DPSIDW[i] / (p_soil.p_THSAT[i] - p_soil.p_θr[i])
-            # # TODO(bernhard): is there no STONEF in IMODEL==1. Bug?
+            # # TODO(bernhard): is there no STONEF in FLAG_MualVanGen==1. Bug?
             # #                 2021-03-24: yes, this seems like a bug. But it doesn't seem
             # #                             to be used anywhere further down.
             # temp[i] = u_aux_PSITI[i] + A[i] * DTI
 
             # NOTE Bernhard: deactivated computation of A and temp as they are unused anyway
-            #                if IMODEL==1
+            #                if FLAG_MualVanGen==1
         end
     end
 
@@ -612,15 +612,15 @@ function ITER(NLAYER, IMODEL, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSITI, u_aux_
 
     for i = 1:NLAYER
         # prevent too large a change in water content
-        # DTINEW = min(DTINEW, 0.01 * p_DSWMAX * p_SWATMX[i] / max(0.000001, abs(du_NTFLI[i])))
+        # DTINEW = min(DTINEW, 0.01 * p_DSWMAX * p_SWATMAX[i] / max(0.000001, abs(du_NTFLI[i])))
         DTINEW = min(DTINEW,
                      0.01 * p_DSWMAX * p_soil.p_THICK[i] * p_soil.p_THSAT[i] * (1 - p_soil.p_STONEF[i]) / max(0.000001, abs(du_NTFLI[i])))
 
         # prevent a change in water content larger than total available water
-        if (IMODEL == 0)
-            available_water = (0.0     - u_aux_θ[i]) * p_soil.p_THICK[i] # TODO(bernhard): is ther no STONEF in IMODEL==0. Bug?
-        else # IMODEL == 1
-            available_water = (p_soil.p_θr[i] - u_aux_θ[i]) * p_soil.p_THICK[i] # TODO(bernhard): is ther no STONEF in IMODEL==1. Bug?
+        if (FLAG_MualVanGen == 0)
+            available_water = (0.0     - u_aux_θ[i]) * p_soil.p_THICK[i] # TODO(bernhard): is ther no STONEF in FLAG_MualVanGen==0. Bug?
+        else # FLAG_MualVanGen == 1
+            available_water = (p_soil.p_θr[i] - u_aux_θ[i]) * p_soil.p_THICK[i] # TODO(bernhard): is ther no STONEF in FLAG_MualVanGen==1. Bug?
         end
 
         # If water is flowing out of cell: du_NTFLI < 0
@@ -639,13 +639,13 @@ function ITER(NLAYER, IMODEL, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSITI, u_aux_
             end
         end
         # prevent oscillation of potential gradient
-        if (IMODEL == 0)
+        if (FLAG_MualVanGen == 0)
             if (i < NLAYER)
                 # total potential difference at beginning of iteration
                 PP = u_aux_PSITI[i] - u_aux_PSITI[i + 1]
                 # first approx to total potential difference at end of iteration
                 TT = temp[i] - temp[i + 1]
-                if ((abs(TT) > p_DPSIMX) && (abs(PP) > p_DPSIMX) && (sign(TT) != sign(PP)))
+                if ((abs(TT) > p_DPSIMAX) && (abs(PP) > p_DPSIMAX) && (sign(TT) != sign(PP)))
                     DTINEW = min(DTINEW, -PP / (A[i] - A[i + 1]))
                     DTINEW = max(DTINEW, DTIMIN) # Only in LWFBrook90R
                 end

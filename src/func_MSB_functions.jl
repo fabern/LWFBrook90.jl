@@ -10,7 +10,7 @@ callback function.
 """
 function MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
                     # arguments
-                    IMODEL, NLAYER, p_soil,
+                    FLAG_MualVanGen, NLAYER, p_soil,
                     # for SUNDS
                     p_LAT, p_ESLOPE, DOY, p_L1, p_L2,
                     # for CANOPY
@@ -107,7 +107,7 @@ end
 
 
 function MSBDAYNIGHT(IDAY, #TODO(bernhard) just for debug... remove again!
-                     IMODEL,
+                     FLAG_MualVanGen,
                      # arguments
                      p_fT_SLFDAY, p_fu_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fu_TADTM, p_fu_UADTM, p_fu_TANTM, p_fu_UANTM,
                      p_fT_I0HDAY,
@@ -134,7 +134,7 @@ function MSBDAYNIGHT(IDAY, #TODO(bernhard) just for debug... remove again!
     p_fu_GIR = fill(NaN, 2)
     p_fu_ATRI=fill(NaN,2,NLAYER)
 
-    if IMODEL == 1
+    if FLAG_MualVanGen == 1
         p_fu_PGER = fill(NaN, 2) # fill in values further down
     else
         p_fu_PGER = fill(NaN, 2) # don't fill in values, simply return NaN
@@ -187,7 +187,7 @@ function MSBDAYNIGHT(IDAY, #TODO(bernhard) just for debug... remove again!
         # RSC = 0, p_fu_RSS not changed
         p_fu_PIR[J], p_fu_GIR[J] =  LWFBrook90.PET.SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, 0, p_fu_RSS, DELTA)
 
-        if IMODEL == 1
+        if FLAG_MualVanGen == 1
             # S.-W. potential interception and ground evap. rates
             # RSC not changed, p_fu_RSS = 0
             _, p_fu_PGER[J] =  LWFBrook90.PET.SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, 0, DELTA)
@@ -233,7 +233,7 @@ function MSBDAYNIGHT(IDAY, #TODO(bernhard) just for debug... remove again!
 end
 
 
-function MSBDAYNIGHT_postprocess(IMODEL, NLAYER,
+function MSBDAYNIGHT_postprocess(FLAG_MualVanGen, NLAYER,
                                  p_fu_PTR, # potential transpiration rate for daytime or night (mm/d)
                                  p_fu_GER, # ground evaporation rate for daytime or night (mm/d)
                                  p_fu_PIR, # potential interception rate for daytime or night (mm/d)
@@ -249,7 +249,7 @@ function MSBDAYNIGHT_postprocess(IMODEL, NLAYER,
     p_fu_PINT  = (p_fu_PIR[1] * p_fT_DAYLEN + p_fu_PIR[2] * (1 - p_fT_DAYLEN))
     p_fu_GIVP  = (p_fu_GIR[1] * p_fT_DAYLEN + p_fu_GIR[2] * (1 - p_fT_DAYLEN))
 
-    if IMODEL==1
+    if FLAG_MualVanGen==1
         p_fu_PSLVP = (p_fu_PGER[1] * p_fT_DAYLEN + p_fu_PGER[2] * (1 - p_fT_DAYLEN))
     end
 
@@ -356,16 +356,16 @@ function MSBPREINT(#arguments:
 end
 
 
-function MSBITERATE(IMODEL, NLAYER, p_QLAYER, p_soil,
+function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
                     # for SRFLFR:
                     u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC,
                     #
                     p_IMPERV, p_fu_RNET, aux_du_SMLT,
-                    p_LENGTH, p_DSLOPE,
+                    p_LENGTH_SLOPE, p_DSLOPE,
                     # for DSLOP:
                     p_RHOWG, u_aux_PSIM, p_fu_KK,
                     #
-                    u_aux_PSITI, p_DPSIMX,
+                    u_aux_PSITI, p_DPSIMAX,
                     #
                     p_DRAIN, DTRI, p_DTIMAX,
                     # for INFLOW:
@@ -398,17 +398,17 @@ function MSBITERATE(IMODEL, NLAYER, p_QLAYER, p_soil,
     aux_du_DSFLI = fill(NaN, NLAYER)
 
     # downslope flow rates
-    if (p_LENGTH == 0 || p_DSLOPE == 0)
+    if (p_LENGTH_SLOPE == 0 || p_DSLOPE == 0)
         # added in Version 4
         aux_du_DSFLI .= 0
     else
-        aux_du_DSFLI .= LWFBrook90.WAT.DSLOP(p_DSLOPE, p_LENGTH, p_RHOWG, p_soil, u_aux_PSIM, p_fu_KK)
+        aux_du_DSFLI .= LWFBrook90.WAT.DSLOP(p_DSLOPE, p_LENGTH_SLOPE, p_RHOWG, p_soil, u_aux_PSIM, p_fu_KK)
     end
 
     for i = NLAYER:-1:1
         # vertical flow rates
         if (i < NLAYER)
-            if (abs(u_aux_PSITI[i] - u_aux_PSITI[i+1]) < p_DPSIMX)
+            if (abs(u_aux_PSITI[i] - u_aux_PSITI[i+1]) < p_DPSIMAX)
                 aux_du_VRFLI[i] = 0
             else
                 aux_du_VRFLI[i] =
@@ -442,7 +442,7 @@ function MSBITERATE(IMODEL, NLAYER, p_QLAYER, p_soil,
     # net inflow to each layer including E and T withdrawal adjusted for interception
     aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
         LWFBrook90.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
-                                    aux_du_SLVP, p_soil.p_SWATMX, u_SWATI,
+                                    aux_du_SLVP, p_soil.p_SWATMAX, u_SWATI,
                                     aux_du_VRFLI_1st_approx)
 
     DPSIDW = LWFBrook90.KPT.FDPSIDWF(u_aux_WETNES, p_soil)
@@ -450,8 +450,8 @@ function MSBITERATE(IMODEL, NLAYER, p_QLAYER, p_soil,
     # limit step size
     #   ITER computes DTI so that the potential difference (due to aux_du_VRFLI)
     #   between adjacent layers does not change sign during the iteration time step
-    DTINEW=LWFBrook90.WAT.ITER(NLAYER, IMODEL, DTI, LWFBrook90.CONSTANTS.p_DTIMIN, DPSIDW,
-                                    du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMX,
+    DTINEW=LWFBrook90.WAT.ITER(NLAYER, FLAG_MualVanGen, DTI, LWFBrook90.CONSTANTS.p_DTIMIN, DPSIDW,
+                                    du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMAX,
                     p_soil)
     # recompute step
     if (DTINEW < DTI)
@@ -459,7 +459,7 @@ function MSBITERATE(IMODEL, NLAYER, p_QLAYER, p_soil,
         DTI = DTINEW
         aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
             LWFBrook90.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
-                                        aux_du_SLVP, p_soil.p_SWATMX, u_SWATI,
+                                        aux_du_SLVP, p_soil.p_SWATMAX, u_SWATI,
                                         aux_du_VRFLI_1st_approx)
     end
 

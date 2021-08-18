@@ -1,5 +1,4 @@
 using Interpolations: interpolate, BSpline, Constant, Previous, scale, extrapolate, NoInterp
-
 """
     define_diff_eq_parameters()
 
@@ -7,7 +6,7 @@ Generate vector p needed for ODE() problem in DiffEq.jl package.
 
 # Arguments
 - `NLAYER::...`: TODO argument description.
-- `IMODEL::...`: TODO argument description.
+- `FLAG_MualVanGen::...`: TODO argument description.
 - `constant_dt_solver::...`: TODO argument description.
 - `NOOUTF::...`: TODO argument description.
 - `Reset::...`: TODO argument description.
@@ -32,7 +31,7 @@ function define_LWFB90_p(
     compute_intermediate_quantities = false,
     constant_dt_solver = 1)
 
-            # TODO: check in define_LWFB90_p if IMODEL correctly defined, i.e. loaded soil data has correct column names
+            # TODO: check in define_LWFB90_p if FLAG_MualVanGen correctly defined, i.e. loaded soil data has correct column names
             # TODO: check in define_LWFB90_p if NLAYER correctly defined, i.e. loaded soil data has correct number of rows
             # TODO: check in define_LWFB90_p if input_param[1,"nmat"] correctly defined, i.e. loaded soil materials has correct number of rows size(input_soil_materials,1)
             # TODO: check in define_LWFB90_p input_soil_materials
@@ -49,38 +48,38 @@ function define_LWFB90_p(
         LWFBrook90.discretize_soil_params(
             input_soil_materials,
             input_soil_nodes,
-            input_param[1,"IMODEL"],
+            input_param[1,"FLAG_MualVanGen"],
             input_param[1,"ILAYER"],
             input_param[1,"QLAYER"],
             nrow(input_soil_nodes),
             0, # flag for heat balance; not implemented; input_param[1,"HEAT"],
             nrow(input_soil_materials),
-            input_param[1,"inirdep"],
-            input_param[1,"rgrorate"])
+            input_param[1,"INITRDEP"],
+            input_param[1,"RGRORATE"])
 
     interpolated_meteoveg =
         LWFBrook90.interpolate_meteoveg(
             input_meteoveg,
             input_meteoveg_reference_date,
             nrow(input_soil_nodes),
-            input_param[1,"inirdep"],
-            input_param[1,"inirlen"],
-            input_param[1,"rgroper"],
+            input_param[1,"INITRDEP"],
+            input_param[1,"INITRLEN"],
+            input_param[1,"RGROPER"],
             soil_discr["tini"],
             soil_discr["frelden"])
-    # TODO(bernhard): document input parameters: inirdep, inirlen, rgroper, tini, frelden,
+    # TODO(bernhard): document input parameters: INITRDEP, INITRLEN, RGROPER, tini, frelden,
     ########
 
 
     ########
     ## Solver algorithm options
-    p_DPSIMX = input_param[1,"DPSIMX"] # maximum potential difference considered "equal", kPa               (BROOK90: DPSIMX is fixed at 0.01 kPa)
-    p_DSWMAX = input_param[1,"DSWMAX"] # maximum change allowed in soil wetness SWATI, percent of SWATMX(i) (BROOK90: DSWMAX is fixed at 2 %)
+    p_DPSIMAX = input_param[1,"DPSIMAX"] # maximum potential difference considered "equal", kPa               (BROOK90: DPSIMAX is fixed at 0.01 kPa)
+    p_DSWMAX = input_param[1,"DSWMAX"] # maximum change allowed in soil wetness SWATI, percent of SWATMAX(i) (BROOK90: DSWMAX is fixed at 2 %)
     p_DTIMAX = input_param[1,"DTIMAX"] # maximum iteration time step, d (BROOK90: DTIMAX is fixed at 0.5 d)
     # Documentation from ecoshift:
-    # DPSIMX (Fixed parameter) - maximum potential difference considered equal during soil water integration, kPa. There is no vertical flow between layers whose potentials differ by less than DPSIMX. This reduces oscillation initiated by flows that are the product of large conductivities and large time steps, but small gradients. The number of iterations used is not at all linearly related to the three iteration parameters DPSIMX, DSWMAX, and DTIMAX. Selection of values depends on whether the user only wants monthly or daily totals, or is concerned with behaviour at shorter time steps. Generally, faster runs are obtained by using fewer thicker soil layers rather than by using large values of DSWMAX and DPSIMX. DPSIMX is fixed at 0.01 kPa. [see WAT-ITER]
-    # DSWMAX (Fixed parameter) - maximum change allowed in soil wetness for any layer during an iteration, percent. DSWMAX sets the maximum change in soil wetness or saturation fraction (SWATI / SWATMX(i)) allowed for any layer in an iteration. See also DPSIMX. DSWMAX is fixed at 2 %. [see WAT-ITER]
-    # DTIMAX (Fixed parameter) - maximum iteration time step, d. DTIMAX is fixed at 0.5 d, which forces at least two iterations per day. This is the largest value that should be used. Much smaller values of DTIMAX, between 0.01 and 0.001 d, will force many iterations per day and thus smooth integration. However, a run with such a small DTIMAX takes a long time. See also DPSIMX. [see WAT-ITER]
+    # DPSIMAX (Fixed parameter) - maximum potential difference considered equal during soil water integration, kPa. There is no vertical flow between layers whose potentials differ by less than DPSIMAX. This reduces oscillation initiated by flows that are the product of large conductivities and large time steps, but small gradients. The number of iterations used is not at all linearly related to the three iteration parameters DPSIMAX, DSWMAX, and DTIMAX. Selection of values depends on whether the user only wants monthly or daily totals, or is concerned with behaviour at shorter time steps. Generally, faster runs are obtained by using fewer thicker soil layers rather than by using large values of DSWMAX and DPSIMAX. DPSIMAX is fixed at 0.01 kPa. [see WAT-ITER]
+    # DSWMAX (Fixed parameter) - maximum change allowed in soil wetness for any layer during an iteration, percent. DSWMAX sets the maximum change in soil wetness or saturation fraction (SWATI / SWATMAX(i)) allowed for any layer in an iteration. See also DPSIMAX. DSWMAX is fixed at 2 %. [see WAT-ITER]
+    # DTIMAX (Fixed parameter) - maximum iteration time step, d. DTIMAX is fixed at 0.5 d, which forces at least two iterations per day. This is the largest value that should be used. Much smaller values of DTIMAX, between 0.01 and 0.001 d, will force many iterations per day and thus smooth integration. However, a run with such a small DTIMAX takes a long time. See also DPSIMAX. [see WAT-ITER]
 
 
     ## Heat flow (unimplemented)
@@ -187,10 +186,10 @@ function define_LWFB90_p(
     p_CINTRS = input_param[1,"CINTRS"] # (Fixed  parameter), Maximum interception storage of rain       per unit SAI, mm (BROOK90: CINTRL and CINTRS are both fixed at 0.15 mm)
     p_CINTSL = input_param[1,"CINTSL"] # (Fixed  parameter), Maximum interception storage of snow water per unit LAI, mm (BROOK90: CINTSL and CINTSS are both fixed at 0.6 mm)
     p_CINTSS = input_param[1,"CINTSS"] # (Fixed  parameter), Maximum interception storage of snow water per unit SAI, mm (BROOK90: CINTSL and CINTSS are both fixed at 0.6 mm)
-    p_FRINTL = input_param[1,"FRINTL"] # (Fixed  parameter), Intercepted fraction of rain per unit LAI, dimensionless (BROOK90: FRINTL and FRINTS are both fixed at 0.06)
-    p_FRINTS = input_param[1,"FRINTS"] # (Fixed  parameter), Intercepted fraction of rain per unit SAI, dimensionless (BROOK90: FRINTL and FRINTS are both fixed at 0.06)
-    p_FSINTL = input_param[1,"FSINTL"] # (Fixed  parameter), Intercepted fraction of snow per unit LAI, dimensionless (BROOK90: FSINTL and FSINTS are both fixed at 0.04)
-    p_FSINTS = input_param[1,"FSINTS"] # (Fixed  parameter), Intercepted fraction of snow per unit SAI, dimensionless (BROOK90: FSINTL and FSINTS are both fixed at 0.04)
+    p_FRINTL = input_param[1,"FRINTLAI"] # (Fixed  parameter), Intercepted fraction of rain per unit LAI, dimensionless (BROOK90: FRINTLAI and FRINTSAI are both fixed at 0.06)
+    p_FRINTS = input_param[1,"FRINTSAI"] # (Fixed  parameter), Intercepted fraction of rain per unit SAI, dimensionless (BROOK90: FRINTLAI and FRINTSAI are both fixed at 0.06)
+    p_FSINTL = input_param[1,"FSINTLAI"] # (Fixed  parameter), Intercepted fraction of snow per unit LAI, dimensionless (BROOK90: FSINTLAI and FSINTSAI are both fixed at 0.04)
+    p_FSINTS = input_param[1,"FSINTSAI"] # (Fixed  parameter), Intercepted fraction of snow per unit SAI, dimensionless (BROOK90: FSINTLAI and FSINTSAI are both fixed at 0.04)
     ### Vegetation conductivity
     p_MXKPL  = input_param[1,"MXKPL"]  # (Canopy parameter), maximum plant conductivity, mm d-1 MPa-1.
     p_FXYLEM = input_param[1,"FXYLEM"] # (Canopy parameter), fraction of plant resistance that is in the xylem (above ground) and not in the roots, (0-1)
@@ -224,8 +223,8 @@ function define_LWFB90_p(
     # RM (Fixed parameter) - nominal maximum solar radiation possible on a leaf, W/m2, as used in calculating leaf conductance. See also R5. RM is fixed at 1000 W/m2. [see PET-SRSC]
     # CINTRL and CINTRS (Fixed parameters) - maximum interception storage of rain per unit LAI and SAI, respectively, mm. This storage is only removed by evaporation, so does not include water that drips off. CINTRL and CINTRS are both fixed at 0.15 mm. Studies of rain interception in mature forests generally indicate a capacity of 1 or 2 mm. With CINTRL and CINTRS set at 0.15, an LAI of 6 and an SAI of 0.7 gives a capacity of 1.0 mm. LAI is on a projected area basis, so the assumption is that only the projected area is wetted. [see EVP-INTER]
     # CINTSL and CINTSS (Fixed parameters) - maximum interception storage of snow water per unit LAI and SAI, respectively, mm. This storage is only removed by evaporation, so does not include water that drips or falls off. CINTSL and CINTSS are both fixed at 0.6. With LAI = 6 and SAI = 0.7, maximum snow water interception capacity is 4.0 mm corresponding to the value used by Federer and Lash (1978b). This capacity is slightly lower than the 5 and 7.5 mm that Leaf and Brink (1973) used for lodgepole pine and spruce-fir, but BROOK90 assumes that all of this will evaporate while they do not. When LAI = 0 and SAI = 0.7 the capacity is 0.4 mm. LAI is on a projected area basis, so the assumption is that only the projected area is wetted. [see EVP-INTER]
-    # FRINTL and FRINTS (Fixed parameters) - intercepted fraction of rain per unit LAI and per unit SAI respectively, dimensionless. See also FSINTL. FRINTL and FRINTS are both fixed at 0.06. For LAI = 6 and SAI = 0.7 these values give a rain catch rate of 40% of the rainfall rate. For leafless deciduous forest with LAI = 0 and SAI = 0.7 the rain catch rate is 4%. To turn off RINT, set both FRINTL and FRINTS to zero. [see EVP-INTER]
-    # FSINTL and FSINTS (Fixed parameters) - intercepted fraction of snow per unit LAI and per unit SAI respectively, dimensionless. See also FRINTL. FSINTL and FSINTS are both fixed at 0.04. For LAI = 6 and SAI = 0.7 these values catch snow at 27%. For leafless deciduous forest with LAI = 0 and SAI = 0.7 the snowfall catch rate is 3%. To turn off SINT, set both FSINTL and FSINTS to zero. [see EVP-INTER]
+    # FRINTLAI and FRINTSAI (Fixed parameters) - intercepted fraction of rain per unit LAI and per unit SAI respectively, dimensionless. See also FSINTLAI. FRINTLAI and FRINTSAI are both fixed at 0.06. For LAI = 6 and SAI = 0.7 these values give a rain catch rate of 40% of the rainfall rate. For leafless deciduous forest with LAI = 0 and SAI = 0.7 the rain catch rate is 4%. To turn off RINT, set both FRINTLAI and FRINTSAI to zero. [see EVP-INTER]
+    # FSINTLAI and FSINTSAI (Fixed parameters) - intercepted fraction of snow per unit LAI and per unit SAI respectively, dimensionless. See also FRINTLAI. FSINTLAI and FSINTSAI are both fixed at 0.04. For LAI = 6 and SAI = 0.7 these values catch snow at 27%. For leafless deciduous forest with LAI = 0 and SAI = 0.7 the snowfall catch rate is 3%. To turn off SINT, set both FSINTLAI and FSINTSAI to zero. [see EVP-INTER]
 
     ## Soil vegetation (roots)
     NOOUTF   = 1 == input_param[1,"NOOUTF"] # flag to prevent outflow from roots (hydraulic redistribution), (0/1)
@@ -237,7 +236,7 @@ function define_LWFB90_p(
     # MXRTLN Total root length per unit area (RTLEN) is MXRTLN * RELHT * DENSEF. MXRTLN is used to calculate rhizosphere resistance and is only important when soil is dry or roots are sparse. Values of MXRTLN are not frequent in the literature, especially for forests. Newman (1974) reported a range of 1700 to 11000 m/m2 for 5 woody plants. Safford (1974) found fine root masses of 1200 g/m2 for northern hardwoods, and Safford and Bell (1972) found 700 g/m2 for white spruce; with a mean diameter of 0.7 mm and density of 0.5 g/cm3, these become 6200 and 3600 m/m2. To turn off TRAN set MXRTLN to zero. [see PET-CANOPY] [see EVP-PLNTRES]
 
     ## Soil discretization
-    IMODEL   = input_param[1,"IMODEL"] # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
+    FLAG_MualVanGen   = input_param[1,"FLAG_MualVanGen"] # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
     NLAYER   = nrow(input_soil_nodes) # Number of soil layers used
     p_THICK  = soil_discr["THICK"]   # (Soil parameter),  layer thicknesses, mm
     # Documentation from ecoshift:
@@ -247,7 +246,7 @@ function define_LWFB90_p(
     ## Soil hydraulics
     p_RSSA   = input_param[1,"RSSA"] # Soil evaporation resistance (RSS) at field capacity, s/m (BROOK90: RSSA is fixed at 500 s/m following Shuttleworth and Gurney (1990))
     p_RSSB   = input_param[1,"RSSB"] # Exponent in relation of soil evaporation resistance (RSS) to soil water potential (PSIM) in the top layer, dimensionless, (BROOK90: RSSB is fixed at 1.0, which makes RSS directly proportional to PSIM)
-    if IMODEL == 0
+    if FLAG_MualVanGen == 0
         p_soil = LWFBrook90.KPT.KPT_SOILPAR_Ch1d(;
             p_THICK = p_THICK,
             p_STONEF = soil_discr["STONEF"],           # stone volume fraction in each soil layer, dimensionless
@@ -258,7 +257,7 @@ function define_LWFB90_p(
             p_BEXP   = soil_discr["PAR"][!,"bexp"],    # Clapp-Hornberger exponent for ψ-θ relation
             p_WETINF = soil_discr["PAR"][!,"wetinf"])  # wetness at dry end of near-saturation range for a soil layer, dimensionless
 
-    elseif IMODEL == 1
+    elseif FLAG_MualVanGen == 1
         # Instantiate soil parameters
         p_soil = LWFBrook90.KPT.KPT_SOILPAR_Mvg1d(;
             p_THICK  = p_THICK,
@@ -272,7 +271,7 @@ function define_LWFB90_p(
             p_θr     = soil_discr["PAR"][!,"θr"])
 
     else
-        error("Unsupported IMODEL: $IMODEL")
+        error("Unsupported FLAG_MualVanGen: $FLAG_MualVanGen")
     end
 
     # TODO(bernhard): treat following note:
@@ -318,12 +317,12 @@ function define_LWFB90_p(
     p_DSLOPE = input_param[1,"DSLOPE"] # (Flow parameter), hillslope angle for downslope matric flow (DSFL), degrees
     p_GSC    = input_param[1,"GSC"] # (Flow parameter), fraction of groundwater storage (GWAT), that is transferred to groundwater flow (GWFL) and deep seepage (SEEP) each day, d-1
     p_GSP    = input_param[1,"GSP"] # (Flow parameter), fraction of groundwater discharge produced by GSC that goes to deep seepage (SEEP) and is not added to streamflow (FLOW), dimensionless
-    p_LENGTH = input_param[1,"LENGTH"] # (Flow parameter), slope length for downslope flow (DSFL), m
+    p_LENGTH_SLOPE = input_param[1,"LENGTH_SLOPE"] # (Flow parameter), slope length for downslope flow (DSFL), m
     p_QFFC   = input_param[1,"QFFC"] # (Flow parameter), quick flow fraction for SRFL and BYFL at THETAF, dimensionless
     p_QFPAR  = input_param[1,"QFPAR"] # (Flow parameter), raction of the water content between field capacity (THETAF) and saturation (THSAT) at which the quick flow fraction is 1, dimensionless
 
     # source area parameters SRFPAR()
-    p_SWATQX = sum(p_soil.p_SWATMX[1:p_QLAYER]) # maximum water storage for layers 1 through QLAYER, mm
+    p_SWATQX = sum(p_soil.p_SWATMAX[1:p_QLAYER]) # maximum water storage for layers 1 through QLAYER, mm
     p_SWATQF = sum(
         p_soil.p_THETAF[1:p_QLAYER] .*
         p_soil.p_THICK[1:p_QLAYER] .*
@@ -332,13 +331,13 @@ function define_LWFB90_p(
     # Documentation from ecoshift:
     # BYPAR (Flow parameter) - either 0 to prevent bypass flow (BYFL), or 1 to allow BYFL . BYFL is zero when BYPAR = 0, unless the surface layer becomes saturated. When BYPAR = 1, a fraction of infiltration to each layer is immediately routed to bypass flow to simulate downslope macropore or pipe flow of new water. The fraction depends on QFFC and QFPAR. These are the same parameters used to determine source area flow (SRFL), so simulation with both SRFL and BYFL (QDEPTH > 0 and BYPAR = 1) is discouraged. The difference is that SRFL depends on the total water content down to QDEPTH whereas BYFL depends on water content in each layer down to IDEPTH. When NLAYER = 1, SRFL and BYFL are identical. [see WAT-BYFLFR]
     # DRAIN (Flow parameter) - multiplier between 0 and 1 of drainage from the lowest soil layer, VRFLI(n), for drainage to groundwater, dimensionless. DRAIN = 1 produces vertical drainage under gravity gradient. DRAIN = 0 prevents drainage from the bottom of the soil column. Values between 0 and 1 can also be used, especially to control DSFL. [see WAT-VERT] [see WAT-DSLOP]
-    # DSLOPE and DSLOPED (Flow parameter) - hillslope angle for downslope matric flow (DSFL), degrees. In code DSLOPED is in degrees, DSLOPE is in radians. Because downslope flow is overparameterized, arbitrarily setting DSLOPE to 10° is satisfactory for DSFL from the bottom soil layer(s). When either DSLOPE or LENGTH is 0 there is no DSFL, and the other parameter is ignored. [see WAT-DSLOP]
+    # DSLOPE and DSLOPED (Flow parameter) - hillslope angle for downslope matric flow (DSFL), degrees. In code DSLOPED is in degrees, DSLOPE is in radians. Because downslope flow is overparameterized, arbitrarily setting DSLOPE to 10° is satisfactory for DSFL from the bottom soil layer(s). When either DSLOPE or LENGTH_SLOPE is 0 there is no DSFL, and the other parameter is ignored. [see WAT-DSLOP]
     # GSC (Flow parameter) - fraction of groundwater storage (GWAT), that is transferred to groundwater flow (GWFL) and deep seepage (SEEP) each day, d-1. Where groundwater is being simulated, GSC should be some fraction like 0.1 d-1 or less. If GSC = 0 there is no groundwater storage and all vertical drainage from the soil profile becomes seepage or streamflow directly. See also GSP. [see WAT-GWATER]
     # GSP (Flow parameter) - fraction of groundwater discharge produced by GSC that goes to deep seepage (SEEP) and is not added to streamflow (FLOW), dimensionless. If GSC = 0, GSP applies to vertical drainage from the bottom soil layer. To eliminate SEEP set GSP to zero. [see WAT-GWATER]
     # IDEPTH (Flow parameter) - depth over which infiltration is distributed, mm. IDEPTH determines the number of soil layers over which infiltration is distributed when INFEXP is greater than 0. It should correspond to the depth of vertical macropores. IDEPTH does not need to correspond to the bottom of a soil layer; it is converted into the number of soil layers most closely corresponding to IDEPTH. [see WAT-INFPAR].
     # IMPERV (Flow parameter) - fraction of the soil surface that is impermeable and always routes water reaching it directly to streamflow as SRFL. For a watershed, IMPERV represents at least the area of the stream channel; an appropriate value is 0.01. To turn off SLFL set IMPERV = 1. To turn off SRFL set both IMPERV and QDEPTH to zero. [see WAT-SRFLFR]
     # INFEXP (Flow parameter) - infiltration exponent that determines the distribution of infiltrated water with depth, dimensionless. When INFEXP = 0, all infiltration goes to the top soil layer and a classic top-down wetting front is produced. Increasing INFEXP corresponds to increasing macropore-assisted infiltration, and produces an exponential depth distribution of infiltrated water down through the layer whose lower depth most closely corresponds to IDEPTH. With INFEXP = 1, infiltrated water is distributed uniformly down to the IDEPTH layer. Values above 1 put more water into lower layers than into upper layers. [see WAT-INFPAR] [see WAT-BYFLFR]
-    # LENGTH (Flow parameter) - slope length for downslope flow (DSFL), m. LENGTH is conceptually the hillslope length in m as horizontal or map distance from ridge to channel. But in practice it is a fitted value to produce the desired amount of DSFL, which is roughly inversely proportional to LENGTH. Downslope flow from the bottom soil layer(s) is overparameterized, so LENGTH can be set to 10 m and DSFL can be varied by changing DRAIN. When either DSLOPE or LENGTH are 0 there is no downslope flow, and the other parameter is ignored. [see WAT-DSLOP]
+    # LENGTH_SLOPE (Flow parameter) - slope length for downslope flow (DSFL), m. LENGTH_SLOPE is conceptually the hillslope length in m as horizontal or map distance from ridge to channel. But in practice it is a fitted value to produce the desired amount of DSFL, which is roughly inversely proportional to LENGTH_SLOPE. Downslope flow from the bottom soil layer(s) is overparameterized, so LENGTH_SLOPE can be set to 10 m and DSFL can be varied by changing DRAIN. When either DSLOPE or LENGTH_SLOPE are 0 there is no downslope flow, and the other parameter is ignored. [see WAT-DSLOP]
     # QDEPTH (Flow parameter) - soil depth for SRFL calculation, mm. QDEPTH determines the number of soil layers over which wetness is calculated to determine source area fraction and SRFL. QDEPTH does not need to correspond to the bottom of a soil layer, but it is converted into the number of soil layers most closely corresponding to QDEPTH. When QDEPTH equals or exceeds the depth of NLAYER then all NLAYERs are used. When QDEPTH = 0, the source area fraction is equal to IMPERV. Smaller QDEPTH means a larger contrast between wet and dry conditions, and thus more responsiveness of source area fraction. See also QFPAR and QFFC. To turn off SRFL set both IMPERV and QDEPTH to zero. [see WAT-BYFLFR] [see WAT-SRFLFR] [see WAT-SRFPAR]
     # QFFC (Flow parameter) - quick flow fraction for SRFL and BYFL at THETAF, dimensionless. QFFC is used for both SRFL and BYFL, so normally only one or the other should be simulated. For Hubbard Brook Watershed 6, QFFC = 0.2 and QFPAR = 0.3 fit storm hydrographs well using SRFL; these values give a generally high stormflow response. Decreasing QFFC decreases SRFL and BYFL proportionally at all soil water contents. See also QFPAR, and QDEPTH. QFFC must be greater than 0.0001. When both BYPAR and QDEPTH = 0, QFFC is ignored. When QFFC = 1 there is never any infiltration into the top soil layer. [see WAT-BYFLFR] [see WAT-SRFLFR]
     # QFPAR (Flow parameter) - fraction of the water content between field capacity (THETAF) and saturation (THSAT) at which the quick flow fraction is 1, dimensionless. QFPAR is used for both SRFL and BYFL, so normally only one or the other should be simulated. When QFPAR = 0 (<= 0.01), quick flow operates like a field-capacity bucket; all water input above field capacity becomes BYFL or SRFL. For Hubbard Brook Watershed 6, QFFC = 0.2 and QFPAR = 0.3 fit storm hydrographs well using SRFL; these values give a generally high stormflow response. Increasing QFPAR increases quickflow from soil dryer than THETAF and decreases it from soil wetter than THETAF. Values > 1 are allowed. For SRFL, the average water content of layers down through QDEPTH controls the flow rate. For BYFL, the water content of each layer controls the flow rate from that layer. When both BYPAR and QDEPTH = 0, QFPAR is ignored. [see WAT-BYFLFR] [see WAT-SRFLFR]
@@ -352,12 +351,12 @@ function define_LWFB90_p(
 
     # p_cst_1 and p_cst_2 for both RHS and CallBack in DiffEq.jl
     p_cst_1 = p_soil
-    p_cst_2 = (NLAYER, IMODEL, compute_intermediate_quantities, Reset,
+    p_cst_2 = (NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, Reset,
         p_DTP, p_NPINT,
 
         # FOR MSBITERATE:
         p_QLAYER, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC, p_IMPERV,
-        p_LENGTH, p_DSLOPE, LWFBrook90.CONSTANTS.p_RHOWG, p_DPSIMX,
+        p_LENGTH_SLOPE, p_DSLOPE, LWFBrook90.CONSTANTS.p_RHOWG, p_DPSIMAX,
         p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX,
         p_GSC, p_GSP,
 
@@ -436,9 +435,9 @@ function interpolate_meteoveg(
     input_meteoveg_reference_date::DateTime,
     # root density parameters
     NLAYER,
-    p_inirdep,
-    p_inirlen,
-    p_rgroper,
+    p_INITRDEP,
+    p_INITRLEN,
+    p_RGROPER,
     p_tini,
     p_frelden)
 
@@ -472,7 +471,7 @@ function interpolate_meteoveg(
     # Which is a vector quantity that is dependent on time:
     p_RELDEN_2Darray = fill(NaN, nrow(input_meteoveg), NLAYER)
     for i in 1:nrow(input_meteoveg)
-        p_RELDEN_2Darray[i,:] = LWFBrook90.WAT.LWFRootGrowth(p_frelden, p_tini, input_meteoveg.AGE[i], p_rgroper, p_inirdep, p_inirlen, NLAYER)
+        p_RELDEN_2Darray[i,:] = LWFBrook90.WAT.LWFRootGrowth(p_frelden, p_tini, input_meteoveg.AGE[i], p_RGROPER, p_INITRDEP, p_INITRLEN, NLAYER)
     end
     p_RELDEN =  extrapolate(scale(interpolate(p_RELDEN_2Darray, (BSpline(Constant{Previous}()), NoInterp()) ),# 1st dimension: ..., 2nd dimension NoInterp()
                             time_range, 1:size(p_RELDEN_2Darray,2)),
@@ -495,19 +494,19 @@ function interpolate_meteoveg(
 end
 
 """
-    discretize_soil_params(input_soil_materials,IMODEL, ILAYER, QLAYER, NLAYER)
+    discretize_soil_params(input_soil_materials,FLAG_MualVanGen, ILAYER, QLAYER, NLAYER)
 
 Define constant parameters from input_pdur. TO BE REDEFINED
 """
 function discretize_soil_params(
     input_soil_materials, input_soil_nodes,
-    IMODEL, ILAYER, QLAYER, NLAYER, HEAT, nmat, inirdep, rgrorate)
+    FLAG_MualVanGen, ILAYER, QLAYER, NLAYER, HEAT, nmat, INITRDEP, RGRORATE)
     # Parse soil parameter according to material at different depth given by
     # arguments:
     # input_soil_materials: A matrix of the 8 soil materials parameters.
-    #                 When imodel = 1 (Mualem-van Genuchten), these refer to:
+    #                 When FLAG_MualVanGen = 1 (Mualem-van Genuchten), these refer to:
     #                       mat, ths, thr, alpha (m-1), npar, ksat (mm d-1), tort (-), stonef (-).
-    #                 When imodel = 0 (Clapp-Hornberger):
+    #                 When FLAG_MualVanGen = 0 (Clapp-Hornberger):
     #                       mat, thsat, thetaf, psif (kPa), bexp, kf (mm d-1), wetinf (-), stonef (-).
 
 
@@ -516,11 +515,11 @@ function discretize_soil_params(
         error("Failure of QLAYER and ILAYER < NLAYER < ML")
     end
 
-    # Parse the parameters for each material depending on wheter we use iModel ==1 or ==2
+    # Parse the parameters for each material depending on wheter we use FLAG_MualVanGen ==1 or ==2
     ParMat    = fill(NaN, (nmat, 10))
     StonefMat = fill(NaN, (nmat, 1))
     for i = 1:nmat
-        if IMODEL == 0
+        if FLAG_MualVanGen == 0
         # Clapp-Hornberger
         #             input_soil_materials[i,1]  # mat
         ParMat[i,1] = input_soil_materials[i,2]  # θs
@@ -537,7 +536,7 @@ function discretize_soil_params(
         # ParMat[i,CH]> (θs, θf, kf, ψf, 0, 0, 0, 0, bexp, wetinf)
         end
 
-        if IMODEL == 1
+        if FLAG_MualVanGen == 1
             # Mualem-van Genuchten
             #             input_soil_materials[i,1]  # mat
             ParMat[i,1] = input_soil_materials[i,2]  # θs
@@ -596,10 +595,10 @@ function discretize_soil_params(
         end
         STONEF[i] = StonefMat[ mat[i] ]
     end
-    if IMODEL == 0
+    if FLAG_MualVanGen == 0
         # Clapp-Hornberger
         PAR = DataFrame(PAR, ["θs","θf","kf","ψf","dummy1","dummy2","dummy3","dummy4","bexp","wetinf"])
-    elseif IMODEL == 1
+    elseif FLAG_MualVanGen == 1
         # Mualem-van Genuchten
         PAR = DataFrame(PAR, ["θs","dummy1","K(θ_fc)","dummy2","dummy3","Ksat","α","n","tort","θr"])
     end
@@ -618,12 +617,12 @@ function discretize_soil_params(
         if i >= i1 && i <= i2
             frelden[i] = max( frelden[i], 1.01e-6)
         end
-        if frelden[i] >= 1.e-6 && (depmax-dep[i]) <= inirdep
+        if frelden[i] >= 1.e-6 && (depmax-dep[i]) <= INITRDEP
             tini[i] = 0.
         end
-        if frelden[i] >= 1.e-6 && (depmax-dep[i]) > inirdep
-            if rgrorate > 0
-                tini[i] = (depmax-dep[i]-inirdep)/rgrorate
+        if frelden[i] >= 1.e-6 && (depmax-dep[i]) > INITRDEP
+            if RGRORATE > 0
+                tini[i] = (depmax-dep[i]-INITRDEP)/RGRORATE
             end
         end
         # write(*,*)'dep= ',dep[i],' tini= ',tini[i]

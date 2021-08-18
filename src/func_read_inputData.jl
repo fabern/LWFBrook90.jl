@@ -64,9 +64,9 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
     # Load soil data
 
     #' @param soil_materials A matrix of the 8 soil materials parameters.
-    #'                       When imodel = 1 (Mualem-van Genuchten), these refer to:
+    #'                       When FLAG_MualVanGen = 1 (Mualem-van Genuchten), these refer to:
     #'                             mat, ths, thr, alpha (m-1), npar, ksat (mm d-1), tort (-), stonef (-).
-    #'                       When imodel = 2 (Clapp-Hornberger):
+    #'                       When FLAG_MualVanGen = 0 (Clapp-Hornberger):
     #'                             mat, thsat, thetaf, psif (kPa), bexp, kf (mm d-1), wetinf (-), stonef (-).
     input_soil_materials = DataFrame(File(path_soil_materials;
                                      types=[Int64, Float64, Float64, Float64, Float64, Float64, Float64, Float64],
@@ -180,61 +180,62 @@ function read_path_param(path_param)
     input_param = DataFrame(File(path_param;
         transpose=true, drop=[1], comment = "###",
         types = Dict(# Meteorologic site parameters -------
-                    "eslope" => Float64,           "aspect" => Float64,
-                    "alb" => Float64,              "albsn" => Float64,
-                    "c1" => Float64,               "c2" => Float64,               "c3" => Float64,
-                    "wndrat" => Float64,           "fetch" => Float64,            "z0w" => Float64,              "zw" => Float64,
+                    "ESLOPE_DEG" => Float64,           "ASPECT_DEG" => Float64,
+                    "ALB" => Float64,              "ALBSN" => Float64,
+                    "C1" => Float64,               "C2" => Float64,               "C3" => Float64,
+                    "WNDRAT" => Float64,           "FETCH" => Float64,            "Z0W" => Float64,              "ZW" => Float64,
                     # Canopy parameters -------
-                    "lwidth" => Float64,           "obsheight_x_czs" => Float64,  "z0s" => Float64,
-                    "lpc" => Float64,              "cs" => Float64,               "czs" => Float64,
-                    "czr" => Float64,              "hs" => Float64,               "hr" => Float64,
-                    "zminh" => Float64,            "rhotp" => Float64,            "nn" => Float64,
+                    "LWIDTH" => Float64,           "Z0G" => Float64,              "Z0S" => Float64,
+                    "LPC" => Float64,              "CS" => Float64,               "CZS" => Float64,
+                    "CZR" => Float64,              "HS" => Float64,               "HR" => Float64,
+                    "ZMINH" => Float64,            "RHOTP" => Float64,            "NN" => Float64,
                     # Interception initial conditions -------
-                    "intrainini" => Float64,       "intsnowini" => Float64,
+                    "u_INTR_init" => Float64,       "u_INTS_init" => Float64,
                     # Interception parameters -------
-                    "rstemp" => Float64,
-                    "frintlai" => Float64,         "fsintlai" => Float64,
-                    "frintsai" => Float64,         "fsintsai" => Float64,
-                    "cintrl" => Float64,           "cintrs" => Float64,
-                    "cintsl" => Float64,           "cintss" => Float64,
+                    "FRINTLAI" => Float64,         "FSINTLAI" => Float64,
+                    "FRINTSAI" => Float64,         "FSINTSAI" => Float64,
+                    "CINTRL" => Float64,           "CINTRS" => Float64,
+                    "CINTSL" => Float64,           "CINTSS" => Float64,
+                    "RSTEMP" => Float64,
                     # Snowpack parameters -------
-                    "melfac" => Float64,           "ccfac" => Float64,            "laimlt" => Float64,
-                    "saimlt" => Float64,           "grdmlt" => Float64,           "maxlqf" => Float64,
-                    "ksnvp" => Float64,            "snoden" => Float64,
+                    "MELFAC" => Float64,           "CCFAC" => Float64,            "LAIMLT" => Float64,
+                    "SAIMLT" => Float64,           "GRDMLT" => Float64,           "MAXLQF" => Float64,
+                    "KSNVP" => Float64,            "SNODEN" => Float64,
                     # Leaf evaporation parameters (affecting PE) -------
-                    "glmax" => Float64,            "radex" => Float64,            "glmin" => Float64,            "rm" => Float64,
-                    "r5" => Float64,               "cvpd" => Float64,             "tl" => Float64,               "t1" => Float64,
-                    "t2" => Float64,               "th" => Float64,
+                    "GLMAX" => Float64,            "GLMIN" => Float64,            "CR" => Float64,               "RM" => Float64,
+                    "R5" => Float64,               "CVPD" => Float64,             "TL" => Float64,               "T1" => Float64,
+                    "T2" => Float64,               "TH" => Float64,
                     # Plant parameters (affecting soil-water supply) -------
-                    "mxkpl" => Float64,
-                    "maxrlen" => Float64,          "initrlen" => Float64,         "initrdep" => Float64,
-                    "rgrorate" => Float64,         "rgroper" => Float64,          "fxylem" => Float64,
-                    "psicr" => Float64,            "rrad" => Float64,             "nooutf" => Int64,    # TODO(bernhard): make boolena
+                    "MXKPL" => Float64,
+                    "MAXRTLN" => Float64,          "INITRLEN" => Float64,         "INITRDEP" => Float64,
+                    "RGRORATE" => Float64,         "RGROPER" => Float64,          "FXYLEM" => Float64,
+                    "PSICR" => Float64,            "RTRAD" => Float64,            "NOOUTF" => Int64,    # TODO(bernhard): make boolena
                     # Soil parameters -------
-                    "ilayer" => Int64  ,            # TODO(bernhard): switch to depth in mm
-                    "qlayer" => Int64  ,            # TODO(bernhard): switch to depth in mm
-                    "is_MvG_aka_iModel" => Int64  , # TODO(bernhard): make boolena
-                    "rssa" => Float64,             "rssb" => Float64,             "infexp" => Float64,
-                    "bypar" => Int64  ,             # TODO(bernhard): make boolena
-                    "qfpar" => Float64,            "qffc" => Float64,
-                    "imperv" => Float64,           "dslope" => Float64,           "slopelen" => Float64,
-                    "drain" => Float64,            "gsc" => Float64,              "gsp" => Float64,
+                    "ILAYER" => Int64  ,            # TODO(bernhard): switch to depth in mm
+                    "QLAYER" => Int64  ,            # TODO(bernhard): switch to depth in mm
+                    "FLAG_MualVanGen" => Int64  ,            # TODO(bernhard): make boolena
+                    "RSSA" => Float64,             "RSSB" => Float64,             "INFEXP" => Float64,
+                    "BYPAR" => Int64  ,             # TODO(bernhard): make boolena
+                    "QFPAR" => Float64,            "QFFC" => Float64,
+                    "IMPERV" => Float64,           "DSLOPE" => Float64,           "LENGTH_SLOPE" => Float64,
+                    "DRAIN" => Float64,            "GSC" => Float64,              "GSP" => Float64,
                     # Numerical solver parameters -------
-                    "dtimax" => Float64,           "dswmax" => Float64,           "dpsimax" => Float64)
-    ))
+                    "DTIMAX" => Float64,           "DSWMAX" => Float64,           "DPSIMAX" => Float64)))
+
 
     # Assert that inputs are correct:
     received_names = names(input_param)
     expected_names = [
-        "eslope","aspect","alb","albsn","c1","c2","c3","wndrat","fetch","z0w","zw","lwidth",
-        "obsheight_x_czs","z0s","lpc","cs","czs","czr","hs","hr","zminh","rhotp","nn",
-        "intrainini","intsnowini","frintlai","fsintlai","frintsai","fsintsai","cintrl",
-        "cintrs","cintsl","cintss","rstemp","melfac","ccfac","laimlt","saimlt","grdmlt",
-        "maxlqf","ksnvp","snoden","glmax","radex","glmin","rm","r5","cvpd","tl","t1","t2",
-        "th","mxkpl","maxrlen","initrlen","initrdep","rgrorate","rgroper","fxylem","psicr",
-        "rrad","nooutf","ilayer","qlayer","is_MvG_aka_iModel","rssa","rssb","infexp","bypar",
-        "qfpar","qffc","imperv","dslope","slopelen","drain","gsc","gsp",
-        "dtimax","dswmax","dpsimax"]
+        "ESLOPE_DEG","ASPECT_DEG","ALB","ALBSN","C1","C2","C3","WNDRAT","FETCH","Z0W","ZW",
+        "LWIDTH","Z0G","Z0S","LPC","CS","CZS","CZR","HS","HR","ZMINH","RHOTP","NN",
+        "u_INTR_init","u_INTS_init","FRINTLAI","FSINTLAI","FRINTSAI","FSINTSAI","CINTRL",
+        "CINTRS","CINTSL","CINTSS","RSTEMP","MELFAC","CCFAC","LAIMLT","SAIMLT","GRDMLT",
+        "MAXLQF","KSNVP","SNODEN","GLMAX","CR","GLMIN","RM","R5","CVPD","TL","T1","T2",
+        "TH","MXKPL","MXRTLN","INITRLEN","INITRDEP","RGRORATE","RGROPER","FXYLEM","PSICR",
+        "RTRAD","NOOUTF","ILAYER","QLAYER","FLAG_MualVanGen","RSSA","RSSB","INFEXP","BYPAR",
+         "QFPAR","QFFC","IMPERV","DSLOPE","LENGTH_SLOPE","DRAIN","GSC","GSP",
+         "DTIMAX","DSWMAX","DPSIMAX"]
+
     @assert all(expected_names .∈ (received_names,)) """
     Input file '$path_param' does not contain all the expected 80 entries.
     \nExpected but missing:\n$(expected_names[(!).(expected_names .∈ (received_names,))])
@@ -246,102 +247,10 @@ function read_path_param(path_param)
     \nExpected:\n$expected_names\nReceived:\n$received_names\n
     """
 
-    # Rename
-    input_param = rename(input_param,
-        # Meteorologic site parameters -------
-        :eslope            => :ESLOPE_DEG,
-        :aspect            => :ASPECT_DEG,
-        :alb               => :ALB,
-        :albsn             => :ALBSN,
-        :c1                => :C1,
-        :c2                => :C2,
-        :c3                => :C3,
-        :wndrat            => :WNDRAT,
-        :fetch             => :FETCH,
-        :z0w               => :Z0W,
-        :zw                => :ZW,
-        # Canopy parameters -------
-        :lwidth            => :LWIDTH,
-        :obsheight_x_czs   => :Z0G,
-        :z0s               => :Z0S,
-        :lpc               => :LPC,
-        :cs                => :CS,
-        :czs               => :CZS,
-        :czr               => :CZR,
-        :hs                => :HS,
-        :hr                => :HR,
-        :zminh             => :ZMINH,
-        :rhotp             => :RHOTP,
-        :nn                => :NN,
-        # Interception initial conditions -------
-        :intrainini        => :INTR_init,
-        :intsnowini        => :INTS_init,
-        # Interception parameters -------
-        :frintlai          => :FRINTL,
-        :fsintlai          => :FSINTL,
-        :frintsai          => :FRINTS,
-        :fsintsai          => :FSINTS,
-        :cintrl            => :CINTRL,
-        :cintrs            => :CINTRS,
-        :cintsl            => :CINTSL,
-        :cintss            => :CINTSS,
-        :rstemp            => :RSTEMP,
-        # Snowpack parameters -------
-        :melfac            => :MELFAC,
-        :ccfac             => :CCFAC,
-        :laimlt            => :LAIMLT,
-        :saimlt            => :SAIMLT,
-        :grdmlt            => :GRDMLT,
-        :maxlqf            => :MAXLQF,
-        :ksnvp             => :KSNVP,
-        :snoden            => :SNODEN,
-        # Leaf evaporation parameters (affecting PE) -------
-        :glmax             => :GLMAX,
-        :radex             => :CR,
-        :glmin             => :GLMIN,
-        :rm                => :RM,
-        :r5                => :R5,
-        :cvpd              => :CVPD,
-        :tl                => :TL,
-        :t1                => :T1,
-        :t2                => :T2,
-        :th                => :TH,
-        # Plant parameters (affecting soil-water supply) -------
-        :mxkpl             => :MXKPL,
-        :maxrlen           => :MXRTLN,
-        :initrlen          => :inirlen,
-        :initrdep          => :inirdep,
-        :rgrorate          => :rgrorate,
-        :rgroper           => :rgroper,
-        :fxylem            => :FXYLEM,
-        :psicr             => :PSICR,
-        :rrad              => :RTRAD,
-        :nooutf            => :NOOUTF,
-        # Soil parameters -------
-        :ilayer            => :ILAYER,
-        :qlayer            => :QLAYER,
-        :is_MvG_aka_iModel => :IMODEL,
-        :rssa              => :RSSA,
-        :rssb              => :RSSB,
-        :infexp            => :INFEXP,
-        :bypar             => :BYPAR,
-        :qfpar             => :QFPAR,
-        :qffc              => :QFFC,
-        :imperv            => :IMPERV,
-        :dslope            => :DSLOPE,
-        :slopelen          => :LENGTH,
-        :drain             => :DRAIN,
-        :gsc               => :GSC,
-        :gsp               => :GSP,
-        # Numerical solver parameters -------
-        :dtimax            => :DTIMAX,
-        :dswmax            => :DSWMAX,
-        :dpsimax           => :DPSIMX)
-
     # from LWFBrook90R:PFILE.h
     input_param[:,:FXYLEM]  = min.(input_param[:,:FXYLEM], 0.990)
-    input_param[:,:inirlen] = max.(input_param[:,:inirlen], 0.010)
-    input_param[:,:inirdep] = max.(input_param[:,:inirdep], 0.010)
+    input_param[:,:INITRLEN] = max.(input_param[:,:INITRLEN], 0.010)
+    input_param[:,:INITRDEP] = max.(input_param[:,:INITRDEP], 0.010)
 
     return input_param
 end

@@ -456,15 +456,15 @@ BROOK90 assumes that interception catch rates, RINT and SINT, are a constant fra
 rainfall or snowfall until the canopy reaches a storage capacity. Until the capacity is
 reached, RINT and SINT are assumed to be linear functions of LAI and SAI, so that
 
-RINT = (FRINTL * LAI + FRINTS * SAI) * RFAL
+RINT = (FRINTLAI * LAI + FRINTSAI * SAI) * RFAL
 
 and
 
-SINT = (FSINTL * LAI + FSINTS * SAI) * SFAL
+SINT = (FSINTLAI * LAI + FSINTSAI * SAI) * SFAL
 
 where RFAL and SFAL are rainfall rate and snowfall rate as determined from subroutine
-SNOFRAC, FRINTL and FSINTL are the catch fraction per unit LAI for rain and snow,
-respectively, and FRINTS and FSINTS are the catch fraction per unit SAI for rain and snow,
+SNOFRAC, FRINTLAI and FSINTLAI are the catch fraction per unit LAI for rain and snow,
+respectively, and FRINTSAI and FSINTSAI are the catch fraction per unit SAI for rain and snow,
 respectively.
 
 The canopy has capacities or maximum values of INTR and INTS that depend on LAI and SAI. In
@@ -479,7 +479,7 @@ For snow,
 INTSMX = CINTSL * LAI + CINTSS * SAI,
 
 and the capacity parameters are generally larger than for rain. The eight interception
-parameters, FRINTL, FRINTS, FSINTL, FSINTS, CINTRL, CINTRS, CINTSL, and CINTSS, only control
+parameters, FRINTLAI, FRINTSAI, FSINTLAI, FSINTSAI, CINTRL, CINTRS, CINTSL, and CINTSS, only control
 interception loss in small storms; interception loss in large storms is controlled by the
 evaporation rate of intercepted water (PINT) and the storm intensity and duration.
 

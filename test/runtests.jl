@@ -64,13 +64,13 @@ end
     @test p_soil1.p_PSIF    ≈ [-0.03210102700011719, -0.02096528992202748, -0.019805546964157438]
     @test p_soil1.p_THETAF  ≈ [0.6652527196951767, 0.6299247343092094, 0.6208286442505493]
     @test p_soil1.p_PSIG    ≈ [-0.19619999999999999, -0.5886, -1.3734]
-    @test p_soil1.p_SWATMX  ≈ [28.2744, 22.044, 64.944]
+    @test p_soil1.p_SWATMAX  ≈ [28.2744, 22.044, 64.944]
     @test p_soil1.p_WETF    ≈ [0.924422821232832, 0.9364352826531043, 0.9400828692513616]
     @test p_soil1.p_PsiCrit ≈ [-2.001039697148224e72, -7.555263344289398e71, -5.276582923029774e71]
 
     @test p_soil2.p_PSIG   ≈ [-0.5886, -1.7658, -4.1202000000000005]
-    @test p_soil2.p_SWATMX ≈ [84.82319999999999, 66.132, 194.832]
-    @test p_soil2.p_SWATMX ≈ p_soil1.p_SWATMX * 3
+    @test p_soil2.p_SWATMAX ≈ [84.82319999999999, 66.132, 194.832]
+    @test p_soil2.p_SWATMAX ≈ p_soil1.p_SWATMAX * 3
     @test p_soil2.p_THICK  ≈ p_soil1.p_THICK * 3
 
     @test_throws AssertionError LWFBrook90.KPT.KPT_SOILPAR_Mvg1d(;
@@ -118,13 +118,13 @@ end
     @test p_soil1.p_CHM     ≈ [95.73164439624084, -6667.137100808987]
     @test p_soil1.p_CHN     ≈ [0.7806060606060607,0.3545656945751017]
     @test p_soil1.p_PSIG    ≈ [-0.49049999999999994, -1.4714999999999998]
-    @test p_soil1.p_SWATMX  ≈ [43.5, 43.5]
+    @test p_soil1.p_SWATMAX  ≈ [43.5, 43.5]
     @test p_soil1.p_WETF    ≈ [0.6114942528735633, 0.6114942528735633]
     @test p_soil1.p_PsiCrit ≈ [-4.7813122937946886e17, -4.7813122937946886e17]
 
     @test p_soil2.p_PSIG   ≈ [-0.9809999999999999, -2.9429999999999996]
-    @test p_soil2.p_SWATMX ≈ [87.0, 87.0]
-    @test p_soil2.p_SWATMX ≈ p_soil1.p_SWATMX * 2
+    @test p_soil2.p_SWATMAX ≈ [87.0, 87.0]
+    @test p_soil2.p_SWATMAX ≈ p_soil1.p_SWATMAX * 2
     @test p_soil2.p_THICK  ≈ p_soil1.p_THICK * 2
 
 

@@ -48,8 +48,8 @@ p = define_LWFB90_p(
 # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
 u_GWAT_init = input_siteparam[1, "GWAT_init"]
 u_SNOW_init = input_siteparam[1, "SNOW_init"]
-u_INTS_init = input_param[1,"INTS_init"]
-u_INTR_init = input_param[1,"INTR_init"]
+u_INTS_init = input_param[1,"u_INTS_init"]
+u_INTR_init = input_param[1,"u_INTR_init"]
 u_CC_init     = 0; # any initial snow has zero liquid water and cold content
 u_SNOWLQ_init = 0; # any initial snow has zero liquid water and cold content
 
@@ -62,7 +62,7 @@ end
 
 p_soil = p[1][1]
 u_aux_WETNESinit = LWFBrook90.KPT.FWETNES(u_aux_PSIM_init, p_soil)
-u_SWATIinit      = p_soil.p_SWATMX ./ p_soil.p_THSAT .* LWFBrook90.KPT.FTheta(u_aux_WETNESinit, p_soil)
+u_SWATIinit      = p_soil.p_SWATMAX ./ p_soil.p_THSAT .* LWFBrook90.KPT.FTheta(u_aux_WETNESinit, p_soil)
 ######
 
 # Create u0 for DiffEq.jl

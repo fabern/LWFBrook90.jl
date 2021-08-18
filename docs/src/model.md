@@ -26,7 +26,7 @@ LWFBrook90.jl is developed with the following objectives in mind:
 
 Currently two mode of operation are distinguished by the flag `compute_intermediate_quantities = true`. It determines wheter additional, non-essential quantities are computed during simulation. The intent is to optimize computational cost.
 
-LWFBrook90.jl contains two parametrizations of the soil hydraulics: Mualem-van Genuchten and Clapp-Hornberger. They can be switched by setting the parameter `IMODEL`.
+LWFBrook90.jl contains two parametrizations of the soil hydraulics: Mualem-van Genuchten and Clapp-Hornberger. They can be switched by setting the parameter `FLAG_MualVanGen`.
 
 ### Implementation details
 LWFBrook90.jl makes use of [DifferentialEquations.jl](https://github.com/SciML/DifferentialEquations.jl) to solve the system of Ordinary Differential Equations (ODE). Each state variable (`u`) has a corresponding ODE. The ODEs are defined by their right hand side defined in the function `f` (which sets `du` that is the rate of change in `u`). The right hand side `f(u,p,t)` depends on time `t`, parameters `p` (time-dependent or constant), and the state `u`.

@@ -19,7 +19,7 @@ function define_LWFB90_cb()
         ### Compute parameters
         ## A) constant parameters:
         p_soil = integrator.p[1][1]
-        (NLAYER, IMODEL, compute_intermediate_quantities, Reset,
+        (NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, Reset,
         p_DTP, p_NPINT,
 
         _, _, _, _, _, _,
@@ -73,7 +73,7 @@ function define_LWFB90_cb()
         u_SNOWLQ   = integrator.u[6]
         u_SWATI    = integrator.u[7:(7+NLAYER-1)]
 
-        LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMX, integrator.t)
+        LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, integrator.t)
 
         # Derive (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) from u_SWATI
         (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
@@ -87,7 +87,7 @@ function define_LWFB90_cb()
           p_fu_SHEAT,p_fu_SOLRADC, p_fu_TA, p_fu_TADTM, p_fu_TANTM, p_fu_UADTM, p_fu_UANTM,
           p_fT_SNOFRC,p_fu_TSNOW,p_fu_PSNVP, p_fu_ALBEDO,p_fu_RSS, p_fu_SNOEN =
           MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
-                     IMODEL, NLAYER, p_soil,
+                     FLAG_MualVanGen, NLAYER, p_soil,
                      # for SUNDS:
                      p_LAT, p_ESLOPE, p_DOY(integrator.t), p_L1, p_L2,
                      # for LWFBrook90_CANOPY:
@@ -121,7 +121,7 @@ function define_LWFB90_cb()
         # Compute day and night rates
         (p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR, p_fu_ATRI, p_fu_PGER) =
             MSBDAYNIGHT(IDAY,
-                        IMODEL,
+                        FLAG_MualVanGen,
                         p_fT_SLFDAY, p_fu_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fu_TADTM, p_fu_UADTM, p_fu_TANTM, p_fu_UANTM,
                         p_fT_I0HDAY,
                         # for AVAILEN:
@@ -136,7 +136,7 @@ function define_LWFB90_cb()
                         p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, NLAYER, p_PSICR, NOOUTF)
         # Combine day and night rates to average daily rate
         (p_fu_PTRAN, p_fu_GEVP, p_fu_PINT, p_fu_GIVP, p_fu_PSLVP, aux_du_TRANI) = # TODO(bernhard): p_fu_PSLVP is unused
-            MSBDAYNIGHT_postprocess(IMODEL, NLAYER, p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR, p_fu_ATRI, p_fT_DAYLEN, p_fu_PGER)
+            MSBDAYNIGHT_postprocess(FLAG_MualVanGen, NLAYER, p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR, p_fu_ATRI, p_fT_DAYLEN, p_fu_PGER)
         #* * * * * * * *  E N D   D A Y - N I G H T   L O O P  * * * * * * * * * *
 
         ####################################################################
