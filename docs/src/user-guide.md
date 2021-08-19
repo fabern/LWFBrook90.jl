@@ -65,12 +65,12 @@ Time dependent parameters (climate and vegetation) are provided in the following
 
 `BEA2016-reset-FALSE_meteoveg.csv`:
 
-| dates      | globrad | tmax    | tmin    | vappres | windspeed | prec     | mesfl    | densef | height | lai   | sai   | age       |
-| ---------- | ------- | ----    | -----   | ------- | --------- | ----     | -----    | ------ | ------ | ----- | ----  | -------   |
-|            | weather | weather | weather | weather | weather   | weather  | stream   | stand  | stand  | stand | stand | stand     |
-|            | (MJ/m2) | (°C)    | (°C)    | (kPa)   | (m/s)     | (mm/day) | (unused) | (-)    | (m)    | (-)   | (-)   | (years)   |
-| 2016-01-01 | 4.08    | 5.5     | -1.1    | 0.53    | 1.22      | 3.2      | 0        | 1      | 23     | 1.752 | 1     | 200       |
-| 2016-01-02 | 1.61    | 3.36    | -2.08   | 0.49    | 0.89      | 0.2      | 0        | 1      | 23     | 1.752 | 1     | 200.00274 |
+| dates      | globrad | tmax    | tmin    | vappres | windspeed | prec     | densef | height | lai   | sai   | age       |
+| ---------- | ------- | ----    | -----   | ------- | --------- | ----     | ------ | ------ | ----- | ----  | -------   |
+|            | weather | weather | weather | weather | weather   | weather  | stand  | stand  | stand | stand | stand     |
+|            | (MJ/m2) | (°C)    | (°C)    | (kPa)   | (m/s)     | (mm/day) | (-)    | (m)    | (-)   | (-)   | (years)   |
+| 2016-01-01 | 4.08    | 5.5     | -1.1    | 0.53    | 1.22      | 3.2      | 1      | 23     | 1.752 | 1     | 200       |
+| 2016-01-02 | 1.61    | 3.36    | -2.08   | 0.49    | 0.89      | 0.2      | 1      | 23     | 1.752 | 1     | 200.00274 |
 
 Note that the second and third rows containing description and unit headers is not contained in the input dataset.
 

@@ -30,23 +30,20 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
 
   # A) time-dependent parameters: (meteo and stand properties)
   veg_daily   <- input_Data$standprop_daily %>% select(dates, densef, height, lai, sai, age)
-  mesfl_daily <- data.frame(dates = veg_daily$dates, mesfl = 0) # TODO(bernhard): impelement mesfl
   clim_daily  <- original_arguments$climate %>%
     select(dates, globrad, tmax, tmin, vappres, windspeed, prec) %>%
     filter(dates >= input_Data$options_b90$startdate) %>%
     filter(dates <= input_Data$options_b90$enddate)
 
   out_csv_meteoveg <- clim_daily %>%
-    dplyr::left_join(mesfl_daily, by="dates") %>%
     dplyr::left_join(veg_daily, by="dates") %>%
-    select("dates",	
-           "globrad_MJDayM2" = globrad,	
+    select("dates",
+           "globrad_MJDayM2" = globrad,
            "tmax_degC" = tmax,
            "tmin_degC" = tmin,
            "vappres_kPa" = vappres,
            "windspeed_ms" = windspeed,
            "prec_mmDay" = prec,
-           "mesfl_unknownUnits" = mesfl,
            "densef_" = densef,
            "height_m" = height,
            "lai_" = lai,

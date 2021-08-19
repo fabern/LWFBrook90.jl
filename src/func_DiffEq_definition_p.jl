@@ -395,7 +395,6 @@ function define_LWFB90_p(
             interpolated_meteoveg["p_VAPPRES"],
             interpolated_meteoveg["p_WIND"],
             interpolated_meteoveg["p_PREC"],
-            interpolated_meteoveg["p_MESFL"],
             interpolated_meteoveg["p_DENSEF"], # canopy density multiplier between 0.05 and 1, dimensionless
             interpolated_meteoveg["p_HEIGHT"],
             interpolated_meteoveg["p_LAI"],
@@ -455,7 +454,6 @@ function interpolate_meteoveg(
     p_TMIN    = extrapolate(scale(interpolate(input_meteoveg.TMIN,    (BSpline(Constant{Previous}()))), time_range) ,0)
     p_VAPPRES = extrapolate(scale(interpolate(input_meteoveg.VAPPRES, (BSpline(Constant{Previous}()))), time_range) ,0)
     p_WIND    = extrapolate(scale(interpolate(input_meteoveg.WIND,    (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_MESFL   = extrapolate(scale(interpolate(input_meteoveg.MESFL,   (BSpline(Constant{Previous}()))), time_range) ,0)
     p_DENSEF  = extrapolate(scale(interpolate(input_meteoveg.DENSEF,  (BSpline(Constant{Previous}()))), time_range) ,0)
     p_HEIGHT  = extrapolate(scale(interpolate(input_meteoveg.HEIGHT,  (BSpline(Constant{Previous}()))), time_range) ,0)
     p_LAI     = extrapolate(scale(interpolate(input_meteoveg.LAI,     (BSpline(Constant{Previous}()))), time_range) ,0)
@@ -480,7 +478,6 @@ function interpolate_meteoveg(
                  ("p_VAPPRES",p_VAPPRES),
                  ("p_WIND",p_WIND),
                  ("p_PREC",p_PREC),
-                 ("p_MESFL",p_MESFL),
                  ("p_DENSEF",p_DENSEF),
                  ("p_HEIGHT",p_HEIGHT),
                  ("p_LAI",p_LAI),

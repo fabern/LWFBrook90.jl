@@ -37,15 +37,15 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
     input_param = read_path_param(path_param)
 
     # Load precipitation data
-    #' @param precdat A matrix of precipitation interval data with 6 columns:
-    #'                   year, month, day, interval-number (1:precint), prec, mesflp.
+    #' @param precdat A matrix of precipitation interval data with 5 columns:
+    #'                   year, month, day, interval-number (1:precint), prec.
     # input_precdat = DataFrame(a = Nothing, b = Nothing)
     # TODO(bernhard): currently not implemented.
     #                 Only using PRECIN (resolution daily).
     #                 PRECDAT would allow to have smaller resolution (would require changes).
     # unused: input_precdat = read(path_precdat, DataFrame;
     # unused:           missingstring = "-999",
-    # unused:           datarow=2, header=["year","month","day","interval_number","prec","mesflp"], delim=',',
+    # unused:           datarow=2, header=["year","month","day","interval_number","prec"], delim=',',
     # unused:           ignorerepeated=true)
 
     #' @param pdur a [1,12]-matrix of precipitation durations (hours) for each month.
@@ -136,10 +136,10 @@ function read_path_meteoveg(path_meteoveg)
         datarow=2, delim=',', ignorerepeated=true,
         header=["dates", #"YY","MM","DD",
                 "GLOBRAD","TMAX","TMIN","VAPPRES","WIND",
-                "PRECIN","MESFL","DENSEF","HEIGHT","LAI","SAI","AGE"],
+                "PRECIN","DENSEF","HEIGHT","LAI","SAI","AGE"],
         types=Dict(:dates => DateTime, #YY,MM,DD,
                 :GLOBRAD => Float64,:TMAX => Float64,:TMIN => Float64,:VAPPRES => Float64,:WIND => Float64,
-                :PRECIN => Float64,:MESFL => Float64,:DENSEF => Float64,:HEIGHT => Float64,:LAI => Float64,:SAI => Float64,:AGE => Float64))) |>
+                :PRECIN => Float64,:DENSEF => Float64,:HEIGHT => Float64,:LAI => Float64,:SAI => Float64,:AGE => Float64))) |>
         transform(dates = DateTime.(:dates))
 
     # Identify period of interest
