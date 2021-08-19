@@ -10,6 +10,7 @@ input_path = "example/"*input_prefix*"-input/"
     input_meteoveg_reference_date,
     input_param,
     input_pdur,
+    input_initial_conditions,
     input_soil_materials,
     input_soil_nodes) = read_LWFBrook90R_inputData(input_path, input_prefix)
 ####################
@@ -55,14 +56,14 @@ u_SWATIinit      = p_soil.p_SWATMAX ./ p_soil.p_THSAT .* LWFBrook90.KPT.FTheta(u
 ######
 
 # Create u0 for DiffEq.jl
-u0 = define_LWFB90_u0(input_param[1,"u_GWAT_init"],
-                    input_param[1,"u_INTS_init"],
-                    input_param[1,"u_INTR_init"],
-                    input_param[1,"u_SNOW_init"],
-                    input_param[1,"u_CC_init"],
-                    input_param[1,"u_SNOWLQ_init"],
-                    u_SWATIinit,
-                    compute_intermediate_quantities)
+u0 = define_LWFB90_u0(input_initial_conditions[1,"u_GWAT_init"],
+                      input_initial_conditions[1,"u_INTS_init"],
+                      input_initial_conditions[1,"u_INTR_init"],
+                      input_initial_conditions[1,"u_SNOW_init"],
+                      input_initial_conditions[1,"u_CC_init"],
+                      input_initial_conditions[1,"u_SNOWLQ_init"],
+                      u_SWATIinit,
+                      compute_intermediate_quantities)
 ####################
 
 ####################

@@ -75,6 +75,7 @@ function run_example()
         input_meteoveg_reference_date,
         input_param,
         input_pdur,
+        input_initial_conditions,
         input_soil_materials,
         input_soil_nodes) = read_LWFBrook90R_inputData(input_path, input_prefix)
     ####################
@@ -120,12 +121,12 @@ function run_example()
     ######
 
     # Create u0 for DiffEq.jl
-    u0 = define_LWFB90_u0(input_param[1,"u_GWAT_init"],
-                        input_param[1,"u_INTS_init"],
-                        input_param[1,"u_INTR_init"],
-                        input_param[1,"u_SNOW_init"],
-                        input_param[1,"u_CC_init"],
-                        input_param[1,"u_SNOWLQ_init"],
+    u0 = define_LWFB90_u0(input_initial_conditions[1,"u_GWAT_init"],
+                        input_initial_conditions[1,"u_INTS_init"],
+                        input_initial_conditions[1,"u_INTR_init"],
+                        input_initial_conditions[1,"u_SNOW_init"],
+                        input_initial_conditions[1,"u_CC_init"],
+                        input_initial_conditions[1,"u_SNOWLQ_init"],
                         u_SWATIinit,
                         compute_intermediate_quantities)
     ####################

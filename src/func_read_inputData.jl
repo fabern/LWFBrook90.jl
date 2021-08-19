@@ -7,9 +7,10 @@ using Dates: DateTime, Millisecond, Second, Day, month, value, dayofyear
     read_LWFBrook90R_inputData(folder::String, prefix::String)
 
 Load different input files for LWFBrook90:
-- meteoveg
-- param
-- pdur
+- meteoveg.csv
+- param.csv
+- pdur.csv
+- initial_conditions.csv
 - soil_materials.csv
 - soil_nodes.csv
 
@@ -21,12 +22,13 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
     # https://towardsdatascience.com/read-csv-to-data-frame-in-julia-programming-lang-77f3d0081c14
 
     ## A) Define paths of all input files
-    path_meteoveg       = joinpath(folder, prefix*"_meteoveg.csv")
-    path_param          = joinpath(folder, prefix*"_param.csv")
+    path_meteoveg           = joinpath(folder, prefix*"_meteoveg.csv")
+    path_param              = joinpath(folder, prefix*"_param.csv")
     # unused path_precdat=joinpath(folder, prefix*"_precdat.csv")
-    path_pdur           = joinpath(folder, prefix*"_pdur.csv")
-    path_soil_materials = joinpath(folder, prefix*"_soil_materials.csv")
-    path_soil_nodes     = joinpath(folder, prefix*"_soil_nodes.csv")
+    path_pdur               = joinpath(folder, prefix*"_pdur.csv")
+    path_initial_conditions = joinpath(folder, prefix*"_initial_conditions.csv")
+    path_soil_materials     = joinpath(folder, prefix*"_soil_materials.csv")
+    path_soil_nodes         = joinpath(folder, prefix*"_soil_nodes.csv")
 
     ## B) Load input data (time- and/or space-varying parameters)
     input_meteoveg, input_meteoveg_reference_date = read_path_meteoveg(path_meteoveg)
@@ -51,6 +53,9 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
     #' @param pdur a [1,12]-matrix of precipitation durations (hours) for each month.
     input_pdur = read_path_pdur(path_pdur)
 
+    # Load initial conditions of scalar state variables
+    input_initial_conditions = read_path_initial_conditions(path_initial_conditions)
+
     # Load soil data
 
     #' @param soil_materials A matrix of the 8 soil materials parameters.
@@ -71,6 +76,7 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
             input_meteoveg_reference_date,
             input_param,
             input_pdur,
+            input_initial_conditions,
             input_soil_materials,
             input_soil_nodes)
 end
@@ -161,8 +167,34 @@ function read_path_meteoveg(path_meteoveg)
     return input_meteoveg, reference_date
 end
 
+function read_path_initial_conditions(path_initial_conditions)
+    input_initial_conditions = DataFrame(File(path_initial_conditions;
+        transpose=true, drop=[1], comment = "###",
+        types = Dict(# Initial conditions (except for depth-dependent u_aux_PSIM) -------
+                    "u_GWAT_init" => Float64,       "u_INTS_init" => Float64,
+                    "u_INTR_init" => Float64,       "u_SNOW_init" => Float64,
+                    "u_CC_init" => Float64,         "u_SNOWLQ_init" => Float64)))
+    # Assert that inputs are correct:
+    received_names = names(input_initial_conditions)
+    expected_names = [
+        "u_GWAT_init","u_INTS_init","u_INTR_init","u_SNOW_init","u_CC_init","u_SNOWLQ_init",
+        ]
+
+    @assert all(expected_names .∈ (received_names,)) """
+    Input file '$path_initial_conditions' does not contain all the expected entries.
+    \nExpected but missing:\n$(expected_names[(!).(expected_names .∈ (received_names,))])
+    \n\nExpected:\n$expected_names\nReceived:\n$received_names\n
+    """
+    @assert all(received_names .∈ (expected_names,)) """
+    Input file '$path_initial_conditions' contains other than the expected entries.
+    \nReceived unexpected: $(received_names[(!).(received_names .∈ (expected_names,))])
+    \nExpected:\n$expected_names\nReceived:\n$received_names\n
+    """
+
+    return input_initial_conditions
+end
+
 function read_path_param(path_param)
-    # input_param = DataFrame(File(path_param; types=[String, Float64], strict=true))
     input_param = DataFrame(File(path_param;
         transpose=true, drop=[1], comment = "###",
         types = Dict(# Meteorologic site parameters -------
@@ -176,10 +208,6 @@ function read_path_param(path_param)
                     "LPC" => Float64,              "CS" => Float64,               "CZS" => Float64,
                     "CZR" => Float64,              "HS" => Float64,               "HR" => Float64,
                     "ZMINH" => Float64,            "RHOTP" => Float64,            "NN" => Float64,
-                    # Initial conditions (except for depth-dependent u_aux_PSIM) -------
-                    "u_GWAT_init" => Float64,       "u_INTS_init" => Float64,
-                    "u_INTR_init" => Float64,       "u_SNOW_init" => Float64,
-                    "u_CC_init" => Float64,         "u_SNOWLQ_init" => Float64,
                     # Interception parameters -------
                     "FRINTLAI" => Float64,         "FSINTLAI" => Float64,
                     "FRINTSAI" => Float64,         "FSINTSAI" => Float64,
@@ -211,14 +239,12 @@ function read_path_param(path_param)
                     # Numerical solver parameters -------
                     "DTIMAX" => Float64,           "DSWMAX" => Float64,           "DPSIMAX" => Float64)))
 
-
     # Assert that inputs are correct:
     received_names = names(input_param)
     expected_names = [
         "LAT_DEG","ESLOPE_DEG","ASPECT_DEG",
         "ALB","ALBSN","C1","C2","C3","WNDRAT","FETCH","Z0W","ZW",
         "LWIDTH","Z0G","Z0S","LPC","CS","CZS","CZR","HS","HR","ZMINH","RHOTP","NN",
-        "u_GWAT_init","u_INTS_init","u_INTR_init","u_SNOW_init","u_CC_init","u_SNOWLQ_init",
         "FRINTLAI","FSINTLAI","FRINTSAI","FSINTSAI","CINTRL",
         "CINTRS","CINTSL","CINTSS","RSTEMP","MELFAC","CCFAC","LAIMLT","SAIMLT","GRDMLT",
         "MAXLQF","KSNVP","SNODEN","GLMAX","CR","GLMIN","RM","R5","CVPD","TL","T1","T2",
@@ -228,12 +254,12 @@ function read_path_param(path_param)
          "DTIMAX","DSWMAX","DPSIMAX"]
 
     @assert all(expected_names .∈ (received_names,)) """
-    Input file '$path_param' does not contain all the expected 80 entries.
+    Input file '$path_param' does not contain all the expected entries.
     \nExpected but missing:\n$(expected_names[(!).(expected_names .∈ (received_names,))])
     \n\nExpected:\n$expected_names\nReceived:\n$received_names\n
     """
     @assert all(received_names .∈ (expected_names,)) """
-    Input file '$path_param' contains other than the expected 80 entries.
+    Input file '$path_param' contains other than the expected entries.
     \nReceived unexpected: $(received_names[(!).(received_names .∈ (expected_names,))])
     \nExpected:\n$expected_names\nReceived:\n$received_names\n
     """
@@ -248,7 +274,7 @@ end
 
 function read_path_pdur(path_pdur)
     input_pdur = DataFrame(File(path_pdur;
-                           types=[String, Int64], strict=true,
+                           types=[String, Int64], strict=true, comment = "###",
                            datarow=2, header=["month", "pdur_h"], delim=',')) # ignorerepeated=true
     received_month_names = input_pdur[!,"month"]
     expected_month_names = ["January", "Februrary", "March", "April", "May", "June", "July",
