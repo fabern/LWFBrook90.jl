@@ -61,11 +61,29 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
   # out_csv_precdat <- NULL # TODO(bernhard): currently not implemented
 
   # B2) i)  soil discretization and parameters and initial conditions of continuous quantities
-  out_csv_soil_nodes     <- input_Data$param_b90$soil_nodes %>%
-    # select(layer, midpoint, thick, mat, psiini, rootden)
-    select(layer, upper_m = upper, lower_m = lower, mat, psiini_kPa = psiini, rootden)
-  # B2) ii) parameters discretely availble for soil horizons
-  out_csv_soil_materials <- input_Data$param_b90$soil_materials
+  out_csv_soil_discretization <- input_Data$param_b90$soil_nodes %>%
+    select(#SimulationNode = layer,
+           Upper_m = upper, Lower_m = lower,
+           Rootden = rootden, Psiini_kPa = psiini) %>%
+    mutate(delta18O_mUr = NA, delta2H_mUr = NA)
+
+  # B2) ii) soil horizon parameters in discrete horizons (different from numerical node discretization)
+  out_csv_soil_horizons <-left_join(
+      select(input_Data$param_b90$soil_nodes, HorizonNr = layer, Upper_m = upper, Lower_m = lower, mat),
+      select(input_Data$param_b90$soil_materials,
+             mat,
+             ths_volFrac = ths,
+             thr_volFrac = thr,
+             alpha_perMeter = alpha,
+             npar_ = npar,
+             #mpar_ = mpar,
+             ksat_mmDay = ksat,
+             tort_ = tort,
+             gravel_volFrac = gravel),
+      by = "mat"
+    ) %>% select(-mat)
+
+
 
   # B3) initial conditions of scalar state variables
   out_initial_conditions <- with(input_Data$param_b90,c(
@@ -82,15 +100,14 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
 
 
   # B4) other model parameters
-  # Variant 1: (unfinished)
-  # NOTE: from input_Data$param_b90 remove:
-  #       1. soil_nodes
-  #       2. soil_materials
-  # out_csv_param <- input_Data$param_b90
-  # out_csv_param["soil_nodes"]     <- NULL
-  # out_csv_param["soil_materials"] <- NULL
-
-  # Variant 2: (ugly but finished and compatible with current Julia code)
+  # Define idepth and qdepth
+  idepth = -1000*out_csv_soil_discretization[input_Data$param_b90$ilayer,"Lower_m"] # in mm (positive depth)
+  if (input_Data$param_b90$qlayer==0) {
+    qdepth = 0
+  } else {
+    qdepth = -1000*out_csv_soil_discretization[input_Data$param_b90$qlayer,"Lower_m"] # in mm (positive depth)
+  }
+  # Save all parameters
   out_param <- with(input_Data$param_b90,
                         c("### Meteorologic site parameters -------" = NA,
                           "LAT_DEG"=coords_y, "ESLOPE_DEG"=eslope,"ASPECT_DEG"=aspect,
@@ -124,8 +141,7 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
                           "RGRORATE"=rgrorate, "RGROPER"=rgroper,   "FXYLEM"=fxylem,
                           "PSICR"=psicr,       "RTRAD"=rrad,        "NOOUTF"=nooutf,
                           "### Soil parameters -------" = NA,
-                          "ILAYER"=ilayer, #TODO(bernhard): switch to depth in mm"
-                          "QLAYER"=qlayer, #TODO(bernhard): switch to depth in mm"
+                          "IDEPTH"=idepth, "QDEPTH"=qdepth,
                           "FLAG_MualVanGen"=ifelse(input_Data$options_b90$imodel == "MvG", 1, 0),
                           "RSSA"=rssa,     "RSSB"=rssb,     "INFEXP"=infexp,
                           "BYPAR"=bypar,   "QFPAR"=qfpar,   "QFFC"=qffc,
@@ -143,12 +159,14 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
 
   withr::with_options(c(scipen=100), { # temporarily switches off scientific notation
     require(dplyr)
-    out_csv_soil_nodes         %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_soil_nodes.csv")),         row.names=FALSE, quote=FALSE)
-    out_csv_soil_materials     %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_soil_materials.csv")),     row.names=FALSE, quote=FALSE)
-    out_csv_param              %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_param.csv")),              row.names=FALSE, quote=FALSE)
-    out_csv_initial_conditions %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_initial_conditions.csv")),row.names=FALSE, quote=FALSE)
-    out_csv_meteoveg           %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_meteoveg.csv")),           row.names=FALSE, quote=FALSE)
-    out_csv_pdur               %>%                                                 write.csv(file.path(input_folder, paste0(Julia_prefix, "_pdur.csv")),               row.names=FALSE, quote=FALSE)
+    out_csv_soil_discretization
+
+    out_csv_soil_discretization%>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_soil_discretization.csv")), row.names=FALSE, quote=FALSE)
+    out_csv_soil_horizons      %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_soil_horizons.csv")),       row.names=FALSE, quote=FALSE)
+    out_csv_param              %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_param.csv")),               row.names=FALSE, quote=FALSE)
+    out_csv_initial_conditions %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_initial_conditions.csv")),  row.names=FALSE, quote=FALSE)
+    out_csv_meteoveg           %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_meteoveg.csv")),            row.names=FALSE, quote=FALSE)
+    out_csv_pdur               %>%                                                 write.csv(file.path(input_folder, paste0(Julia_prefix, "_pdur.csv")),                row.names=FALSE, quote=FALSE)
     # out_csv_precdat          %>%                                                 write.csv(file.path(input_folder, paste0(Julia_prefix, "_precdat.csv")),       row.names=FALSE, quote=FALSE)
   })
 

@@ -525,6 +525,8 @@ end
 
 
 function SRFLFR(p_QLAYER, u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC)
+    @assert p_QLAYER >= 1 "QLAYER is smaller than 1. Funcion SRFLFR should never have been called."
+
     SUM = sum(u_SWATI[1:p_QLAYER])
 
     # Brook90 Variant: if p_QFPAR > 0.01

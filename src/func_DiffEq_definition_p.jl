@@ -21,44 +21,30 @@ function define_LWFB90_p(
     input_meteoveg_reference_date,
     input_param,
     input_pdur,
-    input_soil_materials,
-    input_soil_nodes
+    input_soil_horizons,
+    input_soil_discretization
     ;
     Reset = false,
     compute_intermediate_quantities = false,
     constant_dt_solver = 1)
 
-            # TODO: check in define_LWFB90_p if FLAG_MualVanGen correctly defined, i.e. loaded soil data has correct column names
-            # TODO: check in define_LWFB90_p if NLAYER correctly defined, i.e. loaded soil data has correct number of rows
-            # TODO: check in define_LWFB90_p if input_param[1,"nmat"] correctly defined, i.e. loaded soil materials has correct number of rows size(input_soil_materials,1)
-            # TODO: check in define_LWFB90_p input_soil_materials
-            # # Check that all required column names are present in loaded data
-            # MvG_columnnames = ["ths", "thr", "alpha", "npar", "ksat", "tort", "gravel"]
-            # CH_columnnames  = ["mat", "thsat", "thetaf", "psif", "bexp", "kf", "wtinf", "gravel"]
-            # @assert length(setdiff(MvG_columnnames, names(input_soil_materials))) == 0 "Not all required column names found in soil materials input: $MvG_columnnames"
-            # @assert length(setdiff(CH_columnnames, names(input_soil_materials))) == 0  "Not all required column names found in soil materials input: $CH_columnnames"
-            # TODO: check in define_LWFB90_p
-
     ########
     ## Discretize soil parameters and interpolate meteo and vegetation parameters
     soil_discr =
         LWFBrook90.discretize_soil_params(
-            input_soil_materials,
-            input_soil_nodes,
-            input_param[1,"FLAG_MualVanGen"],
-            input_param[1,"ILAYER"],
-            input_param[1,"QLAYER"],
-            nrow(input_soil_nodes),
-            0, # flag for heat balance; not implemented; input_param[1,"HEAT"],
-            nrow(input_soil_materials),
+            input_soil_horizons,
+            input_soil_discretization,
+            input_param[1,"IDEPTH"],
+            input_param[1,"QDEPTH"],
             input_param[1,"INITRDEP"],
-            input_param[1,"RGRORATE"])
+            input_param[1,"RGRORATE"],
+            input_param[1,"FLAG_MualVanGen"])
 
     interpolated_meteoveg =
         LWFBrook90.interpolate_meteoveg(
             input_meteoveg,
             input_meteoveg_reference_date,
-            nrow(input_soil_nodes),
+            soil_discr["NLAYER"],
             input_param[1,"INITRDEP"],
             input_param[1,"INITRLEN"],
             input_param[1,"RGROPER"],
@@ -234,8 +220,8 @@ function define_LWFB90_p(
 
     ## Soil discretization
     FLAG_MualVanGen   = input_param[1,"FLAG_MualVanGen"] # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
-    NLAYER   = nrow(input_soil_nodes) # Number of soil layers used
-    p_THICK  = soil_discr["THICK"]   # (Soil parameter),  layer thicknesses, mm
+    NLAYER   = soil_discr["NLAYER"] # Number of soil layers used
+    p_THICK  = soil_discr["THICK"]  # (Soil parameter),  layer thicknesses, mm
     # Documentation from ecoshift:
     # NLAYER (Soil parameter) - number of soil layers to be used, dimensionless. NLAYER is the number of soil layers to be used in the model run. It can vary from 1 to ML. Run time is more or less proportional to NLAYER. Soil parameter values for layers greater than NLAYER can be 0.
     # THICK(1 To ML) (Soil parameter) - layer thicknesses, mm. THICK is the vertical thickness of each soil layer. Each layer can have a different thickness, but the number of iterations goes up as the thickness of any layer goes down. THICK should probably not be less than 50 mm unless run time is not important. [see EVP-PLNTRES] [see KPT] [see WAT-VERT]
@@ -303,8 +289,8 @@ function define_LWFB90_p(
     ### Infiltration (incl. preferential flow)
     p_IMPERV = input_param[1,"IMPERV"] # (Flow parameter), fraction of impervious surface area generating surface or source area flow (SRFL), dimensionless
     p_INFEXP = input_param[1,"INFEXP"] # (Flow parameter), infiltration exponent that determines the distribution of infiltrated water with depth, dimensionless (from 0 to >1; 0 = all infiltration to top soil layer, 1 = uniform distribution down to ILAYER, >1 = more water in lower layers closer to ILAYER)
-    p_ILAYER = input_param[1,"ILAYER"] # (Flow parameter), number of layers over which infiltration is distributed
-    p_QLAYER = input_param[1,"QLAYER"] # (Flow parameter), number of soil layers for SRFL
+    p_ILAYER = soil_discr["ILAYER"] # (Flow parameter), number of layers over which infiltration is distributed
+    p_QLAYER = soil_discr["QLAYER"] # (Flow parameter), number of soil layers for SRFL
     p_INFRAC = LWFBrook90.WAT.INFPAR(p_INFEXP, p_ILAYER, p_soil, NLAYER) # fraction of (preferential) infiltration to each layer
     # TODO(bernhard):switch to ILAYAER and QLAYER to IDEPTH and QDEPTH, which are independent of soil discretization.
 
@@ -488,83 +474,119 @@ function interpolate_meteoveg(
 end
 
 """
-    discretize_soil_params(input_soil_materials,FLAG_MualVanGen, ILAYER, QLAYER, NLAYER)
+    discretize_soil_params(input_soil_horizons,FLAG_MualVanGen, ILAYER, QLAYER, NLAYER)
 
 Define constant parameters from input_pdur. TO BE REDEFINED
 """
 function discretize_soil_params(
-    input_soil_materials, input_soil_nodes,
-    FLAG_MualVanGen, ILAYER, QLAYER, NLAYER, HEAT, nmat, INITRDEP, RGRORATE)
-    # Parse soil parameter according to material at different depth given by
-    # arguments:
-    # input_soil_materials: A matrix of the 8 soil materials parameters.
-    #                 When FLAG_MualVanGen = 1 (Mualem-van Genuchten), these refer to:
-    #                       mat, ths, thr, alpha (m-1), npar, ksat (mm d-1), tort (-), stonef (-).
-    #                 When FLAG_MualVanGen = 0 (Clapp-Hornberger):
-    #                       mat, thsat, thetaf, psif (kPa), bexp, kf (mm d-1), wetinf (-), stonef (-).
+    input_soil_horizons, input_soil_discretization, IDEPTH, QDEPTH, INITRDEP, RGRORATE, FLAG_MualVanGen)
 
+    # This function maps the input parameters: (input_soil_horizons, ILAYER, QLAYER, INITRDEP, RGRORATE)
+    # onto the soil discretization (input_soil_discretization)
 
-    #if (NLAYER > ML) || (ILAYER > NLAYER) || (QLAYER > NLAYER)
-    if (ILAYER > NLAYER) || (QLAYER > NLAYER)
-        error("Failure of QLAYER and ILAYER < NLAYER < ML")
+    # input_soil_horizons: A matrix of the 8 soil materials parameters.
+    # input_soil_discretization:
+    # IDEPTH depth over which infiltration is distributed, [mm] "IDEPTH determines the
+    #        number of soil layers over which infiltration is distributed when INFEXP is
+    #        greater than 0."
+    # QDEPTH soil depth for SRFL calculation, 0 to prevent SRFL, [mm] "QDEPTH determines the
+    #        layers over which wetness is calculated to determine source area (SRFL)
+    #        parameters."
+    # INITRDEP
+    # RGRORATE
+
+    ############
+    # 1) Check if discretization needs to be refined
+    # Approach 1: refine discretization to get horizons and prescribed depths very precisely.
+    # Approach 2: do not refine discretization. Just include layers for ILAYER and QLAYER
+    #             that are entirely within IDEPTH and QDEPTH
+    # Below we opted for approach 1: refine discretization
+
+    # Find out which limits need to be added
+    existing_limits     = [0; input_soil_discretization[!,"Lower_m"]]
+    all_needed_limits = unique(sort(
+        [input_soil_horizons[!,"Upper_m"];
+         input_soil_horizons[!,"Lower_m"];
+         -IDEPTH/1000; # mm (positive) to m (negative)
+         -QDEPTH/1000  # mm (positive) to m (negative)
+         ];
+        rev = true))
+    to_add = all_needed_limits[(!).(all_needed_limits .∈ (existing_limits,))]
+
+    # Add them to the DataFrame
+    for element_to_add in to_add
+        for i in 1:nrow(input_soil_discretization)
+            condition = element_to_add > input_soil_discretization[i, "Lower_m"]
+            #println("$i, element_to_add:$element_to_add, $(input_soil_discretization[i, "Lower_m"]) $condition")
+            if (condition)
+                element_to_add
+                pos = i+1
+                insert!.(eachcol(input_soil_discretization),
+                        pos,
+                        Matrix(input_soil_discretization)[pos-1,:])
+                input_soil_discretization[pos-1, "Lower_m"] = element_to_add[1]
+                input_soil_discretization[pos,   "Upper_m"] = element_to_add[1]
+                break
+            end
+        end
     end
 
-    # Parse the parameters for each material depending on wheter we use FLAG_MualVanGen ==1 or ==2
-    ParMat    = fill(NaN, (nmat, 10))
-    StonefMat = fill(NaN, (nmat, 1))
-    for i = 1:nmat
-        if FLAG_MualVanGen == 0
-        # Clapp-Hornberger
-        #             input_soil_materials[i,1]  # mat
-        ParMat[i,1] = input_soil_materials[i,2]  # θs
-        ParMat[i,2] = input_soil_materials[i,3]  # θf
-        ParMat[i,4] = input_soil_materials[i,4]  # ψf (kPa)
-        ParMat[i,9] = input_soil_materials[i,5]  # bexp (-)
-        ParMat[i,3] = input_soil_materials[i,6]  # kf (mm d-1)
-        ParMat[i,10] = input_soil_materials[i,7] # wetinf (-)
-        StonefMat[i,1] = input_soil_materials[i,8] # stonef (-)
-        ParMat[i,5] = 0.
-        ParMat[i,6] = 0.
-        ParMat[i,7] = 0.
-        ParMat[i,8] = 0.
-        # ParMat[i,CH]> (θs, θf, kf, ψf, 0, 0, 0, 0, bexp, wetinf)
-        end
+    # Define ILAYER and QLAYER (to be used internally instead of IDEPTH and QDEPTH)
+    is_infiltration_layer_BOOLEAN = -IDEPTH/1000 .<= input_soil_discretization[!,"Lower_m"]
+    is_SRFL_layer_BOOLEAN         = -QDEPTH/1000 .<= input_soil_discretization[!,"Lower_m"]
+    ILAYER = sum(is_infiltration_layer_BOOLEAN) # lowest node where Bottom_m is below IDEPTH/1000
+    QLAYER = sum(is_SRFL_layer_BOOLEAN)         # lowest node where Bottom_m is below QDEPTH/1000
 
-        if FLAG_MualVanGen == 1
-            # Mualem-van Genuchten
-            #             input_soil_materials[i,1]  # mat
-            ParMat[i,1] = input_soil_materials[i,2]  # θs
-            ParMat[i,10] = input_soil_materials[i,3] # θr
-            ParMat[i,7] = input_soil_materials[i,4]  # α (m-1)
-            ParMat[i,8] = input_soil_materials[i,5]  # npar
-            ParMat[i,6] = input_soil_materials[i,6]  # ksat (mm d-1)
-            ParMat[i,9] = input_soil_materials[i,7]  # tort (-)
-            StonefMat[i,1] = input_soil_materials[i,8] # stonef (-)
-            ParMat[i,2] = 0.
-            ParMat[i,4] = 0.
-            ParMat[i,5] = 0.
-            # ..it's a sin......
-            # Hard default [mm d-1] for saturated hydraulic conductivity at field capacity
-            ParMat[i,3] = 2            # K(θ_fc) = 2 (mm d-1)
-            # ParMat_MvG ==> (θs,  0, K(θ_fc), 0, 0, ksat, α, npar, tort, θr)
-        end
-        # ParMat_CH  ==> (θs, θf, kf,     ψf, 0, 0,    0,    0, bexp, wetinf)
-        # ParMat_MvG ==> (θs,  0, K(θ_fc), 0, 0, ksat, α, npar, tort, θr)
+    if (-IDEPTH/1000 < input_soil_discretization[end,"Lower_m"]) ||
+        (-QDEPTH/1000 < input_soil_discretization[end,"Lower_m"])
+        @error "QDEPTH or IDEPTH were defined deeper than the lowest simulation element."
     end
+    ############
 
-    # THICK     = input_soil_nodes[!,"thick"]                                 # thickness of soil layer [mm]
-    # dep       = input_soil_nodes[!,"midpoint"]                              # soil depth [m] (midpoint, i.e. average depth of layer)
-    THICK_m   = input_soil_nodes[!,"upper_m"] - input_soil_nodes[!,"lower_m"] # thickness of soil layer [m]
-    THICK     = 1000*(THICK_m)                                                # thickness of soil layer [mm]
-    dep       = input_soil_nodes[!,"upper_m"] - THICK/1000/2                  # soil depth [m] (midpoint, i.e. average depth of layer)
-    mat       = input_soil_nodes[!,"mat"]                                     # material_id for each soil layer #TODO(bernhard): not exported
-    PSIM_init = input_soil_nodes[!,"psiini_kPa"]                              # initial condition PSIM [kPa]
-    frelden   = input_soil_nodes[!,"rootden"]                                 # root density
+    ############
+    # 2) Append soil horizon data to discretized soil domain
+    # Assert expectations
+    @assert input_soil_horizons[1,"Upper_m"]       ≈ 0
+    @assert input_soil_discretization[1,"Upper_m"] ≈ 0
+    @assert input_soil_horizons[1,"Lower_m"]       < 0
+    @assert input_soil_discretization[1,"Lower_m"] < 0
+
+    # Find for each input_soil_discretization node in which horizon it lies
+    which_horizon = fill(0, nrow(input_soil_discretization))
+    for i = 1:nrow(input_soil_discretization)
+        for j = nrow(input_soil_horizons):-1:1
+            condition = input_soil_discretization[i,"Lower_m"] >= input_soil_horizons[j,"Lower_m"]
+            # println("$i,$j: $(input_soil_discretization[i,"Lower_m"]) >= $(input_soil_horizons[j,"Lower_m"]): $condition")
+            if condition
+                which_horizon[i] = input_soil_horizons[j,"HorizonNr"]
+            end
+        end
+    end
+    input_soil_discretization[:,"HorizonNr"] = which_horizon
+
+    input_soil_discretization = innerjoin(input_soil_discretization,
+                                input_soil_horizons, makeunique=true,
+                                #select(input_soil_horizons, Not([:Upper_m,:Lower_m])),
+                                on = :HorizonNr)
+    ############
+
+    ############
+
+    # hardcoded:
+    HEAT = 0 # flag for heat balance; not implemented; input_param[1,"HEAT"],
+
+    THICK_m   = input_soil_discretization[!,"Upper_m"] - input_soil_discretization[!,"Lower_m"] # thickness of soil layer [m]
+    THICK     = 1000*(THICK_m)                                    # thickness of soil layer [mm]
+    PSIM_init = input_soil_discretization[!,"Psiini_kPa"]         # initial condition PSIM [kPa]
+    # d18O_soil_init = input_soil_discretization[!,"delta18O_mUr"]  # initial condition soil water δ18O [mUr]
+    # d2H_soil_init  = input_soil_discretization[!,"delta2H_mUr"]   # initial condition soil water δ2H [mUr]
+
+    NLAYER = nrow(input_soil_discretization)
 
     for i = 1:NLAYER
         if (HEAT != 0) @error "HEAT must be set to zero, as heat balance is not implemented." end
         # if (HEAT == 1)
-        #     # TemperatureNew(i)       = input_soil_nodes[i,7] we don't have it in the input file!!!
+        #     # TemperatureNew(i)       = input_soil_discretization[i,7] we don't have it in the input file!!!
         #     if i > NLAYER
         #         MUE[i] = THICK[i] / ( THICK[i] + THICK(I+1) )
         #         ZL[i]  = 0.5 * ( THICK[i] + THICK(I+1) )
@@ -575,29 +597,47 @@ function discretize_soil_params(
         #     TMean[i]   = 0.
         # end
     end
-    depmax = dep[1] - THICK[1] / 1000.
+    ############
 
-    #..from material-specific to layer-specific parameter values
-    PAR    = fill(NaN, (NLAYER, 10)) # MPAR=10
-    STONEF = fill(NaN, (NLAYER))
-    for i = 1:NLAYER
-        for j = 1:10 # MPAR=10
-            PAR[i,j] = ParMat[mat[i], j]
-            # PAR_CH  ==> (θs, θf, kf,     ψf, 0, 0,    0,    0, bexp, wetinf)
-            # PAR_MvG ==> (θs,  0, K(θ_fc), 0, 0, ksat, α, npar, tort, θr)
-        end
-        STONEF[i] = StonefMat[ mat[i] ]
+    ############
+    # 3) Bring to simple vecotr and matrix form
+
+    # Parse the stonefraction and hydraulic parameters for each layer
+    # depending on wheter we use FLAG_MualVanGen ==1 or ==2
+    STONEF = input_soil_discretization[:,"gravel_volFrac"]
+
+    if FLAG_MualVanGen == 1
+        # Mualem-van Genuchten
+        PAR = select(input_soil_discretization,
+                :ths_volFrac    => :θs,
+                :ksat_mmDay     => :Ksat,
+                :alpha_perMeter => :α,
+                :npar_          => :n,
+                :tort_          => :tort,
+                :thr_volFrac    => :θr
+                )
+        # ..it's a sin......
+        # Hard default of 2 [mm d-1] for saturated hydraulic conductivity at field capacity K(θ_fc)
+        PAR[:,"K(θ_fc)"] .= 2. #insertcols!(copy(input_soil_discretization), ("K(θ_fc)" => 2.)),
     end
     if FLAG_MualVanGen == 0
         # Clapp-Hornberger
-        PAR = DataFrame(PAR, ["θs","θf","kf","ψf","dummy1","dummy2","dummy3","dummy4","bexp","wetinf"])
-    elseif FLAG_MualVanGen == 1
-        # Mualem-van Genuchten
-        PAR = DataFrame(PAR, ["θs","dummy1","K(θ_fc)","dummy2","dummy3","Ksat","α","n","tort","θr"])
+        PAR = select(input_soil_discretization,
+                :thsat    => :θs,
+                :thetaf   => :θf,
+                :kf_mmD   => :kf,
+                :psif_kPa => :ψf,
+                :bexp     => :bexp,
+                :wetinf   => :wetinf
+                )
     end
 
     # find thickness of maximum root zone
     # frelden: relative values of final root density per unit volume
+    frelden = input_soil_discretization[!,"Rootden"]            # root density
+    dep     = input_soil_discretization[!,"Upper_m"] - THICK/1000/2 # soil depth [m] (midpoint, i.e. average depth of layer)
+    depmax  = dep[1] - THICK[1] / 1000.
+
     i1 = findfirst(frelden .> 1.e-6) # first layer where frelden[i] is >=1.e-6
     i2 = findlast(frelden .> 1.e-6)  # last layer (in 1:NLAYER) where frelden[i] is >=1.e-6
     if !isnothing(i1) && isnothing(i2)
@@ -623,6 +663,7 @@ function discretize_soil_params(
 
 
     # heat flow -------
+    # nmat   = nrow(input_soil_horizons)
     if (HEAT != 0) @error "HEAT must be set to zero, as heat balance is not implemented." end
     #       if (HEAT == 1)
     #        READ (12,*) Comment
@@ -654,6 +695,7 @@ function discretize_soil_params(
     #        READ (12,*) C
     #       end
 
+    # mat       = input_soil_horizons[!,"mat"]
     # ### # from LWFBrook90R:md_brook90.f95 (lines 105)
     # TPar = fill(NaN, (nmat, 10))
     # TPar .= -1
@@ -664,9 +706,10 @@ function discretize_soil_params(
     # end
     ###
 
-
-
     return Dict([
+                ("NLAYER",NLAYER),
+                ("ILAYER",ILAYER),
+                ("QLAYER",QLAYER),
                 ("THICK",THICK),
                 ("PSIM_init",PSIM_init),
                 ("frelden",frelden),

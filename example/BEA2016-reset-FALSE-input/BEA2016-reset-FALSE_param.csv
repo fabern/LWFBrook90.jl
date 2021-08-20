@@ -67,8 +67,8 @@ PSICR,-2
 RTRAD,0.35
 NOOUTF,1
 ### Soil parameters -------,NA
-ILAYER,1
-QLAYER,0
+IDEPTH,40
+QDEPTH,0
 FLAG_MualVanGen,1
 RSSA,100
 RSSB,1

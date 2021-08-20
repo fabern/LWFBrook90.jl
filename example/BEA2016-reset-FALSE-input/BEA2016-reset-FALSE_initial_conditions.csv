@@ -1,0 +1,8 @@
+param_id,x
+### Initial conditions (except for depth-dependent u_aux_PSIM) -------,NA
+u_GWAT_init,0
+u_INTS_init,0
+u_INTR_init,0
+u_SNOW_init,0
+u_CC_init,0
+u_SNOWLQ_init,0

@@ -23,8 +23,8 @@ input_path = "example/"*input_prefix*"-input/"
     input_param,
     input_pdur,
     input_initial_conditions,
-    input_soil_materials,
-    input_soil_nodes) = read_LWFBrook90R_inputData(input_path, input_prefix)
+    input_soil_horizons,
+    input_soil_discretization) = read_LWFBrook90R_inputData(input_path, input_prefix)
 ####################
 ```
 
@@ -56,8 +56,8 @@ p = define_LWFB90_p(
     input_meteoveg_reference_date,
     input_param,
     input_pdur,
-    input_soil_materials,
-    input_soil_nodes;
+    input_soil_horizons,
+    input_soil_discretization;
     Reset = Reset,
     compute_intermediate_quantities = compute_intermediate_quantities)
 ####################
@@ -70,7 +70,7 @@ p = define_LWFB90_p(
 
 ######
 # Transform initial value of auxiliary state u_aux_PSIM_init into state u_SWATIinit:
-u_aux_PSIM_init = input_soil_nodes[:,"psiini_kPa"]
+u_aux_PSIM_init = input_soil_discretization[:,"psiini_kPa"]
 if any( u_aux_PSIM_init.> 0)
     error("Initial matrix psi must be negative or zero")
 end

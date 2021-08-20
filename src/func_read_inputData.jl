@@ -11,8 +11,8 @@ Load different input files for LWFBrook90:
 - param.csv
 - pdur.csv
 - initial_conditions.csv
-- soil_materials.csv
-- soil_nodes.csv
+- soil_horizons.csv
+- soil_discretization.csv
 
 These files were created with an R script `generate_LWFBrook90Julia_Input.R` that
 takes the same arguements as the R funciton `LWFBrook90R::run_LWFB90()` and generates
@@ -20,15 +20,14 @@ the corresponding Julia input functions.
 """
 function read_LWFBrook90R_inputData(folder::String, prefix::String)
     # https://towardsdatascience.com/read-csv-to-data-frame-in-julia-programming-lang-77f3d0081c14
-
     ## A) Define paths of all input files
     path_meteoveg           = joinpath(folder, prefix*"_meteoveg.csv")
     path_param              = joinpath(folder, prefix*"_param.csv")
     # unused path_precdat=joinpath(folder, prefix*"_precdat.csv")
     path_pdur               = joinpath(folder, prefix*"_pdur.csv")
     path_initial_conditions = joinpath(folder, prefix*"_initial_conditions.csv")
-    path_soil_materials     = joinpath(folder, prefix*"_soil_materials.csv")
-    path_soil_nodes         = joinpath(folder, prefix*"_soil_nodes.csv")
+    path_soil_horizons      = joinpath(folder, prefix*"_soil_horizons.csv")
+    path_soil_discretization= joinpath(folder, prefix*"_soil_discretization.csv")
 
     ## B) Load input data (time- and/or space-varying parameters)
     input_meteoveg, input_meteoveg_reference_date = read_path_meteoveg(path_meteoveg)
@@ -59,26 +58,20 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
     # Load soil data
 
     #' @param soil_materials A matrix of the 8 soil materials parameters.
-    #'                       When FLAG_MualVanGen = 1 (Mualem-van Genuchten), these refer to:
-    #'                             mat, ths, thr, alpha (m-1), npar, ksat (mm d-1), tort (-), stonef (-).
-    #'                       When FLAG_MualVanGen = 0 (Clapp-Hornberger):
-    #'                             mat, thsat, thetaf, psif (kPa), bexp, kf (mm d-1), wetinf (-), stonef (-).
-    input_soil_materials = DataFrame(File(path_soil_materials;
-                                     types=[Int64, Float64, Float64, Float64, Float64, Float64, Float64, Float64],
-                                     datarow=2, header=["mat","ths","thr","alpha","npar","ksat","tort","gravel"],
-                                     delim=','))# ignorerepeated=true
-
+    input_soil_horizons = read_path_soil_horizons(
+        path_soil_horizons,
+        input_param[1,"FLAG_MualVanGen"])
     #' @param soil_nodes A matrix of the soil model layers with columns
     #'                   nl (layer number), layer midpoint (m), thickness (mm), mat, psiini (kPa), rootden (-).
-    input_soil_nodes = read_path_soil_nodes(path_soil_nodes)
+    input_soil_discretization = read_path_soil_discretization(path_soil_discretization)
 
     return (input_meteoveg,
             input_meteoveg_reference_date,
             input_param,
             input_pdur,
             input_initial_conditions,
-            input_soil_materials,
-            input_soil_nodes)
+            input_soil_horizons,
+            input_soil_discretization)
 end
 
 
@@ -226,13 +219,12 @@ function read_path_param(path_param)
                     "MXKPL" => Float64,
                     "MAXRTLN" => Float64,          "INITRLEN" => Float64,         "INITRDEP" => Float64,
                     "RGRORATE" => Float64,         "RGROPER" => Float64,          "FXYLEM" => Float64,
-                    "PSICR" => Float64,            "RTRAD" => Float64,            "NOOUTF" => Int64,    # TODO(bernhard): make boolena
+                    "PSICR" => Float64,            "RTRAD" => Float64,            "NOOUTF" => Int64,    # TODO(bernhard): make boolean
                     # Soil parameters -------
-                    "ILAYER" => Int64  ,            # TODO(bernhard): switch to depth in mm
-                    "QLAYER" => Int64  ,            # TODO(bernhard): switch to depth in mm
-                    "FLAG_MualVanGen" => Int64  ,            # TODO(bernhard): make boolena
+                    "IDEPTH" => Int64,             "QDEPTH" => Int64,
+                    "FLAG_MualVanGen" => Int64,    # TODO(bernhard): make boolean
                     "RSSA" => Float64,             "RSSB" => Float64,             "INFEXP" => Float64,
-                    "BYPAR" => Int64  ,             # TODO(bernhard): make boolena
+                    "BYPAR" => Int64  ,             # TODO(bernhard): make boolean
                     "QFPAR" => Float64,            "QFFC" => Float64,
                     "IMPERV" => Float64,           "DSLOPE" => Float64,           "LENGTH_SLOPE" => Float64,
                     "DRAIN" => Float64,            "GSC" => Float64,              "GSP" => Float64,
@@ -249,7 +241,7 @@ function read_path_param(path_param)
         "CINTRS","CINTSL","CINTSS","RSTEMP","MELFAC","CCFAC","LAIMLT","SAIMLT","GRDMLT",
         "MAXLQF","KSNVP","SNODEN","GLMAX","CR","GLMIN","RM","R5","CVPD","TL","T1","T2",
         "TH","MXKPL","MXRTLN","INITRLEN","INITRDEP","RGRORATE","RGROPER","FXYLEM","PSICR",
-        "RTRAD","NOOUTF","ILAYER","QLAYER","FLAG_MualVanGen","RSSA","RSSB","INFEXP","BYPAR",
+        "RTRAD","NOOUTF","IDEPTH","QDEPTH","FLAG_MualVanGen","RSSA","RSSB","INFEXP","BYPAR",
          "QFPAR","QFFC","IMPERV","DSLOPE","LENGTH_SLOPE","DRAIN","GSC","GSP",
          "DTIMAX","DSWMAX","DPSIMAX"]
 
@@ -288,18 +280,49 @@ function read_path_pdur(path_pdur)
     return input_pdur
 end
 
-function read_path_soil_nodes(path_soil_nodes)
-    path_soil_nodes = "example/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_soil_nodes.csv"
-    input_soil_nodes = DataFrame(File(path_soil_nodes;
-                                 types=[Int64, Float64, Float64, Int64, Float64, Float64],
-                                 datarow=2, header=["layer","upper_m","lower_m","mat","psiini_kPa","rootden"],
-                                #  datarow=2, header=["layer","midpoint","thick","mat","psiini","rootden"],
+function read_path_soil_horizons(path_soil_horizons, FLAG_MualVanGen)
+    if FLAG_MualVanGen == 1
+        input_soil_horizons = DataFrame(File(path_soil_horizons;
+            # datarow=2, header=["HorizonNr","Upper_m","Lower_m","ths","thr","alpha","npar","ksat","tort","gravel"],
+            datarow=2, header=["HorizonNr","Upper_m","Lower_m","ths_volFrac","thr_volFrac","alpha_perMeter","npar_","ksat_mmDay","tort_","gravel_volFrac"],
+            types            =[Int64,      Float64,  Float64,  Float64,      Float64,      Float64,         Float64, Float64,    Float64,Float64],
+            delim=','))# ignorerepeated=true
+    else # FLAG_MualVanGen = 0 (Clapp-Hornberger)
+        input_soil_horizons = DataFrame(File(path_soil_horizons;
+            datarow=2, header=["HorizonNr","Upper_m","Lower_m","ths_volFrac","thr_volFrac","alpha_perMeter","npar_","ksat_mmDay","tort_","gravel_volFrac"],
+            types=[Int64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64],
+            delim=','))# ignorerepeated=true
+    end
+
+    # Check that defined horizons do not overlap
+    @assert input_soil_horizons[1:end-1,"Lower_m"] == input_soil_horizons[2:end,"Upper_m"] """
+        Input file '$path_soil_horizons' contains overlapping layers.
+        Please check and correct the input file.
+        """
+
+    @assert input_soil_horizons[1,"Upper_m"] ≈ 0 """
+        Input file '$path_soil_horizons' does not start with 0.0 as Upper_m limit of first horizon.
+        Please check and correct the input file.
+        """
+
+    return input_soil_horizons
+end
+
+function read_path_soil_discretization(path_soil_discretization)
+    input_soil_discretization = DataFrame(File(path_soil_discretization;
+                                 datarow=2, header=["Upper_m","Lower_m","Rootden","Psiini_kPa","delta18O_mUr","delta2H_mUr"],
+                                 types =           [Float64,  Float64,  Float64,  Float64,      Float64,      Float64],
                                  delim=','))# ignorerepeated=true
 
     # Check that defined layers do not overlap
-    @assert input_soil_nodes[1:end-1,"lower_m"] == input_soil_nodes[2:end,"upper_m"] """
-        Input file '$path_soil_nodes' contains overlapping layers.
+    @assert input_soil_discretization[1:end-1,"Lower_m"] == input_soil_discretization[2:end,"Upper_m"] """
+        Input file '$path_soil_discretization' contains overlapping layers.
         Please check and correct the input file.
         """
-    return input_soil_nodes
+
+    @assert input_soil_discretization[1,"Upper_m"] ≈ 0 """
+        Input file '$path_soil_discretization' does not start with 0.0 as Upper_m limit of first layer.
+        Please check and correct the input file.
+        """
+    return input_soil_discretization
 end
