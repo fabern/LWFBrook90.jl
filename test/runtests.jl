@@ -1,4 +1,5 @@
 using LWFBrook90
+using DataFrames
 using Test: @testset, @test, @test_throws
 
 # @testset "Module WAT" begin
