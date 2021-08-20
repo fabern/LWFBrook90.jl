@@ -129,17 +129,41 @@ end
 #     rename(Dict(:dates => :days))
 # end
 
+# path_meteoveg = "example/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_meteoveg.csv"
 function read_path_meteoveg(path_meteoveg)
-    # Load meteo
+    parsing_types =
+        Dict(:dates          => DateTime,
+            :globrad_MJDayM2 => Float64,
+            :tmax_degC       => Float64,
+            :tmin_degC       => Float64,
+            :vappres_kPa     => Float64,
+            :windspeed_ms    => Float64,
+            :prec_mmDay      => Float64,
+            :densef_         => Float64,
+            :height_m        => Float64,
+            :lai_            => Float64,
+            :sai_            => Float64,
+            :age_yrs         => Float64)
+
     input_meteoveg = @linq DataFrame(File(path_meteoveg;
-        datarow=2, delim=',', ignorerepeated=true,
-        header=["dates", #"YY","MM","DD",
-                "GLOBRAD","TMAX","TMIN","VAPPRES","WIND",
-                "PRECIN","DENSEF","HEIGHT","LAI","SAI","AGE"],
-        types=Dict(:dates => DateTime, #YY,MM,DD,
-                :GLOBRAD => Float64,:TMAX => Float64,:TMIN => Float64,:VAPPRES => Float64,:WIND => Float64,
-                :PRECIN => Float64,:DENSEF => Float64,:HEIGHT => Float64,:LAI => Float64,:SAI => Float64,:AGE => Float64))) |>
+        datarow=2, delim=',', ignorerepeated=true, types=parsing_types))  |>
         transform(dates = DateTime.(:dates))
+
+    expected_names = [String(k) for k in keys(parsing_types)]
+    assert_colnames_as_expected(input_meteoveg, path_meteoveg, expected_names)
+
+    rename!(input_meteoveg,
+        :globrad_MJDayM2 => :GLOBRAD,
+        :tmax_degC       => :TMAX,
+        :tmin_degC       => :TMIN,
+        :vappres_kPa     => :VAPPRES,
+        :windspeed_ms    => :WIND,
+        :prec_mmDay      => :PRECIN,
+        :densef_         => :DENSEF,
+        :height_m        => :HEIGHT,
+        :lai_            => :LAI,
+        :sai_            => :SAI,
+        :age_yrs         => :AGE)
 
     # Identify period of interest
     # Starting date: latest among the input data
@@ -160,101 +184,74 @@ function read_path_meteoveg(path_meteoveg)
     return input_meteoveg, reference_date
 end
 
+# path_initial_conditions = "example/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_initial_conditions.csv"
 function read_path_initial_conditions(path_initial_conditions)
+    parsing_types =
+        Dict(# Initial conditions (except for depth-dependent u_aux_PSIM) -------
+            "u_GWAT_init" => Float64,       "u_INTS_init" => Float64,
+            "u_INTR_init" => Float64,       "u_SNOW_init" => Float64,
+            "u_CC_init"   => Float64,       "u_SNOWLQ_init" => Float64)
     input_initial_conditions = DataFrame(File(path_initial_conditions;
         transpose=true, drop=[1], comment = "###",
-        types = Dict(# Initial conditions (except for depth-dependent u_aux_PSIM) -------
-                    "u_GWAT_init" => Float64,       "u_INTS_init" => Float64,
-                    "u_INTR_init" => Float64,       "u_SNOW_init" => Float64,
-                    "u_CC_init" => Float64,         "u_SNOWLQ_init" => Float64)))
-    # Assert that inputs are correct:
-    received_names = names(input_initial_conditions)
-    expected_names = [
-        "u_GWAT_init","u_INTS_init","u_INTR_init","u_SNOW_init","u_CC_init","u_SNOWLQ_init",
-        ]
+        types=parsing_types))
 
-    @assert all(expected_names .∈ (received_names,)) """
-    Input file '$path_initial_conditions' does not contain all the expected entries.
-    \nExpected but missing:\n$(expected_names[(!).(expected_names .∈ (received_names,))])
-    \n\nExpected:\n$expected_names\nReceived:\n$received_names\n
-    """
-    @assert all(received_names .∈ (expected_names,)) """
-    Input file '$path_initial_conditions' contains other than the expected entries.
-    \nReceived unexpected: $(received_names[(!).(received_names .∈ (expected_names,))])
-    \nExpected:\n$expected_names\nReceived:\n$received_names\n
-    """
+    expected_names = [String(k) for k in keys(parsing_types)]
+    assert_colnames_as_expected(input_initial_conditions, path_initial_conditions, expected_names)
 
     return input_initial_conditions
 end
 
+# path_param = "example/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_param.csv"
 function read_path_param(path_param)
+    parsing_types =
+        Dict(# Meteorologic site parameters -------
+            "LAT_DEG" => Float64,
+            "ESLOPE_DEG" => Float64,       "ASPECT_DEG" => Float64,
+            "ALB" => Float64,              "ALBSN" => Float64,
+            "C1" => Float64,               "C2" => Float64,               "C3" => Float64,
+            "WNDRAT" => Float64,           "FETCH" => Float64,            "Z0W" => Float64,              "ZW" => Float64,
+            # Canopy parameters -------
+            "LWIDTH" => Float64,           "Z0G" => Float64,              "Z0S" => Float64,
+            "LPC" => Float64,              "CS" => Float64,               "CZS" => Float64,
+            "CZR" => Float64,              "HS" => Float64,               "HR" => Float64,
+            "ZMINH" => Float64,            "RHOTP" => Float64,            "NN" => Float64,
+            # Interception parameters -------
+            "FRINTLAI" => Float64,         "FSINTLAI" => Float64,
+            "FRINTSAI" => Float64,         "FSINTSAI" => Float64,
+            "CINTRL" => Float64,           "CINTRS" => Float64,
+            "CINTSL" => Float64,           "CINTSS" => Float64,
+            "RSTEMP" => Float64,
+            # Snowpack parameters -------
+            "MELFAC" => Float64,           "CCFAC" => Float64,            "LAIMLT" => Float64,
+            "SAIMLT" => Float64,           "GRDMLT" => Float64,           "MAXLQF" => Float64,
+            "KSNVP" => Float64,            "SNODEN" => Float64,
+            # Leaf evaporation parameters (affecting PE) -------
+            "GLMAX" => Float64,            "GLMIN" => Float64,            "CR" => Float64,               "RM" => Float64,
+            "R5" => Float64,               "CVPD" => Float64,             "TL" => Float64,               "T1" => Float64,
+            "T2" => Float64,               "TH" => Float64,
+            # Plant parameters (affecting soil-water supply) -------
+            "MXKPL" => Float64,
+            "MXRTLN" => Float64,           "INITRLEN" => Float64,         "INITRDEP" => Float64,
+            "RGRORATE" => Float64,         "RGROPER" => Float64,          "FXYLEM" => Float64,
+            "PSICR" => Float64,            "RTRAD" => Float64,            "NOOUTF" => Int64,    # TODO(bernhard): make boolean
+            # Soil parameters -------
+            "IDEPTH" => Int64,             "QDEPTH" => Int64,
+            "RSSA" => Float64,             "RSSB" => Float64,             "INFEXP" => Float64,
+            "BYPAR" => Int64  ,             # TODO(bernhard): make boolean
+            "QFPAR" => Float64,            "QFFC" => Float64,
+            "IMPERV" => Float64,           "DSLOPE" => Float64,           "LENGTH_SLOPE" => Float64,
+            "DRAIN" => Float64,            "GSC" => Float64,              "GSP" => Float64,
+            # Numerical solver parameters -------
+            "DTIMAX" => Float64,           "DSWMAX" => Float64,           "DPSIMAX" => Float64)
+
     input_param = DataFrame(File(path_param;
         transpose=true, drop=[1], comment = "###",
-        types = Dict(# Meteorologic site parameters -------
-                    "LAT_DEG" => Float64,
-                    "ESLOPE_DEG" => Float64,       "ASPECT_DEG" => Float64,
-                    "ALB" => Float64,              "ALBSN" => Float64,
-                    "C1" => Float64,               "C2" => Float64,               "C3" => Float64,
-                    "WNDRAT" => Float64,           "FETCH" => Float64,            "Z0W" => Float64,              "ZW" => Float64,
-                    # Canopy parameters -------
-                    "LWIDTH" => Float64,           "Z0G" => Float64,              "Z0S" => Float64,
-                    "LPC" => Float64,              "CS" => Float64,               "CZS" => Float64,
-                    "CZR" => Float64,              "HS" => Float64,               "HR" => Float64,
-                    "ZMINH" => Float64,            "RHOTP" => Float64,            "NN" => Float64,
-                    # Interception parameters -------
-                    "FRINTLAI" => Float64,         "FSINTLAI" => Float64,
-                    "FRINTSAI" => Float64,         "FSINTSAI" => Float64,
-                    "CINTRL" => Float64,           "CINTRS" => Float64,
-                    "CINTSL" => Float64,           "CINTSS" => Float64,
-                    "RSTEMP" => Float64,
-                    # Snowpack parameters -------
-                    "MELFAC" => Float64,           "CCFAC" => Float64,            "LAIMLT" => Float64,
-                    "SAIMLT" => Float64,           "GRDMLT" => Float64,           "MAXLQF" => Float64,
-                    "KSNVP" => Float64,            "SNODEN" => Float64,
-                    # Leaf evaporation parameters (affecting PE) -------
-                    "GLMAX" => Float64,            "GLMIN" => Float64,            "CR" => Float64,               "RM" => Float64,
-                    "R5" => Float64,               "CVPD" => Float64,             "TL" => Float64,               "T1" => Float64,
-                    "T2" => Float64,               "TH" => Float64,
-                    # Plant parameters (affecting soil-water supply) -------
-                    "MXKPL" => Float64,
-                    "MAXRTLN" => Float64,          "INITRLEN" => Float64,         "INITRDEP" => Float64,
-                    "RGRORATE" => Float64,         "RGROPER" => Float64,          "FXYLEM" => Float64,
-                    "PSICR" => Float64,            "RTRAD" => Float64,            "NOOUTF" => Int64,    # TODO(bernhard): make boolean
-                    # Soil parameters -------
-                    "IDEPTH" => Int64,             "QDEPTH" => Int64,
-                    "RSSA" => Float64,             "RSSB" => Float64,             "INFEXP" => Float64,
-                    "BYPAR" => Int64  ,             # TODO(bernhard): make boolean
-                    "QFPAR" => Float64,            "QFFC" => Float64,
-                    "IMPERV" => Float64,           "DSLOPE" => Float64,           "LENGTH_SLOPE" => Float64,
-                    "DRAIN" => Float64,            "GSC" => Float64,              "GSP" => Float64,
-                    # Numerical solver parameters -------
-                    "DTIMAX" => Float64,           "DSWMAX" => Float64,           "DPSIMAX" => Float64)))
+        types = parsing_types))
 
-    # Assert that inputs are correct:
-    received_names = names(input_param)
-    expected_names = [
-        "LAT_DEG","ESLOPE_DEG","ASPECT_DEG",
-        "ALB","ALBSN","C1","C2","C3","WNDRAT","FETCH","Z0W","ZW",
-        "LWIDTH","Z0G","Z0S","LPC","CS","CZS","CZR","HS","HR","ZMINH","RHOTP","NN",
-        "FRINTLAI","FSINTLAI","FRINTSAI","FSINTSAI","CINTRL",
-        "CINTRS","CINTSL","CINTSS","RSTEMP","MELFAC","CCFAC","LAIMLT","SAIMLT","GRDMLT",
-        "MAXLQF","KSNVP","SNODEN","GLMAX","CR","GLMIN","RM","R5","CVPD","TL","T1","T2",
-        "TH","MXKPL","MXRTLN","INITRLEN","INITRDEP","RGRORATE","RGROPER","FXYLEM","PSICR",
-        "RTRAD","NOOUTF","IDEPTH","QDEPTH","RSSA","RSSB","INFEXP","BYPAR",
-         "QFPAR","QFFC","IMPERV","DSLOPE","LENGTH_SLOPE","DRAIN","GSC","GSP",
-         "DTIMAX","DSWMAX","DPSIMAX"]
+    expected_names = [String(k) for k in keys(parsing_types)]
+    assert_colnames_as_expected(input_param, path_param, expected_names)
 
-    @assert all(expected_names .∈ (received_names,)) """
-    Input file '$path_param' does not contain all the expected entries.
-    \nExpected but missing:\n$(expected_names[(!).(expected_names .∈ (received_names,))])
-    \n\nExpected:\n$expected_names\nReceived:\n$received_names\n
-    """
-    @assert all(received_names .∈ (expected_names,)) """
-    Input file '$path_param' contains other than the expected entries.
-    \nReceived unexpected: $(received_names[(!).(received_names .∈ (expected_names,))])
-    \nExpected:\n$expected_names\nReceived:\n$received_names\n
-    """
-
+    # Set minimum/maximum values
     # from LWFBrook90R:PFILE.h
     input_param[:,:FXYLEM]  = min.(input_param[:,:FXYLEM], 0.990)
     input_param[:,:INITRLEN] = max.(input_param[:,:INITRLEN], 0.010)
@@ -263,10 +260,18 @@ function read_path_param(path_param)
     return input_param
 end
 
+# path_pdur = "example/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_pdur.csv"
 function read_path_pdur(path_pdur)
+    parsing_types =
+        Dict("month" => String, "average_storm_duration_h" => Float64)
     input_pdur = DataFrame(File(path_pdur;
-                           types=[String, Int64], strict=true, comment = "###",
-                           datarow=2, header=["month", "pdur_h"], delim=',')) # ignorerepeated=true
+        strict=true, comment = "###",
+        types=parsing_types))
+
+    expected_names = [String(k) for k in keys(parsing_types)]
+    assert_colnames_as_expected(input_pdur, path_pdur, expected_names)
+
+    # Assert months to be ordered
     received_month_names = input_pdur[!,"month"]
     expected_month_names = ["January", "Februrary", "March", "April", "May", "June", "July",
                             "August", "September", "October", "November", "December"]
@@ -275,6 +280,10 @@ function read_path_pdur(path_pdur)
         Please correct the input file.
         \n\nExpected:\n$expected_month_names\nReceived:\n$received_month_names\n
         """
+
+    # Rename column names
+    rename!(input_pdur,
+        :average_storm_duration_h => :pdur_h)
 
     return input_pdur
 end
@@ -329,11 +338,21 @@ function read_path_soil_horizons(path_soil_horizons)
     return input_soil_horizons, FLAG_MualVanGen
 end
 
+# path_soil_discretization = "example/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_soil_discretization.csv"
 function read_path_soil_discretization(path_soil_discretization)
+    parsing_types =
+        Dict("Upper_m"      => Float64,
+             "Lower_m"      => Float64,
+             "Rootden"      => Float64,
+             "Psiini_kPa"   => Float64,
+             "delta18O_mUr" => Float64,
+             "delta2H_mUr"  => Float64)
     input_soil_discretization = DataFrame(File(path_soil_discretization;
-                                 datarow=2, header=["Upper_m","Lower_m","Rootden","Psiini_kPa","delta18O_mUr","delta2H_mUr"],
-                                 types =           [Float64,  Float64,  Float64,  Float64,      Float64,      Float64],
-                                 delim=','))# ignorerepeated=true
+        datarow=2, missingstring = "NA",
+        types=parsing_types))
+
+    expected_names = [String(k) for k in keys(parsing_types)]
+    assert_colnames_as_expected(input_soil_discretization, path_soil_discretization, expected_names)
 
     # Check that defined layers do not overlap
     @assert input_soil_discretization[1:end-1,"Lower_m"] == input_soil_discretization[2:end,"Upper_m"] """
@@ -346,4 +365,20 @@ function read_path_soil_discretization(path_soil_discretization)
         Please check and correct the input file.
         """
     return input_soil_discretization
+end
+
+function assert_colnames_as_expected(input_df, input_path, expected_names)
+    # Assert that inputs are correct:
+    received_names = names(input_df)
+
+    @assert all(expected_names .∈ (received_names,)) """
+    Input file '$input_path' does not contain all the expected column names.
+    \nExpected but missing:\n$(expected_names[(!).(expected_names .∈ (received_names,))])
+    \n\nExpected:\n$expected_names\nReceived:\n$received_names\n
+    """
+    @assert all(received_names .∈ (expected_names,)) """
+    Input file '$input_path' contains other than the expected  column names.
+    \nReceived unexpected: $(received_names[(!).(received_names .∈ (expected_names,))])
+    \nExpected:\n$expected_names\nReceived:\n$received_names\n
+    """
 end
