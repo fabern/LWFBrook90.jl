@@ -1,5 +1,6 @@
 using LWFBrook90
 using OrdinaryDiffEq: solve, Tsit5
+# example = LWFBrook90.run_example()
 
 # Read in input data
 input_prefix = "BEA2016-reset-FALSE"
@@ -12,7 +13,8 @@ input_path = "example/"*input_prefix*"-input/"
     input_pdur,
     input_initial_conditions,
     input_soil_horizons,
-    input_soil_discretization) = read_LWFBrook90R_inputData(input_path, input_prefix)
+    input_soil_discretization,
+    simOption_FLAG_MualVanGen) = read_LWFBrook90R_inputData(input_path, input_prefix)
 ####################
 
 ####################
@@ -35,7 +37,8 @@ p = define_LWFB90_p(
     input_param,
     input_pdur,
     input_soil_horizons,
-    input_soil_discretization;
+    input_soil_discretization,
+    simOption_FLAG_MualVanGen;
     Reset = Reset,
     compute_intermediate_quantities = compute_intermediate_quantities)
 ####################

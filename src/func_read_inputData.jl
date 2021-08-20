@@ -58,9 +58,8 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
     # Load soil data
 
     #' @param soil_materials A matrix of the 8 soil materials parameters.
-    input_soil_horizons = read_path_soil_horizons(
-        path_soil_horizons,
-        input_param[1,"FLAG_MualVanGen"])
+    input_soil_horizons, simOption_FLAG_MualVanGen = read_path_soil_horizons(path_soil_horizons)
+
     #' @param soil_nodes A matrix of the soil model layers with columns
     #'                   nl (layer number), layer midpoint (m), thickness (mm), mat, psiini (kPa), rootden (-).
     input_soil_discretization = read_path_soil_discretization(path_soil_discretization)
@@ -71,7 +70,8 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
             input_pdur,
             input_initial_conditions,
             input_soil_horizons,
-            input_soil_discretization)
+            input_soil_discretization,
+            simOption_FLAG_MualVanGen)
 end
 
 
@@ -222,7 +222,6 @@ function read_path_param(path_param)
                     "PSICR" => Float64,            "RTRAD" => Float64,            "NOOUTF" => Int64,    # TODO(bernhard): make boolean
                     # Soil parameters -------
                     "IDEPTH" => Int64,             "QDEPTH" => Int64,
-                    "FLAG_MualVanGen" => Int64,    # TODO(bernhard): make boolean
                     "RSSA" => Float64,             "RSSB" => Float64,             "INFEXP" => Float64,
                     "BYPAR" => Int64  ,             # TODO(bernhard): make boolean
                     "QFPAR" => Float64,            "QFFC" => Float64,
@@ -241,7 +240,7 @@ function read_path_param(path_param)
         "CINTRS","CINTSL","CINTSS","RSTEMP","MELFAC","CCFAC","LAIMLT","SAIMLT","GRDMLT",
         "MAXLQF","KSNVP","SNODEN","GLMAX","CR","GLMIN","RM","R5","CVPD","TL","T1","T2",
         "TH","MXKPL","MXRTLN","INITRLEN","INITRDEP","RGRORATE","RGROPER","FXYLEM","PSICR",
-        "RTRAD","NOOUTF","IDEPTH","QDEPTH","FLAG_MualVanGen","RSSA","RSSB","INFEXP","BYPAR",
+        "RTRAD","NOOUTF","IDEPTH","QDEPTH","RSSA","RSSB","INFEXP","BYPAR",
          "QFPAR","QFFC","IMPERV","DSLOPE","LENGTH_SLOPE","DRAIN","GSC","GSP",
          "DTIMAX","DSWMAX","DPSIMAX"]
 
@@ -280,16 +279,38 @@ function read_path_pdur(path_pdur)
     return input_pdur
 end
 
-function read_path_soil_horizons(path_soil_horizons, FLAG_MualVanGen)
+function read_path_soil_horizons(path_soil_horizons)
+    # Derive whether to use Clapp Hornberger or MualemVanGenuchten based on the input data
+    MualVanGen_expected_column_names =
+        ["HorizonNr","Upper_m","Lower_m","ths_volFrac","thr_volFrac","alpha_perMeter","npar_","ksat_mmDay","tort_","gravel_volFrac"]
+    ClappHornberger_expected_column_names =
+        ["HorizonNr","Upper_m","Lower_m","ths_volFrac","thr_volFrac","alpha_perMeter","npar_","ksat_mmDay","tort_","gravel_volFrac"]
+
+    if String.(propertynames(File(path_soil_horizons))) == MualVanGen_expected_column_names
+        FLAG_MualVanGen = 1
+    elseif String.(propertynames(File(path_soil_horizons))) == ClappHornberger_expected_column_names
+        FLAG_MualVanGen = 0
+    else
+        @error """
+        Could not derive which hydraulic model parametrization (Mualem-Van-Genuchten or
+        Clapp-Hornberger) to use, based the column names of the input file '$path_soil_horizons'.
+        Please check and correct the input file!
+
+        Expected column names are either:
+        Mualem-Van-Genuchten: $MualVanGen_expected_column_names
+        or for Clapp-Hornberger: $ClappHornberger_expected_column_names
+        """
+    end
+
     if FLAG_MualVanGen == 1
         input_soil_horizons = DataFrame(File(path_soil_horizons;
             # datarow=2, header=["HorizonNr","Upper_m","Lower_m","ths","thr","alpha","npar","ksat","tort","gravel"],
-            datarow=2, header=["HorizonNr","Upper_m","Lower_m","ths_volFrac","thr_volFrac","alpha_perMeter","npar_","ksat_mmDay","tort_","gravel_volFrac"],
+            datarow=2, header=MualVanGen_expected_column_names,
             types            =[Int64,      Float64,  Float64,  Float64,      Float64,      Float64,         Float64, Float64,    Float64,Float64],
             delim=','))# ignorerepeated=true
     else # FLAG_MualVanGen = 0 (Clapp-Hornberger)
         input_soil_horizons = DataFrame(File(path_soil_horizons;
-            datarow=2, header=["HorizonNr","Upper_m","Lower_m","ths_volFrac","thr_volFrac","alpha_perMeter","npar_","ksat_mmDay","tort_","gravel_volFrac"],
+            datarow=2, header=ClappHornberger_expected_column_names,
             types=[Int64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64],
             delim=','))# ignorerepeated=true
     end
@@ -305,7 +326,7 @@ function read_path_soil_horizons(path_soil_horizons, FLAG_MualVanGen)
         Please check and correct the input file.
         """
 
-    return input_soil_horizons
+    return input_soil_horizons, FLAG_MualVanGen
 end
 
 function read_path_soil_discretization(path_soil_discretization)

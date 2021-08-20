@@ -173,7 +173,6 @@ nooutf,1
 ### Soil parameters -------,NA
 ilayer,1
 qlayer,0
-FLAG_MualVanGen,1
 rssa,100
 rssb,1
 infexp,0

@@ -69,7 +69,6 @@ NOOUTF,1
 ### Soil parameters -------,NA
 IDEPTH,40
 QDEPTH,0
-FLAG_MualVanGen,1
 RSSA,100
 RSSB,1
 INFEXP,0

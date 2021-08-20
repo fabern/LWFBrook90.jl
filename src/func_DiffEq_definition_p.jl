@@ -22,8 +22,8 @@ function define_LWFB90_p(
     input_param,
     input_pdur,
     input_soil_horizons,
-    input_soil_discretization
-    ;
+    input_soil_discretization,
+    simOption_FLAG_MualVanGen;
     Reset = false,
     compute_intermediate_quantities = false,
     constant_dt_solver = 1)
@@ -38,7 +38,7 @@ function define_LWFB90_p(
             input_param[1,"QDEPTH"],
             input_param[1,"INITRDEP"],
             input_param[1,"RGRORATE"],
-            input_param[1,"FLAG_MualVanGen"])
+            simOption_FLAG_MualVanGen)
 
     interpolated_meteoveg =
         LWFBrook90.interpolate_meteoveg(
@@ -219,7 +219,7 @@ function define_LWFB90_p(
     # MXRTLN Total root length per unit area (RTLEN) is MXRTLN * RELHT * DENSEF. MXRTLN is used to calculate rhizosphere resistance and is only important when soil is dry or roots are sparse. Values of MXRTLN are not frequent in the literature, especially for forests. Newman (1974) reported a range of 1700 to 11000 m/m2 for 5 woody plants. Safford (1974) found fine root masses of 1200 g/m2 for northern hardwoods, and Safford and Bell (1972) found 700 g/m2 for white spruce; with a mean diameter of 0.7 mm and density of 0.5 g/cm3, these become 6200 and 3600 m/m2. To turn off TRAN set MXRTLN to zero. [see PET-CANOPY] [see EVP-PLNTRES]
 
     ## Soil discretization
-    FLAG_MualVanGen   = input_param[1,"FLAG_MualVanGen"] # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
+    FLAG_MualVanGen = simOption_FLAG_MualVanGen # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
     NLAYER   = soil_discr["NLAYER"] # Number of soil layers used
     p_THICK  = soil_discr["THICK"]  # (Soil parameter),  layer thicknesses, mm
     # Documentation from ecoshift:
