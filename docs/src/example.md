@@ -21,7 +21,7 @@ input_path = "example/"*input_prefix*"-input/"
 (input_meteoveg,
     input_meteoveg_reference_date,
     input_param,
-    input_pdur,
+    input_storm_durations,
     input_initial_conditions,
     input_soil_horizons,
     input_soil_discretization,
@@ -56,7 +56,7 @@ p = define_LWFB90_p(
     input_meteoveg,
     input_meteoveg_reference_date,
     input_param,
-    input_pdur,
+    input_storm_durations,
     input_soil_horizons,
     input_soil_discretization,
     simOption_FLAG_MualVanGen;
@@ -72,7 +72,7 @@ p = define_LWFB90_p(
 
 ######
 # Transform initial value of auxiliary state u_aux_PSIM_init into state u_SWATIinit:
-u_aux_PSIM_init = input_soil_discretization[:,"psiini_kPa"]
+u_aux_PSIM_init = input_soil_discretization[:,"uAux_PSIM_init_kPa"]
 if any( u_aux_PSIM_init.> 0)
     error("Initial matrix psi must be negative or zero")
 end
@@ -82,12 +82,12 @@ u_SWATIinit      = p_soil.p_SWATMAX ./ p_soil.p_THSAT .* LWFBrook90.KPT.FTheta(u
 ######
 
 # Create u0 for DiffEq.jl
-u0 = define_LWFB90_u0(input_initial_conditions[1,"u_GWAT_init"],
-                      input_initial_conditions[1,"u_INTS_init"],
-                      input_initial_conditions[1,"u_INTR_init"],
-                      input_initial_conditions[1,"u_SNOW_init"],
-                      input_initial_conditions[1,"u_CC_init"],
-                      input_initial_conditions[1,"u_SNOWLQ_init"],
+u0 = define_LWFB90_u0(input_initial_conditions[1,"u_GWAT_init_mm"],
+                      input_initial_conditions[1,"u_INTS_init_mm"],
+                      input_initial_conditions[1,"u_INTR_init_mm"],
+                      input_initial_conditions[1,"u_SNOW_init_mm"],
+                      input_initial_conditions[1,"u_CC_init_MJ_per_m2"],
+                      input_initial_conditions[1,"u_SNOWLQ_init_mm"],
                       u_SWATIinit,
                       compute_intermediate_quantities)
 ####################
@@ -147,12 +147,12 @@ sol_LWFBrook90_Dates =
 # Using dates (but not interpolated)
 plot(sol_LWFBrook90_Dates,
     sol_LWFBrook90[[1,2,3,4,5,6],:]',
-    label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
+    label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
 
 # Using simple plot recipe that interpolates, but without dates
 plot(sol_LWFBrook90;
     vars = [1, 2, 3, 4, 5, 6],
-    label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
+    label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
 
 # Plot vector quantities
 # http://docs.juliaplots.org/latest/generated/gr/#gr-ref43

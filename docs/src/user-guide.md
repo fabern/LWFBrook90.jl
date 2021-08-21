@@ -35,7 +35,7 @@ To run a simulation following input data are needed
 - siteparam:
 - meteo:
 - precdat (currently unused):
-- pdur: (currently unused??)
+- storm_durations:
 - soil_materials:
 - soil_nodes:
 - param:
@@ -80,7 +80,7 @@ Note that the second and third rows containing description and unit headers is n
 
 
 ### Needed constant meteo data
-`pdur.csv`:
+`meteo_storm_durations.csv`:
 ```
 "x"
 4
@@ -196,7 +196,7 @@ dpsimax,5e-04
 ### Needed soil properties
 `soil_nodes.csv`:
 
-| layer | midpoint | thick | mat  | psiini | rootden |
+| layer | midpoint | thick | mat  | psiini | Rootden_ |
 | ----- | -------- | ----- | ---- | ------ | ------- |
 | (-)   | (m)      | (mm)  | (#)  | (kPa)  | (-)     |
 | 1     | -0.02    | 40    | 1    | -6.3   | 0.029   |

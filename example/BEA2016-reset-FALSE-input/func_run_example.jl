@@ -14,12 +14,12 @@ object of DifferentialEquations.jl) and other variables useful for plotting.
     # Using dates (but not interpolated)
     plot(example["solutionDates"],
         example["solution"][[1,2,3,4,5,6],:]',
-        label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
+        label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
 
     # Using simple plot recipe that interpolates, but without dates
     plot(example["solution"];
         vars = [1, 2, 3, 4, 5, 6],
-        label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
+        label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
 
     # Plot vector solution
     x = example["solutionDates"]
@@ -46,12 +46,12 @@ function run_example()
     # Using dates (but not interpolated)
     plot(example["solutionDates"],
         example["solution"][[1,2,3,4,5,6],:]',
-        label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
+        label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
 
     # Using simple plot recipe that interpolates, but without dates
     plot(example["solution"];
         vars = [1, 2, 3, 4, 5, 6],
-        label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
+        label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
 
     # Plot vector solution
     x = example["solutionDates"]
@@ -74,7 +74,7 @@ function run_example()
     (input_meteoveg,
         input_meteoveg_reference_date,
         input_param,
-        input_pdur,
+        input_storm_durations,
         input_initial_conditions,
         input_soil_horizons,
         input_soil_discretization,
@@ -99,7 +99,7 @@ function run_example()
         input_meteoveg,
         input_meteoveg_reference_date,
         input_param,
-        input_pdur,
+        input_storm_durations,
         input_soil_horizons,
         input_soil_discretization,
         simOption_FLAG_MualVanGen;
@@ -113,7 +113,7 @@ function run_example()
 
     ######
     # Transform initial value of auxiliary state u_aux_PSIM_init into state u_SWATIinit:
-    u_aux_PSIM_init = input_soil_discretization[:,"psiini_kPa"]
+    u_aux_PSIM_init = input_soil_discretization[:,"uAux_PSIM_init_kPa"]
     if any( u_aux_PSIM_init.> 0)
         error("Initial matrix psi must be negative or zero")
     end
@@ -123,12 +123,12 @@ function run_example()
     ######
 
     # Create u0 for DiffEq.jl
-    u0 = define_LWFB90_u0(input_initial_conditions[1,"u_GWAT_init"],
-                        input_initial_conditions[1,"u_INTS_init"],
-                        input_initial_conditions[1,"u_INTR_init"],
-                        input_initial_conditions[1,"u_SNOW_init"],
-                        input_initial_conditions[1,"u_CC_init"],
-                        input_initial_conditions[1,"u_SNOWLQ_init"],
+    u0 = define_LWFB90_u0(input_initial_conditions[1,"u_GWAT_init_mm"],
+                        input_initial_conditions[1,"u_INTS_init_mm"],
+                        input_initial_conditions[1,"u_INTR_init_mm"],
+                        input_initial_conditions[1,"u_SNOW_init_mm"],
+                        input_initial_conditions[1,"u_CC_init_MJ_per_m2"],
+                        input_initial_conditions[1,"u_SNOWLQ_init_mm"],
                         u_SWATIinit,
                         compute_intermediate_quantities)
     ####################

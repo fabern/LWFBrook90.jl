@@ -9,7 +9,7 @@ using Dates: DateTime, Millisecond, Second, Day, month, value, dayofyear
 Load different input files for LWFBrook90:
 - meteoveg.csv
 - param.csv
-- pdur.csv
+- meteo_storm_durations.csv
 - initial_conditions.csv
 - soil_horizons.csv
 - soil_discretization.csv
@@ -24,7 +24,7 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
     path_meteoveg           = joinpath(folder, prefix*"_meteoveg.csv")
     path_param              = joinpath(folder, prefix*"_param.csv")
     # unused path_precdat=joinpath(folder, prefix*"_precdat.csv")
-    path_pdur               = joinpath(folder, prefix*"_pdur.csv")
+    path_storm_durations    = joinpath(folder, prefix*"_meteo_storm_durations.csv")
     path_initial_conditions = joinpath(folder, prefix*"_initial_conditions.csv")
     path_soil_horizons      = joinpath(folder, prefix*"_soil_horizons.csv")
     path_soil_discretization= joinpath(folder, prefix*"_soil_discretization.csv")
@@ -37,7 +37,17 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
     #' @param param A numeric vector of model input parameters. Order:
     input_param = read_path_param(path_param)
 
-    # Load precipitation data
+    # Load initial conditions of scalar state variables
+    input_initial_conditions = read_path_initial_conditions(path_initial_conditions)
+
+    # Load soil data
+    input_soil_horizons, simOption_FLAG_MualVanGen = read_path_soil_horizons(path_soil_horizons)
+
+    input_soil_discretization = read_path_soil_discretization(path_soil_discretization)
+
+    # Load precipitation subdaily details
+    #' @param storm_durations a [1,12]-matrix of precipitation durations (hours) for each month.
+    input_storm_durations = read_path_storm_durations(path_storm_durations)
     #' @param precdat A matrix of precipitation interval data with 5 columns:
     #'                   year, month, day, interval-number (1:precint), prec.
     # input_precdat = DataFrame(a = Nothing, b = Nothing)
@@ -49,25 +59,10 @@ function read_LWFBrook90R_inputData(folder::String, prefix::String)
     # unused:           datarow=2, header=["year","month","day","interval_number","prec"], delim=',',
     # unused:           ignorerepeated=true)
 
-    #' @param pdur a [1,12]-matrix of precipitation durations (hours) for each month.
-    input_pdur = read_path_pdur(path_pdur)
-
-    # Load initial conditions of scalar state variables
-    input_initial_conditions = read_path_initial_conditions(path_initial_conditions)
-
-    # Load soil data
-
-    #' @param soil_materials A matrix of the 8 soil materials parameters.
-    input_soil_horizons, simOption_FLAG_MualVanGen = read_path_soil_horizons(path_soil_horizons)
-
-    #' @param soil_nodes A matrix of the soil model layers with columns
-    #'                   nl (layer number), layer midpoint (m), thickness (mm), mat, psiini (kPa), rootden (-).
-    input_soil_discretization = read_path_soil_discretization(path_soil_discretization)
-
     return (input_meteoveg,
             input_meteoveg_reference_date,
             input_param,
-            input_pdur,
+            input_storm_durations,
             input_initial_conditions,
             input_soil_horizons,
             input_soil_discretization,
@@ -146,7 +141,7 @@ function read_path_meteoveg(path_meteoveg)
             :age_yrs         => Float64)
 
     input_meteoveg = @linq DataFrame(File(path_meteoveg;
-        datarow=2, delim=',', ignorerepeated=true, types=parsing_types))  |>
+        datarow=3, delim=',', ignorerepeated=true, types=parsing_types))  |>
         transform(dates = DateTime.(:dates))
 
     expected_names = [String(k) for k in keys(parsing_types)]
@@ -164,6 +159,13 @@ function read_path_meteoveg(path_meteoveg)
         :lai_            => :LAI,
         :sai_            => :SAI,
         :age_yrs         => :AGE)
+
+    # Assert units:
+    assert_unitsHeader_as_expected(path_meteoveg,
+        DataFrame(dates = "YYYY-MM-DD", globrad_MJDayM2 = "MJ/Day/m2",
+        tmax_degC = "degree C", tmin_degC = "degree C", vappres_kPa = "kPa",
+        windspeed_ms = "m per s", prec_mmDay = "mm per Day", densef_ = "-",
+        height_m = "m", lai_ = "-", sai_ = "-", age_yrs = "years"))
 
     # Identify period of interest
     # Starting date: latest among the input data
@@ -188,9 +190,9 @@ end
 function read_path_initial_conditions(path_initial_conditions)
     parsing_types =
         Dict(# Initial conditions (except for depth-dependent u_aux_PSIM) -------
-            "u_GWAT_init" => Float64,       "u_INTS_init" => Float64,
-            "u_INTR_init" => Float64,       "u_SNOW_init" => Float64,
-            "u_CC_init"   => Float64,       "u_SNOWLQ_init" => Float64)
+            "u_GWAT_init_mm" => Float64,       "u_INTS_init_mm" => Float64,
+            "u_INTR_init_mm" => Float64,       "u_SNOW_init_mm" => Float64,
+            "u_CC_init_MJ_per_m2"   => Float64,       "u_SNOWLQ_init_mm" => Float64)
     input_initial_conditions = DataFrame(File(path_initial_conditions;
         transpose=true, drop=[1], comment = "###",
         types=parsing_types))
@@ -260,34 +262,34 @@ function read_path_param(path_param)
     return input_param
 end
 
-# path_pdur = "example/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_pdur.csv"
-function read_path_pdur(path_pdur)
+# path_storm_durations = "example/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_meteo_storm_durations.csv"
+function read_path_storm_durations(path_storm_durations)
     parsing_types =
         Dict("month" => String, "average_storm_duration_h" => Float64)
-    input_pdur = DataFrame(File(path_pdur;
+    input_storm_durations = DataFrame(File(path_storm_durations;
         strict=true, comment = "###",
         types=parsing_types))
 
     expected_names = [String(k) for k in keys(parsing_types)]
-    assert_colnames_as_expected(input_pdur, path_pdur, expected_names)
+    assert_colnames_as_expected(input_storm_durations, path_storm_durations, expected_names)
 
     # Assert months to be ordered
-    received_month_names = input_pdur[!,"month"]
+    received_month_names = input_storm_durations[!,"month"]
     expected_month_names = ["January", "Februrary", "March", "April", "May", "June", "July",
                             "August", "September", "October", "November", "December"]
     @assert received_month_names == expected_month_names """
-        Input file '$path_pdur' does not contain the months in the expected order.
+        Input file '$path_storm_durations' does not contain the months in the expected order.
         Please correct the input file.
         \n\nExpected:\n$expected_month_names\nReceived:\n$received_month_names\n
         """
 
     # Rename column names
-    rename!(input_pdur,
-        :average_storm_duration_h => :pdur_h)
+    rename!(input_storm_durations,
+        :average_storm_duration_h => :storm_durations_h)
 
-    return input_pdur
+    return input_storm_durations
 end
-
+# path_soil_horizons = "example/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_soil_horizons.csv"
 function read_path_soil_horizons(path_soil_horizons)
     # Derive whether to use Clapp Hornberger or MualemVanGenuchten based on the input data
     MualVanGen_expected_column_names =
@@ -312,12 +314,26 @@ function read_path_soil_horizons(path_soil_horizons)
     end
 
     if FLAG_MualVanGen == 1
+        # Assert units:
+        assert_unitsHeader_as_expected(path_soil_horizons,
+            DataFrame(HorizonNr = "-", Upper_m = "m", Lower_m = "m", ths_volFrac = "volume fraction (-)",
+                thr_volFrac = "volume fraction (-)", alpha_perMeter = "perMeter", npar_ = "-",
+                ksat_mmDay = "mm per Day", tort_ = "-", gravel_volFrac = "volFrac"))
+
+        # Load file
         input_soil_horizons = DataFrame(File(path_soil_horizons;
-            # datarow=2, header=["HorizonNr","Upper_m","Lower_m","ths","thr","alpha","npar","ksat","tort","gravel"],
-            datarow=2, header=MualVanGen_expected_column_names,
+            datarow=3, header=MualVanGen_expected_column_names,
             types            =[Int64,      Float64,  Float64,  Float64,      Float64,      Float64,         Float64, Float64,    Float64,Float64],
-            delim=','))# ignorerepeated=true
+            delim=','))
     else # FLAG_MualVanGen = 0 (Clapp-Hornberger)
+        # TODO(bernhard): modify for Clapp Hornberger
+        # # Assert units:
+        # expected_units = DataFrame(HorizonNr = "-", Upper_m = "m", Lower_m = "m", ths_volFrac = "volume fraction (-)",
+        #     thr_volFrac = "volume fraction (-)", alpha_perMeter = "perMeter", npar_ = "-",
+        #     ksat_mmDay = "mm per Day", tort_ = "-", gravel_volFrac = "volFrac")
+        # @assert DataFrame(File(path_soil_horizons;datarow=2,limit=1)) == expected_units """
+        #     Unexpected units in input file $path_soil_horizons. Expected units:
+        #     $expected_units"""
         input_soil_horizons = DataFrame(File(path_soil_horizons;
             datarow=2, header=ClappHornberger_expected_column_names,
             types=[Int64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64],
@@ -343,14 +359,15 @@ function read_path_soil_discretization(path_soil_discretization)
     parsing_types =
         Dict("Upper_m"      => Float64,
              "Lower_m"      => Float64,
-             "Rootden"      => Float64,
-             "Psiini_kPa"   => Float64,
-             "delta18O_mUr" => Float64,
-             "delta2H_mUr"  => Float64)
-    input_soil_discretization = DataFrame(File(path_soil_discretization;
-        datarow=2, missingstring = "NA",
-        types=parsing_types))
+             "Rootden_"      => Float64,
+             "uAux_PSIM_init_kPa"   => Float64,
+             "u_delta18O_init_mUr" => Float64,
+             "u_delta2H_init_mUr"  => Float64)
 
+    input_soil_discretization = DataFrame(File(path_soil_discretization;
+        datarow=3, missingstring = "NA", types=parsing_types))
+
+    # Assert colnames
     expected_names = [String(k) for k in keys(parsing_types)]
     assert_colnames_as_expected(input_soil_discretization, path_soil_discretization, expected_names)
 
@@ -364,6 +381,12 @@ function read_path_soil_discretization(path_soil_discretization)
         Input file '$path_soil_discretization' does not start with 0.0 as Upper_m limit of first layer.
         Please check and correct the input file.
         """
+    # Assert units:
+    assert_unitsHeader_as_expected(path_soil_discretization,
+        DataFrame(Upper_m = "m", Lower_m = "m", Rootden_ = "-",
+            uAux_PSIM_init_kPa = "kPa",
+            u_delta18O_init_mUr = "mUr", u_delta2H_init_mUr = "mUr"))
+
     return input_soil_discretization
 end
 
@@ -381,4 +404,17 @@ function assert_colnames_as_expected(input_df, input_path, expected_names)
     \nReceived unexpected: $(received_names[(!).(received_names .∈ (expected_names,))])
     \nExpected:\n$expected_names\nReceived:\n$received_names\n
     """
+end
+
+function assert_unitsHeader_as_expected(path, expected_units)
+    @assert DataFrame(File(path;datarow=2,limit=1)) == expected_units """
+    Unexpected units in input file $path. Expected units:
+    $expected_units"""
+end
+
+function assert_unitsColumn_as_expected(path, expected_units)
+    # TODO(bernhard): define units in and implement this check.
+    # @assert DataFrame(File(path;datarow=2,limit=1)) == expected_units """
+    # Unexpected units in input file $path. Expected units:
+    # $expected_units"""
 end

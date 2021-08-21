@@ -88,8 +88,8 @@ end
 
 @testset "discretization" begin
     input_soil_discretization = DataFrame(Upper_m = -(0.:8.), Lower_m = -(1.:9.),
-                               Rootden = (1:9) ./ 10, Psiini_kPa = -6.0,
-                               delta18O_mUr = NaN, delta2H_mUr = NaN)
+                               Rootden_ = (1:9) ./ 10, uAux_PSIM_init_kPa = -6.0,
+                               u_delta18O_init_mUr = NaN, u_delta2H_init_mUr = NaN)
     input_soil_horizons = DataFrame(HorizonNr = 1:5, Upper_m = -[0.,3,8,10,15], Lower_m = -[3.,8,10,15,20],
                     ths_volFrac = (11:15) ./ 20, thr_volFrac = 0.069,
                     gravel_volFrac = 0.9:-0.1:0.5,

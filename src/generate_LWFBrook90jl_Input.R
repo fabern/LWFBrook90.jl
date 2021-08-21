@@ -52,20 +52,20 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
 
   # B) time-independent parameters:
   # B1) site climate data
-  out_pdur <- input_Data$param_b90$pdur
-  out_csv_pdur <- data.frame(month = c("### Average durations of a single storm event for each month -------",
+  out_storm_durations <- input_Data$param_b90$pdur
+  out_csv_storm_durations <- data.frame(month = c("### Typical average durations of a single storm event for each month -------",
                                        "January", "Februrary", "March", "April",
                                        "May", "June", "July", "August",
                                        "September", "October", "November", "December"),
-                             average_storm_duration_h = c(NA,out_pdur))
+                             average_storm_duration_h = c(NA,out_storm_durations))
   # out_csv_precdat <- NULL # TODO(bernhard): currently not implemented
 
   # B2) i)  soil discretization and parameters and initial conditions of continuous quantities
   out_csv_soil_discretization <- input_Data$param_b90$soil_nodes %>%
     select(#SimulationNode = layer,
            Upper_m = upper, Lower_m = lower,
-           Rootden = rootden, Psiini_kPa = psiini) %>%
-    mutate(delta18O_mUr = NA, delta2H_mUr = NA)
+           Rootden_ = rootden, uAux_PSIM_init_kPa = psiini) %>%
+    mutate(u_delta18O_init_mUr = NA, u_delta2H_init_mUr = NA)
 
   # B2) ii) soil horizon parameters in discrete horizons (different from numerical node discretization)
   out_csv_soil_horizons <-left_join(
@@ -88,12 +88,12 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
   # B3) initial conditions of scalar state variables
   out_initial_conditions <- with(input_Data$param_b90,c(
     "### Initial conditions (except for depth-dependent u_aux_PSIM) -------" = NA,
-    "u_GWAT_init"=gwatini,
-    "u_INTS_init"=intsnowini,
-    "u_INTR_init"=intrainini,
-    "u_SNOW_init"=snowini,
-    "u_CC_init"    =0,
-    "u_SNOWLQ_init"=0
+    "u_GWAT_init_mm"=gwatini,
+    "u_INTS_init_mm"=intsnowini,
+    "u_INTR_init_mm"=intrainini,
+    "u_SNOW_init_mm"=snowini,
+    "u_CC_init_MJ_per_m2"    =0,
+    "u_SNOWLQ_init_mm"=0
   ))
   out_csv_initial_conditions <- data.frame(param_id = names(out_initial_conditions),
                                            x        = unname(out_initial_conditions))
@@ -165,7 +165,7 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
     out_csv_param              %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_param.csv")),               row.names=FALSE, quote=FALSE)
     out_csv_initial_conditions %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_initial_conditions.csv")),  row.names=FALSE, quote=FALSE)
     out_csv_meteoveg           %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_meteoveg.csv")),            row.names=FALSE, quote=FALSE)
-    out_csv_pdur               %>%                                                 write.csv(file.path(input_folder, paste0(Julia_prefix, "_pdur.csv")),                row.names=FALSE, quote=FALSE)
+    out_csv_storm_durations    %>%                                                 write.csv(file.path(input_folder, paste0(Julia_prefix, "_meteo_storm_durations.csv")),                row.names=FALSE, quote=FALSE)
     # out_csv_precdat          %>%                                                 write.csv(file.path(input_folder, paste0(Julia_prefix, "_precdat.csv")),       row.names=FALSE, quote=FALSE)
   })
 

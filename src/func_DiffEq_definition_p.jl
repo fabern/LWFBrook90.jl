@@ -14,13 +14,13 @@ Generate vector p needed for ODE() problem in DiffEq.jl package.
 - `input_meteoveg::...`: TODO argument description.
 - `input_param::...`: TODO argument description.
 - `input_soil::...`: TODO argument description.
-- `input_pdur::...`: TODO argument description.
+- `input_storm_durations::...`: TODO argument description.
 """
 function define_LWFB90_p(
     input_meteoveg,
     input_meteoveg_reference_date,
     input_param,
-    input_pdur,
+    input_storm_durations,
     input_soil_horizons,
     input_soil_discretization,
     simOption_FLAG_MualVanGen;
@@ -79,7 +79,7 @@ function define_LWFB90_p(
     else
         error("Case with multiple precipitation intervals (using PRECDAT and precip_interval != 1) is not implemented.")
     end
-    p_DURATN = input_pdur[1:12,"pdur_h"]   # average storm duration for each month, hr
+    p_DURATN = input_storm_durations[1:12,"storm_durations_h"]# average storm duration for each month, hr
     p_LAT    = input_param[1,"LAT_DEG"]   /57.296  # (Location parameter), latitude, radians
     p_ASPECT = input_param[1,"ASPECT_DEG"]/57.296  # (Location parameter), aspect, radians through east from north
     p_ESLOPE = input_param[1,"ESLOPE_DEG"]/57.296  # (Location parameter), slope for evapotranspiration and snowmelt, radians
@@ -476,7 +476,7 @@ end
 """
     discretize_soil_params(input_soil_horizons,FLAG_MualVanGen, ILAYER, QLAYER, NLAYER)
 
-Define constant parameters from input_pdur. TO BE REDEFINED
+Define constant parameters from input_storm_durations. TO BE REDEFINED
 """
 function discretize_soil_params(
     input_soil_horizons, input_soil_discretization, IDEPTH, QDEPTH, INITRDEP, RGRORATE, FLAG_MualVanGen)
@@ -577,9 +577,9 @@ function discretize_soil_params(
 
     THICK_m   = input_soil_discretization[!,"Upper_m"] - input_soil_discretization[!,"Lower_m"] # thickness of soil layer [m]
     THICK     = 1000*(THICK_m)                                    # thickness of soil layer [mm]
-    PSIM_init = input_soil_discretization[!,"Psiini_kPa"]         # initial condition PSIM [kPa]
-    # d18O_soil_init = input_soil_discretization[!,"delta18O_mUr"]  # initial condition soil water δ18O [mUr]
-    # d2H_soil_init  = input_soil_discretization[!,"delta2H_mUr"]   # initial condition soil water δ2H [mUr]
+    PSIM_init = input_soil_discretization[!,"uAux_PSIM_init_kPa"]         # initial condition PSIM [kPa]
+    # d18O_soil_init = input_soil_discretization[!,"u_delta18O_init_mUr"]  # initial condition soil water δ18O [mUr]
+    # d2H_soil_init  = input_soil_discretization[!,"u_delta2H_init_mUr"]   # initial condition soil water δ2H [mUr]
 
     NLAYER = nrow(input_soil_discretization)
 
@@ -634,7 +634,7 @@ function discretize_soil_params(
 
     # find thickness of maximum root zone
     # frelden: relative values of final root density per unit volume
-    frelden = input_soil_discretization[!,"Rootden"]            # root density
+    frelden = input_soil_discretization[!,"Rootden_"]            # root density
     dep     = input_soil_discretization[!,"Upper_m"] - THICK/1000/2 # soil depth [m] (midpoint, i.e. average depth of layer)
     depmax  = dep[1] - THICK[1] / 1000.
 
