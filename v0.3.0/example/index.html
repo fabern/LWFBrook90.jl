@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Example · LWFBrook90.jl</title><script data-outdated-warner src="../assets/warner.js"></script><link rel="canonical" href="https://fabern.github.io/LWFBrook90.jl/example/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../"><img src="../assets/logo.png" alt="LWFBrook90.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../">LWFBrook90.jl</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">About</a></li><li><a class="tocitem" href="../model/">SVAT Model</a></li><li><a class="tocitem" href="../user-guide/">User Guide</a></li><li class="is-active"><a class="tocitem" href>Example</a><ul class="internal"><li><a class="tocitem" href="#Step-by-step-instructions"><span>Step-by-step instructions</span></a></li><li><a class="tocitem" href="#Plotting-results"><span>Plotting results</span></a></li><li><a class="tocitem" href="#Comparison-with-LWFBrook90R"><span>Comparison with LWFBrook90R</span></a></li></ul></li><li><a class="tocitem" href="../code-lst/">Code Listing</a></li><li><a class="tocitem" href="../function-docs/">Function Documentations</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Example</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Example</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/fabern/LWFBrook90.jl/blob/master/docs/src/example.md#L" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Example"><a class="docs-heading-anchor" href="#Example">Example</a><a id="Example-1"></a><a class="docs-heading-anchor-permalink" href="#Example" title="Permalink"></a></h1><p>Example data from Beatenberg is located in subfolder <code>example/</code>. WSL is acknowledged for providing the input data (see section <a href="../#Acknowledgments">Acknowledgments</a>).</p><h2 id="Step-by-step-instructions"><a class="docs-heading-anchor" href="#Step-by-step-instructions">Step-by-step instructions</a><a id="Step-by-step-instructions-1"></a><a class="docs-heading-anchor-permalink" href="#Step-by-step-instructions" title="Permalink"></a></h2><p>To run the example simulation simulation simply call LWFBrook90.run_example(). For more control either run the script <code>main.jl</code>or follow the step-by-step instructiosn below.</p><p>Load packages:</p><pre><code class="language-Julia hljs">using LWFBrook90
+using OrdinaryDiffEq: solve, Tsit5</code></pre><p>Define and read in input data</p><pre><code class="language-Julia hljs"># Read in input data
+input_prefix = &quot;BEA2016-reset-FALSE&quot;
+input_path = &quot;example/&quot;*input_prefix*&quot;-input/&quot;
+
+####################
+(input_meteoveg,
+    input_meteoveg_reference_date,
+    input_param,
+    input_storm_durations,
+    input_initial_conditions,
+    input_soil_horizons,
+    input_soil_discretization,
+    simOption_FLAG_MualVanGen) = ) = read_LWFBrook90R_inputData(input_path, input_prefix)
+####################</code></pre><p>Then simulation parameters are defined. The user has the possibility to modify the input variables before continuing with the simulation. Further the user can select whether intermediate quantities such as e.g. evaporation fluxes should be stored during simulation (<code>compute_intermediate_quantities = true</code>) or whether processing steps during simulation should be kept to a minimum for performance reasons (<code>compute_intermediate_quantities = false</code>).</p><pre><code class="language-Julia hljs">####################
+# Define solver options
+Reset = false                          # currently only Reset = 0 implemented
+compute_intermediate_quantities = true # Flag whether ODE containes additional quantities than only states
+
+# Override input file settings
+# Here possibility to check and override dataframes input_[...] manually
+    # # E.g:
+    # # Soil hydraulic model
+    # input_param[1,&quot;NOOUTF&quot;] = true # `true` if outflow from roots prevented, `false` if allowed
+####################
+</code></pre><p>Then functions from the package are used to define the problem that will be handed to the solver from DifferentialEquations.jl. That is we need to define <code>p</code>, <code>u0</code>, and <code>tspan</code></p><p><code>p</code>:</p><pre><code class="language-Julia hljs">####################
+# Define parameters for differential equation
+p = define_LWFB90_p(
+    input_meteoveg,
+    input_meteoveg_reference_date,
+    input_param,
+    input_storm_durations,
+    input_soil_horizons,
+    input_soil_discretization,
+    simOption_FLAG_MualVanGen;
+    Reset = Reset,
+    compute_intermediate_quantities = compute_intermediate_quantities)
+####################</code></pre><p><code>u0</code>:</p><pre><code class="language-Julia hljs">####################
+# Define initial states of differential equation
+# state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
+
+######
+# Transform initial value of auxiliary state u_aux_PSIM_init into state u_SWATIinit:
+u_aux_PSIM_init = input_soil_discretization[:,&quot;uAux_PSIM_init_kPa&quot;]
+if any( u_aux_PSIM_init.&gt; 0)
+    error(&quot;Initial matrix psi must be negative or zero&quot;)
+end
+p_soil = p[1][1]
+u_aux_WETNESinit = LWFBrook90.KPT.FWETNES(u_aux_PSIM_init, p_soil)
+u_SWATIinit      = p_soil.p_SWATMAX ./ p_soil.p_THSAT .* LWFBrook90.KPT.FTheta(u_aux_WETNESinit, p_soil)
+######
+
+# Create u0 for DiffEq.jl
+u0 = define_LWFB90_u0(input_initial_conditions[1,&quot;u_GWAT_init_mm&quot;],
+                      input_initial_conditions[1,&quot;u_INTS_init_mm&quot;],
+                      input_initial_conditions[1,&quot;u_INTR_init_mm&quot;],
+                      input_initial_conditions[1,&quot;u_SNOW_init_mm&quot;],
+                      input_initial_conditions[1,&quot;u_CC_init_MJ_per_m2&quot;],
+                      input_initial_conditions[1,&quot;u_SNOWLQ_init_mm&quot;],
+                      u_SWATIinit,
+                      compute_intermediate_quantities)
+####################</code></pre><p><code>tspan</code>:</p><pre><code class="language-Julia hljs">####################
+# Define ODE problem which consists of
+#   - definition of right-hand-side (RHS) function f
+#   - definition of callback function cb
+#   - u0:     initial condition of states
+#   - tspan:  definition of simulation time span
+#   - p:      parameters
+
+# Define simulation time span:
+tspan = (minimum(input_meteoveg[:,&quot;days&quot;]),
+         maximum(input_meteoveg[:,&quot;days&quot;])) # simulate all available days
+
+# Define ODE:
+ode_LWFBrook90 = define_LWFB90_ODE(u0, tspan, p)
+
+# Alternative definitions of tspan:
+# tspan = (0.,  5.) # simulate days 0 to 5 (in the reference frame of the input data)
+# Simulation specific period (provided it is within the input data):
+# tspan = (LWFBrook90.jl.DateTime2RelativeDaysFloat(DateTime(1980,1,1), reference_date),
+#          LWFBrook90.jl.DateTime2RelativeDaysFloat(DateTime(1985,1,1), reference_date))
+####################</code></pre><p>Then the ODE problem can be solved:</p><pre><code class="language-Julia hljs">####################
+## Solve ODE:
+sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
+    progress = true,
+    saveat = tspan[1]:tspan[2], dt=1e-6, adaptive = true); # dt is initial dt, but adaptive
+####################</code></pre><p>Note to use a progress bar indicating advancement of the solving is possible. It is sufficient to load the package <code>using ProgressLogging</code>.</p><p>The generated solution can be plotted using the plotting recipes of DifferntialEquations.jl for Plots.jl (<a href="https://diffeq.sciml.ai/stable/basics/plot/">see instructions</a>). An example is provided below:</p><pre><code class="language-Julia hljs">####################
+## Plotting
+using Plots
+sol_LWFBrook90_Dates =
+    LWFBrook90.jl.RelativeDaysFloat2DateTime.(
+        sol_LWFBrook90.t,
+        input_meteoveg_reference_date)
+
+# Plot scalar quantities
+# Using dates (but not interpolated)
+plot(sol_LWFBrook90_Dates,
+    sol_LWFBrook90[[1,2,3,4,5,6],:]&#39;,
+    label=[&quot;GWAT (mm)&quot; &quot;INTS (mm)&quot; &quot;INTR (mm)&quot; &quot;SNOW (mm)&quot; &quot;CC (MJ/m2)&quot; &quot;SNOWLQ (mm)&quot;])
+
+# Using simple plot recipe that interpolates, but without dates
+plot(sol_LWFBrook90;
+    vars = [1, 2, 3, 4, 5, 6],
+    label=[&quot;GWAT (mm)&quot; &quot;INTS (mm)&quot; &quot;INTR (mm)&quot; &quot;SNOW (mm)&quot; &quot;CC (MJ/m2)&quot; &quot;SNOWLQ (mm)&quot;])
+
+# Plot vector quantities
+# http://docs.juliaplots.org/latest/generated/gr/#gr-ref43
+x = sol_LWFBrook90_Dates
+y = cumsum(pfile_soil[&quot;THICK&quot;])
+z = sol_LWFBrook90[7 .+ (0:example[&quot;NLAYER&quot;]-1), :]./pfile_soil[&quot;THICK&quot;]
+heatmap(x, y, z,
+    yflip = true,
+    xlabel = &quot;Date&quot;,
+    ylabel = &quot;Depth [mm]&quot;,
+    colorbar_title = &quot;θ [-]&quot;)</code></pre><h2 id="Plotting-results"><a class="docs-heading-anchor" href="#Plotting-results">Plotting results</a><a id="Plotting-results-1"></a><a class="docs-heading-anchor-permalink" href="#Plotting-results" title="Permalink"></a></h2><p>Following plots illustrate results of the provided data set. The scalar state variables and depth-depenedent (vector) state variables can be plotted:</p><p align="center">
+<img src="../assets/example-results/2021-03-16_11h27-Reset0-git+6e6946d+clean_LWFBrook90Julia_plot_u_scalar.png" width="400"><br>
+<br><em><b>Figure 2</b>: Example simulation: scalar results</em><br>
+<p><p align="center">
+<img src="../assets/example-results/2021-03-16_11h27-Reset0-git+6e6946d+clean_LWFBrook90Julia_plot_u_vector.png" width="400"><br>
+<br><em><b>Figure 3</b>: Example simulation: vector results soil water</em><br>
+<p><h2 id="Comparison-with-LWFBrook90R"><a class="docs-heading-anchor" href="#Comparison-with-LWFBrook90R">Comparison with LWFBrook90R</a><a id="Comparison-with-LWFBrook90R-1"></a><a class="docs-heading-anchor-permalink" href="#Comparison-with-LWFBrook90R" title="Permalink"></a></h2><p>Tests are run to assert agreement with results from LWFBrook90R. Visualizations are reported below. Note that minor discrepancies ```@raw htmlare still present linked to the adaptive time stepping and intermediate updates of state variables.</p><p align="center">
+<img src="../assets/example-results/2021-03-16_11h27-Reset0-git+6e6946d+clean_R-vs-Julia_Daily_first12M.png" width="400"><br>
+<br><em><b>Figure 4</b>: Comparing daily outputs of LWFBrook90R and LWFBrook90.jl for example data set over a year</em><br>
+<p><p align="center">
+<img src="../assets/example-results/2021-03-16_11h27-Reset0-git+6e6946d+clean_R-vs-Julia_Daily_first2M.png" width="400"><br>
+<br><em><b>Figure 5</b>: Comparing daily outputs of LWFBrook90R and LWFBrook90.jl for example data set over 2 months</em><br>
+<p><p>Note that some features of LWFBrook90R are not implemented in the main version of LWFBrook90.jl. The time step adaptivity and <code>Reset==1</code> are major ones that require some code refactoring that is not how the library for ODEs DiffEq.jl is intended to be used. Because of that implementation of these features is currently in a feature branch here on git <code>feature 005</code>.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../user-guide/">« User Guide</a><a class="docs-footer-nextpage" href="../code-lst/">Code Listing »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.5 on <span class="colophon-date" title="Saturday 21 August 2021 17:34">Saturday 21 August 2021</span>. Using Julia version 1.8.0-DEV.381.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
