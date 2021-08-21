@@ -29,7 +29,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # unused are the constant parameters saved in: = p[1][3]
 
         ## B) time dependent parameters
-        (p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC, p_MESFL,
+        (p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC,
         _, _, _, _, _) = p[2]
 
         DTRI = p_DTP
@@ -166,7 +166,6 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
             # du[7+NLAYER+25]= 0 # cum_d_rthr, was computed in callback
             # du[7+NLAYER+26]= 0 # cum_d_sthr, was computed in callback
-            # du[7+NLAYER+27]= 0 # mesfl, was computed in callback
             # balerd[IDAY]=BALERD
 
             # TODO(bernhard): use SavingCallback() for all quantities that have du=0

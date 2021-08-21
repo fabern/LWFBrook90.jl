@@ -287,15 +287,16 @@ function MSBPREINT(#arguments:
 
     if (p_NPINT > 1.0)
         # more than one precip interval in day
-        # snow interception
-        if (p_fu_PINT < 0 && p_fu_TA > 0)
-            # prevent frost when too warm, carry negative p_fu_PINT to rain
-            aux_du_SINT, aux_du_ISVP = LWFBrook90.EVP.INTER(p_fT_SFAL, 0, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DTP, u_INTS)
-        else
-            aux_du_SINT, aux_du_ISVP = LWFBrook90.EVP.INTER(p_fT_SFAL, p_fu_PINT, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DTP, u_INTS)
-        end
-        # rain interception,  note potential interception rate is PID-aux_du_ISVP (mm/day)
-        aux_du_RINT, aux_du_IRVP = LWFBrook90.EVP.INTER(p_fT_RFAL, p_fu_PINT - aux_du_ISVP, p_fu_LAI, p_fu_SAI, p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS, p_DTP, u_INTR)
+        error("Case with multiple precipitation intervals (using PRECDAT and precip_interval != 1) is not implemented.")
+        # # snow interception
+        # if (p_fu_PINT < 0 && p_fu_TA > 0)
+        #     # prevent frost when too warm, carry negative p_fu_PINT to rain
+        #     aux_du_SINT, aux_du_ISVP = LWFBrook90.EVP.INTER(p_fT_SFAL, 0, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DTP, u_INTS)
+        # else
+        #     aux_du_SINT, aux_du_ISVP = LWFBrook90.EVP.INTER(p_fT_SFAL, p_fu_PINT, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DTP, u_INTS)
+        # end
+        # # rain interception,  note potential interception rate is PID-aux_du_ISVP (mm/day)
+        # aux_du_RINT, aux_du_IRVP = LWFBrook90.EVP.INTER(p_fT_RFAL, p_fu_PINT - aux_du_ISVP, p_fu_LAI, p_fu_SAI, p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS, p_DTP, u_INTR)
     else
         # one precip interval in day, use storm p_DURATN and INTER24
         # snow interception

@@ -1,4 +1,5 @@
 using LWFBrook90
+using DataFrames
 using Test: @testset, @test, @test_throws
 
 # @testset "Module WAT" begin
@@ -83,6 +84,36 @@ end
         p_MvGn   = [1,1],
         p_MvGl   = [1,1],
         p_θr     = [1])
+end
+
+@testset "discretization" begin
+    input_soil_discretization = DataFrame(Upper_m = -(0.:8.), Lower_m = -(1.:9.),
+                               Rootden_ = (1:9) ./ 10, uAux_PSIM_init_kPa = -6.0,
+                               u_delta18O_init_mUr = NaN, u_delta2H_init_mUr = NaN)
+    input_soil_horizons = DataFrame(HorizonNr = 1:5, Upper_m = -[0.,3,8,10,15], Lower_m = -[3.,8,10,15,20],
+                    ths_volFrac = (11:15) ./ 20, thr_volFrac = 0.069,
+                    gravel_volFrac = 0.9:-0.1:0.5,
+                    ksat_mmDay = 50, alpha_perMeter = 10:14, npar_ = 0, tort_ = 0
+                    )
+    IDEPTH = 45 # mm
+    QDEPTH = 0  # mm
+    INITRDEP = 10
+    RGRORATE = 10
+    FLAG_MualVanGen = 1
+    # FLAG_MualVanGen = 0
+
+    soil_disc = LWFBrook90.discretize_soil_params(
+        input_soil_horizons, input_soil_discretization, IDEPTH, QDEPTH, INITRDEP, RGRORATE, FLAG_MualVanGen)
+
+    @test soil_disc["NLAYER"] == 10
+    @test soil_disc["THICK"]  ≈ [45.0, 955.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0]
+    @test soil_disc["STONEF"] ≈ [0.9, 0.9, 0.9, 0.9, 0.8, 0.8, 0.8, 0.8, 0.8, 0.7]
+    @test soil_disc["PSIM_init"] ≈ [-6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0]
+    @test soil_disc["frelden"] ≈ [0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    @test soil_disc["QLAYER"] == 0
+    @test soil_disc["ILAYER"] == 1
+    #soil_disc["tini"] .= 0.0
+    @test soil_disc["PAR"][!,"θs"] ≈ [0.55, 0.55, 0.55, 0.55, 0.6, 0.6, 0.6, 0.6, 0.6, 0.65]
 end
 
 @testset "KPT.KPT_SOILPAR_Ch1d" begin

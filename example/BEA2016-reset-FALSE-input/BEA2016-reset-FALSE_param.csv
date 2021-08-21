@@ -1,5 +1,6 @@
 param_id,x
 ### Meteorologic site parameters -------,NA
+LAT_DEG,46.70052
 ESLOPE_DEG,18.26
 ASPECT_DEG,225
 ALB,0.2
@@ -24,9 +25,6 @@ HR,10
 ZMINH,2
 RHOTP,2
 NN,2.5
-### Interception initial conditions -------,NA
-u_INTR_init,0
-u_INTS_init,0
 ### Interception parameters -------,NA
 FRINTLAI,0.06
 FSINTLAI,0.04
@@ -69,9 +67,8 @@ PSICR,-2
 RTRAD,0.35
 NOOUTF,1
 ### Soil parameters -------,NA
-ILAYER,1
-QLAYER,0
-FLAG_MualVanGen,1
+IDEPTH,40
+QDEPTH,0
 RSSA,100
 RSSB,1
 INFEXP,0

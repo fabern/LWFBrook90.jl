@@ -14,12 +14,12 @@ object of DifferentialEquations.jl) and other variables useful for plotting.
     # Using dates (but not interpolated)
     plot(example["solutionDates"],
         example["solution"][[1,2,3,4,5,6],:]',
-        label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
+        label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
 
     # Using simple plot recipe that interpolates, but without dates
     plot(example["solution"];
         vars = [1, 2, 3, 4, 5, 6],
-        label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
+        label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
 
     # Plot vector solution
     x = example["solutionDates"]
@@ -46,12 +46,12 @@ function run_example()
     # Using dates (but not interpolated)
     plot(example["solutionDates"],
         example["solution"][[1,2,3,4,5,6],:]',
-        label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
+        label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
 
     # Using simple plot recipe that interpolates, but without dates
     plot(example["solution"];
         vars = [1, 2, 3, 4, 5, 6],
-        label=["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ"])
+        label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
 
     # Plot vector solution
     x = example["solutionDates"]
@@ -74,11 +74,11 @@ function run_example()
     (input_meteoveg,
         input_meteoveg_reference_date,
         input_param,
-        input_siteparam,
-        input_precdat,    #TODO(bernhard): input_precdat is unused
-        input_pdur,
-        input_soil_materials,
-        input_soil_nodes) = read_LWFBrook90R_inputData(input_path, input_prefix)
+        input_storm_durations,
+        input_initial_conditions,
+        input_soil_horizons,
+        input_soil_discretization,
+        simOption_FLAG_MualVanGen) = read_LWFBrook90R_inputData(input_path, input_prefix)
     ####################
 
     ####################
@@ -99,11 +99,10 @@ function run_example()
         input_meteoveg,
         input_meteoveg_reference_date,
         input_param,
-        input_siteparam,
-        input_precdat,
-        input_pdur,
-        input_soil_materials,
-        input_soil_nodes;
+        input_storm_durations,
+        input_soil_horizons,
+        input_soil_discretization,
+        simOption_FLAG_MualVanGen;
         Reset = Reset,
         compute_intermediate_quantities = compute_intermediate_quantities)
     ####################
@@ -111,32 +110,25 @@ function run_example()
     ####################
     # Define initial states of differential equation
     # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
-    u_GWAT_init = input_siteparam[1, "u_GWAT_init"]
-    u_SNOW_init = input_siteparam[1, "u_SNOW_init"]
-    u_INTS_init = input_param[1,"u_INTS_init"]
-    u_INTR_init = input_param[1,"u_INTR_init"]
-    u_CC_init     = 0; # any initial snow has zero liquid water and cold content
-    u_SNOWLQ_init = 0; # any initial snow has zero liquid water and cold content
 
-    u_aux_PSIM_init = input_soil_nodes[:,"psiini"]
     ######
     # Transform initial value of auxiliary state u_aux_PSIM_init into state u_SWATIinit:
+    u_aux_PSIM_init = input_soil_discretization[:,"uAux_PSIM_init_kPa"]
     if any( u_aux_PSIM_init.> 0)
         error("Initial matrix psi must be negative or zero")
     end
-
     p_soil = p[1][1]
     u_aux_WETNESinit = LWFBrook90.KPT.FWETNES(u_aux_PSIM_init, p_soil)
     u_SWATIinit      = p_soil.p_SWATMAX ./ p_soil.p_THSAT .* LWFBrook90.KPT.FTheta(u_aux_WETNESinit, p_soil)
     ######
 
     # Create u0 for DiffEq.jl
-    u0 = define_LWFB90_u0(u_GWAT_init,
-                        u_INTS_init,
-                        u_INTR_init,
-                        u_SNOW_init,
-                        u_CC_init,
-                        u_SNOWLQ_init,
+    u0 = define_LWFB90_u0(input_initial_conditions[1,"u_GWAT_init_mm"],
+                        input_initial_conditions[1,"u_INTS_init_mm"],
+                        input_initial_conditions[1,"u_INTR_init_mm"],
+                        input_initial_conditions[1,"u_SNOW_init_mm"],
+                        input_initial_conditions[1,"u_CC_init_MJ_per_m2"],
+                        input_initial_conditions[1,"u_SNOWLQ_init_mm"],
                         u_SWATIinit,
                         compute_intermediate_quantities)
     ####################

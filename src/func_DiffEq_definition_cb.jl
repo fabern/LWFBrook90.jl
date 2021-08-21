@@ -53,7 +53,7 @@ function define_LWFB90_cb()
 
         ## B) time dependent parameters
         p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC,
-            p_MESFL, p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE, p_RELDEN = integrator.p[2]
+            p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE, p_RELDEN = integrator.p[2]
 
         p_fT_DENSEF = max(0.050, p_DENSEF(integrator.t))
 
@@ -235,7 +235,6 @@ function define_LWFB90_cb()
 
             # integrator.u[7+NLAYER+25] = p_DTP*(p_fT_RFAL - aux_du_RINT) # cum_d_rthr
             # integrator.u[7+NLAYER+26] = p_DTP*(p_fT_SFAL - aux_du_SINT) # cum_d_sthr
-            # integrator.u[7+NLAYER+26] = p_DTP*(p_MESFL(integrator.t))   # ?
             # timeseries_balerd[IDAY]=BALERD
 
             # TODO(bernhard): use SavingCallback() for all quantities that have u=... and du=0

@@ -30,57 +30,87 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
 
   # A) time-dependent parameters: (meteo and stand properties)
   veg_daily   <- input_Data$standprop_daily %>% select(dates, densef, height, lai, sai, age)
-  mesfl_daily <- data.frame(dates = veg_daily$dates, mesfl = 0) # TODO(bernhard): impelement mesfl
   clim_daily  <- original_arguments$climate %>%
     select(dates, globrad, tmax, tmin, vappres, windspeed, prec) %>%
     filter(dates >= input_Data$options_b90$startdate) %>%
     filter(dates <= input_Data$options_b90$enddate)
 
   out_csv_meteoveg <- clim_daily %>%
-    dplyr::left_join(mesfl_daily, by="dates") %>%
-    dplyr::left_join(veg_daily, by="dates")
+    dplyr::left_join(veg_daily, by="dates") %>%
+    select("dates",
+           "globrad_MJDayM2" = globrad,
+           "tmax_degC" = tmax,
+           "tmin_degC" = tmin,
+           "vappres_kPa" = vappres,
+           "windspeed_ms" = windspeed,
+           "prec_mmDay" = prec,
+           "densef_" = densef,
+           "height_m" = height,
+           "lai_" = lai,
+           "sai_" = sai,
+           "age_yrs" = age)
 
   # B) time-independent parameters:
-  # B1) climate data
-  out_pdur <- input_Data$param_b90$pdur
-  out_csv_pdur <- data.frame(month = c("January", "Februrary", "March", "April", 
-                                       "May", "June", "July", "August", 
+  # B1) site climate data
+  out_storm_durations <- input_Data$param_b90$pdur
+  out_csv_storm_durations <- data.frame(month = c("### Typical average durations of a single storm event for each month -------",
+                                       "January", "Februrary", "March", "April",
+                                       "May", "June", "July", "August",
                                        "September", "October", "November", "December"),
-                             average_storm_duration_h = out_pdur)
+                             average_storm_duration_h = c(NA,out_storm_durations))
   # out_csv_precdat <- NULL # TODO(bernhard): currently not implemented
 
-  # B2) soil parameters
-  out_csv_soil_nodes     <- input_Data$param_b90$soil_nodes %>%
-    select(layer, midpoint, thick, mat, psiini, rootden)
-  out_csv_soil_materials <- input_Data$param_b90$soil_materials
+  # B2) i)  soil discretization and parameters and initial conditions of continuous quantities
+  out_csv_soil_discretization <- input_Data$param_b90$soil_nodes %>%
+    select(#SimulationNode = layer,
+           Upper_m = upper, Lower_m = lower,
+           Rootden_ = rootden, uAux_PSIM_init_kPa = psiini) %>%
+    mutate(u_delta18O_init_mUr = NA, u_delta2H_init_mUr = NA)
 
-  # B3) site parameters
-  simyears <- seq(from = as.integer(format(input_Data$options_b90$startdate,"%Y")),
-                  to = as.integer(format(input_Data$options_b90$enddate,"%Y")),
-                  by = 1)
-  out_siteparam <- data.frame(start_year            = format(input_Data$options_b90$startdate,"%Y"),
-                              start_doy             = format(input_Data$options_b90$startdate,"%j"),
-                              precip_interval_NPINT = input_Data$options_b90$prec_interval,
-                              LAT_DEG               = input_Data$param_b90$coords_y,
-                              u_SNOW_init           = input_Data$param_b90$snowini,
-                              u_GWAT_init           = input_Data$param_b90$gwatini)
-  # out_csv_siteparam <- data.frame(param_id = names(out_siteparam),
-  #                                 x        = unname(out_siteparam))
-  out_csv_siteparam <- out_siteparam
+  # B2) ii) soil horizon parameters in discrete horizons (different from numerical node discretization)
+  out_csv_soil_horizons <-left_join(
+      select(input_Data$param_b90$soil_nodes, HorizonNr = layer, Upper_m = upper, Lower_m = lower, mat),
+      select(input_Data$param_b90$soil_materials,
+             mat,
+             ths_volFrac = ths,
+             thr_volFrac = thr,
+             alpha_perMeter = alpha,
+             npar_ = npar,
+             #mpar_ = mpar,
+             ksat_mmDay = ksat,
+             tort_ = tort,
+             gravel_volFrac = gravel),
+      by = "mat"
+    ) %>% select(-mat)
+
+
+
+  # B3) initial conditions of scalar state variables
+  out_initial_conditions <- with(input_Data$param_b90,c(
+    "### Initial conditions (except for depth-dependent u_aux_PSIM) -------" = NA,
+    "u_GWAT_init_mm"=gwatini,
+    "u_INTS_init_mm"=intsnowini,
+    "u_INTR_init_mm"=intrainini,
+    "u_SNOW_init_mm"=snowini,
+    "u_CC_init_MJ_per_m2"    =0,
+    "u_SNOWLQ_init_mm"=0
+  ))
+  out_csv_initial_conditions <- data.frame(param_id = names(out_initial_conditions),
+                                           x        = unname(out_initial_conditions))
+
 
   # B4) other model parameters
-  # Variant 1: (unfinished)
-  # NOTE: from input_Data$param_b90 remove:
-  #       1. soil_nodes
-  #       2. soil_materials
-  # out_csv_param <- input_Data$param_b90
-  # out_csv_param["soil_nodes"]     <- NULL
-  # out_csv_param["soil_materials"] <- NULL
-
-  # Variant 2: (ugly but finished and compatible with current Julia code)
+  # Define idepth and qdepth
+  idepth = -1000*out_csv_soil_discretization[input_Data$param_b90$ilayer,"Lower_m"] # in mm (positive depth)
+  if (input_Data$param_b90$qlayer==0) {
+    qdepth = 0
+  } else {
+    qdepth = -1000*out_csv_soil_discretization[input_Data$param_b90$qlayer,"Lower_m"] # in mm (positive depth)
+  }
+  # Save all parameters
   out_param <- with(input_Data$param_b90,
                         c("### Meteorologic site parameters -------" = NA,
-                          "ESLOPE_DEG"=eslope,"ASPECT_DEG"=aspect,
+                          "LAT_DEG"=coords_y, "ESLOPE_DEG"=eslope,"ASPECT_DEG"=aspect,
                           "ALB"=alb,          "ALBSN"=albsn,
                           "C1"=c1,            "C2"=c2,          "C3"=c3,
                           "WNDRAT"=wndrat,    "FETCH"=fetch,    "Z0W"=z0w,   "ZW"=zw,
@@ -89,8 +119,7 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
                           "LPC"=lpc,          "CS"=cs,                  "CZS"=czs,
                           "CZR"=czr,          "HS"=hs,                  "HR"=hr,
                           "ZMINH"=zminh,      "RHOTP"=rhotp,            "NN"=nn,
-                          "### Interception initial conditions -------" = NA,
-                          "u_INTR_init"=intrainini, "u_INTS_init"=intsnowini,
+                          # Note: u_aux_PSIM_init is not defined here as it is a vector quantity
                           "### Interception parameters -------" = NA,
                           "FRINTLAI"=frintlai, "FSINTLAI"=fsintlai,
                           "FRINTSAI"=frintsai, "FSINTSAI"=fsintsai,
@@ -112,9 +141,7 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
                           "RGRORATE"=rgrorate, "RGROPER"=rgroper,   "FXYLEM"=fxylem,
                           "PSICR"=psicr,       "RTRAD"=rrad,        "NOOUTF"=nooutf,
                           "### Soil parameters -------" = NA,
-                          "ILAYER"=ilayer, #TODO(bernhard): switch to depth in mm"
-                          "QLAYER"=qlayer, #TODO(bernhard): switch to depth in mm"
-                          "FLAG_MualVanGen"=ifelse(input_Data$options_b90$imodel == "MvG", 1, 0),
+                          "IDEPTH"=idepth, "QDEPTH"=qdepth,
                           "RSSA"=rssa,     "RSSB"=rssb,     "INFEXP"=infexp,
                           "BYPAR"=bypar,   "QFPAR"=qfpar,   "QFFC"=qffc,
                           "IMPERV"=imperv, "DSLOPE"=dslope, "LENGTH_SLOPE"=slopelen,
@@ -129,28 +156,18 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
   results_folder <- file.path(Julia_target_dir,paste0(Julia_prefix,"-LWFBrook90R_result"))
   dir.create(input_folder, showWarnings = TRUE, recursive = T)
 
-  # withr::with_options(c(scipen=100), { # temporarily swichtes off scientific notation
-  #   write.csv(out_csv_soil_nodes,     file.path(input_folder, paste0(Julia_prefix, "_soil_nodes.csv")),     row.names = FALSE, quote = FALSE)
-  #   write.csv(out_csv_soil_materials, file.path(input_folder, paste0(Julia_prefix, "_soil_materials.csv")), row.names = FALSE, quote = FALSE)
-  #   write.csv(out_csv_pdur,           file.path(input_folder, paste0(Julia_prefix, "_pdur.csv")),           row.names = FALSE, quote = FALSE)
-  #   write.csv(out_csv_param,          file.path(input_folder, paste0(Julia_prefix, "_param.csv")),          row.names = FALSE, quote = FALSE)
-  #   # write.csv(out_csv_precdat,      file.path(input_folder, paste0(Julia_prefix, "_precdat.csv")),        row.names = FALSE, quote = FALSE)
-  #   write.csv(out_csv_meteoveg,       file.path(input_folder, paste0(Julia_prefix, "_meteoveg.csv")),       row.names = FALSE, quote = FALSE)
-  #   write.csv(out_csv_siteparam,      file.path(input_folder, paste0(Julia_prefix, "_siteparam.csv")),      row.names = FALSE, quote = FALSE)
-  # })
   withr::with_options(c(scipen=100), { # temporarily switches off scientific notation
     require(dplyr)
-    out_csv_soil_nodes     %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_soil_nodes.csv")),    row.names=FALSE, quote=FALSE)
-    out_csv_soil_materials %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_soil_materials.csv")),row.names=FALSE, quote=FALSE)
-    out_csv_param          %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_param.csv")),         row.names=FALSE, quote=FALSE)
-    out_csv_meteoveg       %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_meteoveg.csv")),      row.names=FALSE, quote=FALSE)
-    out_csv_pdur           %>%                                                 write.csv(file.path(input_folder, paste0(Julia_prefix, "_pdur.csv")),          row.names=FALSE, quote=FALSE)
-    out_csv_siteparam      %>%                                                 write.csv(file.path(input_folder, paste0(Julia_prefix, "_siteparam.csv")),     row.names=FALSE, quote=FALSE)
-    # out_csv_precdat        %>%                                                 write.csv(file.path(input_folder, paste0(Julia_prefix, "_precdat.csv")),       row.names=FALSE, quote=FALSE)
+    out_csv_soil_discretization
+
+    out_csv_soil_discretization%>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_soil_discretization.csv")), row.names=FALSE, quote=FALSE)
+    out_csv_soil_horizons      %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_soil_horizons.csv")),       row.names=FALSE, quote=FALSE)
+    out_csv_param              %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_param.csv")),               row.names=FALSE, quote=FALSE)
+    out_csv_initial_conditions %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_initial_conditions.csv")),  row.names=FALSE, quote=FALSE)
+    out_csv_meteoveg           %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv(file.path(input_folder, paste0(Julia_prefix, "_meteoveg.csv")),            row.names=FALSE, quote=FALSE)
+    out_csv_storm_durations    %>%                                                 write.csv(file.path(input_folder, paste0(Julia_prefix, "_meteo_storm_durations.csv")),                row.names=FALSE, quote=FALSE)
+    # out_csv_precdat          %>%                                                 write.csv(file.path(input_folder, paste0(Julia_prefix, "_precdat.csv")),       row.names=FALSE, quote=FALSE)
   })
-
-  #TODO: siteparam rename columns: out_csv_siteparam
-
 
   # If run is requested also run LWFBrook90R and save results
   if(run_LWFBrook90R) {
