@@ -155,11 +155,11 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
   input_folder   <- file.path(Julia_target_dir,paste0(Julia_prefix,"-input"))
   results_folder <- file.path(Julia_target_dir,paste0(Julia_prefix,"-LWFBrook90R_result"))
   dir.create(input_folder, showWarnings = TRUE, recursive = T)
-  
+
   write.csv_withUnits <- function(x, units=c(), file, row.names = FALSE, ...) {
-    # This function writes a csv but adds the provided vector of units in a 
+    # This function writes a csv but adds the provided vector of units in a
     # second header line
-    
+
     if (length(units) == 0) {
       write.csv(x = x, file = file, row.names = row.names, ...)
     } else {
@@ -177,15 +177,15 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
       # Append data without column names
       write.table(append = TRUE, col.names = FALSE, sep = ",",
                   x = x, file = file, row.names = row.names,
-                  ...) 
+                  ...)
     }
   }
   withr::with_options(c(scipen=100), { # temporarily switches off scientific notation
     require(dplyr)
-    units_meteoveg            = c("YYYY-MM-DD","MJ/Day/m2","degree C","degree C","kPa","m per s","mm per Day","-","m","-","-","years")
+    units_meteoveg            = c("YYYY-MM-DD","MJ/Day/m2","degree C","degree C","kPa","m per s","mm per day","-","m","-","-","years")
     units_soil_discretization = c("m","m","-","kPa","mUr","mUr")
-    units_soil_horizons       = c("-","m","m","volume fraction (-)","volume fraction (-)","perMeter","-","mm per Day","-","volFrac")
-    
+    units_soil_horizons       = c("-","m","m","volume fraction (-)","volume fraction (-)","perMeter","-","mm per day","-","volFrac")
+
     out_csv_soil_discretization%>% mutate(across(where(is.numeric), round, 5)) %>% write.csv_withUnits(units = units_soil_discretization, file = file.path(Julia_target_dir, paste0(Julia_prefix, "_soil_discretization.csv")), row.names=FALSE, quote=FALSE)
     out_csv_soil_horizons      %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv_withUnits(units = units_soil_horizons,       file = file.path(Julia_target_dir, paste0(Julia_prefix, "_soil_horizons.csv")),       row.names=FALSE, quote=FALSE)
     out_csv_param              %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv_withUnits(units = c(),                       file = file.path(Julia_target_dir, paste0(Julia_prefix, "_param.csv")),               row.names=FALSE, quote=FALSE)

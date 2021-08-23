@@ -4,7 +4,7 @@ using DataFramesMeta#: @linq, transform, DataFramesMeta
 using Dates: DateTime, Millisecond, Second, Day, month, value, dayofyear
 
 """
-    read_LWFBrook90R_inputData(folder::String, prefix::String)
+    read_inputData(folder::String, prefix::String)
 
 Load different input files for LWFBrook90:
 - meteoveg.csv
@@ -16,18 +16,18 @@ Load different input files for LWFBrook90:
 
 These files were created with an R script `generate_LWFBrook90Julia_Input.R` that
 takes the same arguements as the R funciton `LWFBrook90R::run_LWFB90()` and generates
-the corresponding Julia input functions.
+the corresponding input files for LWFBrook90.jl.
 """
-function read_LWFBrook90R_inputData(folder::String, prefix::String)
+function read_inputData(folder::String, prefix::String; suffix::String = "")
     # https://towardsdatascience.com/read-csv-to-data-frame-in-julia-programming-lang-77f3d0081c14
     ## A) Define paths of all input files
-    path_meteoveg           = joinpath(folder, prefix*"_meteoveg.csv")
-    path_param              = joinpath(folder, prefix*"_param.csv")
-    # unused path_precdat=joinpath(folder, prefix*"_precdat.csv")
-    path_storm_durations    = joinpath(folder, prefix*"_meteo_storm_durations.csv")
-    path_initial_conditions = joinpath(folder, prefix*"_initial_conditions.csv")
-    path_soil_horizons      = joinpath(folder, prefix*"_soil_horizons.csv")
-    path_soil_discretization= joinpath(folder, prefix*"_soil_discretization.csv")
+    path_meteoveg           = joinpath(folder, prefix*"_meteoveg"*suffix*".csv")
+    path_param              = joinpath(folder, prefix*"_param"*suffix*".csv")
+    # unused path_precdat=joinpath(folder, prefix*"_precdat"*suffix*".csv")
+    path_storm_durations    = joinpath(folder, prefix*"_meteo_storm_durations"*suffix*".csv")
+    path_initial_conditions = joinpath(folder, prefix*"_initial_conditions"*suffix*".csv")
+    path_soil_horizons      = joinpath(folder, prefix*"_soil_horizons"*suffix*".csv")
+    path_soil_discretization= joinpath(folder, prefix*"_soil_discretization"*suffix*".csv")
 
     ## B) Load input data (time- and/or space-varying parameters)
     input_meteoveg, input_meteoveg_reference_date = read_path_meteoveg(path_meteoveg)
@@ -164,7 +164,7 @@ function read_path_meteoveg(path_meteoveg)
     assert_unitsHeader_as_expected(path_meteoveg,
         DataFrame(dates = "YYYY-MM-DD", globrad_MJDayM2 = "MJ/Day/m2",
         tmax_degC = "degree C", tmin_degC = "degree C", vappres_kPa = "kPa",
-        windspeed_ms = "m per s", prec_mmDay = "mm per Day", densef_ = "-",
+        windspeed_ms = "m per s", prec_mmDay = "mm per day", densef_ = "-",
         height_m = "m", lai_ = "-", sai_ = "-", age_yrs = "years"))
 
     # Identify period of interest
@@ -295,7 +295,8 @@ function read_path_soil_horizons(path_soil_horizons)
     MualVanGen_expected_column_names =
         ["HorizonNr","Upper_m","Lower_m","ths_volFrac","thr_volFrac","alpha_perMeter","npar_","ksat_mmDay","tort_","gravel_volFrac"]
     ClappHornberger_expected_column_names =
-        ["HorizonNr","Upper_m","Lower_m","ths_volFrac","thr_volFrac","alpha_perMeter","npar_","ksat_mmDay","tort_","gravel_volFrac"]
+        ["HorizonNr","Upper_m","Lower_m","thsat_volFrac","thetaf_volFrac","psif_kPa","bexp_","kf_mmDay","wtinf_","gravel_volFrac"]
+
 
     if String.(propertynames(File(path_soil_horizons))) == MualVanGen_expected_column_names
         FLAG_MualVanGen = 1
@@ -318,24 +319,23 @@ function read_path_soil_horizons(path_soil_horizons)
         assert_unitsHeader_as_expected(path_soil_horizons,
             DataFrame(HorizonNr = "-", Upper_m = "m", Lower_m = "m", ths_volFrac = "volume fraction (-)",
                 thr_volFrac = "volume fraction (-)", alpha_perMeter = "perMeter", npar_ = "-",
-                ksat_mmDay = "mm per Day", tort_ = "-", gravel_volFrac = "volFrac"))
+                ksat_mmDay = "mm per day", tort_ = "-", gravel_volFrac = "volFrac"))
 
         # Load file
         input_soil_horizons = DataFrame(File(path_soil_horizons;
             datarow=3, header=MualVanGen_expected_column_names,
-            types            =[Int64,      Float64,  Float64,  Float64,      Float64,      Float64,         Float64, Float64,    Float64,Float64],
+            types=[Int64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64],
             delim=','))
     else # FLAG_MualVanGen = 0 (Clapp-Hornberger)
-        # TODO(bernhard): modify for Clapp Hornberger
-        # # Assert units:
-        # expected_units = DataFrame(HorizonNr = "-", Upper_m = "m", Lower_m = "m", ths_volFrac = "volume fraction (-)",
-        #     thr_volFrac = "volume fraction (-)", alpha_perMeter = "perMeter", npar_ = "-",
-        #     ksat_mmDay = "mm per Day", tort_ = "-", gravel_volFrac = "volFrac")
-        # @assert DataFrame(File(path_soil_horizons;datarow=2,limit=1)) == expected_units """
-        #     Unexpected units in input file $path_soil_horizons. Expected units:
-        #     $expected_units"""
+        # Assert units:
+        assert_unitsHeader_as_expected(path_soil_horizons,
+            DataFram(HorizonNr = "-", Upper_m = "m", Lower_m = "m", thsat_volFrac = "volume fraction (-)",
+                thetaf_volFrac = "volume fraction (-)", psif_kPa = "kPa", bexp_ = "-",
+                kf_mmDay = "mm per day", wtinf_ = "-", gravel_volFrac = "volume fraction "))
+
+        # Load file
         input_soil_horizons = DataFrame(File(path_soil_horizons;
-            datarow=2, header=ClappHornberger_expected_column_names,
+            datarow=3, header=ClappHornberger_expected_column_names,
             types=[Int64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64],
             delim=','))# ignorerepeated=true
     end
