@@ -25,7 +25,7 @@ input_path = "example/"*input_prefix*"-input/"
     input_initial_conditions,
     input_soil_horizons,
     input_soil_discretization,
-    simOption_FLAG_MualVanGen) = ) = read_LWFBrook90R_inputData(input_path, input_prefix)
+    simOption_FLAG_MualVanGen) = ) = read_inputData(input_path, input_prefix)
 ####################
 ```
 

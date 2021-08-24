@@ -3,7 +3,7 @@ module LWFBrook90
 using OrdinaryDiffEq  # instead of loading the full DifferentialEquations
 using DiffEqCallbacks # instead of loading the full DifferentialEquations
 
-export read_LWFBrook90R_inputData
+export read_inputData
 export define_LWFB90_p, define_LWFB90_u0, define_LWFB90_ODE
 export KPT_SOILPAR_Mvg1d, KPT_SOILPAR_Ch1d
 

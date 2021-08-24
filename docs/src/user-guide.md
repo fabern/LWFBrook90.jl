@@ -31,258 +31,200 @@ For performance reasons, e.g. for Bayesian parameter estimation, computation of 
 
 
 ## Input data
+
+### Overview of input data
 To run a simulation following input data are needed
-- siteparam:
-- meteo:
-- precdat (currently unused):
-- storm_durations:
-- soil_materials:
-- soil_nodes:
-- param:
+- `soil_horizons.csv` - containing the hydraulic parameters of the different soil horizons
+- `meteoveg.csv` - containing daily values of meteorologic variables and stand properties
+- `meteo_storm_durations.csv` - containing parameters of sub-daily storm/precipitation event patterns
+- `initial_conditions.csv` - containing initial conditions of scalar state variables
+- `soil_discretization.csv` - containing the initial conditions of the soil water status in the form of the soil matric potential (kPa) (vector state variable); continuously defined parameters of relative root density distributions; as well as the definition of the numerical discretization of the soil domain (nodes with upper and lower limits).
+- `param.csv` - containing further scalar model parameters
 
-Which contain problem-specific settings such as site paramters, meteorological drivers, and soil parameters as well as implementation-specific control settings in `input_param`.
+The structure of the input data is illustrated by the example input data set `BEA2016-*` located in the folder `example/`, as well as below in this documentation. Please follow these examples closely when generating your own input files, including the exact column names and header lines containing the units.
 
-The input files can be specified in two ways:
-1. `read_inputData` (TODO: not yet implemented) or
-2. [`read_LWFBrook90R_inputData`](@ref) (implemented).
-
-The first input data is not yet implemented.
-The second type of input data is more detailed and should be generated automatically by the user. The structure of the second type of input data is illustrated by the example input data `BEA2016-*` set located in the folder `example/`.
-
-An easy way to generate the second type of input data is by setting up a simulation with the R package [LWFBrook90R (v0.4.3)](https://github.com/pschmidtwalter/LWFBrook90R#usage). Instead of running the simulation with `run_LWFB90()`, the same arguments can be used to generate the input files for LWFBrook90.jl using the R function provided in the file `generate_LWFBrook90jl_Input.R`.
+For convenience, input files can be generated from a script that sets up a simulation with the R package [LWFBrook90R (v0.4.3)](https://github.com/pschmidtwalter/LWFBrook90R#usage). Instead of running the simulation with `run_LWFB90()`, the same arguments can be used to generate the input files for LWFBrook90.jl using the R function provided in the file `generate_LWFBrook90jl_Input.R`.
 
 To load load input data and prepare a simulation follow the instructions in section [Example](@ref) or alternatively use the sample script `main.jl`.
 
 In case you're unfamiliar to Julia, there are various ways to run a script such as `main.jl`: One possibility is to open the Julia REPL and run the script using `include(“main.jl”)`. Alternatively, the editor VS Code in combination with the Julia extension ([julia-vscode.org](https://www.julia-vscode.org)), provides a complete IDE for programming in Julia.
 
-!!! note
+### Structure of input data
 
-    TODO(bernhard): include units descriptions in tables below. And also discuss rounding.
+`soil_horizons.csv`: (when using Mualem-van Genuchten parametrization)
 
-### Needed time dependent parameters (daily time step): meteo data and stand properties
-
-Time dependent parameters (climate and vegetation) are provided in the following form:
-
-`BEA2016-reset-FALSE_meteoveg.csv`:
-
-| dates      | globrad | tmax    | tmin    | vappres | windspeed | prec     | densef | height | lai   | sai   | age       |
-| ---------- | ------- | ----    | -----   | ------- | --------- | ----     | ------ | ------ | ----- | ----  | -------   |
-|            | weather | weather | weather | weather | weather   | weather  | stand  | stand  | stand | stand | stand     |
-|            | (MJ/m2) | (°C)    | (°C)    | (kPa)   | (m/s)     | (mm/day) | (-)    | (m)    | (-)   | (-)   | (years)   |
-| 2016-01-01 | 4.08    | 5.5     | -1.1    | 0.53    | 1.22      | 3.2      | 1      | 23     | 1.752 | 1     | 200       |
-| 2016-01-02 | 1.61    | 3.36    | -2.08   | 0.49    | 0.89      | 0.2      | 1      | 23     | 1.752 | 1     | 200.00274 |
-
-Note that the second and third rows containing description and unit headers is not contained in the input dataset.
-
-`precdat.csv``
-
-- TODO(bernhard): support for `precdat.csv` is currently not implemented
+| HorizonNr | Upper_m | Lower_m | ths_volFrac         | thr_volFrac         | alpha_perMeter | npar_   | ksat_mmDay | tort_   | gravel_volFrac |
+| --------- | ------- | ------- | ------------------- | ------------------- | -------------- | ------- | ---------- | ------- | -------------- |
+| -         | m       | m       | volume fraction (-) | volume fraction (-) | perMeter       | -       | mm per day | -       | volFrac        |
+| 1         | 0       | -0.04   | 0.7149              | 0.069               | 1147.88919     | 1.05123 | 24864.6784 | 4.67037 | 0.01           |
+| 2         | -0.04   | -0.08   | 0.66873             | 0.069               | 1274.88602     | 1.05105 | 12881.4864 | 4.47828 | 0.175          |
+| 3         | -0.08   | -0.2    | 0.6561              | 0.069               | 1215.92721     | 1.05106 | 10516.6166 | 4.50162 | 0.175          |
+| 4         | -0.2    | -0.45   | 0.60159             | 0.069               | 795.20401      | 1.05099 | 3438.06275 | 4.34489 | 0.175          |
+| 5         | -0.45   | -0.75   | 0.52331             | 0.069               | 352.36825      | 1.05097 | 450.35802  | 4.29122 | 0.01           |
+| 6         | -0.75   | -1.1    | 0.56472             | 0.069               | 570.68168      | 1.05111 | 1488.20958 | 5.14818 | 0.01           |
+| 7         | -1.1    | -1.2    | 0.46743             | 0.069               | 164.564        | 1.05103 | 67.97846   | 0.01    | 0.95           |
 
 
-### Needed constant meteo data
+`soil_horizons.csv`: (when using Clapp-Hornberger parametrization) (NOT COMPLETELY IMPLEMENTED!)
+
+| HorizonNr  | Upper_m | Lower_m | thsat_volFrac       | thetaf_volFrac      | psif_kPa    | bexp_  | kf_mmDay     | wtinf_ | gravel_volFrac      |
+| ---------- | ------- | ------- | ------------------- | ------------------- | ----------- | ------ | ------------ | ------ | ------------------- |
+| -          | m       | m       | volume fraction (-) | volume fraction (-) | kPa         | -      | mm per day   | -      | volume fraction (-) |
+| 1          | 0       | -0.04   | NA                  | NA                  | NA          | NA     | NA           | NA     | NA                  |
+
+
+`meteoveg.csv`: contains time dependent parameters (meterologic variables and vegetation parameters):
+
+| dates      | globrad_MJDayM2 | tmax_degC | tmin_degC | vappres_kPa | windspeed_ms | prec_mmDay | densef | height | lai   | sai  | age       |
+| ---------- | --------------- | --------- | --------- | ----------- | ------------ | ---------- | ------ | ------ | ----- | ---- | --------- |
+| YYYY-MM-DD | MJ/Day/m2       | degree C  | degree C  | kPa         | m per s      | mm per Day | -      | m      | -     | -    | years     |
+| 01.01.10   | 4.75            | -0.68     | -5.2      | 0.4         | 1.27         | 0.6        | 1      | 25     | 2.274 | 1    | 240       |
+| 02.01.10   | 4.64            | -3.95     | -14.57    | 0.22        | 3.32         | 0          | 1      | 25     | 2.274 | 1    | 240.00275 |
+| 03.01.10   | 6.58            | -8.28     | -16.07    | 0.13        | 1.59         | 0          | 1      | 25     | 2.274 | 1    | 240.00549 |
+| ...        | ...             | ...       | ...       | ...         | ...          | ...        | ...    | ...    | ...   | ...  | ...       |
+| 21.06.10   | 10.94           | 5.18      | 2.03      | 0.72        | 2.29         | 0.9        | 1      | 25     | 3.79  | 1    | 240.46978 |
+| 22.06.10   | 8.17            | 5.62      | 2.85      | 0.77        | 2.17         | 0.1        | 1      | 25     | 3.79  | 1    | 240.47253 |
+| 23.06.10   | 30.39           | 13.53     | 1.68      | 0.81        | 2.66         | 0          | 1      | 25     | 3.79  | 1    | 240.47527 |
+| 24.06.10   | 30.57           | 16.13     | 3.95      | 0.88        | 2.28         | 0          | 1      | 25     | 3.79  | 1    | 240.47802 |
+
 `meteo_storm_durations.csv`:
-```
-"x"
-4
-4
-4
-4
-4
-4
-4
-4
-4
-4
-4
-4
-```
 
-`param.csv` (header line and lines starting with ### are ignored):
+| month                                                        | average_storm_duration_h |
+| ------------------------------------------------------------ | ------------------------ |
+| ### Typical average durations of a single  storm event for each month ------- | NA                       |
+| January                                                      | 4                        |
+| Februrary                                                    | 4                        |
+| March                                                        | 4                        |
+| April                                                        | 4                        |
+| May                                                          | 4                        |
+| June                                                         | 4                        |
+| July                                                         | 4                        |
+| August                                                       | 4                        |
+| September                                                    | 4                        |
+| October                                                      | 4                        |
+| November                                                     | 4                        |
+| December                                                     | 4                        |
+|                                                              |                          |
 
-```
-param_id,x
-### Meteorologic site parameters -------,NA
-eslope,18.26
-aspect,225
-alb,0.2
-albsn,0.5
-c1,0.25
-c2,0.5
-c3,0.2
-wndrat,0.3
-fetch,5000
-z0w,0.005
-zw,2
-### Canopy parameters -------,NA
-lwidth,0.1
-obsheight_x_czs,0.00325
-z0s,0.001
-lpc,4
-cs,0.035
-czs,0.13
-czr,0.05
-hs,1
-hr,10
-zminh,2
-rhotp,2
-nn,2.5
-### Interception initial conditions -------,NA
-intrainini,0
-intsnowini,0
-### Interception parameters -------,NA
-frintlai,0.06
-fsintlai,0.04
-frintsai,0.06
-fsintsai,0.04
-cintrl,0.15
-cintrs,0.15
-cintsl,0.6
-cintss,0.6
-rstemp,-0.5
-### Snowpack parameters -------,NA
-melfac,1.5
-ccfac,0.3
-laimlt,0.2
-saimlt,0.5
-grdmlt,0.35
-maxlqf,0.05
-ksnvp,0.3
-snoden,0.3
-### Leaf evaporation parameters (affecting PE) -------,NA
-glmax,0.0053
-radex,0.5
-glmin,3e-04
-rm,1000
-r5,100
-cvpd,2
-tl,0
-t1,10
-t2,30
-th,40
-### Plant parameters (affecting soil-water supply) -------,NA
-mxkpl,8
-maxrlen,3000
-INITRLEN,12
-INITRDEP,0.25
-RGRORATE,0.03
-RGROPER,30
-fxylem,0.5
-psicr,-2
-rrad,0.35
-nooutf,1
-### Soil parameters -------,NA
-ilayer,1
-qlayer,0
-rssa,100
-rssb,1
-infexp,0
-bypar,0
-qfpar,1
-qffc,0
-imperv,0
-dslope,0
-slopelen,200
-drain,1
-gsc,0
-gsp,0
-### Numerical solver parameters -------,NA
-dtimax,0.5
-dswmax,0.05
-dpsimax,5e-04
-```
+`initial_conditions.csv`:
+
+| param_id                                                            | x    |
+| ------------------------------------------------------------------- | ---- |
+| ### Initial conditions (except for  depth-dependent u_aux_PSIM) --- | NA   |
+| u_GWAT_init_mm                                                      | 0    |
+| u_INTS_init_mm                                                      | 0    |
+| u_INTR_init_mm                                                      | 0    |
+| u_SNOW_init_mm                                                      | 0    |
+| u_CC_init_MJ_per_m2                                                 | 0    |
+| u_SNOWLQ_init_mm                                                    | 0    |
+
+`soil_discretization.csv` contains the initial conditions of the soil water status, root density distributions, and the definition of the numerical discretization of the soil domain (nodes with upper and lower limits):
+
+| Upper_m | Lower_m | Rootden_ | uAux_PSIM_init_kPa | u_delta18O_init_mUr | u_delta2H_init_mUr |
+| ------- | ------- | -------- | ------------------ | ------------------- | ------------------ |
+| m       | m       | -        | kPa                | mUr                 | mUr                |
+| 0       | -0.04   | 0.02868  | -6.3               | NA                  | NA                 |
+| -0.04   | -0.08   | 0.02539  | -6.3               | NA                  | NA                 |
+| -0.08   | -0.2    | 0.02     | -6.3               | NA                  | NA                 |
+| -0.2    | -0.45   | 0.01159  | -6.3               | NA                  | NA                 |
+| -0.45   | -0.75   | 0.00507  | -6.3               | NA                  | NA                 |
+| -0.75   | -1.1    | 0.00191  | -6.3               | NA                  | NA                 |
+| -1.1    | -1.2    | 0.00092  | -6.3               | NA                  | NA                 |
 
 
+`param.csv` contains scalar model parameters:
 
-### Needed soil properties
-`soil_nodes.csv`:
-
-| layer | midpoint | thick | mat  | psiini | Rootden_ |
-| ----- | -------- | ----- | ---- | ------ | ------- |
-| (-)   | (m)      | (mm)  | (#)  | (kPa)  | (-)     |
-| 1     | -0.02    | 40    | 1    | -6.3   | 0.029   |
-| 2     | -0.06    | 40    | 2    | -6.3   | 0.025   |
-| 3     | -0.14    | 120   | 3    | -6.3   | 0.020   |
-| 4     | -0.325   | 250   | 4    | -6.3   | 0.012   |
-| 5     | -0.6     | 300   | 5    | -6.3   | 0.005   |
-| 6     | -0.925   | 350   | 6    | -6.3   | 0.002   |
-| 7     | -1.15    | 100   | 7    | -6.3   | 0.001   |
-
-Note that the second row containing units is not contained in the input dataset.
-
-`soil_materials.csv`: (when using Mualem-van Genuchten parmetrization)
-
-| mat  | ths   | thr   | alpha    | npar  | ksat      | tort  | gravel |
-| ---- | ----- | ----- | -------- | ----- | --------- | ----- | ------ |
-| (#)  | (-)   | (-)   | (m-1)    | (-)   | (mm/day)  | (-)   | (-)    |
-| 1    | 0.715 | 0.069 | 1147.889 | 1.051 | 24864.678 | 4.670 | 0.010  |
-| 2    | 0.669 | 0.069 | 1274.886 | 1.051 | 12881.486 | 4.478 | 0.175  |
-| 3    | 0.656 | 0.069 | 1215.927 | 1.051 | 10516.617 | 4.502 | 0.175  |
-| 4    | 0.602 | 0.069 | 795.204  | 1.051 | 3438.063  | 4.345 | 0.175  |
-| 5    | 0.523 | 0.069 | 352.368  | 1.051 | 450.358   | 4.291 | 0.010  |
-| 6    | 0.565 | 0.069 | 570.682  | 1.051 | 1488.210  | 5.148 | 0.010  |
-| 7    | 0.467 | 0.069 | 164.564  | 1.051 | 67.978    | 0.010 | 0.950  |
-
-Note that the second row containing units is not contained in the input dataset.
-
-`soil_materials.csv`: (when using Clapp-Hornberger parametrization) (NOT IMPLEMENTED!)
-
-| mat  | thsat | thetaf| psif    | bexp  | kf       | wtinf | gravel |
-| ---- | ----- | ----- | ------- | ----- | -------  | ----- | ------ |
-| (#)  | (-)   | (-)   | (kPa)   | (-)   | (mm/day) | (-)   | (-)    |
-| NA   | NA    | NA    | NA      | NA    | NA       | NA    | NA     |
-
-
+| param_id                                                     | x        |
+| ------------------------------------------------------------ | -------- |
+| **### Meteorologic site parameters -------**                 | NA       |
+| LAT_DEG                                                      | 46.70052 |
+| ESLOPE_DEG                                                   | 18.26    |
+| ASPECT_DEG                                                   | 225      |
+| ALB                                                          | 0.2      |
+| ALBSN                                                        | 0.5      |
+| C1                                                           | 0.25     |
+| C2                                                           | 0.5      |
+| C3                                                           | 0.2      |
+| WNDRAT                                                       | 0.3      |
+| FETCH                                                        | 5000     |
+| Z0W                                                          | 0.005    |
+| ZW                                                           | 2        |
+| **### Canopy parameters -------**                            | NA       |
+| LWIDTH                                                       | 0.1      |
+| Z0G                                                          | 0.00325  |
+| Z0S                                                          | 0.001    |
+| LPC                                                          | 4        |
+| CS                                                           | 0.035    |
+| CZS                                                          | 0.13     |
+| CZR                                                          | 0.05     |
+| HS                                                           | 1        |
+| HR                                                           | 10       |
+| ZMINH                                                        | 2        |
+| RHOTP                                                        | 2        |
+| NN                                                           | 2.5      |
+| **### Interception parameters -------**                      | NA       |
+| FRINTLAI                                                     | 0.06     |
+| FSINTLAI                                                     | 0.04     |
+| FRINTSAI                                                     | 0.06     |
+| FSINTSAI                                                     | 0.04     |
+| CINTRL                                                       | 0.15     |
+| CINTRS                                                       | 0.15     |
+| CINTSL                                                       | 0.6      |
+| CINTSS                                                       | 0.6      |
+| RSTEMP                                                       | -0.5     |
+| **### Snowpack parameters -------**                          | NA       |
+| MELFAC                                                       | 1.5      |
+| CCFAC                                                        | 0.3      |
+| LAIMLT                                                       | 0.2      |
+| SAIMLT                                                       | 0.5      |
+| GRDMLT                                                       | 0.35     |
+| MAXLQF                                                       | 0.05     |
+| KSNVP                                                        | 0.3      |
+| SNODEN                                                       | 0.3      |
+| **### Leaf evaporation parameters  (affecting PE) -------**  | NA       |
+| GLMAX                                                        | 0.0053   |
+| GLMIN                                                        | 0.0003   |
+| CR                                                           | 0.5      |
+| RM                                                           | 1000     |
+| R5                                                           | 100      |
+| CVPD                                                         | 2        |
+| TL                                                           | 0        |
+| T1                                                           | 10       |
+| T2                                                           | 30       |
+| TH                                                           | 40       |
+| **### Plant parameters (affecting  soil-water supply) -------** | NA       |
+| MXKPL                                                        | 8        |
+| MXRTLN                                                       | 3000     |
+| INITRLEN                                                     | 12       |
+| INITRDEP                                                     | 0.25     |
+| RGRORATE                                                     | 0.03     |
+| RGROPER                                                      | 30       |
+| FXYLEM                                                       | 0.5      |
+| PSICR                                                        | -2       |
+| RTRAD                                                        | 0.35     |
+| NOOUTF                                                       | 1        |
+| **### Soil parameters -------**                              | NA       |
+| IDEPTH                                                       | 40       |
+| QDEPTH                                                       | 0        |
+| RSSA                                                         | 100      |
+| RSSB                                                         | 1        |
+| INFEXP                                                       | 0        |
+| BYPAR                                                        | 0        |
+| QFPAR                                                        | 1        |
+| QFFC                                                         | 0        |
+| IMPERV                                                       | 0        |
+| DSLOPE                                                       | 0        |
+| LENGTH_SLOPE                                                 | 200      |
+| DRAIN                                                        | 1        |
+| GSC                                                          | 0        |
+| GSP                                                          | 0        |
+| **### Numerical solver parameters -------**                  | NA       |
+| DTIMAX                                                       | 0.5      |
+| DSWMAX                                                       | 0.05     |
+| DPSIMAX                                                      | 0.0005   |
 
 ## Calibration data (calibration not yet implemented)
 Roadmap to include calibration data intends to allow inclusion of:
 - Throughfall amounts (for parametrisation of interception)
 - Soil moisture (volumetric water content, θ)
 - Soil matric potential (ψ)
-
-
-
-
-
-
-!!! note
-
-    USER GUIDE ENDS HERE.
-
-    TODO(bernhard): after impelementation of function `read_inputData`
-    Below is an illustration of the initial data sets that could be used.
-
-#### Needed time dependent parameters (daily time step): meteo data and stand properties
-
-| site_id | dates      | tmin   | tmax  | tmean  | prec | relhum | globrad | wind | vappres |
-| ------- | ---------- | ------ | ----- | ------ | ---- | ------ | ------- | ---- | ------- |
-|         |            | °C     | °C    | °C     | mm   | %      | MJ/m2   | m/s  | kPa     |
-| BEA     | 01.01.2010 | -6.39  | 1.85  | -1.78  | 0.2  | 79.39  | 3.45    | 2.87 | 0.43    |
-| BEA     | 02.01.2010 | -14.09 | -6.98 | -10.83 | 0    | 79.25  | 7.26    | 3.6  | 0.21    |
-
-Note that the second row containing units is not contained in the input dataset.
-
-| site     | X      | Y      | long_wgs84 | lat_wgs84   | tree height  | max root depth | LAI  | tree age  | % of deciduous plants |
-| -------- | ------ | ------ | ---------- | ----------- | ------------ | -------------- | ---- | --------- | --------------------- |
-| (-)      | (m)    | (-)    | (°E WGS84) | (°N WGS84)  | (m)          | (m)            | (-)  | (years)   | (%)                   |
-| BEA      | 827262 | 165790 | 10.40555   | 46.60469346 | 3.5          | 1.1            | 1.91 | 80        | 45                    |
-| BEA      | 827620 | 165710 | 10.41018   | 46.60385246 | 8.5          | 1.0            | 1.91 | 80        | 50                    |
-TODO: remove (X, Y)
-
-Note that the second row containing units is not contained in the input dataset.
-
-
-#### Needed soil properties
-LWF sites (TODO: format as LWFBrook90R):
-- TODO(Bernhard): remove this once an example data set is here.
-
-| site_id         | Total soil depth | horizon | texture | upper | lower | bd       | gravel   | sand     | silt     | clay     | c_org    |
-| --------------- | ---------------- | ------- | ------- | ----- | ----- | -------- | -------- | -------- | -------- | -------- | -------- |
-| unit            | m                | KA5     | GSTCS*  | (m)   | (m)   | (g cm-3) | fraction | (mass-%) | (mass-%) | (mass-%) | (mass-%) |
-| Münstertal_pit1 | 1.2              | Ah      | Sl3     | 0     | -0.05 | 1.32     | 0.1      | 70       | 20       | 10       | 9        |
-| -               | -                | Bv      | …       | -0.05 | -0.4  |          |          |          |          |          |          |
-| Münstertal_pit2 | 1.3              | Ah      |         | ...   |       |          |          |          |          |          |          |
-| -               | -                | Bv      |         | ...   |       |          |          |          |          |          |          |
-\* GSTCS refers to: German soil texture classification system
-
-Note that the second row containing units is not contained in the input dataset.
-
