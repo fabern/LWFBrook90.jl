@@ -106,19 +106,29 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
         # Transport flow (heat, solutes, isotopes, ...)
         # TODO(bernhard): see initial prototype code... (script3)
+        # du_δ2H_GWAT, du_δ2H_SWATI, du_δ2H_INTS, du_δ2H_INTR, du_δ2H_SNOW =
+        #     TODO(bernhard)
+        du_δ18O_GWAT, du_δ18O_SWATI, du_δ18O_INTS, du_δ18O_INTR, du_δ18O_SNOW =
+            compute_isotope_du( # check chart "../docs/src/assets/b90flow.gif"
+                # for GWAT:
+                du_GWFL, du_SEEP, # aux_du_VRFLI, δ18O_GWAT (out), δ18O_SWATI (in)
+                # for SWATI:
+                aux_du_VRFLI, δ18O_SWATI, Diffusivity_18O,
+                aux_du_TRANI, aux_du_SLVP, # (non-fractionated)
+                aux_du_INFLI, δ18O_INFLI,
+                # TODO(bernhard): acutally instead of INFLI we need to use SMLT(δ_SNOW) and RNET(δ_PREC)
+                # TODO(benrhard): or alternatively compute δ_INFLI = (p_fu_RNET*δ18O_Precip + aux_du_SMLT*δ18O_SNOW)/(p_fu_RNET + aux_du_SMLT)
+
+                # for INTS, INTR, SNOW: (is done in daily time steps (i.e. in the callback function cb()))
+                ###
+                # TODO(bernhard): also compute δ of EVAP, SEEP and FLOW
+                )
 
         ##################
         # Update solution:
         # u is a state vector with u[1] = S relative saturation (-)
         # Update GWAT:
         du[1] = aux_du_VRFLI[NLAYER] - du_GWFL - du_SEEP
-        # Update SWATI for each layer:
-        #du[7] = 0
-        #du[8] = 0
-        #du[9] = 0
-        #du[10] = 0
-        #du[11] = 0
-        du[idx_u_vector_amounts] .= du_NTFLI[:] # 0.000002 seconds (3 allocations: 224 bytes)
 
         # Do not modify INTS, INTR, SNOW, CC, SNOWLQ
         # as they are separately modified by the callback.
@@ -128,6 +138,10 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         du[4] = 0
         du[5] = 0
         du[6] = 0
+
+        # Update SWATI for each layer:
+        du[idx_u_vector_amounts] .= du_NTFLI[:] # 0.000002 seconds (3 allocations: 224 bytes)
+
 
         ##########################################
         # Accumulate flows to compute daily sums

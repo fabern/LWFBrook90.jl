@@ -396,7 +396,7 @@ function MSBPREINT(#arguments:
             # compute change in interception storage:
             aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP,
             # compute change in snow storage:
-            aux_du_RSNO, aux_du_SNVP, aux_du_SMLT,
+            aux_du_RSNO, aux_du_SNVP, aux_du_SMLT, p_fu_STHR,
             # compute updated states:
             u_SNOW, u_CC, u_SNOWLQ)
 end

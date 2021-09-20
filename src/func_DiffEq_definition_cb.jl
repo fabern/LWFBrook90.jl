@@ -161,7 +161,7 @@ function LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     # compute change in interception storage:
     aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP,
     # compute change in snow storage:
-    aux_du_RSNO, aux_du_SNVP, aux_du_SMLT,
+    aux_du_RSNO, aux_du_SNVP, aux_du_SMLT, p_fu_STHR,
     # compute updated states:
     u_SNOW, u_CC, u_SNOWLQ) =
         MSBPREINT(p_PREC(integrator.t), p_DTP, p_fT_SNOFRC, p_NPINT, p_fu_PINT, p_fu_TA,
@@ -177,6 +177,15 @@ function LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
                u_CC, u_SNOWLQ, p_fu_PSNVP, p_fu_SNOEN, p_MAXLQF, p_GRDMLT,
                LWFBrook90.CONSTANTS.p_CVICE, LWFBrook90.CONSTANTS.p_LF, LWFBrook90.CONSTANTS.p_CVLQ)
                # 0.000016 seconds (28 allocations: 3.609 KiB)
+
+    compute_isotope_INTS_INTR_SNOW(
+        # for INTS (in: SINT; out: ISVP):
+        aux_du_SINT, aux_du_ISVP, p_DTP, δ2H_INTS, δ18O_INTS,
+        # for INTR (in: RINT; out: IRVP):
+        aux_du_RINT, aux_du_IRVP, δ2H_INTR, δ18O_INTR,
+        # for SNOW (in: STHR, RSNO (both δ_PREC); out: SMLT, SNVP (δ_SNOW and fractionated)):
+        p_fu_STHR, aux_du_RSNO, aux_du_SMLT, aux_du_SNVP, δ2H_PREC, δ18O_PREC, δ2H_SNOW, δ18O_SNOW
+    ) # check chart "../docs/src/assets/b90flow.gif"
 
 
     ####################################################################
