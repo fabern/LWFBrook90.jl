@@ -77,7 +77,7 @@ In case you're unfamiliar to Julia, there are various ways to run a script such 
 
 | dates      | globrad_MJDayM2 | tmax_degC | tmin_degC | vappres_kPa | windspeed_ms | prec_mmDay | densef | height | lai   | sai  | age       |
 | ---------- | --------------- | --------- | --------- | ----------- | ------------ | ---------- | ------ | ------ | ----- | ---- | --------- |
-| YYYY-MM-DD | MJ/Day/m2       | degree C  | degree C  | kPa         | m per s      | mm per Day | -      | m      | -     | -    | years     |
+| YYYY-MM-DD | MJ/Day/m2       | degree C  | degree C  | kPa         | m per s      | mm per day | -      | m      | -     | -    | years     |
 | 01.01.10   | 4.75            | -0.68     | -5.2      | 0.4         | 1.27         | 0.6        | 1      | 25     | 2.274 | 1    | 240       |
 | 02.01.10   | 4.64            | -3.95     | -14.57    | 0.22        | 3.32         | 0          | 1      | 25     | 2.274 | 1    | 240.00275 |
 | 03.01.10   | 6.58            | -8.28     | -16.07    | 0.13        | 1.59         | 0          | 1      | 25     | 2.274 | 1    | 240.00549 |

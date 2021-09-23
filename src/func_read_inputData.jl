@@ -319,7 +319,7 @@ function read_path_soil_horizons(path_soil_horizons)
         assert_unitsHeader_as_expected(path_soil_horizons,
             DataFrame(HorizonNr = "-", Upper_m = "m", Lower_m = "m", ths_volFrac = "volume fraction (-)",
                 thr_volFrac = "volume fraction (-)", alpha_perMeter = "perMeter", npar_ = "-",
-                ksat_mmDay = "mm per day", tort_ = "-", gravel_volFrac = "volFrac"))
+                ksat_mmDay = "mm per day", tort_ = "-", gravel_volFrac = "volume fraction (-)"))
 
         # Load file
         input_soil_horizons = DataFrame(File(path_soil_horizons;

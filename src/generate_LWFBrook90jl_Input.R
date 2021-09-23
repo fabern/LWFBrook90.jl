@@ -184,7 +184,7 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
     require(dplyr)
     units_meteoveg            = c("YYYY-MM-DD","MJ/Day/m2","degree C","degree C","kPa","m per s","mm per day","-","m","-","-","years")
     units_soil_discretization = c("m","m","-","kPa","mUr","mUr")
-    units_soil_horizons       = c("-","m","m","volume fraction (-)","volume fraction (-)","perMeter","-","mm per day","-","volFrac")
+    units_soil_horizons       = c("-","m","m","volume fraction (-)","volume fraction (-)","perMeter","-","mm per day","-","volume fraction (-)")
 
     out_csv_soil_discretization%>% mutate(across(where(is.numeric), round, 5)) %>% write.csv_withUnits(units = units_soil_discretization, file = file.path(Julia_target_dir, paste0(Julia_prefix, "_soil_discretization.csv")), row.names=FALSE, quote=FALSE)
     out_csv_soil_horizons      %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv_withUnits(units = units_soil_horizons,       file = file.path(Julia_target_dir, paste0(Julia_prefix, "_soil_horizons.csv")),       row.names=FALSE, quote=FALSE)
