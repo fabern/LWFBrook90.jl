@@ -103,7 +103,7 @@ end
     # FLAG_MualVanGen = 0
 
     soil_disc = LWFBrook90.discretize_soil_params(
-        input_soil_horizons, input_soil_discretization, IDEPTH, QDEPTH, INITRDEP, RGRORATE, FLAG_MualVanGen)
+        input_soil_horizons, input_soil_discretization, [], IDEPTH, QDEPTH, INITRDEP, RGRORATE, FLAG_MualVanGen)
 
     @test soil_disc["NLAYER"] == 10
     @test soil_disc["THICK"]  ≈ [45.0, 955.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0]
