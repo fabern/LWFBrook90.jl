@@ -95,7 +95,7 @@ function run_example()
 
     ####################
     # Define parameters for differential equation
-    p = define_LWFB90_p(
+    u_aux_PSIM_init, p = define_LWFB90_p(
         input_meteoveg,
         input_meteoveg_reference_date,
         input_param,
@@ -113,7 +113,6 @@ function run_example()
 
     ######
     # Transform initial value of auxiliary state u_aux_PSIM_init into state u_SWATIinit:
-    u_aux_PSIM_init = input_soil_discretization[:,"uAux_PSIM_init_kPa"]
     if any( u_aux_PSIM_init.> 0)
         error("Initial matrix psi must be negative or zero")
     end
