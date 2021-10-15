@@ -1,7 +1,7 @@
 using CSV: read, File
-using DataFrames: DataFrame, rename# ,select
+using DataFrames: DataFrame, rename, sort!# ,select
 using DataFramesMeta#: @linq, transform, DataFramesMeta
-using Dates: DateTime, Millisecond, Second, Day, month, value, dayofyear
+using Dates: DateTime, Millisecond, Second, Day, Month, month, value, dayofyear
 
 """
     read_inputData(folder::String, prefix::String)
@@ -18,7 +18,12 @@ These files were created with an R script `generate_LWFBrook90Julia_Input.R` tha
 takes the same arguements as the R function `LWFBrook90R::run_LWFB90()` and generates
 the corresponding input files for LWFBrook90.jl.
 """
-function read_inputData(folder::String, prefix::String; suffix::String = "")
+# folder = input_path
+# prefix = input_prefix
+# suffix = ""
+function read_inputData(folder::String, prefix::String;
+    suffix::String = "",
+    simulate_isotopes::Bool = false)
     # https://towardsdatascience.com/read-csv-to-data-frame-in-julia-programming-lang-77f3d0081c14
     ## A) Define paths of all input files
     path_meteoveg           = joinpath(folder, prefix*"_meteoveg"*suffix*".csv")
@@ -28,13 +33,33 @@ function read_inputData(folder::String, prefix::String; suffix::String = "")
     path_initial_conditions = joinpath(folder, prefix*"_initial_conditions"*suffix*".csv")
     path_soil_horizons      = joinpath(folder, prefix*"_soil_horizons"*suffix*".csv")
 
+    if (simulate_isotopes)
+        path_meteoiso = joinpath(folder, prefix*"_meteoiso"*suffix*".csv")
+    end
+    if (simulate_isotopes && prefix == "2021-09-23-DAV")
+        # TODO(bernhard): hardcoded overriding of Davos example data
+        path_meteoiso = joinpath("2021-09-23_onlyDavos2020/2021-09-23-DAV-isoInput", "2021-10-04-DAV_meteoIso"*suffix*".csv")
+            path_initial_conditions = joinpath("2021-09-23_onlyDavos2020/2021-09-23-DAV-isoInput",
+                                                "2021-09-23-DAV_initial_conditions_tracers.csv")
+            path_param              = joinpath("2021-09-23_onlyDavos2020/2021-09-23-DAV-isoInput",
+                                                "2021-09-23-DAV_paramIso.csv")
+    end
+
     ## B) Load input data (time- and/or space-varying parameters)
     input_meteoveg, input_meteoveg_reference_date = read_path_meteoveg(path_meteoveg)
+
+    if (simulate_isotopes)
+        input_meteoiso, input_meteoveg = read_path_meteoiso(path_meteoiso,
+            input_meteoveg,
+            input_meteoveg_reference_date)
+    else
+        input_meteoiso = nothing
+    end
 
     ## C) Load other parameters
     # Load model input parameters
     #' @param param A numeric vector of model input parameters. Order:
-    input_param = read_path_param(path_param)
+    input_param = read_path_param(path_param; simulate_isotopes = simulate_isotopes)
 
     # Load initial conditions of scalar state variables
     input_initial_conditions = read_path_initial_conditions(path_initial_conditions)
@@ -57,6 +82,7 @@ function read_inputData(folder::String, prefix::String; suffix::String = "")
     # unused:           ignorerepeated=true)
 
     return (input_meteoveg,
+        input_meteoiso,
         input_meteoveg_reference_date,
         input_param,
         input_storm_durations,
@@ -182,6 +208,88 @@ function read_path_meteoveg(path_meteoveg)
     return input_meteoveg, reference_date
 end
 
+function read_path_meteoiso(path_meteoiso,
+        input_meteoveg,
+        input_meteoveg_reference_date)
+
+    parsing_types =
+            Dict(:Site           => Char,
+                :Date            => DateTime,
+                :Latitude        => Float64,
+                :Longitude       => Float64,
+                :Elevation       => Float64,
+                Symbol("d18O.Piso.AI")     => Float64,
+                Symbol("d2H.Piso.AI")      => Float64)
+
+    input_meteoiso = @linq DataFrame(File(path_meteoiso; header = 4,
+                skipto=5, delim=',', ignorerepeated=true, types=parsing_types))
+    select!(input_meteoiso, Not([:Column1]))
+
+    expected_names = [String(k) for k in keys(parsing_types)]
+    assert_colnames_as_expected(input_meteoiso, path_meteoiso, expected_names)
+
+    #####
+    # Special treatment of Piso.AI data: contains data on 15th of each month
+    # -> a) only keep needed columns and rename them
+    select!(input_meteoiso, Not([:Site, :Latitude, :Longitude, :Elevation]))
+    rename!(input_meteoiso,
+                Symbol("d18O.Piso.AI") => :d18O,
+                Symbol("d2H.Piso.AI") => :d2H)
+    # -> b) Shift all measured dates to end of month to be able to constnat interpolate backwards.
+    #       Further repeat the very line concerning the first month in the timeseries to be
+    #       able to interpolate between the first and last day of the first month.
+    input_meteoiso_first = deepcopy(input_meteoiso[1,:])
+    input_meteoiso_first.Date = floor(input_meteoiso_first.Date, Month)
+    input_meteoiso = @linq input_meteoiso |>
+            transform(Date = ceil.(:Date, Month))
+    push!(input_meteoiso, input_meteoiso_first) # repeat the first
+    sort!(input_meteoiso, [:Date])
+    input_meteoiso[end,:].Date = input_meteoiso[end,:].Date - Day(1) # Modify last to remain within year (31.12. instead of 01.01)
+    #####
+
+    # Transform times from DateTimes to simulation time (Float of Days)
+    input_meteoiso = @linq input_meteoiso |>
+        transform(Date = DateTime2RelativeDaysFloat.(:Date, input_meteoveg_reference_date)) |>
+        rename(Dict(:Date => :days))
+
+    # Check period
+    # Check if overlap with meteoveg exists
+    startday_iso = minimum(input_meteoiso[:,"days"])
+    startday_veg = minimum(input_meteoveg[:,"days"])
+    stopday_iso  = maximum(input_meteoiso[:,"days"])
+    stopday_veg  = maximum(input_meteoveg[:,"days"])
+    startday = max(startday_iso, startday_veg)
+    endday   = min(stopday_iso, stopday_veg)
+
+
+    if ((stopday_iso > stopday_veg) | (startday_iso < startday_veg))
+        @warn """
+        Isotopic signature of precipitation data covers the period from
+        $(input_meteoveg_reference_date + Day(startday_iso)) to $(input_meteoveg_reference_date + Day(stopday_iso))
+        it will be cropped to the period determined by the other meteorologic inputs going from
+        $(input_meteoveg_reference_date + Day(startday_veg)) to $(input_meteoveg_reference_date + Day(stopday_veg)).
+        """
+        input_meteoiso = @linq input_meteoiso |>
+            where(:days .>= startday, :days .<= endday)
+        input_meteoveg_mod = input_meteoveg #Not needed to crop
+    elseif ((stopday_iso < stopday_veg) | (startday_iso > startday_veg))
+        @warn """
+        Isotopic signature of precipitation data covers the period from
+            $(input_meteoveg_reference_date + Day(startday_iso)) to $(input_meteoveg_reference_date + Day(stopday_iso))
+        It does therefore not cover the entire period of other meteorologic inputs going from
+            $(input_meteoveg_reference_date + Day(startday_veg)) to $(input_meteoveg_reference_date + Day(stopday_veg)).
+        Simulation period will be limited to the period when isotopic signatures are available.
+        Note that the initial conditions will be applied to the beginning of the new simulation period.
+        """
+        input_meteoveg_mod = @linq input_meteoveg |>
+            where(:days .>= startday, :days .<= endday)
+    else
+        input_meteoveg_mod = input_meteoveg #Not needed to crop
+    end
+
+    return input_meteoiso, input_meteoveg_mod
+end
+
 # path_initial_conditions = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_initial_conditions.csv"
 function read_path_initial_conditions(path_initial_conditions)
     parsing_types =
@@ -200,9 +308,11 @@ function read_path_initial_conditions(path_initial_conditions)
 end
 
 # path_param = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_param.csv"
-function read_path_param(path_param)
+function read_path_param(path_param; simulate_isotopes::Bool = false)
     parsing_types =
-        Dict(# Meteorologic site parameters -------
+        Dict(### Isotope tranpsport parameters  -------,NA
+            "TODO" => Float64, "TODO2" => Float64,
+            # Meteorologic site parameters -------
             "LAT_DEG" => Float64,
             "ESLOPE_DEG" => Float64,       "ASPECT_DEG" => Float64,
             "ALB" => Float64,              "ALBSN" => Float64,
@@ -241,6 +351,10 @@ function read_path_param(path_param)
             "DRAIN" => Float64,            "GSC" => Float64,              "GSP" => Float64,
             # Numerical solver parameters -------
             "DTIMAX" => Float64,           "DSWMAX" => Float64,           "DPSIMAX" => Float64)
+    if (!simulate_isotopes)
+        delete!(parsing_types, "TODO")
+        delete!(parsing_types, "TODO2")
+    end
 
     input_param = DataFrame(File(path_param;
         transpose=true, drop=[1], comment = "###",

@@ -4,7 +4,7 @@ using DataFrames: DataFrame, rename# ,select
 using DataFramesMeta#: @linq, transform, DataFramesMeta
 
 """
-    discretize_soil(folder::String, prefix::String)
+    discretize_soil(folder::String, prefix::String; suffix::String = "")
 
 Load input file `soil_discretization.csv` for LWFBrook90:
 

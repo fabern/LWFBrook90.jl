@@ -4,7 +4,8 @@
 Generate vector u0 needed for ODE() problem in DiffEq.jl package.
 """
 function define_LWFB90_u0(p, uScalar_initial, uSoil_initial_ψM_kPa,
-    compute_intermediate_quantities)
+    compute_intermediate_quantities;
+    simulate_isotopes::Bool = false)
 
     p_soil = p[1][1]
     # amounts

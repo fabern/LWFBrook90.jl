@@ -1,0 +1,16 @@
+#Data produced with Piso.AI v.1.01 and downloaded on 2021-10-04.
+#Please cite Nelson/Basler/Kahmen (PNAS 2021 Vol. 118 No. 26 e2024107118) when using these data. 
+#Prediction errors: d18O +/- 1.7  d2H +/- 13
+"","Site","Date","Latitude","Longitude","Elevation","d18O.Piso.AI","d2H.Piso.AI"
+"1","Piso.AI.Site_BEA",2016-01-15,46.70022,7.76755,1540,-13.2,-95
+"2","Piso.AI.Site_BEA",2016-02-15,46.70022,7.76755,1540,-12.8,-94
+"3","Piso.AI.Site_BEA",2016-03-15,46.70022,7.76755,1540,-13,-100
+"4","Piso.AI.Site_BEA",2016-04-15,46.70022,7.76755,1540,-10.6,-74
+"5","Piso.AI.Site_BEA",2016-05-15,46.70022,7.76755,1540,-10.9,-77
+"6","Piso.AI.Site_BEA",2016-06-15,46.70022,7.76755,1540,-9.5,-69
+"7","Piso.AI.Site_BEA",2016-07-15,46.70022,7.76755,1540,-6.1,-35
+"8","Piso.AI.Site_BEA",2016-08-15,46.70022,7.76755,1540,-6.6,-42
+"9","Piso.AI.Site_BEA",2016-09-15,46.70022,7.76755,1540,-9.1,-61
+"10","Piso.AI.Site_BEA",2016-10-15,46.70022,7.76755,1540,-10.2,-67
+"11","Piso.AI.Site_BEA",2016-11-15,46.70022,7.76755,1540,-13.3,-95
+"12","Piso.AI.Site_BEA",2016-12-15,46.70022,7.76755,1540,-12,-88

@@ -415,7 +415,9 @@ function define_LWFB90_p(
             interpolated_meteoveg["p_SAI"],
             interpolated_meteoveg["p_AGE"],
             interpolated_meteoveg["p_RELDEN"],
-            interpolated_meteoveg["REFERENCE_DATE"])
+            interpolated_meteoveg["REFERENCE_DATE"],
+            interpolated_meteoveg["p_d18OPREC"],
+            interpolated_meteoveg["p_d2HPREC"])
     # Documentation from ecoshift:
     # DENSEF (Fixed parameter) - canopy density multiplier between 0.05 and 1, dimensionless. DENSEF is normally 1; it should be reduced below this ONLY to simulate thinning of the existing canopy by cutting. It multiplies MAXLAI, CS, MXRTLN, and MXKPL and thus proportionally reduces LAI, SAI, and RTLEN, and increases RPLANT. However it does NOT reduce canopy HEIGHT and thus will give erroneous aerodynamic resistances if it is less than about 0.05. It should NOT be set to 0 to simulate a clearcut. [see PET-CANOPY]
 
@@ -425,11 +427,23 @@ function define_LWFB90_p(
     #     can temporarily be saved in the parameter vector to avoid computing them twice
 
     # Initialize placeholder for parameters that depend on solution and are computed
-    p_fu = ([NaN, NaN, NaN],
+    p_fu = ([NaN, NaN, NaN, NaN, NaN, NaN],
             fill(NaN, NLAYER)) # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto
+    #TODO(bernhard): what are the additional 3x NaNs needed for in isotope code???
+    #Earlier it was simply: [NaN, NaN, NaN, NaN, NaN, NaN], fill(NaN, NLAYER)
 
-    # 3) Return different types of parameters as a single object
-    return (soil_discr["PSIM_init"], (p_cst, p_fT, p_fu))
+    # 3) Compute intial state of soil in terms of the state variable SWATI instead of PSIM
+    # Transform initial value of auxiliary state u_aux_PSIM_init into state u_SWATIinit:
+    if any( soil_discr["PSIM_init"].> 0)
+        error("Initial matrix psi must be negative or zero. Please check column `uAux_PSIM_init_kPa` in the input files.")
+    end
+    u_aux_WETNESinit = LWFBrook90.KPT.FWETNES(soil_discr["PSIM_init"], p_cst[1])
+    u_SWATIinit = p_cst[1].p_SWATMAX ./ p_cst[1].p_THSAT .* LWFBrook90.KPT.FTheta(u_aux_WETNESinit, p_cst[1])
+    u_d18O_init = soil_discr["d18O_init"]
+    u_d2H_init  = soil_discr["d2H_init"]
+
+    # 4) Return different types of parameters as a single object
+    return ((u_SWATIinit,u_d18O_init,u_d2H_init), (p_cst, p_fT, p_fu))
 end
 
 
@@ -438,13 +452,17 @@ end
 
 
 """
-    interpolate_meteoveg(input_meteoveg::DataFrame, input_meteoveg_reference_date::DateTime)
+    interpolate_meteoveg(
+        input_meteoveg::DataFrame,
+        input_meteoveg_reference_date::DateTime,
+        input_meteoiso::DataFrame, )
 
-Take climate and vegetation parameters in `input_meteoveg` and generates continuous parameters.
+Take climate and vegetation parameters in `input_meteoveg` and `input_meteoiso` and generates continuous parameters.
 """
 function interpolate_meteoveg(
     input_meteoveg::DataFrame,
     input_meteoveg_reference_date::DateTime,
+    input_meteoiso::DataFrame,
     # root density parameters
     NLAYER,
     p_INITRDEP,
@@ -478,6 +496,21 @@ function interpolate_meteoveg(
     p_PREC    = extrapolate(scale(interpolate(input_meteoveg.PRECIN,  (BSpline(Constant{Previous}()))), time_range) ,0)
     # NOTE: PRECIN is already in mm/day from the input data set. No transformation is needed for p_PREC.
 
+    if (isnothing(input_meteoiso))
+        function p_d18OPREC(t)
+            return nothing
+        end
+        function p_d2HPREC(t)
+            return nothing
+        end
+    else
+        time_range_iso = range(minimum(input_meteoiso.days), maximum(input_meteoiso.days), length=length(input_meteoiso.days))
+        p_d18OPREC= extrapolate(scale(interpolate(input_meteoiso.d18O,    (BSpline(Constant{Previous}()))), time_range_iso) ,0)
+        p_d2HPREC = extrapolate(scale(interpolate(input_meteoiso.d2H,     (BSpline(Constant{Previous}()))), time_range_iso) ,0)
+        # using Plots; plot(1:300, p_d18OPREC.(1:300))
+        # using Plots; plot(1:300, p_d2HPREC.(1:300))
+    end
+
     # 2a Compute time dependent root density parameters
     # Which is a vector quantity that is dependent on time:
     p_RELDEN_2Darray = fill(NaN, nrow(input_meteoveg), NLAYER)
@@ -494,6 +527,8 @@ function interpolate_meteoveg(
                  ("p_VAPPRES",p_VAPPRES),
                  ("p_WIND",p_WIND),
                  ("p_PREC",p_PREC),
+                 ("p_d18OPREC",p_d18OPREC),
+                 ("p_d2HPREC",p_d2HPREC),
                  ("p_DENSEF",p_DENSEF),
                  ("p_HEIGHT",p_HEIGHT),
                  ("p_LAI",p_LAI),
@@ -681,9 +716,9 @@ function discretize_soil_params(
 
     THICK_m   = soil_discretization[!,"Upper_m"] - soil_discretization[!,"Lower_m"] # thickness of soil layer [m]
     THICK     = 1000*(THICK_m)                                    # thickness of soil layer [mm]
-    PSIM_init = soil_discretization[!,"uAux_PSIM_init_kPa"]         # initial condition PSIM [kPa]
-    # d18O_soil_init = soil_discretization[!,"u_delta18O_init_mUr"]  # initial condition soil water δ18O [mUr]
-    # d2H_soil_init  = soil_discretization[!,"u_delta2H_init_mUr"]   # initial condition soil water δ2H [mUr]
+    PSIM_init = soil_discretization[!,"uAux_PSIM_init_kPa"]       # initial condition PSIM [kPa]
+    d18O_soil_init = soil_discretization[!,"u_delta18O_init_mUr"] # initial condition soil water δ18O [mUr]
+    d2H_soil_init  = soil_discretization[!,"u_delta2H_init_mUr"]  # initial condition soil water δ2H [mUr]
 
     @assert all(PSIM_init .<= 0) "Initial matrix psi must be negative or zero"
 
@@ -820,6 +855,8 @@ function discretize_soil_params(
                 ("QLAYER",QLAYER),
                 ("THICK",THICK),
                 ("PSIM_init",PSIM_init),
+                ("d18O_init",d18O_soil_init),
+                ("d2H_init",d2H_soil_init),
                 ("frelden",frelden),
                 ("PAR",PAR),
                 ("STONEF",STONEF),
