@@ -29,5 +29,22 @@ function define_LWFB90_ODE(u0, tspan, p)
                      tspan,
                      p,
                      callback=cb_func)
-    return ode
+
+
+    # Define stability check for numerical solver that accepts NAs as undefined isotopic
+    # concentrations (e.g. when a compartment such as SNOW is empty its concentration
+    # is undefined)
+    # unstable_check_function = (dt,u,p,t) -> false
+    # TODO(bernhard) : use below to constrain unstable check to idx_u_vector_amounts
+    # idx_u_vector_amounts       = p[1][4][4]
+    # unstable_check_function = (dt,u,p,t) -> any(isnan,u[idx_u_vector_amounts])
+    unstable_check_function = (dt,u,p,t) -> any(isnan,u[p[1][4][4]])
+    # # idx_u_vector_amounts       = p[1][4][4]
+    # # idx_u_scalar_isotopes_d18O = p[1][4][5]
+    # # idx_u_vector_isotopes_d18O = p[1][4][6]
+    # # idx_u_scalar_isotopes_d2H  = p[1][4][7]
+    # # idx_u_vector_isotopes_d2H  = p[1][4][8]
+    # # idx_u_vector_accumulators  = p[1][4][9]
+
+    return ode, unstable_check_function
 end

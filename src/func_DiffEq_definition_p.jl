@@ -19,6 +19,7 @@ Generate vector p needed for ODE() problem in DiffEq.jl package.
 """
 function define_LWFB90_p(
     input_meteoveg,
+    input_meteoiso,
     input_meteoveg_reference_date,
     input_param,
     input_storm_durations,
@@ -27,6 +28,7 @@ function define_LWFB90_p(
     simOption_FLAG_MualVanGen;
     Reset = false,
     compute_intermediate_quantities = false,
+    simulate_isotopes::Bool = false,
     soil_output_depths = zeros(Float64, 0), # = [],
     constant_dt_solver = 1)
 
@@ -47,6 +49,7 @@ function define_LWFB90_p(
         LWFBrook90.interpolate_meteoveg(
             input_meteoveg,
             input_meteoveg_reference_date,
+            input_meteoiso,
             soil_discr["NLAYER"],
             input_param[1,"INITRDEP"],
             input_param[1,"INITRLEN"],
@@ -375,22 +378,37 @@ function define_LWFB90_p(
     # 6 is the number of states except SWAT: i.e. GWAT, INTS, INTR, SNOW, CC, SNOWLQ
     idx_u_scalar_amounts       = 1:6
     idx_u_vector_amounts       = 7:(6+NLAYER)
+    if simulate_isotopes
+        # 4 is the number of states except SWAT that have concentrations: i.e. INTS, INTR, SNOW, GWAT
+        idx_u_scalar_isotopes_d18O = 6+NLAYER     .+ (1:4)
+        idx_u_vector_isotopes_d18O = 6+NLAYER     .+ (4 .+ (1:NLAYER))
+        idx_u_scalar_isotopes_d2H  = 6+4+2*NLAYER .+ (1:4)
+        idx_u_vector_isotopes_d2H  = 6+4+2*NLAYER .+ (4 .+ (1:NLAYER))
+
+    else
+        idx_u_scalar_isotopes_d18O = []
+        idx_u_vector_isotopes_d18O = []
+        idx_u_scalar_isotopes_d2H  = []
+        idx_u_vector_isotopes_d2H  = []
+    end
     if compute_intermediate_quantities
         # 25 is the number of currently programmed intermediate quantities
-        # if simulate_isotopes
-        #     idx_u_vector_accumulators = 6+4+4+3*NLAYER .+ (1:25)
-        # else
-        idx_u_vector_accumulators = 6 + 0 + 0 + 1 * NLAYER .+ (1:25)
-        names_u_vector_accumulators = [
-            "cum_d_prec"  "cum_d_rfal"  "cum_d_sfal"  "cum_d_rint" "cum_d_sint"  "cum_d_rsno"  "cum_d_rnet"  "cum_d_smlt"  "cum_d_evap"  "cum_d_tran"  "cum_d_irvp"  "cum_d_isvp"  "cum_d_slvp"  "cum_d_snvp"  "cum_d_pint"  "cum_d_ptran"  "cum_d_pslvp" "flow"  "seep"  "srfl"  "slfl"  "byfl"  "dsfl"  "gwfl"  "vrfln"
-            #"cum_d_rthr", "cum_d_sthr"
-        ]
-        # end
+        if simulate_isotopes
+            idx_u_vector_accumulators = 6+4+4+3*NLAYER .+ (1:25)
+        else
+            idx_u_vector_accumulators = 6 + 0 + 0 + 1 * NLAYER .+ (1:25)
+            names_u_vector_accumulators = [
+                "cum_d_prec"  "cum_d_rfal"  "cum_d_sfal"  "cum_d_rint" "cum_d_sint"  "cum_d_rsno"  "cum_d_rnet"  "cum_d_smlt"  "cum_d_evap"  "cum_d_tran"  "cum_d_irvp"  "cum_d_isvp"  "cum_d_slvp"  "cum_d_snvp"  "cum_d_pint"  "cum_d_ptran"  "cum_d_pslvp" "flow"  "seep"  "srfl"  "slfl"  "byfl"  "dsfl"  "gwfl"  "vrfln"
+                #"cum_d_rthr", "cum_d_sthr"
+            ]
+        end
     else
         idx_u_vector_accumulators = []
     end
 
     p_cst_4 = (NLAYER, FLAG_MualVanGen, compute_intermediate_quantities,
+        idx_u_scalar_isotopes_d18O, idx_u_vector_isotopes_d18O,
+        idx_u_scalar_isotopes_d2H,  idx_u_vector_isotopes_d2H,
         idx_u_vector_amounts,
         idx_u_vector_accumulators,
         idx_u_scalar_amounts,

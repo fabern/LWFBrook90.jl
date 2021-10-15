@@ -30,7 +30,8 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
         ## B) time dependent parameters
         (p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC,
-        _, _, _, _, _) = p[2]
+        _, _, _, _, _, _,
+        p_δ18O_PREC, p_δ2H_PREC) = p[2]
 
         ## C) state dependent parameters:
         # Calculate parameters:
@@ -44,7 +45,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
         # These were computed in the callback and are kept constant in between two
         # callbacks.
-        (p_fu_RNET, aux_du_SMLT, aux_du_SLVP) = p[3][1]
+        (p_fu_RNET, aux_du_SMLT, aux_du_SLVP, δ18O_SLFL, δ2H_SLFL, p_fu_TADTM) = p[3][1]
         aux_du_TRANI = p[3][2]
 
 
