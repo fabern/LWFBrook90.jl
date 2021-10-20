@@ -10,6 +10,7 @@ input_path = "examples/" * input_prefix * "-input/"
 
 ####################
 (input_meteoveg,
+    _input_meteoiso, # unused
     input_meteoveg_reference_date,
     input_param,
     input_storm_durations,
@@ -56,6 +57,7 @@ compute_intermediate_quantities = true # Flag whether ODE containes additional q
 # Define parameters for differential equation
 ψM_initial, p = define_LWFB90_p(
     input_meteoveg,
+    _input_meteoiso, # unused
     input_meteoveg_reference_date,
     input_param,
     input_storm_durations,
@@ -65,7 +67,8 @@ compute_intermediate_quantities = true # Flag whether ODE containes additional q
     Reset = Reset,
     # soil_output_depths = collect(-0.05:-0.05:-1.1),
     # soil_output_depths = [-0.1, -0.5, -1.0, -1.5, -1.9],
-    compute_intermediate_quantities = compute_intermediate_quantities)
+    compute_intermediate_quantities = compute_intermediate_quantities,
+    simulate_isotopes = false)
 ####################
 
 ####################
@@ -74,7 +77,8 @@ compute_intermediate_quantities = true # Flag whether ODE containes additional q
 # Create u0 for DiffEq.jl
 u0 = define_LWFB90_u0(p, input_initial_conditions,
     ψM_initial,
-    compute_intermediate_quantities)
+    compute_intermediate_quantities,
+    simulate_isotopes = false)
 ####################
 
 ####################
@@ -94,12 +98,12 @@ tspan = (minimum(input_meteoveg[:, "days"]),
 #          LWFBrook90.DateTime2RelativeDaysFloat(DateTime(1985,1,1), reference_date)) # simulates selected period
 
 # Define ODE:
-ode_LWFBrook90 = define_LWFB90_ODE(u0, tspan, p)
+ode_LWFBrook90, unstable_check_function = define_LWFB90_ODE(u0, tspan, p);
 ####################
 
 ####################
 ## Solve ODE:
-sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
+@time sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
     progress = true,
     saveat = tspan[1]:tspan[2], dt = 1e-3, adaptive = true); # dt is initial dt, but adaptive
 ####################

@@ -351,10 +351,10 @@ function read_path_param(path_param; simulate_isotopes::Bool = false)
             "DRAIN" => Float64,            "GSC" => Float64,              "GSP" => Float64,
             # Numerical solver parameters -------
             "DTIMAX" => Float64,           "DSWMAX" => Float64,           "DPSIMAX" => Float64)
-    if (!simulate_isotopes)
-        delete!(parsing_types, "TODO")
-        delete!(parsing_types, "TODO2")
-    end
+    # if (!simulate_isotopes)
+    #     delete!(parsing_types, "TODO")
+    #     delete!(parsing_types, "TODO2")
+    # end
 
     input_param = DataFrame(File(path_param;
         transpose=true, drop=[1], comment = "###",

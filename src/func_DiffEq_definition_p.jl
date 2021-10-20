@@ -480,7 +480,7 @@ Take climate and vegetation parameters in `input_meteoveg` and `input_meteoiso` 
 function interpolate_meteoveg(
     input_meteoveg::DataFrame,
     input_meteoveg_reference_date::DateTime,
-    input_meteoiso::DataFrame,
+    input_meteoiso::Union{DataFrame,Nothing},
     # root density parameters
     NLAYER,
     p_INITRDEP,

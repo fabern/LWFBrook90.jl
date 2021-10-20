@@ -3,8 +3,10 @@ using OrdinaryDiffEq: solve, Tsit5
 # example = LWFBrook90.run_example()
 
 # Read in input data
-input_prefix = "isoBEA2016-reset-FALSE"
-input_path = "example/BEA2016-reset-FALSE-input/"
+# input_prefix = "isoBEA2016-reset-FALSE"
+# input_path = "example/BEA2016-reset-FALSE-input/"
+input_prefix = "isoBEA2010-18-reset-FALSE";
+input_path = "example/isoBEA2010-18-reset-FALSE-input/";
 
 ####################
 simulate_isotopes = true
@@ -16,14 +18,14 @@ simulate_isotopes = true
     input_initial_conditions,
     input_soil_horizons,
     input_soil_discretization,
-    simOption_FLAG_MualVanGen) = read_inputData(input_path, input_prefix,
-                                                simulate_isotopes = simulate_isotopes)
+    simOption_FLAG_MualVanGen) = read_inputData(input_path, input_prefix;
+                                                simulate_isotopes = simulate_isotopes);
 ####################
 
 ####################
 # Define solver options
-Reset = false                          # currently only Reset = 0 implemented
-compute_intermediate_quantities = true # Flag whether ODE containes additional quantities than only states
+Reset = false;                          # currently only Reset = 0 implemented
+compute_intermediate_quantities = true; # Flag whether ODE containes additional quantities than only states
 
 # Override input file settings
 # Here possibility to check and override dataframes input_[...] manually
@@ -45,7 +47,9 @@ uSoil_initial, p = define_LWFB90_p(
     simOption_FLAG_MualVanGen;
     Reset = Reset,
     compute_intermediate_quantities = compute_intermediate_quantities,
-    simulate_isotopes = true)
+    simulate_isotopes = simulate_isotopes#,
+    # soil_output_depths = [-0.35, -0.42, -0.48]
+    );
 ####################
 
 ####################
@@ -56,7 +60,7 @@ uSoil_initial, p = define_LWFB90_p(
 u0 = define_LWFB90_u0(p, input_initial_conditions,
                       uSoil_initial,
                       compute_intermediate_quantities;
-                      simulate_isotopes = simulate_isotopes)
+                      simulate_isotopes = simulate_isotopes);
 ####################
 
 ####################
@@ -74,6 +78,7 @@ tspan = (minimum(input_meteoveg[:,"days"]),
          maximum(input_meteoveg[:,"days"])) # simulate all available days
 # tspan = (LWFBrook90.DateTime2RelativeDaysFloat(DateTime(1980,1,1), reference_date),
 #          LWFBrook90.DateTime2RelativeDaysFloat(DateTime(1985,1,1), reference_date)) # simulates selected period
+tspan = (0., 700.)
 
 # Define ODE:
 ode_LWFBrook90, unstable_check_function = define_LWFB90_ODE(u0, tspan, p);
@@ -89,26 +94,18 @@ ode_LWFBrook90, unstable_check_function = define_LWFB90_ODE(u0, tspan, p);
 
 ####################
 ## Benchmarking
+# @time sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5(); progress = true,
+#     unstable_check = unstable_check_function, # = (dt,u,p,t) -> false, #any(isnan,u),
+#     saveat = tspan[1]:tspan[2], dt=1e-6, dtmax=1e-3, adaptive = true);
 @time sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5(); progress = true,
     unstable_check = unstable_check_function, # = (dt,u,p,t) -> false, #any(isnan,u),
-    saveat = tspan[1]:tspan[2], dt=1e-1, adaptive = false);
+    saveat = tspan[1]:tspan[2], dt=1e-3, adaptive = false);
 # @time sol_LWFBrook90 = solve(ode_LWFBrook90, progress = true, Euler(); # Note: Euler sometimes hangs
 #     saveat = tspan[1]:tspan[2], dt=1e-1, adaptive = false);
 # using BenchmarkTools # for benchmarking
 # sol_LWFBrook90 = @btime solve(ode_LWFBrook90; dt=1.0e-1, adaptive = false); # dt will be overwritten, adaptive deacives DiffEq.jl adaptivity
 # sol_LWFBrook90 = @btime solve(ode_LWFBrook90; saveat = tspan[1]:tspan[2], dt=1.0e-1, adaptive = false); # dt will be overwritten, adaptive deacives DiffEq.jl adaptivity
 ####################
-# x = LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date);
-# y = cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK);
-# z = sol_LWFBrook90[7 .+ (0:sol_LWFBrook90.prob.p[1][1].NLAYER-1),
-#                     1,
-#                     :]./sol_LWFBrook90.prob.p[1][1].p_THICK;
-# z2 = sol_LWFBrook90[idx_u_vector_isotopes_d18O,1,:]
-# z3 = sol_LWFBrook90[idx_u_vector_isotopes_d2H,1,:];
-# heatmap(x, y, z2, yflip = true,
-#         xlabel = "Date",
-#         ylabel = "Depth [mm]",
-#         colorbar_title = "δ18O [mUr]")
 
 ####################
 ## Plotting
