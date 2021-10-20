@@ -312,7 +312,6 @@ end
 
 
 function MSBPREINT(#arguments:
-                   #
                    p_fT_PREC, p_DTP, p_fT_SNOFRC, p_NPINT, p_fu_PINT, p_fu_TA,
                    # for INTER (snow)
                    u_INTS, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS,
@@ -526,4 +525,465 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
 
 
     return (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, DTI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI, du_GWFL, du_SEEP)
+end
+
+
+"""
+    compute_isotope_INTS_INTR_SNOW!(
+        p_δ2H_PREC, p_δ18O_PREC, p_fu_TADTM, p_EA,
+        # for INTS (in: SINT; out: ISVP):
+        u_INTS, aux_du_SINT, aux_du_ISVP, p_DTP, u_δ2H_INTS, u_δ18O_INTS,
+        # for INTR (in: RINT; out: IRVP):
+        u_INTR, aux_du_RINT, aux_du_IRVP, u_δ2H_INTR, u_δ18O_INTR,
+        # for SNOW (in: STHR, RSNO (both δ_PREC); out: SMLT, SNVP (δ_SNOW and fractionated)):
+        p_fu_STHR, aux_du_RSNO, aux_du_SMLT, aux_du_SNVP, u_δ2H_SNOW, u_δ18O_SNOW,
+        # to compute isotopic signature of soil infiltration: SLFL
+        p_fu_RNET)
+
+In-line update of amounts of states INTS, INTR, and SNOW as well as their isotopic composition.
+Compute mixing and evaporative fractionation, and also compute the isotopic composotion of
+the resulting flux that infiltrates into the soil: δ18O_SLFL, δ2H_SLFL
+
+The function is called in the daily callback.
+
+The function returns (δ18O_SLFL, δ2H_SLFL) but also modifies the following input arguments in-place:
+    u_INTS
+    u_δ18O_INTS
+    u_δ2H_INTS
+    u_INTR
+    u_δ18O_INTR
+    u_δ2H_INTR
+    u_SNOW
+    u_δ18O_SNOW
+    u_δ2H_SNOW
+"""
+function compute_isotope_INTS_INTR_SNOW!(
+    p_δ2H_PREC, p_δ18O_PREC, p_fu_TADTM, p_EA,
+    # for INTS (in: SINT; out: ISVP):
+    u_INTS, aux_du_SINT, aux_du_ISVP, p_DTP, u_δ2H_INTS, u_δ18O_INTS,
+    # for INTR (in: RINT; out: IRVP):
+    u_INTR, aux_du_RINT, aux_du_IRVP, u_δ2H_INTR, u_δ18O_INTR,
+    # for SNOW (in: STHR, RSNO (both δ_PREC); out: SMLT, SNVP (δ_SNOW and fractionated)):
+    u_SNOW, u_SNOW_new, p_fu_STHR, aux_du_RSNO, aux_du_SMLT, aux_du_SNVP, u_δ2H_SNOW, u_δ18O_SNOW,
+    # to compute isotopic signature of soil infiltration: SLFL
+    p_fu_RNET)
+    # check chart "../docs/src/assets/b90flow.gif"
+
+    ##################
+    ##################
+    ##################
+    # Define conditions for isotope calculations:
+    Tc = p_fu_TADTM  # °C, average daytime air temperature
+    h = min(1.0,p_EA) # -, relative humidity of the atmosphere (vappress_atm/1 atm)
+    γ = 1.0          # -, thermodynamic activity coefficient of evaporating water
+    X_INTS = 0.5  # -, turbulence incex of the atmosphere above the evaporating water
+    X_INTR = 0.5  # -, turbulence incex of the atmosphere above the evaporating water
+    X_SNOW = 1.0  # -, turbulence incex of the atmosphere above the evaporating water
+
+    # 1c) Atmospheric vapor composition assumed to be in equilibrium with precipitation
+    #     Benettin-2018-Hydrol_Earh_Syst_Sci citing Gibson et al. 2008
+    δₐ(δ_p, α_eq) = (δ_p - 1000 * (α_eq - 1))/α_eq
+    δ²H_a  = δₐ(p_δ2H_PREC,  LWFBrook90.ISO.α²H_eq(Tc))
+    δ¹⁸O_a = δₐ(p_δ18O_PREC, LWFBrook90.ISO.α¹⁸O_eq(Tc))
+
+    # # For soil:
+    # Xa = 0.5 # between molecular and turbulent
+    # Xs = 1.0 # molecular only
+    # X_SOIL = ((θ_s-θ_res)*Xa + (θ_sat-θ_s)*Xs)/(θ_sat-θ_res)
+    # # Taken from Zhou-2021-Environ_Model_Softw (X is called n_k there)
+    ##################
+    ##################
+    ##################
+    # 2a) INTS (in: SINT*δ_SINT; out: ISVP*δ_ISVP)
+    #          with δ_SINT = δ_PREC; δ_ISVP = f(f, α, ...)
+
+    # Alternative formulation:
+    # ε_eq2H  = (LWFBrook90.ISO.α¹⁸O_eq(Tc)-1)*1000
+    # ε_eq18O = (LWFBrook90.ISO.α¹⁸O_eq(Tc)-1)*1000
+    # ε_kin2H  = (LWFBrook90.ISO.α²H_dif - 1)*1000
+    # ε_kin18O = (LWFBrook90.ISO.α¹⁸O_dif - 1)*1000
+    # δ2H_E  = ((δ2H  - ε_eq2H) /LWFBrook90.ISO.α²H_eq(Tc)  - h*δ²H_a  - ε_kin2H)  / (1. - h + ε_kin2H/1000) # [‰] Benettin 2018 HESS eq. 1 and Gibson 2016 QSR eq. 3
+    # δ18O_E = ((δ18O - ε_eq18O)/LWFBrook90.ISO.α¹⁸O_eq(Tc) - h*δ¹⁸O_a - ε_kin18O) / (1. - h + ε_kin18O/1000)# [‰] Benettin 2018 HESS eq. 1 and Gibson 2016 QSR eq. 3
+    δ18O_empty = NaN
+    δ2H_empty  = NaN
+
+    # Operator step 1
+    @assert aux_du_SINT >= 0 "aux_du_SINT should not be negative"
+    if ((u_INTS == 0) & (aux_du_SINT == 0)) # initially no intercepted snow and no new is added
+        u_δ18O_INTS_final = δ18O_empty
+        u_δ2H_INTS_final  = δ2H_empty
+        u_INTS_final      = 0
+    else
+        u_INTS_first = u_INTS + aux_du_SINT*p_DTP
+        if ((u_INTS == 0) & (aux_du_SINT > 0)) # initially no intercepted snow but some is added
+            u_δ18O_INTS_first = p_δ18O_PREC
+            u_δ2H_INTS_first  = p_δ2H_PREC
+        else # u_INTS is not zero, and some/none is added (aux_du_SINT=0 or aux_du_SINT>0)
+            # some bug in this formulation: u_δ18O_INTS_first = u_δ18O_INTS + aux_du_SINT*p_DTP/u_INTS * (p_δ18O_PREC-u_δ18O_INTS)
+            # some bug in this formulation: u_δ2H_INTS_first  = u_δ2H_INTS  + aux_du_SINT*p_DTP/u_INTS * (p_δ2H_PREC -u_δ2H_INTS )
+            # u_δ18O_INTS_first = 1/u_INTS_first * (u_δ18O_INTS * u_INTS + p_DTP*(p_δ18O_PREC*aux_du_SINT))
+            # u_δ2H_INTS_first  = 1/u_INTS_first * (u_δ2H_INTS  * u_INTS + p_DTP*(p_δ2H_PREC*aux_du_SINT))
+            contrib_fraction = min(1,max(0, p_DTP * (aux_du_SINT)/u_INTS_first))
+            u_δ18O_INTS_first = (u_δ18O_INTS * (1 - contrib_fraction) + p_δ18O_PREC * contrib_fraction)
+            u_δ2H_INTS_first  = (u_δ2H_INTS  * (1 - contrib_fraction) + p_δ2H_PREC  * contrib_fraction)
+        end
+
+        # Operator step 2: now taking care of aux_du_ISVP
+        u_INTS_final = u_INTS + (aux_du_SINT - aux_du_ISVP) * p_DTP
+        f_INTS = min(1,max(0, u_INTS_final/u_INTS_first)) # fraction remaining after evaporation
+        # if (f_INTS <= 0.3) #(f_INTS == 0)
+        #     u_δ18O_INTS_final = δ18O_empty
+        #     u_δ2H_INTS_final  = δ2H_empty
+        # else
+        f_INTS = min(1.0, max(0.5, f_INTS)) # TODO(bernhard): workaround for stability
+            # ε_δ18O = 1/(LWFBrook90.ISO.α¹⁸O_eq(Tc) * LWFBrook90.ISO.α¹⁸O_dif^X_INTS) - 1
+            # ε_δ2H  = 1/(LWFBrook90.ISO.α²H_eq(Tc)  * LWFBrook90.ISO.α²H_dif^X_INTS)  - 1
+            # u_δ18O_INTS_final = 1000 * ( (1 + u_δ18O_INTS_first/1000)(f_INTS)^ε_δ18O - 1 )
+            # u_δ2H_INTS_final  = 1000 * ( (1 + u_δ2H_INTS_first /1000)(f_INTS)^ε_δ2H  - 1 )
+            u_δ18O_INTS_final = u_δ18O_INTS_first
+            u_δ2H_INTS_final  = u_δ2H_INTS_first
+            # TODO(Bernhard): investigate why below leads to instabilities
+            # u_δ18O_INTS_final = 1000 * LWFBrook90.ISO.δ_CraigGordon.(u_δ18O_INTS_first/1000, δ¹⁸O_a/1000, f_INTS, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif, γ, X_INTS)
+            # u_δ2H_INTS_final  = 1000 * LWFBrook90.ISO.δ_CraigGordon.(u_δ2H_INTS_first /1000,  δ²H_a/1000, f_INTS, h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,  γ, X_INTS)
+        # end
+    end
+
+    # 2b) INTR (in: RINT*δ_RINT; out: IRVP*δ_IRVP)
+    #          with δ_RINT = δ_PREC; δ_IRVP = f(f, α, ...)
+    # Operator step 1
+
+    @assert aux_du_RINT >= 0 "aux_du_RINT should not be negative"
+    if ((u_INTR == 0) & (aux_du_RINT == 0)) # initially no intercepted rain and no new is added
+        u_δ18O_INTR_final = δ18O_empty
+        u_δ2H_INTR_final  = δ2H_empty
+        u_INTR_final      = 0
+    else
+        u_INTR_first = u_INTR + aux_du_RINT*p_DTP
+        if ((u_INTR == 0) & (aux_du_RINT > 0)) # initially no intercepted rain but some is added
+            u_δ18O_INTR_first = p_δ18O_PREC
+            u_δ2H_INTR_first  = p_δ2H_PREC
+        else # u_INTR is not zero, and some/none is added (aux_du_RINT=0 or aux_du_RINT>0)
+            # some bug in this formulation: u_δ18O_INTR_first = u_δ18O_INTR + aux_du_RINT*p_DTP/u_INTR * (p_δ18O_PREC-u_δ18O_INTR)
+            # some bug in this formulation: u_δ2H_INTR_first  = u_δ2H_INTR  + aux_du_RINT*p_DTP/u_INTR * (p_δ2H_PREC -u_δ2H_INTR )
+            # u_δ18O_INTR_first = 1/u_INTR_first * (u_δ18O_INTR * u_INTR + p_DTP*(p_δ18O_PREC*aux_du_RINT))
+            # u_δ2H_INTR_first  = 1/u_INTR_first * (u_δ2H_INTR  * u_INTR + p_DTP*(p_δ2H_PREC*aux_du_RINT))
+            contrib_fraction = min(1,max(0, p_DTP * (aux_du_RINT)/u_INTR_first))
+            u_δ18O_INTR_first = (u_δ18O_INTR * (1 - contrib_fraction) + p_δ18O_PREC * contrib_fraction)
+            u_δ2H_INTR_first  = (u_δ2H_INTR  * (1 - contrib_fraction) + p_δ2H_PREC  * contrib_fraction)
+        end
+        # Operator step 2: now taking care of aux_du_IRVP
+        u_INTR_final = u_INTR + (aux_du_RINT - aux_du_IRVP) * p_DTP
+        f_INTR = max(0, u_INTR_final/u_INTR_first) # fraction remaining after evaporation
+        # if (f_INTR <= 0.3) #(f_INTR == 0)
+        #     u_δ18O_INTR_final = δ18O_empty
+        #     u_δ2H_INTR_final  = δ2H_empty
+        # else
+        f_INTR = min(1.0, max(0.3, f_INTR)) # TODO(bernhard): workaround for stability
+            # ε_δ18O = 1/(LWFBrook90.ISO.α¹⁸O_eq(Tc) * LWFBrook90.ISO.α¹⁸O_dif^X_INTR) - 1
+            # ε_δ2H  = 1/(LWFBrook90.ISO.α²H_eq(Tc)  * LWFBrook90.ISO.α²H_dif^X_INTR)  - 1
+            # u_δ18O_INTR_final = 1000 * ( (1 + u_δ18O_INTR_first/1000)(f_INTR)^ε_δ18O - 1 )
+            # u_δ2H_INTR_final  = 1000 * ( (1 + u_δ2H_INTR_first /1000)(f_INTR)^ε_δ2H  - 1 )
+            u_δ18O_INTR_final = u_δ18O_INTR_first
+            u_δ2H_INTR_final  = u_δ2H_INTR_first
+            # TODO(Bernhard): investigate why below leads to instabilities
+            # u_δ18O_INTR_final = 1000 * LWFBrook90.ISO.δ_CraigGordon.(u_δ18O_INTR_first/1000, δ¹⁸O_a/1000, f_INTR, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif, γ, X_INTR)
+            # u_δ2H_INTR_final  = 1000 * LWFBrook90.ISO.δ_CraigGordon.(u_δ2H_INTR_first /1000,  δ²H_a/1000, f_INTR, h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,  γ, X_INTR)
+        # end
+    end
+
+    # 2c) SNOW (in: STHR*δ_STHR, RSNO*δ_RSNO; out: SMLT*δ_SMLT, SNVP*δ_SNVP)
+    #          with δ_STHR = δ_PREC, δ_RSNO = δ_PREC; δ_SMLT = δ_SNOW, δ_SNVP = f(f, α, ...)
+
+    # NOTE: for SNOW the isotope balance is greatly simplified. The most precise
+    #       approach would be to define mixing concentrattion within `SNOWPACK()` in `module_SNO.jl`
+    # Operator step 1
+
+    @assert p_fu_STHR + aux_du_RSNO >= 0 "p_fu_STHR + aux_du_RSNO should not be negative"
+    if ((u_SNOW == 0) & (p_fu_STHR + aux_du_RSNO == 0)) # initially no snowpack and no new is added
+        u_δ18O_SNOW_final = δ18O_empty
+        u_δ2H_SNOW_final  = δ2H_empty
+        u_SNOW_final      = 0
+    else
+        u_SNOW_first = u_SNOW + p_DTP * (p_fu_STHR + aux_du_RSNO - aux_du_SMLT)
+        if ((u_SNOW == 0) & (p_fu_STHR + aux_du_RSNO > 0)) # initially no snowpack but some is added
+            u_δ18O_SNOW_first = p_δ18O_PREC
+            u_δ2H_SNOW_first  = p_δ2H_PREC
+        else # u_SNOW is not zero, and some/none is added ((p_fu_STHR + aux_du_RSNO)=0 or (p_fu_STHR + aux_du_RSNO)>0)
+            # p_fu_STHR, aux_du_RSNO, aux_du_SMLT, aux_du_SNVP
+            # some bug in this formulation: u_δ18O_SNOW_first = u_δ18O_SNOW + (p_fu_STHR + aux_du_RSNO)*p_DTP/u_SNOW * (p_δ18O_PREC - u_δ18O_SNOW)
+            # some bug in this formulation:                             # NOTE: because the outflow term for aux_du_SMLT has
+            # some bug in this formulation:                             #       an isotope concentration of u_δ18O_SNOW and it is thus not needed:
+            # some bug in this formulation:                             # - (aux_du_SMLT)*p_DTP/u_SNOW * (u_δ18O_SNOW-u_δ18O_SNOW)
+            # some bug in this formulation: u_δ2H_SNOW_first = u_δ2H_SNOW + (p_fu_STHR + aux_du_RSNO)*p_DTP/u_SNOW * (p_δ2H_PREC - u_δ2H_SNOW)
+            # some bug in this formulation:                             # NOTE: because the outflow term for aux_du_SMLT has
+            # some bug in this formulation:                             #       an isotope concentration of u_δ2H_SNOW and it is thus not needed:
+            # some bug in this formulation:                             # - (aux_du_SMLT)*p_DTP/u_SNOW * (u_δ2H_SNOW-u_δ2H_SNOW)
+            # u_δ18O_SNOW_first = (u_δ18O_SNOW * (u_SNOW - p_DTP*aux_du_SMLT) + p_δ18O_PREC * p_DTP*(p_fu_STHR + aux_du_RSNO)) / u_SNOW_first
+            # u_δ2H_SNOW_first  = (u_δ2H_SNOW  * (u_SNOW - p_DTP*aux_du_SMLT) + p_δ2H_PREC  * p_DTP*(p_fu_STHR + aux_du_RSNO)) / u_SNOW_first
+            contrib_fraction = min(1,max(0, p_DTP * (p_fu_STHR + aux_du_RSNO)/u_SNOW_first))
+            u_δ18O_SNOW_first = (u_δ18O_SNOW * (1 - contrib_fraction) + p_δ18O_PREC * contrib_fraction)
+            u_δ2H_SNOW_first  = (u_δ2H_SNOW  * (1 - contrib_fraction) + p_δ2H_PREC  * contrib_fraction)
+        end
+        # Operator step 2: now taking care of aux_du_SNVP
+        u_SNOW_final = u_SNOW + p_DTP * (p_fu_STHR + aux_du_RSNO - aux_du_SMLT - aux_du_SNVP)
+        f_SNOW = min(1, max(0, u_SNOW_final/u_SNOW_first)) # fraction remaining after evaporation
+        # if (f_SNOW <= 0.3) #(f_SNOW == 0)
+        #     u_δ18O_SNOW_final = δ18O_empty
+        #     u_δ2H_SNOW_final  = δ2H_empty
+        # else
+        f_SNOW = max(0.5, f_SNOW) # TODO(bernhard): workaround for stability
+            # ε_δ18O = 1/(LWFBrook90.ISO.α¹⁸O_eq(Tc) * LWFBrook90.ISO.α¹⁸O_dif^X_SNOW) - 1
+            # ε_δ2H  = 1/(LWFBrook90.ISO.α²H_eq(Tc)  * LWFBrook90.ISO.α²H_dif^X_SNOW)  - 1
+            # u_δ18O_SNOW_final = 1000 * ( (1 + u_δ18O_SNOW_first/1000)(f_SNOW)^ε_δ18O - 1 )
+            # u_δ2H_SNOW_final  = 1000 * ( (1 + u_δ2H_SNOW_first /1000)(f_SNOW)^ε_δ2H  - 1 )
+            u_δ18O_SNOW_final = u_δ18O_SNOW_first
+            u_δ2H_SNOW_final  = u_δ2H_SNOW_first
+            # TODO(Bernhard): investigate why below leads to instabilities
+            # u_δ18O_SNOW_final = 1000 * LWFBrook90.ISO.δ_CraigGordon.(u_δ18O_SNOW_first/1000, δ¹⁸O_a/1000, f_SNOW, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif, γ, X_SNOW)
+            # u_δ2H_SNOW_final  = 1000 * LWFBrook90.ISO.δ_CraigGordon.(u_δ2H_SNOW_first /1000,  δ²H_a/1000, f_SNOW, h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,  γ, X_SNOW)
+        # end
+    end
+
+
+    # 3) also compute δ_SLFL as mix of δ_SMLT with δ_RNET (i.e. water that infiltrates)
+    # if (aux_du_SMLT + p_fu_RNET == 0)
+    #     δ18O_SLFL = δ18O_empty
+    #     δ2H_SLFL  = δ2H_empty
+    # elseif (aux_du_SMLT == 0)
+    #     δ18O_SLFL = p_δ18O_PREC
+    #     δ2H_SLFL  = p_δ2H_PREC
+    # elseif (p_fu_RNET == 0)
+    #     δ18O_SLFL = u_δ18O_SNOW_final  # TODO(bernhard): using final is effectively operator splitting, (the isotope mass balance is not exact)
+    #     δ2H_SLFL  = u_δ2H_SNOW_final  # TODO(bernhard): using final is effectively operator splitting, (the isotope mass balance is not exact)
+    # else # both fluxes are non-null and we need to compute their mix
+    #     δ18O_SLFL = (u_δ18O_SNOW_final * aux_du_SMLT + p_δ18O_PREC * p_fu_RNET) / (aux_du_SMLT + p_fu_RNET)  # TODO(bernhard): using final is effectively operator splitting, (the isotope mass balance is not exact)
+    #     δ2H_SLFL  = (u_δ2H_SNOW_final * aux_du_SMLT  + p_δ2H_PREC * p_fu_RNET)  / (aux_du_SMLT + p_fu_RNET)  # TODO(bernhard): using final is effectively operator splitting, (the isotope mass balance is not exact)
+    # end
+    # TODO(bernhard): deactivate the following workaround and activate above code
+    δ18O_SLFL = p_δ18O_PREC
+    δ2H_SLFL  = p_δ2H_PREC
+
+    # In-place modify
+    # u_INTS      = u_INTS_final
+    # u_δ18O_INTS = u_δ18O_INTS_final
+    # u_δ2H_INTS  = u_δ2H_INTS_final
+    # u_INTR      = u_INTR_final
+    # u_δ18O_INTR = u_δ18O_INTR_final
+    # u_δ2H_INTR  = u_δ2H_INTR_final
+    # u_SNOW      = u_SNOW_final
+    # u_δ18O_SNOW = u_δ18O_SNOW_final
+    # u_δ2H_SNOW  = u_δ2H_SNOW_final
+
+    return δ18O_SLFL, δ2H_SLFL, u_INTS_final, u_δ18O_INTS_final, u_δ2H_INTS_final, u_INTR_final, u_δ18O_INTR_final, u_δ2H_INTR_final, u_SNOW_final, u_δ18O_SNOW_final, u_δ2H_SNOW_final
+end
+
+
+function compute_isotope_du_GWAT_SWATI(
+    # for GWAT:
+    u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT,
+    # for SWATI:
+    du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI, # (non-fractionating)
+    aux_du_SLVP, p_fu_TADTM, p_EA, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
+    u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, EffectiveDiffusivity_18O, EffectiveDiffusivity_2H,
+    )
+
+    ## FROM: 4a Julia Guswa-2002-Water_Resour_Res.pdf
+    #    # Isotopic compositions of fluxes.
+    #    δ2H_L = δ2H # [‰] no fractionation occurring, i.e. flux composition equal to storage composition
+    #    δ2H_T = δ2H # [‰] no fractionation occurring, i.e. flux composition equal to storage composition
+    #    δ18O_L = δ18O # [‰] no fractionation occurring, i.e. flux composition equal to storage composition
+    #    δ18O_T = δ18O # [‰] no fractionation occurring, i.e. flux composition equal to storage composition
+    #    δ2H_E  = ((δ2H  - ε_eq2H(T_cel)) /α_eq2H(T_cel)  - h*δ_A2H  - ε_kin2H(h))  / (1. - h + ε_kin2H(h) /1000)# [‰] Benettin 2018 HESS eq. 1 and Gibson 2016
+    #    δ18O_E = ((δ18O - ε_eq18O(T_cel))/α_eq18O(T_cel) - h*δ_A18O - ε_kin18O(h)) / (1. - h + ε_kin18O(h)/1000)# [‰] Benettin 2018 HESS eq. 1 and Gibson 2016 QSR eq. 3
+    #    # Rate of change due to balances
+    #    dVdt = (-L -T -E) # dV/dt [mm/day]
+    #    du[1] = dVdt / (n*Zr) # dS/dt [-/day]
+    #    du[2] = - L/V*(δ2H_L - δ2H) - T/V*(δ2H_T - δ2H) - E/V*(δ2H_E - δ2H) # [‰]
+    #    du[3] = - L/V*(δ18O_L-δ18O) - T/V*(δ18O_T-δ18O) - E/V*(δ18O_E-δ18O) # [‰]
+    #    # equivalently: du[2] = - δ2H /V*dVdt - L/V*δ2H_L - T/V*δ2H_T - E/V*δ2H_E
+    #    # equivalently: du[3] = - δ18O/V*dVdt - L/V*δ18O_L - T/V*δ18O_T - E/V*δ18O_E
+            # u is a state vector with:
+            # u[1] = S relative saturation (-)
+            # u[2] = δ2H [‰] TODO(bernhard): #modify this to work with concentrations instead of ‰
+            # u[3] = δ18O [‰] TODO(bernhard): #modify this to work with concentrations instead of ‰
+    ######
+
+    NLAYER = length(aux_du_VRFLI)
+    # SWAT
+        # Actual water mass balance equation over computational cell between interfaces z_upper and z_lower:
+        # ∂/∂t ∫θ dz = ∫∂/∂z[K_h(∂h/∂z + 1)] dz - ∫S dz  # (where S are source/sink terms)
+        # ∂/∂t SWATI = [K_h(∂h/∂z + 1)]_(z_lower)^(z_upper) - ∫S dz
+        #            = [K_h(∂h/∂z + 1)]_(z_lower)^(z_upper) + (INFLI-TRANI-DSFL-SLVP)
+        #            = q(z_upper) - q(z_lower) + INFLI - TRANI - DSFL - SLVP
+
+        # Actual heavy isotope mass balance equation over computational cell:
+        # ∂/∂t ∫θ Cᵢ dz = Dᵢ(z_upper)∂Cᵢ/∂z(z_upper) - Dᵢ(z_lower)∂Cᵢ/∂z(z_lower)
+        #                 - q(z_upper) Cᵢ(z_upper) + q(z_lower) Cᵢ(z_lower)
+        #                 + (INFLI*Cᵢ_{INFLI} - TRANI*Cᵢ_{TRANI} - DSFL*Cᵢ_{DSFL} - SLVP*Cᵢ_{SLVP})
+        #               = r-h-s
+        # with constant θ and Cᵢ over cell:
+        # ∂/∂t θ Cᵢ ∫dz = ∂/∂t θ Cᵢ * (thickness) = thickness * [ θ * ∂/∂t Cᵢ + Cᵢ * ∂/∂t θ ] # where thickness = z_upper - z_lower
+        #                                         = [ SWATI * ∂/∂t Cᵢ + Cᵢ * ∂/∂t SWATI ]
+        #                                         = r-h-s
+        # ==>
+        # ∂/∂t Cᵢ = [- Cᵢ/SWATI * ∂/∂t SWATI] + 1/SWATI * [diff(z_upper) - diff(z_lower) - qCᵢ(z_upper) + qCᵢ(z_lower) + INFLI*Cᵢ_{INFLI} - TRANI*Cᵢ_{TRANI} - DSFL*Cᵢ_{DSFL} - SLVP*Cᵢ_{SLVP}]
+        #
+        # The composition of the fluxes are the comoposition of the originating storage for mixing processes.
+        # For diffusion process they are computed based on the diffusivity.
+        # For evaporation processes they are computed using the Craig-Gordon model:
+        #   Cᵢ = [ (δᵢ - ε_eq)/α_eq - h*δₐ - ε_kin ] / [ 1 - h + ε_kin/1000] # [‰]
+        # source: Benettin 2018 HESS eq. 1 and Gibson 2016 QSR eq. 3
+        #         and Craig Gordon 1965 eq. 23 (and text above)
+        #
+        # Above equation is not used, instead one is derived from Gonfiantini 2018:
+        #   4) R_esc = R_w / ( α * (α_dif)^X )
+        #   5) R_cap = R_A / (α_dif)^X
+        #   6) Evaporation E = (γ - h) φ_vap
+        #   7a) Upward isotopic flux: E_isotop = φ_esc * R_esc - φ_cap * R_cap
+        #                                      = γ*φ_vap * R_esc - h*φ_vap * R_cap
+        #                                      = (γ*R_esc - h*R_cap) * φ_vap
+        #       Net evaporating flux is thus: R_E = E_isotop/E
+        #                                         = (γ*R_esc - h*R_cap) / (γ - h)
+        #                                         = (γ*R_w / ( α * (α_dif)^X ) - h*R_A / (α_dif)^X) / (γ - h)
+        #                                         = (γ*R_w/α - h*R_A) / ((γ - h) * (α_dif)^X)
+        #       And in delta notation this is:
+        #                                     δ_E = 1000*(1 + 1/((γ - h)*(α_dif)^X) * (γ/α*(1+δ_w/1000) - h*(1+δ_A/1000)))
+
+
+        ##################
+        ##################
+        ##################
+        # Define conditions for isotope calculations:
+        Tc = p_fu_TADTM  # °C, average daytime air temperature
+        h = min(1.0, p_EA) # -, relative humidity of the atmosphere (vappress_atm/1 atm)
+        γ = 1.0          # -, thermodynamic activity coefficient of evaporating water
+        # X_INTS = 0.5  # -, turbulence incex of the atmosphere above the evaporating water
+        # X_INTR = 0.5  # -, turbulence incex of the atmosphere above the evaporating water
+        # X_SNOW = 1.0  # -, turbulence incex of the atmosphere above the evaporating water
+
+        # 1c) Atmospheric vapor composition assumed to be in equilibrium with precipitation
+        #     Benettin-2018-Hydrol_Earh_Syst_Sci citing Gibson et al. 2008
+        δₐ(δ_p, α_eq) = (δ_p - 1000 * (α_eq - 1))/α_eq
+        δ²H_a  = δₐ(p_δ2H_PREC,  LWFBrook90.ISO.α²H_eq(Tc))
+        δ¹⁸O_a = δₐ(p_δ18O_PREC, LWFBrook90.ISO.α¹⁸O_eq(Tc))
+
+        # For soil:
+        Xa = 0.5 # between molecular and turbulent
+        Xs = 1.0 # molecular only
+        X_SOIL = u_aux_WETNES[1] * Xa + (1 - u_aux_WETNES[1]) * Xs
+        # when fully saturated, WETNES == 1, water vapor leaves quickly to atmosphere
+        # when hardly saturated, WETNES -> 0, water vapor crosses soil pores until it reaches atmosphere
+        # Equivalent:
+        # X_SOIL = ((u_aux_θ[1]-θ_res)*Xa + (θ_sat-u_aux_θ[1])*Xs)/(θ_sat-θ_res)
+        # Taken from Zhou-2021-Environ_Model_Softw (X is called n_k there)
+        ##################
+        ##################
+
+        # Compute composition of evaporating soil
+        ### a) Fix constants
+        α¹⁸O_eq = LWFBrook90.ISO.α¹⁸O_eq(Tc)
+        α²H_eq  = LWFBrook90.ISO.α²H_eq(Tc)
+        # ε¹⁸O_dif = (α¹⁸O_dif-1)*1000  # diffusive (i.e. kinetic fractionation)
+        # ε²H_dif  = (α²H_dif-1)*1000   # diffusive (i.e. kinetic fractionation)
+        # ε¹⁸O_eq = (α¹⁸O_eq-1)*1000    # equilibrium fractionation
+        # ε²H_eq  = (α²H_eq-1)*1000     # equilibrium fractionation
+
+        ### b) Compute δ signature of evaporating flux
+        # Equation derived based on Gonfiantini (see 60 lines above in comment)
+        # δ_E = 1000*(1 + 1/((γ - h)*(α_dif)^X) * (γ/α*(1+δ_w/1000) - h*(1+δ_A/1000)))
+        δ¹⁸O_SLVP = 1000*( 1 + (γ/α¹⁸O_eq*(1 + u_δ18O_SWATI[1] / 1000) - h*(1 + δ¹⁸O_a/1000)) /
+                                ((γ - h)*(LWFBrook90.ISO.α¹⁸O_dif)^X_SOIL)
+        )
+        δ²H_SLVP  = 1000*( 1 + (γ/α²H_eq*(1 + u_δ2H_SWATI[1] / 1000) - h*(1 + δ²H_a/1000)) /
+                                ((γ - h)*(LWFBrook90.ISO.α²H_dif)^X_SOIL)
+        )
+        # TODO(bernhard): for debugging:
+        δ¹⁸O_SLVP = u_δ18O_SWATI[1] # disabling evaporation fractionation
+        δ²H_SLVP  = u_δ2H_SWATI[1]  # disabling evaporation fractionation
+        # (Above is an alternative to formulation in Benettin 2018 HESS eq. 1 and Gibson 2016)
+        # Cᵢ_SLVP = ( (Cᵢ - ε¹⁸O_eq)/α¹⁸O_eq - h*δ¹⁸O_a - ε¹⁸O_dif ) /
+        #             (1 - h + ε¹⁸O_dif/1000) # [‰]
+
+        ### c) Composition of all other fluxes
+        Cᵢ¹⁸ = u_δ18O_SWATI
+        Cᵢ²H = u_δ2H_SWATI
+
+        diff_upp = 0 #TODO(bernhard): include diffusive flux of isotopes
+        diff_low = 0 #TODO(bernhard): include diffusive flux of isotopes
+        qCᵢ¹⁸O_upp  = [0; aux_du_VRFLI[1:(NLAYER-1)]] .* [0; u_δ18O_SWATI[1:(NLAYER-1)]]
+        qCᵢ¹⁸O_low  = aux_du_VRFLI[1:(NLAYER)]        .* u_δ18O_SWATI[1:(NLAYER)]
+        qCᵢ²H_upp  = [0; aux_du_VRFLI[1:(NLAYER-1)]] .* [0; u_δ2H_SWATI[1:(NLAYER-1)]]
+        qCᵢ²H_low  = aux_du_VRFLI[1:(NLAYER)]        .* u_δ2H_SWATI[1:(NLAYER)]
+
+        Cᵢ¹⁸O_INFLI = p_δ18O_PREC # TODO(bernhard): for debugging, remove this again and replace with δ18O_INFLI
+        # Cᵢ¹⁸O_INFLI = δ18O_INFLI
+        # Cᵢ¹⁸O_INFLI = ifelse(sum(aux_du_INFLI) == 0, 0, δ18O_INFLI) # in case there is no inflow δ18O_INFLI was set to NaN, set it to zero for below equation
+        Cᵢ¹⁸O_TRANI = Cᵢ¹⁸ # no fractionation occurring, i.e. outflux composition equal to storage composition
+        Cᵢ¹⁸O_DSFL  = Cᵢ¹⁸ # no fractionation occurring, i.e. outflux composition equal to storage composition
+        Cᵢ¹⁸O_SLVP  = [δ¹⁸O_SLVP; fill(0, NLAYER-1)]
+        Cᵢ²H_INFLI = p_δ2H_PREC # TODO(bernhard): for debugging, remove this again and replace with δ2H_INFLI
+        # Cᵢ²H_INFLI = δ2H_INFLI
+        # Cᵢ²H_INFLI = ifelse(sum(aux_du_INFLI) == 0, 0, δ2H_INFLI) # in case there is no inflow δ2H_INFLI was set to NaN, set it to zero for below equation
+        Cᵢ²H_TRANI = Cᵢ²H # no fractionation occurring, i.e. outflux composition equal to storage composition
+        Cᵢ²H_DSFL  = Cᵢ²H # no fractionation occurring, i.e. outflux composition equal to storage composition
+        Cᵢ²H_SLVP  = [δ²H_SLVP;  fill(0, NLAYER-1)]
+
+        ### c) Some other terms in the isotope balance equation
+        dVdt = du_NTFLI # [mm/day]
+        # θ = u_aux_θ
+        # dθdt = aux_du_VRFLI[NLAYER] - du_GWFL - du_SEEP # dV/dt [-/day] # TODO(bernhard)
+
+        ### e) Isotope balance equation:
+        # du_δ18O_SWATI = -Cᵢ¹⁸./u_SWATI .* dVdt .+ 1 ./ u_SWATI .* (
+        #                         diff_upp .- diff_low .- qCᵢ¹⁸O_upp .+ qCᵢ¹⁸O_low .+
+        #                         aux_du_INFLI.*Cᵢ¹⁸O_INFLI .- aux_du_TRANI.*Cᵢ¹⁸O_TRANI .- aux_du_DSFLI.*Cᵢ¹⁸O_DSFL .- aux_du_SLVP.*Cᵢ¹⁸O_SLVP
+        #                     )
+        # du_δ2H_SWATI = -Cᵢ²H./u_SWATI .* dVdt .+ 1 ./ u_SWATI .* (
+        #                         diff_upp .- diff_low .- qCᵢ²H_upp .+ qCᵢ²H_low .+
+        #                         aux_du_INFLI.*Cᵢ²H_INFLI .- aux_du_TRANI.*Cᵢ²H_TRANI .- aux_du_DSFLI.*Cᵢ²H_DSFL .- aux_du_SLVP.*Cᵢ²H_SLVP
+        #                     )
+        # NOTE: below max(0.001,u_SWATI) makes the code more robust
+        du_δ18O_SWATI = -Cᵢ¹⁸./max.(0.001,u_SWATI) .* dVdt .+ 1 ./ max.(0.001,u_SWATI) .* (
+                                diff_upp .- diff_low .+ qCᵢ¹⁸O_upp .- qCᵢ¹⁸O_low .+ # TODO(bernhard): check sign for qC
+                                aux_du_INFLI.*Cᵢ¹⁸O_INFLI .- aux_du_TRANI.*Cᵢ¹⁸O_TRANI .- aux_du_DSFLI.*Cᵢ¹⁸O_DSFL .- aux_du_SLVP.*Cᵢ¹⁸O_SLVP
+                            )
+        du_δ2H_SWATI = -Cᵢ²H./max.(0.001,u_SWATI) .* dVdt .+ 1 ./ max.(0.001,u_SWATI) .* (
+                                diff_upp .- diff_low .+ qCᵢ²H_upp .- qCᵢ²H_low .+ # TODO(bernhard): check sign for qC
+                                aux_du_INFLI.*Cᵢ²H_INFLI .- aux_du_TRANI.*Cᵢ²H_TRANI .- aux_du_DSFLI.*Cᵢ²H_DSFL .- aux_du_SLVP.*Cᵢ²H_SLVP
+                            )
+    # GWAT
+        δ18O_empty = NaN
+        δ2H_empty  = NaN
+        @assert aux_du_VRFLI[NLAYER] >= 0 "aux_du_VRFLI[NLAYER] should not be negative"
+
+        if ((u_GWAT == 0) & (aux_du_VRFLI[NLAYER] == 0)) # initially no groundwater and no new is added
+            du_δ18O_GWAT = δ18O_empty
+            du_δ2H_GWAT  = δ2H_empty
+        elseif aux_du_VRFLI[NLAYER] > 0 # initially no groundwater but some is added
+            du_δ18O_GWAT = 0
+            du_δ2H_GWAT  = 0
+
+            u_δ18O_GWAT = u_δ18O_SWATI[end]
+            u_δ2H_GWAT  = u_δ2H_SWATI[end]  # TODO(benrhard): make sure this is actually modifying the state vector
+        else
+            # composition of fluxes
+            δ18O_in_GWAT  = u_δ18O_SWATI[end]
+            δ2H_in_GWAT   = u_δ2H_SWATI[end]
+            # δ18O_out_GWAT = u_δ18O_GWAT # not needed, because it does not change composition
+            # δ2H_out_GWAT  = u_δ2H_GWAT  # not needed, because it does not change composition
+
+            # mass balance:
+            # dVdt = aux_du_VRFLI[NLAYER] - du_GWFL - du_SEEP # dV/dt [mm/day]
+            V_GWAT = u_GWAT
+            in_GWAT = aux_du_VRFLI[NLAYER]
+            # out_GWAT = (du_GWFL + du_SEEP)
+
+            # isotope balance
+            du_δ18O_GWAT = in_GWAT/V_GWAT*(δ18O_in_GWAT - u_δ18O_GWAT) # - out_GWAT*(δ18O_out_GWAT - u_δ18O_GWAT) # <- last part == 0
+            du_δ2H_GWAT  = in_GWAT/V_GWAT*(δ2H_in_GWAT  - u_δ2H_GWAT)  # - out_GWAT*(δ2H_out_GWAT  - u_δ2H_GWAT)  # <- last part == 0
+        end
+
+
+    return du_δ18O_GWAT, du_δ2H_GWAT, du_δ18O_SWATI, du_δ2H_SWATI
+    # return 0, 0, convert.(Float64, 1:NLAYER), convert.(Float64, 1:NLAYER)
 end
