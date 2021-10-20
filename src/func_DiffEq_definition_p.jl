@@ -406,7 +406,7 @@ function define_LWFB90_p(
         idx_u_vector_accumulators = []
     end
 
-    p_cst_4 = (NLAYER, FLAG_MualVanGen, compute_intermediate_quantities,
+    p_cst_4 = (NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, simulate_isotopes, #TODO(bernhard): check that this works
         idx_u_scalar_isotopes_d18O, idx_u_vector_isotopes_d18O,
         idx_u_scalar_isotopes_d2H,  idx_u_vector_isotopes_d2H,
         idx_u_vector_amounts,

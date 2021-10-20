@@ -63,6 +63,28 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         #u_SNOWLQ   = u[6]
         u_SWATI     = u[idx_u_vector_amounts] # 0.000002 seconds (1 allocation: 144 bytes)
 
+        # update δ values of GWAT and SWATI
+        # do not update δ values of INTS, INTR, SNOW (is done in cb())
+        simulate_isotopes = p[4][10]
+        if simulate_isotopes
+            idx_u_scalar_isotopes_d18O = p[4][5]
+            idx_u_scalar_isotopes_d2H  = p[4][7]
+            idx_u_vector_isotopes_d18O = p[4][6]
+            idx_u_vector_isotopes_d2H  = p[4][8]
+            # idx_u_vector_accumulators = p[4][9]
+
+            u_δ18O_GWAT = u[idx_u_scalar_isotopes_d18O[1]]
+            u_δ2H_GWAT  = u[idx_u_scalar_isotopes_d2H[1] ]
+            # u_δ18O_INTS = u[idx_u_scalar_isotopes_d18O[2]]
+            # u_δ2H_INTS  = u[idx_u_scalar_isotopes_d2H[2] ]
+            # u_δ18O_INTR = u[idx_u_scalar_isotopes_d18O[3]]
+            # u_δ2H_INTR  = u[idx_u_scalar_isotopes_d2H[3] ]
+            # u_δ18O_SNOW = u[idx_u_scalar_isotopes_d18O[4]]
+            # u_δ2H_SNOW  = u[idx_u_scalar_isotopes_d2H[4] ]
+            u_δ18O_SWATI = u[idx_u_vector_isotopes_d18O]
+            u_δ2H_SWATI  = u[idx_u_vector_isotopes_d2H]
+        end
+
         LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, t)
 
         (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
@@ -143,6 +165,20 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # Update SWATI for each layer:
         du[idx_u_vector_amounts] .= du_NTFLI[:] # 0.000002 seconds (3 allocations: 224 bytes)
 
+        # update δ values of GWAT and SWATI
+        # do not update δ values of INTS, INTR, SNOW (is done in cb())
+        if simulate_isotopes
+            du[idx_u_scalar_isotopes_d18O[1]]   = u_δ18O_GWAT     #TODO(bernhard)
+            du[idx_u_scalar_isotopes_d2H[1] ]   = u_δ2H_GWAT      #TODO(bernhard)
+            # du[idx_u_scalar_isotopes_d18O[2]]   = u_δ18O_INTS   #du_δ18O_INTS, was computed in callback
+            # du[idx_u_scalar_isotopes_d2H[2] ]   = u_δ2H_INTS    #du_δ2H_INTS,  was computed in callback
+            # du[idx_u_scalar_isotopes_d18O[3]]   = u_δ18O_INTR   #du_δ18O_INTR, was computed in callback
+            # du[idx_u_scalar_isotopes_d2H[3] ]   = u_δ2H_INTR    #du_δ2H_INTR,  was computed in callback
+            # du[idx_u_scalar_isotopes_d18O[4]]   = u_δ18O_SNOW   #du_δ18O_SNOW, was computed in callback
+            # du[idx_u_scalar_isotopes_d2H[4] ]   = u_δ2H_SNOW    #du_δ2H_SNOW,  was computed in callback
+            du[idx_u_vector_isotopes_d18O]      = u_δ18O_SWATI    #TODO(bernhard)
+            du[idx_u_vector_isotopes_d2H]       = u_δ2H_SWATI     #TODO(bernhard)
+        end
 
         ##########################################
         # Accumulate flows to compute daily sums

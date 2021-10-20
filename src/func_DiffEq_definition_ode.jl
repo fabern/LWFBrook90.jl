@@ -36,9 +36,10 @@ function define_LWFB90_ODE(u0, tspan, p)
     # is undefined)
     # unstable_check_function = (dt,u,p,t) -> false
     # TODO(bernhard) : use below to constrain unstable check to idx_u_vector_amounts
+    # idx_u_scalar_amounts       = p[1][4][11]
     # idx_u_vector_amounts       = p[1][4][4]
-    # unstable_check_function = (dt,u,p,t) -> any(isnan,u[idx_u_vector_amounts])
-    unstable_check_function = (dt,u,p,t) -> any(isnan,u[p[1][4][4]])
+    # unstable_check_function = (dt,u,p,t) -> any(isnan,u[ [idx_u_scalar_amounts; idx_u_vector_amounts] ])
+    unstable_check_function = (dt,u,p,t) -> any(isnan,u[ [p[1][4][11]; p[1][4][4]] ])
     # # idx_u_vector_amounts       = p[1][4][4]
     # # idx_u_scalar_isotopes_d18O = p[1][4][5]
     # # idx_u_vector_isotopes_d18O = p[1][4][6]
