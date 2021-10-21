@@ -435,7 +435,8 @@ function define_LWFB90_p(
             interpolated_meteoveg["p_RELDEN"],
             interpolated_meteoveg["REFERENCE_DATE"],
             interpolated_meteoveg["p_d18OPREC"],
-            interpolated_meteoveg["p_d2HPREC"])
+            interpolated_meteoveg["p_d2HPREC"],
+            interpolated_meteoveg["REFERENCE_DATE"])
     # Documentation from ecoshift:
     # DENSEF (Fixed parameter) - canopy density multiplier between 0.05 and 1, dimensionless. DENSEF is normally 1; it should be reduced below this ONLY to simulate thinning of the existing canopy by cutting. It multiplies MAXLAI, CS, MXRTLN, and MXKPL and thus proportionally reduces LAI, SAI, and RTLEN, and increases RPLANT. However it does NOT reduce canopy HEIGHT and thus will give erroneous aerodynamic resistances if it is less than about 0.05. It should NOT be set to 0 to simulate a clearcut. [see PET-CANOPY]
 

@@ -125,12 +125,24 @@ sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
 
 Note to use a progress bar indicating advancement of the solving is possible. It is sufficient to load the package `using ProgressLogging`.
 
-The generated solution can be plotted using the plotting recipes of DifferntialEquations.jl for Plots.jl ([see instructions](https://diffeq.sciml.ai/stable/basics/plot/)). An example is provided below:
+The generated solution can be plotted using the in-built function `LWFBrook90.ISO.plotisotopes()`. Alternatively plots can be constructed using the plotting recipes of DifferentialEquations.jl for Plots.jl ([see instructions](https://diffeq.sciml.ai/stable/basics/plot/)). Examples of both approaches are provided below:
 
 ```Julia
 ####################
 ## Plotting
-using Plots
+using Plots, Measures
+
+###
+# A) Use in-built plotting function
+optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
+pl_inbuilt = LWFBrook90.ISO.plotisotopes(
+    sol_LWFBrook90, optim_ticks;
+    layout = grid(4, 1, heights=[0.1 ,0.4, 0.1, 0.4]),
+    size=(1000,1400), dpi = 300, leftmargin = 15mm);
+savefig(pl_inbuilt, "Isotopeplots_pl_inbuilt.png")
+
+###
+# B) Construct plots yourself using the solution object
 sol_LWFBrook90_Dates =
     LWFBrook90.jl.RelativeDaysFloat2DateTime.(
         sol_LWFBrook90.t,

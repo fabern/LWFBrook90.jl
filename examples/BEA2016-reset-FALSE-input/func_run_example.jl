@@ -7,9 +7,20 @@ object of DifferentialEquations.jl) and other variables useful for plotting.
 
 ## Example:
     using LWFBrook90
-    using Plots
+    using Plots, Measures
     example = LWFBrook90.run_example()
 
+    ###
+    # A) Use in-built plotting function
+    optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
+    pl_inbuilt = LWFBrook90.ISO.plotisotopes(
+        example["solution"], optim_ticks;
+        layout = grid(4, 1, heights=[0.1 ,0.4, 0.1, 0.4]),
+        size=(1000,1400), dpi = 300, leftmargin = 15mm);
+    savefig(pl_inbuilt, "Isotopeplots_pl_inbuilt.png")
+
+    ###
+    # B) Construct plots yourself using the solution object
     # Plot scalar solution
     # Using simple plot recipe that interpolates, but without dates
     plot(example["solution"];
@@ -42,9 +53,20 @@ function run_example()
     following way:
 
     using LWFBrook90
-    using Plots
+     using Plots, Measures
     example = LWFBrook90.run_example()
 
+    ###
+    # A) Use in-built plotting function
+    optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
+    pl_inbuilt = LWFBrook90.ISO.plotisotopes(
+        example["solution"], optim_ticks;
+        layout = grid(4, 1, heights=[0.1 ,0.4, 0.1, 0.4]),
+        size=(1000,1400), dpi = 300, leftmargin = 15mm);
+    savefig(pl_inbuilt, "Isotopeplots_pl_inbuilt.png")
+
+    ###
+    # B) Construct plots yourself using the solution object
     # Plot scalar solution
     # Using simple plot recipe that interpolates, but without dates
     plot(example["solution"];
@@ -104,6 +126,7 @@ function run_example()
     # Define parameters for differential equation
     uSoil_initial, p = define_LWFB90_p(
         input_meteoveg,
+        input_meteoiso, # TODO.... undefined in case we
         input_meteoveg_reference_date,
         input_param,
         input_storm_durations,
@@ -111,8 +134,8 @@ function run_example()
         input_soil_discretization,
         simOption_FLAG_MualVanGen;
         Reset = Reset,
-        # soil_output_depths = collect(-0.05:-0.05:-1.1),
-        compute_intermediate_quantities = compute_intermediate_quantities)
+        compute_intermediate_quantities = compute_intermediate_quantities,
+        simulate_isotopes = false)
     ####################
 
     ####################
@@ -121,7 +144,8 @@ function run_example()
     # Create u0 for DiffEq.jl
     u0 = define_LWFB90_u0(p, input_initial_conditions,
         uSoil_initial,
-        compute_intermediate_quantities)
+        compute_intermediate_quantities,
+        simulate_isotopes = false)
     ####################
 
     ####################

@@ -14,6 +14,10 @@ export RelativeDaysFloat2DateTime, plot_LWFBrook90
 
 export run_simulation, plot_and_save_results, find_indices, get_auxiliary_variables, get_θ
 
+# Include code before defining modules
+include("func_read_inputData.jl") # defines RelativeDaysFloat2DateTime which is used in module ISO
+
+# Define modules
 # on modules: https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
 include("module_CONSTANTS.jl");  # to bring into scope: using .CONSTANTS
 include("module_KPT.jl");        using .KPT # using to bring exports into scope
@@ -22,6 +26,7 @@ include("module_SUN.jl");        # to bring into scope: using .SUN
 include("module_PET.jl");        # to bring into scope: using .PET
 include("module_SNO.jl");        # to bring into scope: using .SNO
 include("module_EVP.jl");        # to bring into scope: using .SNO
+include("module_ISO.jl");        # to bring into scope: using .ISO
 
 include("func_read_inputData.jl")
 include("func_discretize_soil_domain.jl")
