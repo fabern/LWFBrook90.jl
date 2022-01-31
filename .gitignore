@@ -23,6 +23,16 @@ docs/site/
 # environment.
 Manifest.toml
 
+# Settings from VisualStudioCode (taken from https://stackoverflow.com/a/57749909)
+.vscode/*      # Maybe .vscode/**/* instead - see comments
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+# VisualStudioCode Patch
+# Ignore all local history of files
+**/.history
+
 # Project specific
 Ecoshift-webpage/
 gitignored*
