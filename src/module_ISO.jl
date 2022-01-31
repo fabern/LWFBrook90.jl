@@ -29,7 +29,7 @@ module ISO # ISOTOPIC MIXING AND FRACTIONATION
 using RecipesBase
 using ..LWFBrook90: RelativeDaysFloat2DateTime
 
-export α¹⁸O_dif, α²H_dif, α¹⁸O_eq, α²H_eq, δ_CraigGordon
+export α¹⁸O_dif, α²H_dif, α¹⁸O_eq, α²H_eq, δ_CraigGordon, update_δ_with_mixing_and_evaporation
 
 # 1a) Kinetic fractionation (Gonfiantini 2018):
 α¹⁸O_dif = 1.0285 # -, D/D_i i.e. ¹H¹H¹⁶O/¹H¹H¹⁸O: Taken from Gonfiantini 2018, citing Merlivat 1978
@@ -67,6 +67,115 @@ function δ_CraigGordon(δ0, δΑ, f, h, α_eq, α_dif, γ, X)
     B = γ / (α_eq * α_dif^X * (γ-h)) - 1  # Eq 13
 
     return (-1 -A/B*(δΑ + 1) + (δ0 + 1 + A/B*(δΑ+1)) * f^B) # (-)
+end
+
+function update_δ_with_mixing_and_evaporation(dt, u₀, δ₀, inflow, δin, outflow, E, δₐ, h, α_eq, α_dif, γ, X)
+    # dt       [day]      , time step
+    # u₀       [mm]       , initial amount
+    # δ₀       [mUr]      , initial isotopic signature
+    # inflow   [mm/day]   , tuple/vector of inflows
+    # δin      [mUr]      , tuple/vector of inflow isotopic signatures
+    # outflow  [mm/day]   , outflow rates
+    # E        [mm/day]   , evaporation rate
+    # δₐ, h, γ, α_eq, α_dif, X (see below...) other evaporation specific parameters
+
+    # inflow and δin as well as outflow can be vectors [] or tuples ()
+    # NOTE: sum((1.0, 2.0).*(1.0, 2.0)) is the same as sum([1.0, 2.0].*[1.0, 2.0])
+
+    # Operator splitting: first compute all in- and outflows and corresponding mixing to yield δ⁺
+    #                     second compute the fractionation from δ⁺ to δ⁺⁺ considering ...
+    #                     ... a reservoir with a single sink: δ₁ + 1 = (1 + δ₀)*(N₁/N₀)^ε = (1 + δ₀)*f^ε (with f fraction remaining)
+
+    # Going from R₀,W₀ to (1) R⁺,W⁺ and then to (2) R⁺⁺,W⁺⁺
+
+    # ⁺ First step: compute only in- and outflows and neglect fractionation due to evaportion
+    # Mass balance: dW/dt = ∑ Win - ∑ Wout,                   and neglect in Wout the evaporation flux E
+    # Isot.balance: d(R*W)/dt = ∑ Win * Rin - ∑ Wout * R(t),  and neglect in Wout the evaporation flux E
+    #               when simpliying Rout: R(t) := R(t=0) as constant:
+    #               R⁺*W⁺ = R₀*W₀ + ∑ Win*Rin - ∑ Wout*R₀
+    #
+    #        (1) ==> W⁺ = W₀ + dt * (∑ Win - ∑ Wout)
+    #        (2) ==> R⁺ = R₀ * W₀/W⁺ + 1/W⁺ (∑ Rin * dt*Win - ∑ R₀ * dt*Wout)
+    #
+    # ⁺⁺ Second step: going from R⁺,W⁺ to R⁺⁺,W⁺⁺
+    #    Using reservoir with one evaporating sink (Gonfiantini 2018)
+    #       (3) ==> W⁺⁺ = W⁺ - dt*E
+    #       (4) ==> R⁺⁺ = (R⁺ + Rₐ * A/B)*f^B - A/B*Rₐ, (Gonfiantini 2018: Craig-Gordon model)
+    #           where A/B = h * α_eq/(γ - α_eq * α_dif^X *(γ-h))
+    #           where B   = γ/(α_eq * α_dif^X *(γ-h)) - 1
+    #           where f   = W⁺⁺ / W⁺ , fraction of remaining liquid
+    #           where Rₐ is atmospheric isotopic composition
+    #           where γ is thermodynamic activity coefficient of evaporating water
+    #           where h is relative humidty of environmental atmosphere
+    #           where α_eq is isotopic fractionation factor at equilibrium between liquid water and vapor, always > 1
+    #           where α_dif is isotopic fractionation factor between vapor in the saturated equilibrium layer and vapor escaping by diffusion, always >= 1
+    #           where X is teh turbulence index of the atmosphere above the evaporating water (0=fully turbulent, 1=still)
+
+    # (2) and (4) can be approximated in δ notation instead of R notation as [using R = Rstd * (δ+1)]:
+    # (2') δ⁺  = -1 + (δ₀ + 1) * W₀/W⁺ + dt/W⁺ (∑ (δin + 1) * Win - ∑ (δ₀ + 1) * Wout)
+    # (4') δ⁺⁺ = [δ⁺ + 1 + A/B(δₐ + 1)]*f^B - [1 + A/B*(δₐ + 1)]
+
+    @assert all(inflow .>= 0) "Inflows should not be negative"
+    #########
+    # Step 1)
+    u⁺ = u₀ + dt * (sum(inflow) - sum(outflow)) # [mm]
+    δ⁺ = -1 + (δ₀ + 1) * u₀/u⁺ + dt/u⁺ * (sum( (δin .+ 1).* inflow) - sum( (δ₀ + 1) * outflow))
+    # Edge cases:
+    # a) u₀ = 0, then we had δ₀ = NA, and we want δ⁺ = δin (weighted by inflows...)
+    if u₀ == 0
+        if u⁺ == 0
+            δ⁺ = NaN
+        else
+            # @assert sum(outflow) == 0 # No, this is not correct: we can start with u₀ = 0 and have both in and outflows...
+            @assert sum(outflow) <= sum(inflow)
+            δ⁺ = dt/u⁺ * (sum( (δin .+ 1).* inflow)) - 1
+            δ⁺ = (sum( (δin .+ 1).* dt .* inflow)) / u⁺ - 1
+            # (δ⁺ + 1) * u⁺ = (sum( (δin .+ 1).* inflow * dt))
+            # in case there is only one inflow this would reduce to:
+                # (δ⁺ + 1) = (δin .+ 1) * (inflow * dt)/(u₀ + inflow * dt - outflow * dt)
+                # (δ⁺ + 1) = (δin .+ 1) * (inflow * dt)/(u⁺)
+                # (δ⁺ + 1) * u⁺ = (δin .+ 1) * (inflow * dt)
+                # and as we have u⁺ = u₀ + dt * sum(inflow) - dt*sum(outflow)
+                # and as we have u⁺ = 0 + dt * inflow - dt*sum(outflow)
+                # (δ⁺ + 1) * dt * (inflow-outflow) = (δin .+ 1) * (inflow * dt)
+                # δ⁺ = δin                                         , iff outflow is zero
+                # (δ⁺ + 1)  = (δin + 1) * inflow/(inflow-outflow)  , otherwise
+        end
+    end
+
+    #########
+    # Step 2)
+    @assert dt*E >= 0 "Evaporation rate must be positive"
+
+    u⁺⁺ = u⁺ - dt*E
+    # u⁺⁺ = max(0, u⁺ - dt*E) # TODO(bernhard): as below assert was triggered, this is a quick workaround
+    @assert u⁺⁺ >= 0 "End amount must still be positive after evaporation"
+
+    #### TODO(bernhard): reactivation fractionation f     = u⁺⁺ / u⁺
+    #### TODO(bernhard): reactivation fractionation AdivB = h * α_eq/(γ - α_eq * α_dif^X *(γ-h))
+    #### TODO(bernhard): reactivation fractionation B     = γ/(α_eq * α_dif^X *(γ-h)) - 1
+    #### TODO(bernhard): reactivation fractionation δ⁺⁺   = (δ⁺ + 1 + AdivB * (δₐ + 1)) * f^B - [1 + AdivB*(δₐ + 1)]
+
+    #### TODO(bernhard): reactivation fractionation # Edge cases:
+    #### TODO(bernhard): reactivation fractionation # b) u⁺ = 0, then we had δ⁺ = NA and thus no evaporation from u⁺ to u⁺⁺ --> δ⁺⁺ = NA
+    #### TODO(bernhard): reactivation fractionation # c) u⁺⁺ = 0, then we have δ⁺⁺ = NA
+    #### TODO(bernhard): reactivation fractionation if u⁺ == 0 | u⁺⁺ == 0
+    #### TODO(bernhard): reactivation fractionation     u⁺⁺ = 0
+    #### TODO(bernhard): reactivation fractionation     δ⁺⁺ = NaN
+    #### TODO(bernhard): reactivation fractionation else
+    #### TODO(bernhard): reactivation fractionation     @assert isnan(δ⁺⁺) # TODO(bernhard) include bang: @assert !isnan(δ⁺⁺)
+    #### TODO(bernhard): reactivation fractionation end
+
+    #### TODO(bernhard): reactivation fractionation # Step 3)
+    #### TODO(bernhard): reactivation fractionation # consider some edge cases:
+    #### TODO(bernhard): reactivation fractionation # 3a) u₀ = 0, then we had δ₀ = NA
+    #### TODO(bernhard): reactivation fractionation # 3b) u⁺ = 0, then we had δ⁺ = NA and thus no evaporation from u⁺ to u⁺⁺ --> δ⁺⁺ = NA
+    #### TODO(bernhard): reactivation fractionation # 3c) u⁺⁺ = 0, then we have δ⁺⁺ = NA
+    #### TODO(bernhard): reactivation fractionation # 3d) else we have the formulas (3) and (4')
+    #### TODO(bernhard): reactivation fractionation return (u⁺⁺, δ⁺⁺)
+
+    # TODO(bernhard): for debugging: don't use fractionation effect!
+    return (u⁺⁺, δ⁺)
 end
 
 

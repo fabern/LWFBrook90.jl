@@ -370,14 +370,21 @@ function MSBPREINT(#arguments:
         aux_du_RSNO = 0.0
         aux_du_SNVP = 0.0
         aux_du_SMLT = 0.0
+
+        u_CC_new = u_CC # added by FB
+        u_SNOW_new = u_SNOW # added by FB
+        u_SNOWLQ_new = u_SNOWLQ # added by FB
     else
         if (u_SNOW <= 0 && p_fu_STHR > 0)
             # new snow only, zero CC and SNOWLQ assumed
-            u_CC = 0.0
-            u_SNOWLQ = 0.0
+            u_CC_new = 0.0
+            u_SNOWLQ_new = 0.0
+        else
+            u_CC_new = u_CC
+            u_SNOWLQ_new = u_SNOWLQ
         end
         # snow accumulation and melt
-        u_CC, u_SNOW, u_SNOWLQ, aux_du_RSNO, aux_du_SNVP, aux_du_SMLT =
+        u_SNOW_new, u_CC_new, u_SNOWLQ_new, aux_du_RSNO, aux_du_SNVP, aux_du_SMLT =
           LWFBrook90.SNO.SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN,
                    # States that are overwritten:
                    u_CC, u_SNOW, u_SNOWLQ,
@@ -397,7 +404,7 @@ function MSBPREINT(#arguments:
             # compute change in snow storage:
             aux_du_RSNO, aux_du_SNVP, aux_du_SMLT, p_fu_STHR,
             # compute updated states:
-            u_SNOW, u_CC, u_SNOWLQ)
+            u_SNOW_new, u_CC_new, u_SNOWLQ_new)
 end
 
 
@@ -594,155 +601,119 @@ function compute_isotope_INTS_INTR_SNOW!(
     ##################
     ##################
     ##################
-    # 2a) INTS (in: SINT*δ_SINT; out: ISVP*δ_ISVP)
-    #          with δ_SINT = δ_PREC; δ_ISVP = f(f, α, ...)
 
-    # Alternative formulation:
-    # ε_eq2H  = (LWFBrook90.ISO.α¹⁸O_eq(Tc)-1)*1000
-    # ε_eq18O = (LWFBrook90.ISO.α¹⁸O_eq(Tc)-1)*1000
-    # ε_kin2H  = (LWFBrook90.ISO.α²H_dif - 1)*1000
-    # ε_kin18O = (LWFBrook90.ISO.α¹⁸O_dif - 1)*1000
-    # δ2H_E  = ((δ2H  - ε_eq2H) /LWFBrook90.ISO.α²H_eq(Tc)  - h*δ²H_a  - ε_kin2H)  / (1. - h + ε_kin2H/1000) # [‰] Benettin 2018 HESS eq. 1 and Gibson 2016 QSR eq. 3
-    # δ18O_E = ((δ18O - ε_eq18O)/LWFBrook90.ISO.α¹⁸O_eq(Tc) - h*δ¹⁸O_a - ε_kin18O) / (1. - h + ε_kin18O/1000)# [‰] Benettin 2018 HESS eq. 1 and Gibson 2016 QSR eq. 3
-    δ18O_empty = NaN
-    δ2H_empty  = NaN
 
-    # Operator step 1
-    @assert aux_du_SINT >= 0 "aux_du_SINT should not be negative"
-    if ((u_INTS == 0) & (aux_du_SINT == 0)) # initially no intercepted snow and no new is added
-        u_δ18O_INTS_final = δ18O_empty
-        u_δ2H_INTS_final  = δ2H_empty
-        u_INTS_final      = 0
-    else
-        u_INTS_first = u_INTS + aux_du_SINT*p_DTP
-        if ((u_INTS == 0) & (aux_du_SINT > 0)) # initially no intercepted snow but some is added
-            u_δ18O_INTS_first = p_δ18O_PREC
-            u_δ2H_INTS_first  = p_δ2H_PREC
-        else # u_INTS is not zero, and some/none is added (aux_du_SINT=0 or aux_du_SINT>0)
-            # some bug in this formulation: u_δ18O_INTS_first = u_δ18O_INTS + aux_du_SINT*p_DTP/u_INTS * (p_δ18O_PREC-u_δ18O_INTS)
-            # some bug in this formulation: u_δ2H_INTS_first  = u_δ2H_INTS  + aux_du_SINT*p_DTP/u_INTS * (p_δ2H_PREC -u_δ2H_INTS )
-            # u_δ18O_INTS_first = 1/u_INTS_first * (u_δ18O_INTS * u_INTS + p_DTP*(p_δ18O_PREC*aux_du_SINT))
-            # u_δ2H_INTS_first  = 1/u_INTS_first * (u_δ2H_INTS  * u_INTS + p_DTP*(p_δ2H_PREC*aux_du_SINT))
-            contrib_fraction = min(1,max(0, p_DTP * (aux_du_SINT)/u_INTS_first))
-            u_δ18O_INTS_first = (u_δ18O_INTS * (1 - contrib_fraction) + p_δ18O_PREC * contrib_fraction)
-            u_δ2H_INTS_first  = (u_δ2H_INTS  * (1 - contrib_fraction) + p_δ2H_PREC  * contrib_fraction)
-        end
+                # # 2a) INTS (in: SINT*δ_SINT; out: ISVP*δ_ISVP)
+                # #          with δ_SINT = δ_PREC; δ_ISVP = f(f, α, ...)
+                # # Operator step 1
+                # @assert aux_du_SINT >= 0 "aux_du_SINT should not be negative"
+                # if ((u_INTS == 0) & (aux_du_SINT == 0)) # initially no intercepted snow and no new is added
+                #     u_δ18O_INTS_final = 0
+                #     u_δ2H_INTS_final  = 0
+                #     u_INTS_final      = 0
+                # else
+                #     if ((u_INTS == 0) & (aux_du_SINT > 0)) # initially no intercepted snow but some is added
+                #         u_δ18O_INTS_first = p_δ18O_PREC
+                #         u_δ2H_INTS_first  = p_δ2H_PREC
+                #     else # u_INTS is not zero, and some/none is added (aux_du_SINT=0 or aux_du_SINT>0)
+                #         u_δ18O_INTS_first = u_δ18O_INTS + aux_du_SINT*p_DTP/u_INTS * (p_δ18O_PREC-u_δ18O_INTS)
+                #         u_δ2H_INTS_first  = u_δ2H_INTS  + aux_du_SINT*p_DTP/u_INTS * (p_δ2H_PREC -u_δ2H_INTS )
+                #     end
+                #     u_INTS_first = u_INTS + aux_du_SINT*p_DTP
+                #     # Operator step 2: now taking care of aux_du_ISVP
+                #     u_INTS_final = u_INTS + (aux_du_SINT - aux_du_ISVP) * p_DTP
+                #     f_INTS = max(0, u_INTS_final/u_INTS_first) # fraction remaining after evaporation
+                #     # ε_δ18O = 1/(LWFBrook90.ISO.α¹⁸O_eq(Tc) * LWFBrook90.ISO.α¹⁸O_dif^X_INTS) - 1
+                #     # ε_δ2H  = 1/(LWFBrook90.ISO.α²H_eq(Tc)  * LWFBrook90.ISO.α²H_dif^X_INTS)  - 1
+                #     # u_δ18O_INTS_final = 1000 * ( (1 + u_δ18O_INTS_first/1000)(f_INTS)^ε_δ18O - 1 )
+                #     # u_δ2H_INTS_final  = 1000 * ( (1 + u_δ2H_INTS_first /1000)(f_INTS)^ε_δ2H  - 1 )
+                #     u_δ18O_INTS_final = u_δ18O_INTS_first#1000 * LWFBrook90.ISO.δ_CraigGordon.(u_δ18O_INTS_first/1000, δ¹⁸O_a/1000, f_INTS, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif, γ, X_INTS)
+                #     u_δ2H_INTS_final  = u_δ2H_INTS_first#1000 * LWFBrook90.ISO.δ_CraigGordon.(u_δ2H_INTS_first /1000,  δ²H_a/1000, f_INTS, h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,  γ, X_INTS)
+                # end
 
-        # Operator step 2: now taking care of aux_du_ISVP
-        u_INTS_final = u_INTS + (aux_du_SINT - aux_du_ISVP) * p_DTP
-        f_INTS = min(1,max(0, u_INTS_final/u_INTS_first)) # fraction remaining after evaporation
-        # if (f_INTS <= 0.3) #(f_INTS == 0)
-        #     u_δ18O_INTS_final = δ18O_empty
-        #     u_δ2H_INTS_final  = δ2H_empty
-        # else
-        f_INTS = min(1.0, max(0.5, f_INTS)) # TODO(bernhard): workaround for stability
-            # ε_δ18O = 1/(LWFBrook90.ISO.α¹⁸O_eq(Tc) * LWFBrook90.ISO.α¹⁸O_dif^X_INTS) - 1
-            # ε_δ2H  = 1/(LWFBrook90.ISO.α²H_eq(Tc)  * LWFBrook90.ISO.α²H_dif^X_INTS)  - 1
-            # u_δ18O_INTS_final = 1000 * ( (1 + u_δ18O_INTS_first/1000)(f_INTS)^ε_δ18O - 1 )
-            # u_δ2H_INTS_final  = 1000 * ( (1 + u_δ2H_INTS_first /1000)(f_INTS)^ε_δ2H  - 1 )
-            u_δ18O_INTS_final = u_δ18O_INTS_first
-            u_δ2H_INTS_final  = u_δ2H_INTS_first
-            # TODO(Bernhard): investigate why below leads to instabilities
-            # u_δ18O_INTS_final = 1000 * LWFBrook90.ISO.δ_CraigGordon.(u_δ18O_INTS_first/1000, δ¹⁸O_a/1000, f_INTS, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif, γ, X_INTS)
-            # u_δ2H_INTS_final  = 1000 * LWFBrook90.ISO.δ_CraigGordon.(u_δ2H_INTS_first /1000,  δ²H_a/1000, f_INTS, h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,  γ, X_INTS)
-        # end
-    end
+                # # 2b) INTR (in: RINT*δ_RINT; out: IRVP*δ_IRVP)
+                # #          with δ_RINT = δ_PREC; δ_IRVP = f(f, α, ...)
+                # # Operator step 1
+                # @assert aux_du_RINT >= 0 "aux_du_RINT should not be negative"
+                # if ((u_INTR == 0) & (aux_du_RINT == 0)) # initially no intercepted rain and no new is added
+                #     u_δ18O_INTR_final = 0
+                #     u_δ2H_INTR_final  = 0
+                #     u_INTR_final      = 0
+                # else
+                #     if ((u_INTR == 0) & (aux_du_RINT > 0)) # initially no intercepted rain but some is added
+                #         u_δ18O_INTR_first = p_δ18O_PREC
+                #         u_δ2H_INTR_first  = p_δ2H_PREC
+                #     else # u_INTR is not zero, and some/none is added (aux_du_RINT=0 or aux_du_RINT>0)
+                #         u_δ18O_INTR_first = u_δ18O_INTR + aux_du_RINT*p_DTP/u_INTR * (p_δ18O_PREC-u_δ18O_INTR)
+                #         u_δ2H_INTR_first  = u_δ2H_INTR  + aux_du_RINT*p_DTP/u_INTR * (p_δ2H_PREC -u_δ2H_INTR )
+                #     end
+                #     u_INTR_first = u_INTR + aux_du_RINT*p_DTP
+                #     # Operator step 2: now taking care of aux_du_IRVP
+                #     u_INTR_final = u_INTR + (aux_du_RINT - aux_du_IRVP) * p_DTP
+                #     f_INTR = max(0, u_INTR_final/u_INTR_first) # fraction remaining after evaporation
+                #     # ε_δ18O = 1/(LWFBrook90.ISO.α¹⁸O_eq(Tc) * LWFBrook90.ISO.α¹⁸O_dif^X_INTR) - 1
+                #     # ε_δ2H  = 1/(LWFBrook90.ISO.α²H_eq(Tc)  * LWFBrook90.ISO.α²H_dif^X_INTR)  - 1
+                #     # u_δ18O_INTR_final = 1000 * ( (1 + u_δ18O_INTR_first/1000)(f_INTR)^ε_δ18O - 1 )
+                #     # u_δ2H_INTR_final  = 1000 * ( (1 + u_δ2H_INTR_first /1000)(f_INTR)^ε_δ2H  - 1 )
+                #     u_δ18O_INTR_final = u_δ18O_INTR_first# 1000 * LWFBrook90.ISO.δ_CraigGordon.(u_δ18O_INTR_first/1000, δ¹⁸O_a/1000, f_INTR, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif, γ, X_INTR)
+                #     u_δ2H_INTR_final  = u_δ2H_INTR_first# 1000 * LWFBrook90.ISO.δ_CraigGordon.(u_δ2H_INTR_first /1000,  δ²H_a/1000, f_INTR, h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,  γ, X_INTR)
+                # end
 
-    # 2b) INTR (in: RINT*δ_RINT; out: IRVP*δ_IRVP)
-    #          with δ_RINT = δ_PREC; δ_IRVP = f(f, α, ...)
-    # Operator step 1
+                # # 2c) SNOW (in: STHR*δ_STHR, RSNO*δ_RSNO; out: SMLT*δ_SMLT, SNVP*δ_SNVP)
+                # #          with δ_STHR = δ_PREC, δ_RSNO = δ_PREC; δ_SMLT = δ_SNOW, δ_SNVP = f(f, α, ...)
 
-    @assert aux_du_RINT >= 0 "aux_du_RINT should not be negative"
-    if ((u_INTR == 0) & (aux_du_RINT == 0)) # initially no intercepted rain and no new is added
-        u_δ18O_INTR_final = δ18O_empty
-        u_δ2H_INTR_final  = δ2H_empty
-        u_INTR_final      = 0
-    else
-        u_INTR_first = u_INTR + aux_du_RINT*p_DTP
-        if ((u_INTR == 0) & (aux_du_RINT > 0)) # initially no intercepted rain but some is added
-            u_δ18O_INTR_first = p_δ18O_PREC
-            u_δ2H_INTR_first  = p_δ2H_PREC
-        else # u_INTR is not zero, and some/none is added (aux_du_RINT=0 or aux_du_RINT>0)
-            # some bug in this formulation: u_δ18O_INTR_first = u_δ18O_INTR + aux_du_RINT*p_DTP/u_INTR * (p_δ18O_PREC-u_δ18O_INTR)
-            # some bug in this formulation: u_δ2H_INTR_first  = u_δ2H_INTR  + aux_du_RINT*p_DTP/u_INTR * (p_δ2H_PREC -u_δ2H_INTR )
-            # u_δ18O_INTR_first = 1/u_INTR_first * (u_δ18O_INTR * u_INTR + p_DTP*(p_δ18O_PREC*aux_du_RINT))
-            # u_δ2H_INTR_first  = 1/u_INTR_first * (u_δ2H_INTR  * u_INTR + p_DTP*(p_δ2H_PREC*aux_du_RINT))
-            contrib_fraction = min(1,max(0, p_DTP * (aux_du_RINT)/u_INTR_first))
-            u_δ18O_INTR_first = (u_δ18O_INTR * (1 - contrib_fraction) + p_δ18O_PREC * contrib_fraction)
-            u_δ2H_INTR_first  = (u_δ2H_INTR  * (1 - contrib_fraction) + p_δ2H_PREC  * contrib_fraction)
-        end
-        # Operator step 2: now taking care of aux_du_IRVP
-        u_INTR_final = u_INTR + (aux_du_RINT - aux_du_IRVP) * p_DTP
-        f_INTR = max(0, u_INTR_final/u_INTR_first) # fraction remaining after evaporation
-        # if (f_INTR <= 0.3) #(f_INTR == 0)
-        #     u_δ18O_INTR_final = δ18O_empty
-        #     u_δ2H_INTR_final  = δ2H_empty
-        # else
-        f_INTR = min(1.0, max(0.3, f_INTR)) # TODO(bernhard): workaround for stability
-            # ε_δ18O = 1/(LWFBrook90.ISO.α¹⁸O_eq(Tc) * LWFBrook90.ISO.α¹⁸O_dif^X_INTR) - 1
-            # ε_δ2H  = 1/(LWFBrook90.ISO.α²H_eq(Tc)  * LWFBrook90.ISO.α²H_dif^X_INTR)  - 1
-            # u_δ18O_INTR_final = 1000 * ( (1 + u_δ18O_INTR_first/1000)(f_INTR)^ε_δ18O - 1 )
-            # u_δ2H_INTR_final  = 1000 * ( (1 + u_δ2H_INTR_first /1000)(f_INTR)^ε_δ2H  - 1 )
-            u_δ18O_INTR_final = u_δ18O_INTR_first
-            u_δ2H_INTR_final  = u_δ2H_INTR_first
-            # TODO(Bernhard): investigate why below leads to instabilities
-            # u_δ18O_INTR_final = 1000 * LWFBrook90.ISO.δ_CraigGordon.(u_δ18O_INTR_first/1000, δ¹⁸O_a/1000, f_INTR, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif, γ, X_INTR)
-            # u_δ2H_INTR_final  = 1000 * LWFBrook90.ISO.δ_CraigGordon.(u_δ2H_INTR_first /1000,  δ²H_a/1000, f_INTR, h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,  γ, X_INTR)
-        # end
-    end
+                # # NOTE: for SNOW the isotope balance is greatly simplified. The most precise
+                # #       approach would be to define mixing concentrattion within `SNOWPACK()` in `module_SNO.jl`
+                # # Operator step 1
+                # @assert p_fu_STHR + aux_du_RSNO >= 0 "p_fu_STHR + aux_du_RSNO should not be negative"
+                # if ((u_SNOW == 0) & (p_fu_STHR + aux_du_RSNO == 0)) # initially no snowpack and no new is added
+                #     u_δ18O_SNOW_final = 0
+                #     u_δ2H_SNOW_final  = 0
+                #     u_SNOW_final      = 0
+                # else
+                #     if ((u_SNOW == 0) & (p_fu_STHR + aux_du_RSNO > 0)) # initially no snowpack but some is added
+                #         u_δ18O_SNOW_first = p_δ18O_PREC
+                #         u_δ2H_SNOW_first  = p_δ2H_PREC
+                #     else # u_SNOW is not zero, and some/none is added ((p_fu_STHR + aux_du_RSNO)=0 or (p_fu_STHR + aux_du_RSNO)>0)
+                #         # p_fu_STHR, aux_du_RSNO, aux_du_SMLT, aux_du_SNVP
+                #         u_δ18O_SNOW_first = u_δ18O_SNOW + (p_fu_STHR + aux_du_RSNO)*p_DTP/u_SNOW * (p_δ18O_PREC - u_δ18O_SNOW)
+                #                                     # NOTE: because the outflow term for aux_du_SMLT has
+                #                                     #       an isotope concentration of u_δ18O_SNOW and it is thus not needed:
+                #                                     # - (aux_du_SMLT)*p_DTP/u_SNOW * (u_δ18O_SNOW-u_δ18O_SNOW)
+                #         u_δ2H_SNOW_first = u_δ2H_SNOW + (p_fu_STHR + aux_du_RSNO)*p_DTP/u_SNOW * (p_δ2H_PREC - u_δ2H_SNOW)
+                #                                     # NOTE: because the outflow term for aux_du_SMLT has
+                #                                     #       an isotope concentration of u_δ2H_SNOW and it is thus not needed:
+                #                                     # - (aux_du_SMLT)*p_DTP/u_SNOW * (u_δ2H_SNOW-u_δ2H_SNOW)
+                #     end
+                #     u_SNOW_first = u_SNOW + p_DTP * (p_fu_STHR + aux_du_RSNO - aux_du_SMLT)
+                #     # Operator step 2: now taking care of aux_du_SNVP
+                #     u_SNOW_final = u_SNOW + p_DTP * (p_fu_STHR + aux_du_RSNO - aux_du_SMLT - aux_du_SNVP)
+                #     f_SNOW = max(0, u_SNOW_final/u_SNOW_first) # fraction remaining after evaporation
+                #     # ε_δ18O = 1/(LWFBrook90.ISO.α¹⁸O_eq(Tc) * LWFBrook90.ISO.α¹⁸O_dif^X_SNOW) - 1
+                #     # ε_δ2H  = 1/(LWFBrook90.ISO.α²H_eq(Tc)  * LWFBrook90.ISO.α²H_dif^X_SNOW)  - 1
+                #     # u_δ18O_SNOW_final = 1000 * ( (1 + u_δ18O_SNOW_first/1000)(f_SNOW)^ε_δ18O - 1 )
+                #     # u_δ2H_SNOW_final  = 1000 * ( (1 + u_δ2H_SNOW_first /1000)(f_SNOW)^ε_δ2H  - 1 )
+                #     u_δ18O_SNOW_final = u_δ18O_SNOW_first#1000 * LWFBrook90.ISO.δ_CraigGordon.(u_δ18O_SNOW_first/1000, δ¹⁸O_a/1000, f_SNOW, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif, γ, X_SNOW)
+                #     u_δ2H_SNOW_final  = u_δ2H_SNOW_first#1000 * LWFBrook90.ISO.δ_CraigGordon.(u_δ2H_SNOW_first /1000,  δ²H_a/1000, f_SNOW, h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,  γ, X_SNOW)
+                # end
 
-    # 2c) SNOW (in: STHR*δ_STHR, RSNO*δ_RSNO; out: SMLT*δ_SMLT, SNVP*δ_SNVP)
+    # 2a) u_INTS (in: aux_du_SINT*δ_SINT; out: aux_du_ISVP*δ_ISVP)
+    #            with δ_SINT = δ_PREC; δ_ISVP = f(f, α, ...)
+    # 2b) u_INTR (in: aux_du_RINT*δ_RINT; out: aux_du_IRVP*δ_IRVP)
+    #            with δ_RINT = δ_PREC; δ_IRVP = f(f, α, ...)
+    # 2c) SNOW (in: p_fu_STHR*δ_STHR, aux_du_RSNO*δ_RSNO; out: aux_du_SMLT*δ_SMLT, aux_du_SNVP*δ_SNVP)
     #          with δ_STHR = δ_PREC, δ_RSNO = δ_PREC; δ_SMLT = δ_SNOW, δ_SNVP = f(f, α, ...)
 
+    # update_δ_with_mixing_and_evaporation(dt, u₀, δ₀, inflow, δin, outflow, E, δₐ, h, α_eq, α_dif, γ, X)
+    u_INTS_final, u_δ2H_INTS_final  = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(p_DTP, u_INTS, u_δ2H_INTS,  aux_du_SINT,               p_δ2H_PREC,                0,           aux_du_ISVP, δ²H_a,  h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,  γ, X_INTS)
+    _,            u_δ18O_INTS_final = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(p_DTP, u_INTS, u_δ18O_INTS, aux_du_SINT,               p_δ18O_PREC,               0,           aux_du_ISVP, δ¹⁸O_a, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif, γ, X_INTS)
+    u_INTR_final, u_δ2H_INTR_final  = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(p_DTP, u_INTR, u_δ2H_INTR,  aux_du_RINT,               p_δ2H_PREC,                0,           aux_du_IRVP, δ²H_a,  h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,  γ, X_INTR)
+    _,            u_δ18O_INTR_final = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(p_DTP, u_INTR, u_δ18O_INTR, aux_du_RINT,               p_δ18O_PREC,               0,           aux_du_IRVP, δ¹⁸O_a, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif, γ, X_INTR)
     # NOTE: for SNOW the isotope balance is greatly simplified. The most precise
     #       approach would be to define mixing concentrattion within `SNOWPACK()` in `module_SNO.jl`
-    # Operator step 1
+    u_SNOW_final, u_δ2H_SNOW_final  = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(p_DTP, u_SNOW, u_δ2H_SNOW,  (p_fu_STHR, aux_du_RSNO), (p_δ2H_PREC,  p_δ2H_PREC),  aux_du_SMLT, aux_du_SNVP, δ²H_a,  h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,  γ, X_SNOW)
+    _,            u_δ18O_SNOW_final = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(p_DTP, u_SNOW, u_δ18O_SNOW, (p_fu_STHR, aux_du_RSNO), (p_δ18O_PREC, p_δ18O_PREC), aux_du_SMLT, aux_du_SNVP, δ¹⁸O_a, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif, γ, X_SNOW)
 
-    @assert p_fu_STHR + aux_du_RSNO >= 0 "p_fu_STHR + aux_du_RSNO should not be negative"
-    if ((u_SNOW == 0) & (p_fu_STHR + aux_du_RSNO == 0)) # initially no snowpack and no new is added
-        u_δ18O_SNOW_final = δ18O_empty
-        u_δ2H_SNOW_final  = δ2H_empty
-        u_SNOW_final      = 0
-    else
-        u_SNOW_first = u_SNOW + p_DTP * (p_fu_STHR + aux_du_RSNO - aux_du_SMLT)
-        if ((u_SNOW == 0) & (p_fu_STHR + aux_du_RSNO > 0)) # initially no snowpack but some is added
-            u_δ18O_SNOW_first = p_δ18O_PREC
-            u_δ2H_SNOW_first  = p_δ2H_PREC
-        else # u_SNOW is not zero, and some/none is added ((p_fu_STHR + aux_du_RSNO)=0 or (p_fu_STHR + aux_du_RSNO)>0)
-            # p_fu_STHR, aux_du_RSNO, aux_du_SMLT, aux_du_SNVP
-            # some bug in this formulation: u_δ18O_SNOW_first = u_δ18O_SNOW + (p_fu_STHR + aux_du_RSNO)*p_DTP/u_SNOW * (p_δ18O_PREC - u_δ18O_SNOW)
-            # some bug in this formulation:                             # NOTE: because the outflow term for aux_du_SMLT has
-            # some bug in this formulation:                             #       an isotope concentration of u_δ18O_SNOW and it is thus not needed:
-            # some bug in this formulation:                             # - (aux_du_SMLT)*p_DTP/u_SNOW * (u_δ18O_SNOW-u_δ18O_SNOW)
-            # some bug in this formulation: u_δ2H_SNOW_first = u_δ2H_SNOW + (p_fu_STHR + aux_du_RSNO)*p_DTP/u_SNOW * (p_δ2H_PREC - u_δ2H_SNOW)
-            # some bug in this formulation:                             # NOTE: because the outflow term for aux_du_SMLT has
-            # some bug in this formulation:                             #       an isotope concentration of u_δ2H_SNOW and it is thus not needed:
-            # some bug in this formulation:                             # - (aux_du_SMLT)*p_DTP/u_SNOW * (u_δ2H_SNOW-u_δ2H_SNOW)
-            # u_δ18O_SNOW_first = (u_δ18O_SNOW * (u_SNOW - p_DTP*aux_du_SMLT) + p_δ18O_PREC * p_DTP*(p_fu_STHR + aux_du_RSNO)) / u_SNOW_first
-            # u_δ2H_SNOW_first  = (u_δ2H_SNOW  * (u_SNOW - p_DTP*aux_du_SMLT) + p_δ2H_PREC  * p_DTP*(p_fu_STHR + aux_du_RSNO)) / u_SNOW_first
-            contrib_fraction = min(1,max(0, p_DTP * (p_fu_STHR + aux_du_RSNO)/u_SNOW_first))
-            u_δ18O_SNOW_first = (u_δ18O_SNOW * (1 - contrib_fraction) + p_δ18O_PREC * contrib_fraction)
-            u_δ2H_SNOW_first  = (u_δ2H_SNOW  * (1 - contrib_fraction) + p_δ2H_PREC  * contrib_fraction)
-        end
-        # Operator step 2: now taking care of aux_du_SNVP
-        u_SNOW_final = u_SNOW + p_DTP * (p_fu_STHR + aux_du_RSNO - aux_du_SMLT - aux_du_SNVP)
-        f_SNOW = min(1, max(0, u_SNOW_final/u_SNOW_first)) # fraction remaining after evaporation
-        # if (f_SNOW <= 0.3) #(f_SNOW == 0)
-        #     u_δ18O_SNOW_final = δ18O_empty
-        #     u_δ2H_SNOW_final  = δ2H_empty
-        # else
-        f_SNOW = max(0.5, f_SNOW) # TODO(bernhard): workaround for stability
-            # ε_δ18O = 1/(LWFBrook90.ISO.α¹⁸O_eq(Tc) * LWFBrook90.ISO.α¹⁸O_dif^X_SNOW) - 1
-            # ε_δ2H  = 1/(LWFBrook90.ISO.α²H_eq(Tc)  * LWFBrook90.ISO.α²H_dif^X_SNOW)  - 1
-            # u_δ18O_SNOW_final = 1000 * ( (1 + u_δ18O_SNOW_first/1000)(f_SNOW)^ε_δ18O - 1 )
-            # u_δ2H_SNOW_final  = 1000 * ( (1 + u_δ2H_SNOW_first /1000)(f_SNOW)^ε_δ2H  - 1 )
-            u_δ18O_SNOW_final = u_δ18O_SNOW_first
-            u_δ2H_SNOW_final  = u_δ2H_SNOW_first
-            # TODO(Bernhard): investigate why below leads to instabilities
-            # u_δ18O_SNOW_final = 1000 * LWFBrook90.ISO.δ_CraigGordon.(u_δ18O_SNOW_first/1000, δ¹⁸O_a/1000, f_SNOW, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif, γ, X_SNOW)
-            # u_δ2H_SNOW_final  = 1000 * LWFBrook90.ISO.δ_CraigGordon.(u_δ2H_SNOW_first /1000,  δ²H_a/1000, f_SNOW, h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,  γ, X_SNOW)
-        # end
-    end
 
 
     # 3) also compute δ_SLFL as mix of δ_SMLT with δ_RNET (i.e. water that infiltrates)
