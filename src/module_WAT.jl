@@ -202,6 +202,10 @@ function BYFLFR(NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_soil)
             ####
             # variant LWFBrook90R:
             p_fu_BYFRAC[i] = p_QFFC ^ (1 - (1 / p_QFPAR) * (u_aux_WETNES[i] - p_soil.p_WETF[i]) / (1 - p_soil.p_WETF[i]))
+            # should be equvalent with
+            # BYFRAC = QFFC ^ (1 - (1 / QFPAR) * (θ - θfc) / (θs - θfc))
+            # p_fu_BYFRAC[i] = p_QFFC ^ (1 - (1 / p_QFPAR) * (u_aux_θ[i] - p_soil.p_THETAF[i]) / (p_soil.p_THSAT[i] - p_soil.p_THETAF[i]))
+
             if (p_fu_BYFRAC[i] > 1)
                 p_fu_BYFRAC[i] = 1
             end

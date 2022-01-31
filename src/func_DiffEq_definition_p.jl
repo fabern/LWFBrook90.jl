@@ -609,15 +609,11 @@ function discretize_soil_params(
     @assert soil_discretization[1,"Lower_m"] < 0
 
     # Find for each soil_discretization node in which horizon it lies
-    which_horizon = fill(0, nrow(soil_discretization))
+   which_horizon = fill(0, nrow(soil_discretization))
     for i = 1:nrow(soil_discretization)
-        for j = nrow(input_soil_horizons):-1:1
-            condition = soil_discretization[i,"Lower_m"] >= input_soil_horizons[j,"Lower_m"]
-            # println("$i,$j: $(soil_discretization[i,"Lower_m"]) >= $(input_soil_horizons[j,"Lower_m"]): $condition")
-            if condition
-                which_horizon[i] = input_soil_horizons[j,"HorizonNr"]
-            end
-        end
+        # For each soil discretizations (i) check to which which horizon it belongs
+        idx = findfirst(soil_discretization[i,"Lower_m"] .>= input_soil_horizons[:,"Lower_m"])
+        which_horizon[i] = input_soil_horizons[idx,"HorizonNr"]
     end
     soil_discretization[:,"HorizonNr"] = which_horizon
 
