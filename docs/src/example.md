@@ -76,19 +76,11 @@ u_aux_PSIM_init = input_soil_discretization[:,"uAux_PSIM_init_kPa"]
 if any( u_aux_PSIM_init.> 0)
     error("Initial matrix psi must be negative or zero")
 end
-p_soil = p[1][1]
-u_aux_WETNESinit = LWFBrook90.KPT.FWETNES(u_aux_PSIM_init, p_soil)
-u_SWATIinit      = p_soil.p_SWATMAX ./ p_soil.p_THSAT .* LWFBrook90.KPT.FTheta(u_aux_WETNESinit, p_soil)
 ######
 
 # Create u0 for DiffEq.jl
-u0 = define_LWFB90_u0(input_initial_conditions[1,"u_GWAT_init_mm"],
-                      input_initial_conditions[1,"u_INTS_init_mm"],
-                      input_initial_conditions[1,"u_INTR_init_mm"],
-                      input_initial_conditions[1,"u_SNOW_init_mm"],
-                      input_initial_conditions[1,"u_CC_init_MJ_per_m2"],
-                      input_initial_conditions[1,"u_SNOWLQ_init_mm"],
-                      u_SWATIinit,
+u0 = define_LWFB90_u0(p, input_initial_conditions,
+                      uSoil_initial,
                       compute_intermediate_quantities)
 ####################
 ```

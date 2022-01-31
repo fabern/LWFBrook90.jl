@@ -370,7 +370,26 @@ function define_LWFB90_p(
         p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS,
         p_DURATN, p_MAXLQF, p_GRDMLT)
 
-    p_cst = (p_cst_1, p_cst_2, p_cst_3)
+    # p_cst_4 for both RHS, CallBack as well as u0 in DiffEq.jl
+    # derive indices for state vector `u`
+    # 6 is the number of states except SWAT: i.e. GWAT, INTS, INTR, SNOW, CC, SNOWLQ
+    idx_u_vector_amounts       = 1:(6+NLAYER)
+    if compute_intermediate_quantities
+        # 25 is the number of currently programmed intermediate quantities
+        # if simulate_isotopes
+        #     idx_u_vector_accumulators = 6+4+4+3*NLAYER .+ (1:25)
+        # else
+        idx_u_vector_accumulators = 6+0+0+1*NLAYER .+ (1:25)
+        # end
+    else
+        idx_u_vector_accumulators = []
+    end
+
+    p_cst_4 = (NLAYER, FLAG_MualVanGen, compute_intermediate_quantities,
+        idx_u_vector_amounts,
+        idx_u_vector_accumulators)
+
+    p_cst = (p_cst_1, p_cst_2, p_cst_3, p_cst_4)
 
     # 2b) Time varying parameters (e.g. meteorological forcings)
     p_DOY_REF    = (t) -> LWFBrook90.p_DOY(t,    interpolated_meteoveg["REFERENCE_DATE"])
@@ -388,7 +407,8 @@ function define_LWFB90_p(
             interpolated_meteoveg["p_LAI"],
             interpolated_meteoveg["p_SAI"],
             interpolated_meteoveg["p_AGE"],
-            interpolated_meteoveg["p_RELDEN"])
+            interpolated_meteoveg["p_RELDEN"],
+            interpolated_meteoveg["REFERENCE_DATE"])
     # Documentation from ecoshift:
     # DENSEF (Fixed parameter) - canopy density multiplier between 0.05 and 1, dimensionless. DENSEF is normally 1; it should be reduced below this ONLY to simulate thinning of the existing canopy by cutting. It multiplies MAXLAI, CS, MXRTLN, and MXKPL and thus proportionally reduces LAI, SAI, and RTLEN, and increases RPLANT. However it does NOT reduce canopy HEIGHT and thus will give erroneous aerodynamic resistances if it is less than about 0.05. It should NOT be set to 0 to simulate a clearcut. [see PET-CANOPY]
 
@@ -558,8 +578,8 @@ function discretize_soil_params(
     to_add = all_needed_interfaces[(!).(all_needed_interfaces .∈ (existing_interfaces,))]
 
     # Add them to the DataFrame
-    # soil_discretization = copy(input_soil_discretization) # otherwise input argument is modified in-place
-    soil_discretization = input_soil_discretization
+    soil_discretization = copy(input_soil_discretization) # otherwise input argument is modified in-place
+    # soil_discretization = input_soil_discretization
     for interface_to_add in to_add
         for i in 1:nrow(soil_discretization)
             condition = interface_to_add > soil_discretization[i, "Lower_m"]
@@ -651,6 +671,8 @@ function discretize_soil_params(
     PSIM_init = soil_discretization[!,"uAux_PSIM_init_kPa"]         # initial condition PSIM [kPa]
     # d18O_soil_init = soil_discretization[!,"u_delta18O_init_mUr"]  # initial condition soil water δ18O [mUr]
     # d2H_soil_init  = soil_discretization[!,"u_delta2H_init_mUr"]   # initial condition soil water δ2H [mUr]
+
+    @assert all(PSIM_init .<= 0) "Initial matrix psi must be negative or zero"
 
     NLAYER = nrow(soil_discretization)
 

@@ -11,11 +11,6 @@ object of DifferentialEquations.jl) and other variables useful for plotting.
     example = LWFBrook90.run_example()
 
     # Plot scalar solution
-    # Using dates (but not interpolated)
-    plot(example["solutionDates"],
-        example["solution"][[1,2,3,4,5,6],:]',
-        label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
-
     # Using simple plot recipe that interpolates, but without dates
     plot(example["solution"];
         vars = [1, 2, 3, 4, 5, 6],
@@ -24,13 +19,21 @@ object of DifferentialEquations.jl) and other variables useful for plotting.
     # Plot vector solution
     x = example["solutionDates"]
     y = cumsum(example["thickness"])
-    z = example["solution"][7 .+ (0:example["NLAYER"]-1), :]./example["thickness"]
+    z = example["solution"][7 .+ (0:example["NLAYER"]-1), 1, :]./example["thickness"]
     heatmap(x, y, z,
         yflip = true,
         xlabel = "Date",
         ylabel = "Depth [mm]",
         colorbar_title = "θ [-]")
 
+    # Plot both using plot recipe for LWFBrook90
+    using Plots, Measures
+    using LWFBrook90
+    optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
+
+    pl_final = LWFBrook90.plotlwfbrook90(sol_LWFBrook90, optim_ticks)
+    savefig(pl_final,
+        input_prefix * "_plotRecipe_NLAYER" * string(sol_LWFBrook90.prob.p[1][1].NLAYER) * ".png")
 """
 function run_example()
 
@@ -43,11 +46,6 @@ function run_example()
     example = LWFBrook90.run_example()
 
     # Plot scalar solution
-    # Using dates (but not interpolated)
-    plot(example["solutionDates"],
-        example["solution"][[1,2,3,4,5,6],:]',
-        label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
-
     # Using simple plot recipe that interpolates, but without dates
     plot(example["solution"];
         vars = [1, 2, 3, 4, 5, 6],
@@ -56,13 +54,21 @@ function run_example()
     # Plot vector solution
     x = example["solutionDates"]
     y = cumsum(example["thickness"])
-    z = example["solution"][7 .+ (0:example["NLAYER"]-1), :]./example["thickness"]
+    z = example["solution"][7 .+ (0:example["NLAYER"]-1), 1, :]./example["thickness"]
     heatmap(x, y, z,
         yflip = true,
         xlabel = "Date",
         ylabel = "Depth [mm]",
         colorbar_title = "θ [-]")
 
+    # Plot both using plot recipe for LWFBrook90
+    using Plots, Measures
+    using LWFBrook90
+    optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
+
+    pl_final = LWFBrook90.plotlwfbrook90(sol_LWFBrook90, optim_ticks)
+    savefig(pl_final,
+        input_prefix * "_plotRecipe_NLAYER" * string(sol_LWFBrook90.prob.p[1][1].NLAYER) * ".png")
     """
 
     # 1a) Read in input data
@@ -88,14 +94,14 @@ function run_example()
 
     # Override input file settings
     # Here possibility to check and override dataframes input_[...] manually
-        # # E.g:
-        # # Soil hydraulic model
-        # input_param[1,"NOOUTF"] = true # `true` if outflow from roots prevented, `false` if allowed
+    # # E.g:
+    # # Soil hydraulic model
+    # input_param[1,"NOOUTF"] = true # `true` if outflow from roots prevented, `false` if allowed
     ####################
 
     ####################
     # Define parameters for differential equation
-    u_aux_PSIM_init, p = define_LWFB90_p(
+    uSoil_initial, p = define_LWFB90_p(
         input_meteoveg,
         input_meteoveg_reference_date,
         input_param,
@@ -104,32 +110,17 @@ function run_example()
         input_soil_discretization,
         simOption_FLAG_MualVanGen;
         Reset = Reset,
+        # soil_output_depths = collect(-0.05:-0.05:-1.1),
         compute_intermediate_quantities = compute_intermediate_quantities)
     ####################
 
     ####################
     # Define initial states of differential equation
     # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
-
-    ######
-    # Transform initial value of auxiliary state u_aux_PSIM_init into state u_SWATIinit:
-    if any( u_aux_PSIM_init.> 0)
-        error("Initial matrix psi must be negative or zero")
-    end
-    p_soil = p[1][1]
-    u_aux_WETNESinit = LWFBrook90.KPT.FWETNES(u_aux_PSIM_init, p_soil)
-    u_SWATIinit      = p_soil.p_SWATMAX ./ p_soil.p_THSAT .* LWFBrook90.KPT.FTheta(u_aux_WETNESinit, p_soil)
-    ######
-
     # Create u0 for DiffEq.jl
-    u0 = define_LWFB90_u0(input_initial_conditions[1,"u_GWAT_init_mm"],
-                        input_initial_conditions[1,"u_INTS_init_mm"],
-                        input_initial_conditions[1,"u_INTR_init_mm"],
-                        input_initial_conditions[1,"u_SNOW_init_mm"],
-                        input_initial_conditions[1,"u_CC_init_MJ_per_m2"],
-                        input_initial_conditions[1,"u_SNOWLQ_init_mm"],
-                        u_SWATIinit,
-                        compute_intermediate_quantities)
+    u0 = define_LWFB90_u0(p, input_initial_conditions,
+        uSoil_initial,
+        compute_intermediate_quantities)
     ####################
 
     ####################
@@ -141,7 +132,7 @@ function run_example()
     #   - p:      parameters
 
     # Define simulation time span:
-    tspan = (0.,  100.) # simulate 100 days
+    tspan = (0.0, 100.0) # simulate 100 days
     ode_LWFBrook90 = define_LWFB90_ODE(u0, tspan, p)
     ####################
 
@@ -149,16 +140,16 @@ function run_example()
     ## Solve ODE:
     sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
         progress = true,
-        saveat = tspan[1]:tspan[2], dt=1e-6, adaptive = true); # dt is initial dt, but adaptive
+        saveat = tspan[1]:tspan[2], dt = 1e-6, adaptive = true) # dt is initial dt, but adaptive
     ####################
 
 
     return (
-        Dict(["solution"      => sol_LWFBrook90,
-              "solutionDates" => LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t,
-                                                                        input_meteoveg_reference_date),
-              "thickness" => p_soil.p_THICK,
-              "NLAYER"    => p_soil.NLAYER])
-        )
+        Dict(["solution" => sol_LWFBrook90,
+        "solutionDates" => LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t,
+            input_meteoveg_reference_date),
+        "thickness" => sol_LWFBrook90.prob.p[1][1].p_THICK,
+        "NLAYER" => sol_LWFBrook90.prob.p[1][1].NLAYER])
+    )
 
 end
