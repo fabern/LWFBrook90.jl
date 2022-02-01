@@ -66,12 +66,16 @@ function define_LWFB90_cb()
         #  - weather data depending on DOY and u_SNOW
         #  - fraction of precipitation as snowfall depending on DOY
         #  - snowpack temperature, potential snow evaporation and soil evaporation resistance depending on u_SNOW
+
+        idx_u_vector_amounts       = integrator.p[1][4][4] # 7:(6+NLAYER)
+        idx_u_vector_accumulators  = integrator.p[1][4][5] # 6+0+0+1*NLAYER .+ (1:25)
+
         u_INTS     = integrator.u[2]
         u_INTR     = integrator.u[3]
         u_SNOW     = integrator.u[4]
         u_CC       = integrator.u[5]
         u_SNOWLQ   = integrator.u[6]
-        u_SWATI    = integrator.u[7:(7+NLAYER-1)]
+        u_SWATI    = integrator.u[idx_u_vector_amounts]
 
         LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, integrator.t)
 
@@ -203,38 +207,40 @@ function define_LWFB90_cb()
         # Note that below state variables serve only as accumulator but do not affect
         # the evolution of the system.
         if compute_intermediate_quantities
+            # @assert length(idx_u_vector_accumulators) == 25
+
             # 1) Either set daily sum if rate is constant throughout precipitation interval: p_DTP*(...)
             # 2) or then set daily sum to zero and use ODE to accumulate flow.
-            integrator.u[7+NLAYER+0] = p_DTP*(p_fT_RFAL + p_fT_SFAL)                 # RFALD + SFALD        # cum_d_prec
-            integrator.u[7+NLAYER+1] = p_DTP*(p_fT_RFAL)                                                    # cum_d_rfal
-            integrator.u[7+NLAYER+2] = p_DTP*(p_fT_SFAL)                                                    # cum_d_sfal
-            integrator.u[7+NLAYER+3] = p_DTP*(aux_du_RINT)                                                  # cum_d_rint
-            integrator.u[7+NLAYER+4] = p_DTP*(aux_du_SINT)                                                  # cum_d_sint
-            integrator.u[7+NLAYER+5] = p_DTP*(aux_du_RSNO)                                                  # cum_d_rsno
-            integrator.u[7+NLAYER+6] = p_DTP*(p_fT_RFAL - aux_du_RINT - aux_du_RSNO) # cum_d_RTHR - RSNOD   # cum_d_rnet
-            integrator.u[7+NLAYER+7] = p_DTP*(aux_du_SMLT)                                                  # cum_d_smlt
+            integrator.u[idx_u_vector_accumulators[ 1]] = p_DTP * (p_fT_RFAL + p_fT_SFAL)                 # RFALD + SFALD        # cum_d_prec
+            integrator.u[idx_u_vector_accumulators[ 2]] = p_DTP * (p_fT_RFAL)                                                    # cum_d_rfal
+            integrator.u[idx_u_vector_accumulators[ 3]] = p_DTP * (p_fT_SFAL)                                                    # cum_d_sfal
+            integrator.u[idx_u_vector_accumulators[ 4]] = p_DTP * (aux_du_RINT)                                                  # cum_d_rint
+            integrator.u[idx_u_vector_accumulators[ 5]] = p_DTP * (aux_du_SINT)                                                  # cum_d_sint
+            integrator.u[idx_u_vector_accumulators[ 6]] = p_DTP * (aux_du_RSNO)                                                  # cum_d_rsno
+            integrator.u[idx_u_vector_accumulators[ 7]] = p_DTP * (p_fT_RFAL - aux_du_RINT - aux_du_RSNO) # cum_d_RTHR - RSNOD   # cum_d_rnet
+            integrator.u[idx_u_vector_accumulators[ 8]] = p_DTP * (aux_du_SMLT)                                                  # cum_d_smlt
 
-            integrator.u[7+NLAYER+ 8] = p_DTP*(aux_du_IRVP + aux_du_ISVP + aux_du_SNVP + aux_du_SLVP + sum(aux_du_TRANI))  # cum_d_evap
-            integrator.u[7+NLAYER+ 9] = p_DTP*(sum(aux_du_TRANI))                                                          # cum_d_tran
-            integrator.u[7+NLAYER+10] = p_DTP*(aux_du_IRVP)                                                                # cum_d_irvp
-            integrator.u[7+NLAYER+11] = p_DTP*(aux_du_ISVP)                                                                # cum_d_isvp
-            integrator.u[7+NLAYER+12] = p_DTP*(aux_du_SLVP)                                                                # cum_d_slvp
-            integrator.u[7+NLAYER+13] = p_DTP*(aux_du_SNVP)                                                                # cum_d_snvp
-            integrator.u[7+NLAYER+14] = p_DTP*(p_fu_PINT)                                                                  # cum_d_pint
-            integrator.u[7+NLAYER+15] = p_DTP*(p_fu_PTRAN)                                                                 # cum_d_ptran
-            integrator.u[7+NLAYER+16] = p_DTP*(p_fu_PSLVP)                                                                 # cum_d_pslvp
+            integrator.u[idx_u_vector_accumulators[ 9]] = p_DTP * (aux_du_IRVP + aux_du_ISVP + aux_du_SNVP + aux_du_SLVP + sum(aux_du_TRANI))  # cum_d_evap
+            integrator.u[idx_u_vector_accumulators[10]] = p_DTP * (sum(aux_du_TRANI))                                                          # cum_d_tran
+            integrator.u[idx_u_vector_accumulators[11]] = p_DTP * (aux_du_IRVP)                                                                # cum_d_irvp
+            integrator.u[idx_u_vector_accumulators[12]] = p_DTP * (aux_du_ISVP)                                                                # cum_d_isvp
+            integrator.u[idx_u_vector_accumulators[13]] = p_DTP * (aux_du_SLVP)                                                                # cum_d_slvp
+            integrator.u[idx_u_vector_accumulators[14]] = p_DTP * (aux_du_SNVP)                                                                # cum_d_snvp
+            integrator.u[idx_u_vector_accumulators[15]] = p_DTP * (p_fu_PINT)                                                                  # cum_d_pint
+            integrator.u[idx_u_vector_accumulators[16]] = p_DTP * (p_fu_PTRAN)                                                                 # cum_d_ptran
+            integrator.u[idx_u_vector_accumulators[17]] = p_DTP * (p_fu_PSLVP)                                                                 # cum_d_pslvp
 
-            integrator.u[7+NLAYER+17] = 0 # flow,  is computed in ODE
-            integrator.u[7+NLAYER+18] = 0 # seep,  is computed in ODE
-            integrator.u[7+NLAYER+19] = 0 # srfl,  is computed in ODE
-            integrator.u[7+NLAYER+20] = 0 # slfl,  is computed in ODE
-            integrator.u[7+NLAYER+21] = 0 # byfl,  is computed in ODE
-            integrator.u[7+NLAYER+22] = 0 # dsfl,  is computed in ODE
-            integrator.u[7+NLAYER+23] = 0 # gwfl,  is computed in ODE
-            integrator.u[7+NLAYER+24] = 0 # vrfln, is computed in ODE
+            integrator.u[idx_u_vector_accumulators[18]] = 0 # flow,  is computed in ODE
+            integrator.u[idx_u_vector_accumulators[19]] = 0 # seep,  is computed in ODE
+            integrator.u[idx_u_vector_accumulators[20]] = 0 # srfl,  is computed in ODE
+            integrator.u[idx_u_vector_accumulators[21]] = 0 # slfl,  is computed in ODE
+            integrator.u[idx_u_vector_accumulators[22]] = 0 # byfl,  is computed in ODE
+            integrator.u[idx_u_vector_accumulators[23]] = 0 # dsfl,  is computed in ODE
+            integrator.u[idx_u_vector_accumulators[24]] = 0 # gwfl,  is computed in ODE
+            integrator.u[idx_u_vector_accumulators[25]] = 0 # vrfln, is computed in ODE
 
-            # integrator.u[7+NLAYER+25] = p_DTP*(p_fT_RFAL - aux_du_RINT) # cum_d_rthr
-            # integrator.u[7+NLAYER+26] = p_DTP*(p_fT_SFAL - aux_du_SINT) # cum_d_sthr
+            # integrator.u[idx_u_vector_accumulators[26]] = p_DTP*(p_fT_RFAL - aux_du_RINT) # cum_d_rthr
+            # integrator.u[idx_u_vector_accumulators[27]] = p_DTP*(p_fT_SFAL - aux_du_SINT) # cum_d_sthr
             # timeseries_balerd[IDAY]=BALERD
 
             # TODO(bernhard): use SavingCallback() for all quantities that have u=... and du=0

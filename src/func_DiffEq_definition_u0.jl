@@ -25,6 +25,7 @@ function define_LWFB90_u0(p, uScalar_initial, uSoil_initial,
 
     # idx_u_vector_amounts       = p[1][4][4]
     # idx_u_vector_accumulators  = p[1][4][5]
+    # idx_u_scalar_amounts       = p[1][4][6]
 
     if compute_intermediate_quantities
         # accumulation variables:

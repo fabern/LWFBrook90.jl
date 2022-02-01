@@ -51,13 +51,17 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
         ##################
         # Parse states
+        idx_u_vector_amounts       = p[1][4][4] # 7:(6+NLAYER)
+        idx_u_vector_accumulators  = p[1][4][5] # 6+0+0+1*NLAYER .+ (1:25)
+        # idx_u_scalar_amounts       = p[1][4][6] # 1:6
+
         u_GWAT     = u[1]
         #u_INTS     = u[2]
         #u_INTR     = u[3]
         #u_SNOW     = u[4]
         #u_CC       = u[5]
         #u_SNOWLQ   = u[6]
-        u_SWATI    = u[7:(7+NLAYER-1)]
+        u_SWATI     = u[idx_u_vector_amounts]
 
         LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, t)
 
@@ -115,7 +119,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         #du[9] = 0
         #du[10] = 0
         #du[11] = 0
-        du[7:(7+(NLAYER-1))] = du_NTFLI[:]
+        du[idx_u_vector_amounts] .= du_NTFLI[:]
 
         # Do not modify INTS, INTR, SNOW, CC, SNOWLQ
         # as they are separately modified by the callback.
@@ -131,41 +135,44 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # Note that below state variables serve only as accumulator but do not affect
         # the evolution of the system.
         if compute_intermediate_quantities
+            # @assert length(idx_u_vector_accumulators) == 25
+
             # 1) Either set daily sum if rate is constant throughout precipitation interval: p_DTP*(...)
             # 2) or then set daily sum to zero and use ODE to accumulate flow.
-            du[7+NLAYER+0] = 0 # cum_d_prec, was computed in callback
-            du[7+NLAYER+1] = 0 # cum_d_rfal, was computed in callback
-            du[7+NLAYER+2] = 0 # cum_d_sfal, was computed in callback
-            du[7+NLAYER+3] = 0 # cum_d_rint, was computed in callback
-            du[7+NLAYER+4] = 0 # cum_d_sint, was computed in callback
-            du[7+NLAYER+5] = 0 # cum_d_rsno, was computed in callback
-            du[7+NLAYER+6] = 0 # cum_d_rnet, was computed in callback
-            du[7+NLAYER+7] = 0 # cum_d_smlt, was computed in callback
+            6+0+0+1*NLAYER .+ (1:25)
+            du[idx_u_vector_accumulators[ 1]] = 0 # cum_d_prec, was computed in callback
+            du[idx_u_vector_accumulators[ 2]] = 0 # cum_d_rfal, was computed in callback
+            du[idx_u_vector_accumulators[ 3]] = 0 # cum_d_sfal, was computed in callback
+            du[idx_u_vector_accumulators[ 4]] = 0 # cum_d_rint, was computed in callback
+            du[idx_u_vector_accumulators[ 5]] = 0 # cum_d_sint, was computed in callback
+            du[idx_u_vector_accumulators[ 6]] = 0 # cum_d_rsno, was computed in callback
+            du[idx_u_vector_accumulators[ 7]] = 0 # cum_d_rnet, was computed in callback
+            du[idx_u_vector_accumulators[ 8]] = 0 # cum_d_smlt, was computed in callback
 
-            du[7+NLAYER+ 8] = 0 # cum_d_evap,  was computed in callback
-            du[7+NLAYER+ 9] = 0 # cum_d_tran,  was computed in callback
-            du[7+NLAYER+10] = 0 # cum_d_irvp,  was computed in callback
-            du[7+NLAYER+11] = 0 # cum_d_isvp,  was computed in callback
-            du[7+NLAYER+12] = 0 # cum_d_slvp,  was computed in callback
-            du[7+NLAYER+13] = 0 # cum_d_snvp,  was computed in callback
-            du[7+NLAYER+14] = 0 # cum_d_pint,  was computed in callback
-            du[7+NLAYER+15] = 0 # cum_d_ptran, was computed in callback
-            du[7+NLAYER+16] = 0 # cum_d_pslvp, was computed in callback
+            du[idx_u_vector_accumulators[ 9]] = 0 # cum_d_evap,  was computed in callback
+            du[idx_u_vector_accumulators[10]] = 0 # cum_d_tran,  was computed in callback
+            du[idx_u_vector_accumulators[11]] = 0 # cum_d_irvp,  was computed in callback
+            du[idx_u_vector_accumulators[12]] = 0 # cum_d_isvp,  was computed in callback
+            du[idx_u_vector_accumulators[13]] = 0 # cum_d_slvp,  was computed in callback
+            du[idx_u_vector_accumulators[14]] = 0 # cum_d_snvp,  was computed in callback
+            du[idx_u_vector_accumulators[15]] = 0 # cum_d_pint,  was computed in callback
+            du[idx_u_vector_accumulators[16]] = 0 # cum_d_ptran, was computed in callback
+            du[idx_u_vector_accumulators[17]] = 0 # cum_d_pslvp, was computed in callback
 
-            du[7+NLAYER+17] = p_fu_SRFL +
+            du[idx_u_vector_accumulators[18]] = p_fu_SRFL +
                               sum(aux_du_BYFLI) +
                               sum(aux_du_DSFLI) +
                               du_GWFL # SRFLD + BYFLD + DSFLD + GWFLD # flow
-            du[7+NLAYER+18] = du_SEEP                                 # seep
-            du[7+NLAYER+19] = p_fu_SRFL                               # srfl
-            du[7+NLAYER+20] = p_fu_SLFL                               # slfl
-            du[7+NLAYER+21] = sum(aux_du_BYFLI)                       # byfl
-            du[7+NLAYER+22] = sum(aux_du_DSFLI)                       # dsfl
-            du[7+NLAYER+23] = du_GWFL                                 # gwfl
-            du[7+NLAYER+24] = aux_du_VRFLI[NLAYER]                    # vrfln
+            du[idx_u_vector_accumulators[19]] = du_SEEP                                 # seep
+            du[idx_u_vector_accumulators[20]] = p_fu_SRFL                               # srfl
+            du[idx_u_vector_accumulators[21]] = p_fu_SLFL                               # slfl
+            du[idx_u_vector_accumulators[22]] = sum(aux_du_BYFLI)                       # byfl
+            du[idx_u_vector_accumulators[23]] = sum(aux_du_DSFLI)                       # dsfl
+            du[idx_u_vector_accumulators[24]] = du_GWFL                                 # gwfl
+            du[idx_u_vector_accumulators[25]] = aux_du_VRFLI[NLAYER]                    # vrfln
 
-            # du[7+NLAYER+25]= 0 # cum_d_rthr, was computed in callback
-            # du[7+NLAYER+26]= 0 # cum_d_sthr, was computed in callback
+            # du[idx_u_vector_accumulators[26]]= 0 # cum_d_rthr, was computed in callback
+            # du[idx_u_vector_accumulators[27]]= 0 # cum_d_sthr, was computed in callback
             # balerd[IDAY]=BALERD
 
             # TODO(bernhard): use SavingCallback() for all quantities that have du=0

@@ -373,7 +373,8 @@ function define_LWFB90_p(
     # p_cst_4 for both RHS, CallBack as well as u0 in DiffEq.jl
     # derive indices for state vector `u`
     # 6 is the number of states except SWAT: i.e. GWAT, INTS, INTR, SNOW, CC, SNOWLQ
-    idx_u_vector_amounts       = 1:(6+NLAYER)
+    idx_u_scalar_amounts       = 1:6
+    idx_u_vector_amounts       = 7:(6+NLAYER)
     if compute_intermediate_quantities
         # 25 is the number of currently programmed intermediate quantities
         # if simulate_isotopes
@@ -387,7 +388,8 @@ function define_LWFB90_p(
 
     p_cst_4 = (NLAYER, FLAG_MualVanGen, compute_intermediate_quantities,
         idx_u_vector_amounts,
-        idx_u_vector_accumulators)
+        idx_u_vector_accumulators,
+        idx_u_scalar_amounts)
 
     p_cst = (p_cst_1, p_cst_2, p_cst_3, p_cst_4)
 
