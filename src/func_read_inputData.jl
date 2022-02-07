@@ -237,7 +237,7 @@ function read_path_param(path_param)
             "RGRORATE" => Float64,         "RGROPER" => Float64,          "FXYLEM" => Float64,
             "PSICR" => Float64,            "RTRAD" => Float64,            "NOOUTF" => Int64,    # TODO(bernhard): make boolean
             # Soil parameters -------
-            "IDEPTH" => Int64,             "QDEPTH" => Int64,
+            "IDEPTH_m" => Float64,           "QDEPTH_m" => Float64,
             "RSSA" => Float64,             "RSSB" => Float64,             "INFEXP" => Float64,
             "BYPAR" => Int64  ,             # TODO(bernhard): make boolean
             "QFPAR" => Float64,            "QFFC" => Float64,

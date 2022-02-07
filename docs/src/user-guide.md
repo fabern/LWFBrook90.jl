@@ -204,8 +204,8 @@ In case you're unfamiliar to Julia, there are various ways to run a script such 
 | RTRAD                                                        | 0.35     |
 | NOOUTF                                                       | 1        |
 | **### Soil parameters -------**                              | NA       |
-| IDEPTH                                                       | 40       |
-| QDEPTH                                                       | 0        |
+| IDEPTH_m                                                     | 0.040    |
+| QDEPTH_m                                                     | 0.0      |
 | RSSA                                                         | 100      |
 | RSSB                                                         | 1        |
 | INFEXP                                                       | 0        |

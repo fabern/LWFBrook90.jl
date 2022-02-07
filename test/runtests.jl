@@ -95,15 +95,15 @@ end
                     gravel_volFrac = 0.9:-0.1:0.5,
                     ksat_mmDay = 50, alpha_perMeter = 10:14, npar_ = 0, tort_ = 0
                     )
-    IDEPTH = 45 # mm
-    QDEPTH = 0  # mm
+    IDEPTH_m = 0.045 # m
+    QDEPTH_m = 0.0  # m
     INITRDEP = 10
     RGRORATE = 10
     FLAG_MualVanGen = 1
     # FLAG_MualVanGen = 0
 
     soil_disc = LWFBrook90.discretize_soil_params(
-        input_soil_horizons, input_soil_discretization, [], IDEPTH, QDEPTH, INITRDEP, RGRORATE, FLAG_MualVanGen)
+        input_soil_horizons, input_soil_discretization, [], IDEPTH_m, QDEPTH_m, INITRDEP, RGRORATE, FLAG_MualVanGen)
 
     @test soil_disc["NLAYER"] == 10
     @test soil_disc["THICK"]  ≈ [45.0, 955.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0]

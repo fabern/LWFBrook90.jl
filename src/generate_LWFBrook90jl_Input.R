@@ -101,11 +101,11 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
 
   # B4) other model parameters
   # Define idepth and qdepth
-  idepth = -1000*out_csv_soil_discretization[input_Data$param_b90$ilayer,"Lower_m"] # in mm (positive depth)
+  idepth = -1*out_csv_soil_discretization[input_Data$param_b90$ilayer,"Lower_m"] # in m (positive depth)
   if (input_Data$param_b90$qlayer==0) {
     qdepth = 0
   } else {
-    qdepth = -1000*out_csv_soil_discretization[input_Data$param_b90$qlayer,"Lower_m"] # in mm (positive depth)
+    qdepth = -1*out_csv_soil_discretization[input_Data$param_b90$qlayer,"Lower_m"] # in m (positive depth)
   }
   # Save all parameters
   out_param <- with(input_Data$param_b90,
@@ -141,7 +141,7 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
                           "RGRORATE"=rgrorate, "RGROPER"=rgroper,   "FXYLEM"=fxylem,
                           "PSICR"=psicr,       "RTRAD"=rrad,        "NOOUTF"=nooutf,
                           "### Soil parameters -------" = NA,
-                          "IDEPTH"=idepth, "QDEPTH"=qdepth,
+                          "IDEPTH_m"=idepth, "QDEPTH_m"=qdepth,
                           "RSSA"=rssa,     "RSSB"=rssb,     "INFEXP"=infexp,
                           "BYPAR"=bypar,   "QFPAR"=qfpar,   "QFFC"=qffc,
                           "IMPERV"=imperv, "DSLOPE"=dslope, "LENGTH_SLOPE"=slopelen,

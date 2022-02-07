@@ -37,8 +37,8 @@ function define_LWFB90_p(
             input_soil_horizons,
             input_soil_discretization,
             soil_output_depths,
-            input_param[1,"IDEPTH"],
-            input_param[1,"QDEPTH"],
+            input_param[1,"IDEPTH_m"],
+            input_param[1,"QDEPTH_m"],
             input_param[1,"INITRDEP"],
             input_param[1,"RGRORATE"],
             simOption_FLAG_MualVanGen)
@@ -294,7 +294,7 @@ function define_LWFB90_p(
     p_ILAYER = soil_discr["ILAYER"] # (Flow parameter), number of layers over which infiltration is distributed
     p_QLAYER = soil_discr["QLAYER"] # (Flow parameter), number of soil layers for SRFL
     p_INFRAC = LWFBrook90.WAT.INFPAR(p_INFEXP, p_ILAYER, p_soil, NLAYER) # fraction of (preferential) infiltration to each layer
-    # TODO(bernhard):switch to ILAYAER and QLAYER to IDEPTH and QDEPTH, which are independent of soil discretization.
+    # TODO(bernhard):switch to ILAYAER and QLAYER to IDEPTH_m and QDEPTH_m, which are independent of soil discretization.
 
     ### Flow generation
     p_BYPAR  = input_param[1,"BYPAR"]  # (Flow parameter), flag to activate bypass flow (BYFL), (0/1)
@@ -314,18 +314,18 @@ function define_LWFB90_p(
         (1 .- p_soil.p_STONEF[1:p_QLAYER]))     # water storage at field capacity for layers 1 through QLAYER, mm
 
     # Documentation from ecoshift:
-    # BYPAR (Flow parameter) - either 0 to prevent bypass flow (BYFL), or 1 to allow BYFL . BYFL is zero when BYPAR = 0, unless the surface layer becomes saturated. When BYPAR = 1, a fraction of infiltration to each layer is immediately routed to bypass flow to simulate downslope macropore or pipe flow of new water. The fraction depends on QFFC and QFPAR. These are the same parameters used to determine source area flow (SRFL), so simulation with both SRFL and BYFL (QDEPTH > 0 and BYPAR = 1) is discouraged. The difference is that SRFL depends on the total water content down to QDEPTH whereas BYFL depends on water content in each layer down to IDEPTH. When NLAYER = 1, SRFL and BYFL are identical. [see WAT-BYFLFR]
+    # BYPAR (Flow parameter) - either 0 to prevent bypass flow (BYFL), or 1 to allow BYFL . BYFL is zero when BYPAR = 0, unless the surface layer becomes saturated. When BYPAR = 1, a fraction of infiltration to each layer is immediately routed to bypass flow to simulate downslope macropore or pipe flow of new water. The fraction depends on QFFC and QFPAR. These are the same parameters used to determine source area flow (SRFL), so simulation with both SRFL and BYFL (QDEPTH_m > 0 and BYPAR = 1) is discouraged. The difference is that SRFL depends on the total water content down to QDEPTH_m whereas BYFL depends on water content in each layer down to IDEPTH_m. When NLAYER = 1, SRFL and BYFL are identical. [see WAT-BYFLFR]
     # DRAIN (Flow parameter) - multiplier between 0 and 1 of drainage from the lowest soil layer, VRFLI(n), for drainage to groundwater, dimensionless. DRAIN = 1 produces vertical drainage under gravity gradient. DRAIN = 0 prevents drainage from the bottom of the soil column. Values between 0 and 1 can also be used, especially to control DSFL. [see WAT-VERT] [see WAT-DSLOP]
     # DSLOPE and DSLOPED (Flow parameter) - hillslope angle for downslope matric flow (DSFL), degrees. In code DSLOPED is in degrees, DSLOPE is in radians. Because downslope flow is overparameterized, arbitrarily setting DSLOPE to 10° is satisfactory for DSFL from the bottom soil layer(s). When either DSLOPE or LENGTH_SLOPE is 0 there is no DSFL, and the other parameter is ignored. [see WAT-DSLOP]
     # GSC (Flow parameter) - fraction of groundwater storage (GWAT), that is transferred to groundwater flow (GWFL) and deep seepage (SEEP) each day, d-1. Where groundwater is being simulated, GSC should be some fraction like 0.1 d-1 or less. If GSC = 0 there is no groundwater storage and all vertical drainage from the soil profile becomes seepage or streamflow directly. See also GSP. [see WAT-GWATER]
     # GSP (Flow parameter) - fraction of groundwater discharge produced by GSC that goes to deep seepage (SEEP) and is not added to streamflow (FLOW), dimensionless. If GSC = 0, GSP applies to vertical drainage from the bottom soil layer. To eliminate SEEP set GSP to zero. [see WAT-GWATER]
-    # IDEPTH (Flow parameter) - depth over which infiltration is distributed, mm. IDEPTH determines the number of soil layers over which infiltration is distributed when INFEXP is greater than 0. It should correspond to the depth of vertical macropores. IDEPTH does not need to correspond to the bottom of a soil layer; it is converted into the number of soil layers most closely corresponding to IDEPTH. [see WAT-INFPAR].
-    # IMPERV (Flow parameter) - fraction of the soil surface that is impermeable and always routes water reaching it directly to streamflow as SRFL. For a watershed, IMPERV represents at least the area of the stream channel; an appropriate value is 0.01. To turn off SLFL set IMPERV = 1. To turn off SRFL set both IMPERV and QDEPTH to zero. [see WAT-SRFLFR]
-    # INFEXP (Flow parameter) - infiltration exponent that determines the distribution of infiltrated water with depth, dimensionless. When INFEXP = 0, all infiltration goes to the top soil layer and a classic top-down wetting front is produced. Increasing INFEXP corresponds to increasing macropore-assisted infiltration, and produces an exponential depth distribution of infiltrated water down through the layer whose lower depth most closely corresponds to IDEPTH. With INFEXP = 1, infiltrated water is distributed uniformly down to the IDEPTH layer. Values above 1 put more water into lower layers than into upper layers. [see WAT-INFPAR] [see WAT-BYFLFR]
+    # IDEPTH_m (Flow parameter) - depth over which infiltration is distributed, mm. IDEPTH_m determines the number of soil layers over which infiltration is distributed when INFEXP is greater than 0. It should correspond to the depth of vertical macropores. IDEPTH_m does not need to correspond to the bottom of a soil layer; it is converted into the number of soil layers most closely corresponding to IDEPTH_m. [see WAT-INFPAR].
+    # IMPERV (Flow parameter) - fraction of the soil surface that is impermeable and always routes water reaching it directly to streamflow as SRFL. For a watershed, IMPERV represents at least the area of the stream channel; an appropriate value is 0.01. To turn off SLFL set IMPERV = 1. To turn off SRFL set both IMPERV and QDEPTH_m to zero. [see WAT-SRFLFR]
+    # INFEXP (Flow parameter) - infiltration exponent that determines the distribution of infiltrated water with depth, dimensionless. When INFEXP = 0, all infiltration goes to the top soil layer and a classic top-down wetting front is produced. Increasing INFEXP corresponds to increasing macropore-assisted infiltration, and produces an exponential depth distribution of infiltrated water down through the layer whose lower depth most closely corresponds to IDEPTH_m. With INFEXP = 1, infiltrated water is distributed uniformly down to the IDEPTH_m layer. Values above 1 put more water into lower layers than into upper layers. [see WAT-INFPAR] [see WAT-BYFLFR]
     # LENGTH_SLOPE (Flow parameter) - slope length for downslope flow (DSFL), m. LENGTH_SLOPE is conceptually the hillslope length in m as horizontal or map distance from ridge to channel. But in practice it is a fitted value to produce the desired amount of DSFL, which is roughly inversely proportional to LENGTH_SLOPE. Downslope flow from the bottom soil layer(s) is overparameterized, so LENGTH_SLOPE can be set to 10 m and DSFL can be varied by changing DRAIN. When either DSLOPE or LENGTH_SLOPE are 0 there is no downslope flow, and the other parameter is ignored. [see WAT-DSLOP]
-    # QDEPTH (Flow parameter) - soil depth for SRFL calculation, mm. QDEPTH determines the number of soil layers over which wetness is calculated to determine source area fraction and SRFL. QDEPTH does not need to correspond to the bottom of a soil layer, but it is converted into the number of soil layers most closely corresponding to QDEPTH. When QDEPTH equals or exceeds the depth of NLAYER then all NLAYERs are used. When QDEPTH = 0, the source area fraction is equal to IMPERV. Smaller QDEPTH means a larger contrast between wet and dry conditions, and thus more responsiveness of source area fraction. See also QFPAR and QFFC. To turn off SRFL set both IMPERV and QDEPTH to zero. [see WAT-BYFLFR] [see WAT-SRFLFR] [see WAT-SRFPAR]
-    # QFFC (Flow parameter) - quick flow fraction for SRFL and BYFL at THETAF, dimensionless. QFFC is used for both SRFL and BYFL, so normally only one or the other should be simulated. For Hubbard Brook Watershed 6, QFFC = 0.2 and QFPAR = 0.3 fit storm hydrographs well using SRFL; these values give a generally high stormflow response. Decreasing QFFC decreases SRFL and BYFL proportionally at all soil water contents. See also QFPAR, and QDEPTH. QFFC must be greater than 0.0001. When both BYPAR and QDEPTH = 0, QFFC is ignored. When QFFC = 1 there is never any infiltration into the top soil layer. [see WAT-BYFLFR] [see WAT-SRFLFR]
-    # QFPAR (Flow parameter) - fraction of the water content between field capacity (THETAF) and saturation (THSAT) at which the quick flow fraction is 1, dimensionless. QFPAR is used for both SRFL and BYFL, so normally only one or the other should be simulated. When QFPAR = 0 (<= 0.01), quick flow operates like a field-capacity bucket; all water input above field capacity becomes BYFL or SRFL. For Hubbard Brook Watershed 6, QFFC = 0.2 and QFPAR = 0.3 fit storm hydrographs well using SRFL; these values give a generally high stormflow response. Increasing QFPAR increases quickflow from soil dryer than THETAF and decreases it from soil wetter than THETAF. Values > 1 are allowed. For SRFL, the average water content of layers down through QDEPTH controls the flow rate. For BYFL, the water content of each layer controls the flow rate from that layer. When both BYPAR and QDEPTH = 0, QFPAR is ignored. [see WAT-BYFLFR] [see WAT-SRFLFR]
+    # QDEPTH_m (Flow parameter) - soil depth for SRFL calculation, mm. QDEPTH_m determines the number of soil layers over which wetness is calculated to determine source area fraction and SRFL. QDEPTH_m does not need to correspond to the bottom of a soil layer, but it is converted into the number of soil layers most closely corresponding to QDEPTH_m. When QDEPTH_m equals or exceeds the depth of NLAYER then all NLAYERs are used. When QDEPTH_m = 0, the source area fraction is equal to IMPERV. Smaller QDEPTH_m means a larger contrast between wet and dry conditions, and thus more responsiveness of source area fraction. See also QFPAR and QFFC. To turn off SRFL set both IMPERV and QDEPTH_m to zero. [see WAT-BYFLFR] [see WAT-SRFLFR] [see WAT-SRFPAR]
+    # QFFC (Flow parameter) - quick flow fraction for SRFL and BYFL at THETAF, dimensionless. QFFC is used for both SRFL and BYFL, so normally only one or the other should be simulated. For Hubbard Brook Watershed 6, QFFC = 0.2 and QFPAR = 0.3 fit storm hydrographs well using SRFL; these values give a generally high stormflow response. Decreasing QFFC decreases SRFL and BYFL proportionally at all soil water contents. See also QFPAR, and QDEPTH_m. QFFC must be greater than 0.0001. When both BYPAR and QDEPTH_m = 0, QFFC is ignored. When QFFC = 1 there is never any infiltration into the top soil layer. [see WAT-BYFLFR] [see WAT-SRFLFR]
+    # QFPAR (Flow parameter) - fraction of the water content between field capacity (THETAF) and saturation (THSAT) at which the quick flow fraction is 1, dimensionless. QFPAR is used for both SRFL and BYFL, so normally only one or the other should be simulated. When QFPAR = 0 (<= 0.01), quick flow operates like a field-capacity bucket; all water input above field capacity becomes BYFL or SRFL. For Hubbard Brook Watershed 6, QFFC = 0.2 and QFPAR = 0.3 fit storm hydrographs well using SRFL; these values give a generally high stormflow response. Increasing QFPAR increases quickflow from soil dryer than THETAF and decreases it from soil wetter than THETAF. Values > 1 are allowed. For SRFL, the average water content of layers down through QDEPTH_m controls the flow rate. For BYFL, the water content of each layer controls the flow rate from that layer. When both BYPAR and QDEPTH_m = 0, QFPAR is ignored. [see WAT-BYFLFR] [see WAT-SRFLFR]
     # INFRAC(1 To ML) - fraction of infiltration to each layer, calculated parameter. [see WAT-INFPAR] [see WAT-INFLOW]
     # SWATQF - water storage at field capacity for layers 1 to ,mm, calculated parameter. [see WAT-SRFLFR] [see WAT-SRFPAR]
     # SWATQX - maximum water storage for layers 1 to QLAYER, mm, calculated parameter. [see WAT-SRFLFR] [see WAT-SRFPAR]
@@ -380,7 +380,11 @@ function define_LWFB90_p(
         # if simulate_isotopes
         #     idx_u_vector_accumulators = 6+4+4+3*NLAYER .+ (1:25)
         # else
-        idx_u_vector_accumulators = 6+0+0+1*NLAYER .+ (1:25)
+        idx_u_vector_accumulators = 6 + 0 + 0 + 1 * NLAYER .+ (1:25)
+        names_u_vector_accumulators = [
+            "cum_d_prec"  "cum_d_rfal"  "cum_d_sfal"  "cum_d_rint" "cum_d_sint"  "cum_d_rsno"  "cum_d_rnet"  "cum_d_smlt"  "cum_d_evap"  "cum_d_tran"  "cum_d_irvp"  "cum_d_isvp"  "cum_d_slvp"  "cum_d_snvp"  "cum_d_pint"  "cum_d_ptran"  "cum_d_pslvp" "flow"  "seep"  "srfl"  "slfl"  "byfl"  "dsfl"  "gwfl"  "vrfln"
+            #"cum_d_rthr", "cum_d_sthr"
+        ]
         # end
     else
         idx_u_vector_accumulators = []
@@ -389,7 +393,8 @@ function define_LWFB90_p(
     p_cst_4 = (NLAYER, FLAG_MualVanGen, compute_intermediate_quantities,
         idx_u_vector_amounts,
         idx_u_vector_accumulators,
-        idx_u_scalar_amounts)
+        idx_u_scalar_amounts,
+        names_u_vector_accumulators)
 
     p_cst = (p_cst_1, p_cst_2, p_cst_3, p_cst_4)
 
@@ -502,8 +507,8 @@ end
         input_soil_horizons,
         input_soil_discretization,
         soil_output_depths,
-        IDEPTH,
-        QDEPTH,
+        IDEPTH_m,
+        QDEPTH_m,
         INITRDEP,
         RGRORATE,
         FLAG_MualVanGen)
@@ -517,8 +522,8 @@ function discretize_soil_params(
     input_soil_horizons,
     input_soil_discretization,
     soil_output_depths,
-    IDEPTH,
-    QDEPTH,
+    IDEPTH_m,
+    QDEPTH_m,
     INITRDEP,
     RGRORATE,
     FLAG_MualVanGen)
@@ -528,10 +533,10 @@ function discretize_soil_params(
 
     # input_soil_horizons: A matrix of the 8 soil materials parameters.
     # input_soil_discretization:
-    # IDEPTH depth over which infiltration is distributed, [mm] "IDEPTH determines the
+    # IDEPTH_m depth over which infiltration is distributed, [m] "IDEPTH_m determines the
     #        number of soil layers over which infiltration is distributed when INFEXP is
     #        greater than 0."
-    # QDEPTH soil depth for SRFL calculation, 0 to prevent SRFL, [mm] "QDEPTH determines the
+    # QDEPTH_m soil depth for SRFL calculation, 0 to prevent SRFL, [m] "QDEPTH_m determines the
     #        layers over which wetness is calculated to determine source area (SRFL)
     #        parameters."
     # INITRDEP
@@ -565,11 +570,11 @@ function discretize_soil_params(
     # 1b) Find out which interfaces need to be added
     all_needed_interfaces = unique(sort(
         [
-         # interfaces for change in horizons or inflow depths or qdepth
+         # interfaces for change in horizons or inflow depths or QDEPTH_m
          input_soil_horizons[!,"Upper_m"];
          input_soil_horizons[!,"Lower_m"];
-         -IDEPTH/1000; # mm (positive) to m (negative)
-         -QDEPTH/1000;  # mm (positive) to m (negative)
+         -IDEPTH_m; # m (positive) to m (negative)
+         -QDEPTH_m;  # m (positive) to m (negative)
 
          # interfaces for layers determined in 1a)
          needed_interfaces_for_additional_layers
@@ -610,24 +615,24 @@ function discretize_soil_params(
         end
     end
 
-    # Define ILAYER and QLAYER (to be used internally instead of IDEPTH and QDEPTH)
-    is_infiltration_layer_BOOLEAN = -IDEPTH/1000 .<= soil_discretization[!,"Lower_m"]
-    is_SRFL_layer_BOOLEAN         = -QDEPTH/1000 .<= soil_discretization[!,"Lower_m"]
-    ILAYER = sum(is_infiltration_layer_BOOLEAN) # lowest node where Bottom_m is below IDEPTH/1000
-    QLAYER = sum(is_SRFL_layer_BOOLEAN)         # lowest node where Bottom_m is below QDEPTH/1000
+    # Define ILAYER and QLAYER (to be used internally instead of IDEPTH_m and QDEPTH_m)
+    is_infiltration_layer_BOOLEAN = -IDEPTH_m .<= soil_discretization[!,"Lower_m"]
+    is_SRFL_layer_BOOLEAN         = -QDEPTH_m .<= soil_discretization[!,"Lower_m"]
+    ILAYER = sum(is_infiltration_layer_BOOLEAN) # lowest node where Bottom_m is below IDEPTH_m
+    QLAYER = sum(is_SRFL_layer_BOOLEAN)         # lowest node where Bottom_m is below QDEPTH_m
 
-    if (-IDEPTH/1000 < soil_discretization[end,"Lower_m"]) ||
-        (-QDEPTH/1000 < soil_discretization[end,"Lower_m"])
-        @error "QDEPTH or IDEPTH were defined deeper than the lowest simulation element."
+    if (-IDEPTH_m < soil_discretization[end,"Lower_m"]) ||
+        (-QDEPTH_m < soil_discretization[end,"Lower_m"])
+        @error "QDEPTH_m or IDEPTH_m were defined deeper than the lowest simulation element."
     end
     ############
 
     ############
     # 2) Append soil horizon data to discretized soil domain
     # Assert expectations
-    @assert input_soil_horizons[1,"Upper_m"]       ≈ 0
+    @assert input_soil_horizons[1,"Upper_m"] ≈ 0
     @assert soil_discretization[1,"Upper_m"] ≈ 0
-    @assert input_soil_horizons[1,"Lower_m"]       < 0
+    @assert input_soil_horizons[1,"Lower_m"] < 0
     @assert soil_discretization[1,"Lower_m"] < 0
 
     # Find for each soil_discretization node in which horizon it lies
@@ -660,7 +665,7 @@ function discretize_soil_params(
 
         Please check and correct the input files.
         """
-        # (Note that the discretized domain is defined in a separate input CSV-file and is further extended to include internal variables IDEPTH and QDEPTH.)
+        # (Note that the discretized domain is defined in a separate input CSV-file and is further extended to include internal variables IDEPTH_m and QDEPTH_m.)
     ############
 
     ############

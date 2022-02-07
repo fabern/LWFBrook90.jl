@@ -138,16 +138,16 @@ has not infiltrated but has moved across the surface to a channel, whereas BYFL 
 water that has moved to a channel below the surface via macropores or pipes. In BROOK90 the
 amount of BYFL from each layer depends on the wetness of that particular layer and on the
 amount of infiltration to it, which is controlled by INFEXP. The amount of SRFL depends on
-the total wetness of all soil layers down to and including input parameter QDEPTH . In
+the total wetness of all soil layers down to and including input parameter QDEPTH_m . In
 general users should not try to model BYFL and SRFL simultaneously because trying to fit
 parameters for both at the same time would be too complicated. The parameter BYPAR is set to
-1 to allow BYFL and zero to prevent it. SRFL is prevented by setting both QDEPTH and IMPERV
+1 to allow BYFL and zero to prevent it. SRFL is prevented by setting both QDEPTH_m and IMPERV
 to zero. The same parameters, QFFC and QFPAR, are used for SRFL and for BYFL from all
 layers.
 
 When BYPAR = 0, there is no bypass flow from deeper layers, but bypass flow is still
 generated from layer 1 when the layer would otherwise become oversaturated. When INFEXP = 0
-or IDEPTH = 0, BYFL can only be generated from layer 1 because it is the only layer
+or IDEPTH_m = 0, BYFL can only be generated from layer 1 because it is the only layer
 receiving infiltrated water.
 
 In each iteration loop, subroutine BYFLFR calculates the fraction of the water infiltrating
