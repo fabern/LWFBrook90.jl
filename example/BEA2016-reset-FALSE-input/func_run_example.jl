@@ -83,8 +83,9 @@ function run_example()
         input_storm_durations,
         input_initial_conditions,
         input_soil_horizons,
-        input_soil_discretization,
         simOption_FLAG_MualVanGen) = read_inputData(input_path, input_prefix)
+
+    input_soil_discretization = discretize_soil(input_path, input_prefix)
     ####################
 
     ####################

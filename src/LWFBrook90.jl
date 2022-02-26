@@ -4,7 +4,7 @@ using OrdinaryDiffEq  # instead of loading the full DifferentialEquations
 using DiffEqCallbacks # instead of loading the full DifferentialEquations
 using RecipesBase
 
-export read_inputData
+export read_inputData, discretize_soil
 export define_LWFB90_p, define_LWFB90_u0, define_LWFB90_ODE
 export KPT_SOILPAR_Mvg1d, KPT_SOILPAR_Ch1d
 export RelativeDaysFloat2DateTime, plot_LWFBrook90
@@ -19,6 +19,7 @@ include("module_SNO.jl");        # to bring into scope: using .SNO
 include("module_EVP.jl");        # to bring into scope: using .SNO
 
 include("func_read_inputData.jl")
+include("func_discretize_soil_domain.jl")
 include("func_DiffEq_definition_u0.jl")
 include("func_DiffEq_definition_p.jl")
 include("func_DiffEq_definition_cb.jl")

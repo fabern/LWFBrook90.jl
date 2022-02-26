@@ -27,7 +27,6 @@ function read_inputData(folder::String, prefix::String; suffix::String = "")
     path_storm_durations    = joinpath(folder, prefix*"_meteo_storm_durations"*suffix*".csv")
     path_initial_conditions = joinpath(folder, prefix*"_initial_conditions"*suffix*".csv")
     path_soil_horizons      = joinpath(folder, prefix*"_soil_horizons"*suffix*".csv")
-    path_soil_discretization= joinpath(folder, prefix*"_soil_discretization"*suffix*".csv")
 
     ## B) Load input data (time- and/or space-varying parameters)
     input_meteoveg, input_meteoveg_reference_date = read_path_meteoveg(path_meteoveg)
@@ -42,8 +41,6 @@ function read_inputData(folder::String, prefix::String; suffix::String = "")
 
     # Load soil data
     input_soil_horizons, simOption_FLAG_MualVanGen = read_path_soil_horizons(path_soil_horizons)
-
-    input_soil_discretization = read_path_soil_discretization(path_soil_discretization)
 
     # Load precipitation subdaily details
     #' @param storm_durations a [1,12]-matrix of precipitation durations (hours) for each month.
@@ -60,13 +57,12 @@ function read_inputData(folder::String, prefix::String; suffix::String = "")
     # unused:           ignorerepeated=true)
 
     return (input_meteoveg,
-            input_meteoveg_reference_date,
-            input_param,
-            input_storm_durations,
-            input_initial_conditions,
-            input_soil_horizons,
-            input_soil_discretization,
-            simOption_FLAG_MualVanGen)
+        input_meteoveg_reference_date,
+        input_param,
+        input_storm_durations,
+        input_initial_conditions,
+        input_soil_horizons,
+        simOption_FLAG_MualVanGen)
 end
 
 
