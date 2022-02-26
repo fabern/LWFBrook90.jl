@@ -52,7 +52,7 @@ clearly unsaturated:
 module KPT # SOIL WATER PROPERTIES
 
 export SOILPAR_CH, derive_auxiliary_SOILVAR
-export KPT_SOILPAR_Mvg1d, KPT_SOILPAR_Ch1d
+export KPT_SOILPAR_Mvg1d, KPT_SOILPAR_Ch1d, FWETNES
 using Roots: find_zero, Bisection # to find wetness for a given hydraulic conductivity
 using ..CONSTANTS: p_ThCrit,p_RHOWG # https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
 
@@ -263,6 +263,12 @@ end
 KPT_SOILPAR_Mvg1d(;p_THICK::T, p_STONEF::T, p_THSAT::T, p_Kθfc::T, p_KSAT::T, p_MvGα::T, p_MvGn::T, p_MvGl::T, p_θr::T) where {T<:AbstractVector} =
 KPT_SOILPAR_Mvg1d{T}(;p_THICK, p_STONEF, p_THSAT, p_Kθfc, p_KSAT, p_MvGα, p_MvGn, p_MvGl, p_θr)
     # for explanation see https://docs.julialang.org/en/v1/manual/constructors/#Parametric-Constructors
+
+# TODO: at some point in time define iterators or getindex for my type
+    # function Base.getindex(p::KPT_SOILPAR_Mvg1d{Vector{Float64}}, idx::Int)
+#     1 <= idx <= p.NLAYER || throw(BoundsError(p, idx))
+#     p.p_THSAT[idx]
+# end
 
 """
     derive_auxiliary_SOILVAR(u_SWATI, p_soil)

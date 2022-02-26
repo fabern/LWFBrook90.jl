@@ -3,9 +3,10 @@
 
 Generate vector u0 needed for ODE() problem in DiffEq.jl package.
 """
-function define_LWFB90_u0(p, uScalar_initial, uSoil_initial,
+function define_LWFB90_u0(p, uScalar_initial, uSoil_initial_ψM_kPa,
     compute_intermediate_quantities)
 
+    p_soil = p[1][1]
     # amounts
     u_GWAT_init_mm = uScalar_initial[1, "u_GWAT_init_mm"]
     u_INTS_init_mm = uScalar_initial[1, "u_INTS_init_mm"]
@@ -13,15 +14,18 @@ function define_LWFB90_u0(p, uScalar_initial, uSoil_initial,
     u_SNOW_init_mm = uScalar_initial[1, "u_SNOW_init_mm"]
     u_CC_init_MJ_per_m2 = uScalar_initial[1, "u_CC_init_MJ_per_m2"]
     u_SNOWLQ_init_mm = uScalar_initial[1, "u_SNOWLQ_init_mm"]
-    u_SWATIinit_mm = uSoil_initial
+    # u_SWATIinit_mm = LWFBrook90.KPT.FWETNES(uSoil_initial_ψM_kPa, p_soil) .*
+    #                  p_soil.p_SWATMAX
+    u_SWATIinit_mm = LWFBrook90.KPT.FTheta(LWFBrook90.KPT.FWETNES(uSoil_initial_ψM_kPa, p_soil), p_soil) .*
+                     p_soil.p_SWATMAX ./ p_soil.p_THSAT # see l.2020: https://github.com/pschmidtwalter/LWFBrook90R/blob/6f23dc1f6be9e1723b8df5b188804da5acc92e0f/src/md_brook90.f95#L2020
 
     u0 = [u_GWAT_init_mm
-            u_INTS_init_mm
-            u_INTR_init_mm
-            u_SNOW_init_mm
-            u_CC_init_MJ_per_m2
-            u_SNOWLQ_init_mm
-            u_SWATIinit_mm]
+        u_INTS_init_mm
+        u_INTR_init_mm
+        u_SNOW_init_mm
+        u_CC_init_MJ_per_m2
+        u_SNOWLQ_init_mm
+        u_SWATIinit_mm]
 
     # idx_u_vector_amounts       = p[1][4][4]
     # idx_u_vector_accumulators  = p[1][4][5]
