@@ -105,7 +105,37 @@ function MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
             p_fu_SNOEN)
 end
 
+"""
+    MSBDAYNIGHT()
 
+Calculate average daily rate of potential and actual interception, evaporation, and
+transpiration by considering weighted average of rate during day and rate during night:
+Subroutine MSBDAYNIGHT - day-night loop: Compute day and night rates
+
+# Arguments
+- many
+
+http://www.ecoshift.net/brook/pet.html
+
+BROOK90 obtains evaporation rates separately for daytime and nighttime within a day-night
+evaporation loop. All solar radiation (SOLRAD) is assigned to the daytime. The atmospheric
+humidity (EA) is assumed constant through the day ("day" refers to 24 hours). The daytime
+and nighttime values of air temperature and wind speed are obtained in subroutine WEATHER
+using function WNDADJ. Vapor pressure deficit (VPD) is obtained using subroutine ESAT.
+Subroutine CANOPY uses function INTERP to obtain canopy structure variables for the day.
+Subroutine ROUGH gets canopy roughness parameters. Within a day-night loop, the three
+aerodynamic resistances needed by the Shuttleworth-Wallace method are calculated in
+subroutine SWGRA. The canopy surface resistance (RSC) for the daytime is obtained from
+subroutine SRSC, and the soil surface resistance (RSS) in function FRSS. Subroutine SWPE
+uses function PM along with the various resistances to obtain potential transpiration rate
+(PTR) and the associated ground or soil evaporation rate (GER) by the Shuttleworth-Wallace
+equations. Subroutine SWPE is called again with RSC = 0 to give potential interception rate
+(PIR) and its associated soil evaporation rate (GIR). Subroutine TBYLAYER obtains actual
+transpiration by layer (ATRANI). If the actual transpiration is less than the potential, a
+new, higher GER is calculated by subroutine SWGE. BROOK90 then weights the daytime and
+nighttime rates by the solar daylength (DAYLEN) to obtain average rates for the day, PTRAN,
+GEVP, PINT, GIVP, and TRANI, which are used in later calculations.
+"""
 function MSBDAYNIGHT(IDAY, #TODO(bernhard) just for debug... remove again!
                      FLAG_MualVanGen,
                      # arguments
@@ -163,6 +193,7 @@ function MSBDAYNIGHT(IDAY, #TODO(bernhard) just for debug... remove again!
         # else
         cloud_fraction = p_fu_SOLRADC / p_fT_I0HDAY
         # end
+        # Available energy above canopy (AA) and at soil/substrate (ASUBS)
         AA, ASUBS =
             LWFBrook90.SUN.AVAILEN(SLRAD[J], p_fu_ALBEDO, p_C1, p_C2, p_C3, TAJ, p_fT_EA,
                     cloud_fraction,
@@ -178,6 +209,7 @@ function MSBDAYNIGHT(IDAY, #TODO(bernhard) just for debug... remove again!
         else
             RSC = 1 / (p_GLMIN * p_fu_LAIeff)
         end
+        # RSC: canopy surface resistance
 
         #print("\nIDAY:$(@sprintf("% 3d", IDAY)), J = $J     AA:$(@sprintf("% 8.4f", AA)), ASUBS:$(@sprintf("% 8.4f", ASUBS)), VPD:$(@sprintf("% 8.4f", VPD)), RAA:$(@sprintf("% 8.4f", RAA)), RAC:$(@sprintf("% 8.4f", RAC)), RAS:$(@sprintf("% 8.4f", RAS)), RSC:$(@sprintf("% 8.4f", RSC)), p_fu_RSS:$(@sprintf("% 8.4f", p_fu_RSS)), DELTA:$(@sprintf("% 8.4f", DELTA))")
 
@@ -232,7 +264,18 @@ function MSBDAYNIGHT(IDAY, #TODO(bernhard) just for debug... remove again!
     #         p_fu_ATRI)
 end
 
+"""
+    MSBDAYNIGHT_postprocess()
 
+Calculate average daily rate of potential and actual interception, evaporation, and
+transpiration by considering weighted average of rate during day and rate during night:
+Subroutine MSBDAYNIGHT_postprocess - Combine day and night rates to average daily rate
+
+# Arguments
+- many
+
+http://www.ecoshift.net/brook/pet.html
+"""
 function MSBDAYNIGHT_postprocess(FLAG_MualVanGen, NLAYER,
                                  p_fu_PTR, # potential transpiration rate for daytime or night (mm/d)
                                  p_fu_GER, # ground evaporation rate for daytime or night (mm/d)
@@ -449,6 +492,10 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
     DPSIDW = LWFBrook90.KPT.FDPSIDWF(u_aux_WETNES, p_soil)
 
     # limit step size
+    #       TODO(bernhard): This could alternatively be achieved with a stepsize limiter callback
+    #                       see: https://diffeq.sciml.ai/stable/features/callback_library/#Stepsize-Limiters
+    #       TODO(bernhard): Or it could alternatively be set manually using set_proposed_dt!
+    #                       see: https://diffeq.sciml.ai/stable/basics/integrator/#SciMLBase.set_proposed_dt!
     #   ITER computes DTI so that the potential difference (due to aux_du_VRFLI)
     #   between adjacent layers does not change sign during the iteration time step
     DTINEW=LWFBrook90.WAT.ITER(NLAYER, FLAG_MualVanGen, DTI, LWFBrook90.CONSTANTS.p_DTIMIN, DPSIDW,

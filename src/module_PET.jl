@@ -606,7 +606,7 @@ function SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, p_fu_RSS, DELTA)
     PMC = PM(AA, VPD - DELTA * RAC * ASUBS / p_CPRHO, DELTA, RAA + RAC, RSC)
 
     # LE: total latent heat flux density, W/m2
-    LE = (CCC * PMC + CCS * PMS)
+    LE = (CCC * PMC + CCS * PMS) # λE
     D0 = VPD + RAA * (DELTA * AA - (DELTA + p_GAMMA) * LE) / p_CPRHO
 
     # potential transpiration rate, mm/d
@@ -655,10 +655,16 @@ function SWGE(AA, ASUBS, VPD, RAA, RAS, p_fu_RSS, DELTA, ARATE)
 end
 
 
-"""
+@doc raw"""
     SWGRA()
 
 Compute Shuttleworth - Wallace - Gurney Aerodynamic Resistances.
+
+The function computes and returns the aerodynamic resistances
+    ``r_a^a`` (source height to reference height),
+    ``r_a^c`` (leaf to zero plane), and
+    ``r_a^s`` (ground to source height),
+    see Shuttleworth and Gurney (1990).
 
 # Ecoshift
 "
@@ -669,7 +675,9 @@ given here.
 
 The friction velocity, u*, is first obtained from the classic logarithmic wind profile as
 
-(16) u* = k ua / ln [ ( za - d ) / z0 ]
+```math
+(16) u^* = \frac{ k u_a }{ \log((z_a-d)/z_{0}) }
+```
 
 where ua is the wind speed at the reference height, za, z0 is the surface roughness
 parameter, d is the zero-plane displacement, and k is the von Karman constant. The roughness
@@ -683,22 +691,33 @@ the objective is to evaluate PE for periods of a day and are not used in BROOK90
 Shuttleworth and Gurney (1990) assume that the classic logarithmic wind profile applies
 above the canopy and that an exponential profile applies within the canopy. As the canopy
 becomes sparser, they further assume that the effective source height of the energy fluxes
-remains at the same height as for a closed canopy, Dc = z0c + dc; these values are obtained
+remains at the same height as for a closed canopy, ``D_c = z_{0c} + d_c``; these values are obtained
 in subroutine ROUGH. The ground to source height resistance, ras, is obtained by integrating
-the exponential eddy diffusivity from 0 to Dc to give
+the exponential eddy diffusivity from 0 to ``D_c`` to give
 
-(17) ras = [ h exp(n) / n Kh] [exp( -n z0g / h ) - exp( -n Dc / h ) ]
+```math
+(17) r_a^s = \frac{h \exp(n)}{ n K_h} \left(
+        \exp\left( \frac{-n z_{0g} }{h} \right)  -
+        \exp\left( \frac{-n D_c }{h}    \right)
+    \right)
+```
 
 and the source height to reference height resistance, raa, is obtained by integrating from
-Dc to za as
+``D_c`` to ``z_a`` as
 
-(18) raa = ln [ ( za - d ) / ( h - d ) ] / k u* + ( h / n Kh ) { -1 + exp[ n (h - Dc) / h ]
-}
+```math
+(18) r_a^a = \frac{ \log( \frac{z_a-d}{h-d} ) }{k u^*} +
+        \frac{h}{n K_h} \left(
+            -1 + \exp\left( n \frac{h-D_c}{h} \right)
+        \right),
+```
 
-where n is the extinction coefficient for eddy diffusivity, z0g is the roughness parameter
+where n is the extinction coefficient for eddy diffusivity, ``z_{0g}`` is the roughness parameter
 of the underlying ground surface, and the eddy diffusivity at the canopy height, h, is
 
-(19) Kh = k u* (h - d).
+```math
+(19) K_h = k u^* (h-d).
+```
 
 The exponential wind profile and the derived K(z) are known to be incorrect in canopies of
 intermediate leaf area index, but a better model is not yet available (Choudhury and
@@ -707,21 +726,31 @@ Monteith 1988).
 The leaf to zero plane resistance, rac, is assumed by Shuttleworth and Gurney (1990) to be a
 sum of the individual leaf laminar boundary layer conductances, so
 
-(20) rac = ( n / ab ) ( w / uh )1/2 / { ρ tp Lp [ 1 - exp( -n / 2 ) ] }
+```math
+(20) r_a^c = \frac{r_b}{ρtp L_p}
+           = \frac{1}{ρtp L_p}
+              \frac{
+                    \frac{n}{ab} \left( \frac{w}{u_h} \right)^{1/2}
+                }{
+                    \left( 1 - \exp( -n / 2 ) \right)
+                },
+```
 
 where n is the extinction coefficient for eddy diffusivity, ab is a constant = 0.01 m/s0.5
 (Campbell 1977), ρtp is the ratio of projected leaf area to total leaf surface area, Lp is
 the projected leaf area index, w is the representative leaf width in m, and uh is the wind
 speed in m/s at the top of the canopy. (Note that Shuttleworth and Gurney (1990) should have
-n in the numerator, not the denominator.) The rac equation strictly applies only to flat
-leaves and needles, not to cylindrical needles; but rac is small when w is small so this
+n in the numerator, not the denominator.) The ``r_a^c`` equation strictly applies only to flat
+leaves and needles, not to cylindrical needles; but ``r_a^c`` is small when w is small so this
 inaccuracy is negligible. The canopy-top wind speed, uh, is
 
-(21) uh = (u* / k) ln [ ( h - d ) / z0 ].
+```math
+(21) u_h = (u^* / k) \log\left( \frac{h-d}{z_0} \right).
+```
 
 In the Shuttleworth and Gurney equation, rac goes to infinity as Lp goes to zero, but this
-neglects the contribution of stems and branches to interception loss, especially when Lp =
-0. Although the rac equation is specifically for leaves with width w, subroutine SWGRA uses
+neglects the contribution of stems and branches to interception loss, especially when Lp = 0.
+Although the ``r_a^c`` equation is specifically for leaves with width w, subroutine SWGRA uses
 (ρtp Lp + π Sp) for r tp Lp in equation (20), where Sp is the projected stem area index,
 defined analagous to Lp as the ratio of projected surface area of stems and branches to
 ground area (Federer et al. 1996). This assumes that a unit of stem surface has the same

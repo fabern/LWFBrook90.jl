@@ -637,7 +637,7 @@ function ITER(NLAYER, FLAG_MualVanGen, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSIT
                 DTINEW = DTIMIN
 
                 # NOTE(Bernhard): if step is smaller than DTMIN, reduce TRANI and SLVP, but keep at least DTMIN
-                # error("DTINEW is smaller than DTMIN. LWFBrook90R reduce in this case TRANI and SLVP. This is not implemented in LWFBrook90Jullia.")
+                # error("DTINEW is smaller than DTMIN. LWFBrook90R reduce in this case TRANI and SLVP. This is not implemented in LWFBrook90.jl.")
                 # TRANI[i] = 0 # TODO(Bernhard): shold this change leak out into main program? (side effect)
                 # if (i == 1)
                 #     SLVP=0   # TODO(Benrhard): should this change leak out into main program? (side effect)

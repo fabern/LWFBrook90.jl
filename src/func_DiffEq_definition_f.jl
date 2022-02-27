@@ -180,6 +180,15 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         end
 
         return
+
+
+        # NOTE(bernharf): To replicate behavior of LWFBrook90R with Reset == True, the following would be needed (but is not planned):
+        #                 - with Reset == TRUE, certain quantities are updated after each evaluation of the rhs `f`
+        #                 - see the LWFBrook90R code between:
+        #                   https://github.com/pschmidtwalter/LWFBrook90R/blob/6f23dc1f6be9e1723b8df5b188804da5acc92e0f/src/md_brook90.f95#L578
+        #                   and
+        #                   https://github.com/pschmidtwalter/LWFBrook90R/blob/6f23dc1f6be9e1723b8df5b188804da5acc92e0f/src/md_brook90.f95#L703
+
     end
 #     f_func = f_LWFBrook90R
 #     return f_func
