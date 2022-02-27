@@ -251,6 +251,8 @@ function define_LWFB90_cb()
 
     # B) Define callback
     cb_func = PeriodicCallback(LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!,  1.0;
-                               initial_affect = true);
+                               initial_affect = true,
+                               save_positions=(false,false));
+
     return cb_func
 end

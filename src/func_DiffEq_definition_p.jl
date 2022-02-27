@@ -640,6 +640,11 @@ function discretize_soil_params(
     for i = 1:nrow(soil_discretization)
         # For each soil discretizations (i) check to which which horizon it belongs
         idx = findfirst(soil_discretization[i,"Lower_m"] .>= input_soil_horizons[:,"Lower_m"])
+
+        if (isnothing(idx) && i == nrow(soil_discretization))
+            idx = nrow(input_soil_horizons)
+        end
+
         which_horizon[i] = input_soil_horizons[idx,"HorizonNr"]
     end
     soil_discretization[:,"HorizonNr"] = which_horizon
