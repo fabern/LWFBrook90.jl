@@ -16,11 +16,14 @@
 ####### Define function
 generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
                                            Julia_prefix = NA,
+                                           R_output_dir = NA,
                                            run_LWFBrook90R = FALSE,
+                                           run_LWFBrook90.jl = FALSE,
                                            ...){
 
   if(is.na(Julia_target_dir)) {stop("Please provide a target directory `Julia_target_dir`.")}
   if(is.na(Julia_prefix))     {stop("Please provide a prefix for input files `Julia_prefix`.")}
+  if(is.na(R_output_dir) & run_LWFBrook90R) {stop("Please provide a target directory `R_output_dir`.")}
 
   require(dplyr)
 
@@ -68,20 +71,29 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
     mutate(u_delta18O_init_mUr = NA, u_delta2H_init_mUr = NA)
 
   # B2) ii) soil horizon parameters in discrete horizons (different from numerical node discretization)
-  out_csv_soil_horizons <-left_join(
-      select(input_Data$param_b90$soil_nodes, HorizonNr = layer, Upper_m = upper, Lower_m = lower, mat),
-      select(input_Data$param_b90$soil_materials,
-             mat,
-             ths_volFrac = ths,
-             thr_volFrac = thr,
-             alpha_perMeter = alpha,
-             npar_ = npar,
-             #mpar_ = mpar,
-             ksat_mmDay = ksat,
-             tort_ = tort,
-             gravel_volFrac = gravel),
-      by = "mat"
-    ) %>% select(-mat)
+  # define extent of horizons
+  soil_horizons_limits <- select(input_Data$param_b90$soil_nodes, HorizonNr = layer, Upper_m = upper, Lower_m = lower, mat) %>%
+    group_by(HorizonNr = with(rle(mat), rep(seq_along(lengths), lengths))) %>% # source: # https://stackoverflow.com/a/54582075/
+    # Note: we cannot simply group_by(mat), as we need to split the same mat into multiple horizons
+    #       if it is not consecutive e.g. dat$mat = c(1,1,2,2,1,1,1)
+    summarize(HorizonNr = group_indices(),
+              Upper_m = max(Upper_m),
+              Lower_m = min(Lower_m),
+              mat     = unique(mat))
+  # append soil properties to soil horizons
+  out_csv_soil_horizons <- left_join(soil_horizons_limits,
+    select(input_Data$param_b90$soil_materials,
+           mat,
+           ths_volFrac = ths,
+           thr_volFrac = thr,
+           alpha_perMeter = alpha,
+           npar_ = npar,
+           #mpar_ = mpar,
+           ksat_mmDay = ksat,
+           tort_ = tort,
+           gravel_volFrac = gravel),
+    by = "mat"
+  ) %>% select(-mat)
 
 
 
@@ -151,11 +163,7 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
   out_csv_param <- data.frame(param_id = names(out_param),
                               x        = unname(out_param))
 
-  # Write out CSVs:
-  input_folder   <- file.path(Julia_target_dir,paste0(Julia_prefix,"-input"))
-  results_folder <- file.path(Julia_target_dir,paste0(Julia_prefix,"-LWFBrook90R_result"))
-  dir.create(input_folder, showWarnings = TRUE, recursive = T)
-
+  # Setup writing out of CSVs:
   write.csv_withUnits <- function(x, units=c(), file, row.names = FALSE, ...) {
     # This function writes a csv but adds the provided vector of units in a
     # second header line
@@ -180,41 +188,74 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
                   ...)
     }
   }
+
+  # Write out CSVs:
+  dir.create(Julia_target_dir, showWarnings = TRUE, recursive = T)
   withr::with_options(c(scipen=100), { # temporarily switches off scientific notation
     require(dplyr)
     units_meteoveg            = c("YYYY-MM-DD","MJ/Day/m2","degree C","degree C","kPa","m per s","mm per day","-","m","-","-","years")
     units_soil_discretization = c("m","m","-","kPa","mUr","mUr")
     units_soil_horizons       = c("-","m","m","volume fraction (-)","volume fraction (-)","perMeter","-","mm per day","-","volume fraction (-)")
 
-    out_csv_soil_discretization%>% mutate(across(where(is.numeric), round, 5)) %>% write.csv_withUnits(units = units_soil_discretization, file = file.path(Julia_target_dir, paste0(Julia_prefix, "_soil_discretization.csv")), row.names=FALSE, quote=FALSE)
-    out_csv_soil_horizons      %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv_withUnits(units = units_soil_horizons,       file = file.path(Julia_target_dir, paste0(Julia_prefix, "_soil_horizons.csv")),       row.names=FALSE, quote=FALSE)
-    out_csv_param              %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv_withUnits(units = c(),                       file = file.path(Julia_target_dir, paste0(Julia_prefix, "_param.csv")),               row.names=FALSE, quote=FALSE)
-    out_csv_initial_conditions %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv_withUnits(units = c(),                       file = file.path(Julia_target_dir, paste0(Julia_prefix, "_initial_conditions.csv")),  row.names=FALSE, quote=FALSE)
-    out_csv_meteoveg           %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv_withUnits(units = units_meteoveg,            file = file.path(Julia_target_dir, paste0(Julia_prefix, "_meteoveg.csv")),            row.names=FALSE, quote=FALSE)
-    out_csv_storm_durations    %>%                                                 write.csv_withUnits(units = c(),                       file = file.path(Julia_target_dir, paste0(Julia_prefix, "_meteo_storm_durations.csv")),row.names=FALSE, quote=FALSE)
+    out_csv_soil_discretization%>% mutate(across(where(is.double), function(x) sprintf("%0.3f", x))) %>% write.csv_withUnits(units = units_soil_discretization, file = file.path(Julia_target_dir, paste0(Julia_prefix, "_soil_discretization.csv")), row.names=FALSE, quote=FALSE)
+    # out_csv_soil_discretization%>% mutate(across(where(is.numeric), round, 5)) %>% write.csv_withUnits(units = units_soil_discretization,file = file.path(Julia_target_dir, paste0(Julia_prefix, "_soil_discretization.csv")), row.names=FALSE, quote=FALSE)
+    out_csv_soil_horizons      %>% mutate(across(where(is.double), function(x) sprintf("%0.4f", x))) %>% write.csv_withUnits(units = units_soil_horizons,       file = file.path(Julia_target_dir, paste0(Julia_prefix, "_soil_horizons.csv")),       row.names=FALSE, quote=FALSE)
+    # out_csv_soil_horizons      %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv_withUnits(units = units_soil_horizons,      file = file.path(Julia_target_dir, paste0(Julia_prefix, "_soil_horizons.csv")),       row.names=FALSE, quote=FALSE)
+    out_csv_param              %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv_withUnits(units = c(),                        file = file.path(Julia_target_dir, paste0(Julia_prefix, "_param.csv")),               row.names=FALSE, quote=FALSE)
+    out_csv_initial_conditions %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv_withUnits(units = c(),                        file = file.path(Julia_target_dir, paste0(Julia_prefix, "_initial_conditions.csv")),  row.names=FALSE, quote=FALSE)
+    out_csv_meteoveg           %>% mutate(across(where(is.numeric), round, 5)) %>% write.csv_withUnits(units = units_meteoveg,             file = file.path(Julia_target_dir, paste0(Julia_prefix, "_meteoveg.csv")),            row.names=FALSE, quote=FALSE)
+    out_csv_storm_durations    %>%                                                 write.csv_withUnits(units = c(),                        file = file.path(Julia_target_dir, paste0(Julia_prefix, "_meteo_storm_durations.csv")),row.names=FALSE, quote=FALSE)
     # out_csv_precdat          %>%                                                 write.csv_withUnits(units = c(), file = file.path(Julia_target_dir, paste0(Julia_prefix, "_precdat.csv")),       row.names=FALSE, quote=FALSE)
   })
 
   # If run is requested also run LWFBrook90R and save results
   if(run_LWFBrook90R) {
-    dir.create(results_folder, showWarnings = TRUE, recursive = T)
+    dir.create(R_output_dir, showWarnings = TRUE, recursive = T)
     start <- Sys.time()
     res <- LWFBrook90R::run_LWFB90(..., run = TRUE)
     stop <- Sys.time()
 
     # Write out result files and benchmark
-    for(result_name in grep(".ASC", names(res),value = TRUE)) {
-      # write.csv(res[[result_name]],
-      #           file = file.path(results_folder, paste0(Julia_prefix, "_OUTPUT-", result_name, ".csv")))
+    benchmark_text <- sprintf("Finished: %s ==== duration: %s secs (%s)",
+                              res$finishing_time,
+                              signif(res$simulation_duration,4),
+                              capture.output(signif(res$simulation_duration)))
+    writeLines(text = benchmark_text,
+               con = file.path(R_output_dir, paste0(Julia_prefix, "_R-benchmark.txt")))
+
+    results_to_output <- c(grep(".ASC", names(res),value = TRUE),
+                           names(res)[names(res) %in% c("daily_output", "layer_output")])
+    for(result_name in results_to_output) {
       round_digits <- 3
-      res[[result_name]] %>%
+      # Save RDS for internal use with R
+      res[[result_name]] %>% tibble() %>%
+        saveRDS(file = file.path(
+          R_output_dir,
+          paste0(Julia_prefix,
+                 sprintf("_OUTPUT-LWFBrook90R-%s-",packageVersion("LWFBrook90R")),
+                 result_name, ".RDS")))
+      # Save CSV for external use with Julia (unit tests in test suite)
+      res[[result_name]] %>% tibble() %>%
         mutate(across(where(is.numeric), round, round_digits)) %>%
-        # mutate(across(!yr & !mo & !da & !doy, round, round_digits)) %>%
-        write.csv(file = file.path(results_folder,
-                                   paste0(Julia_prefix, "_OUTPUT-", result_name, ".csv")))
+        mutate(across(!yr & !mo & !da & !doy, round, round_digits)) %>%
+        write.csv(file = file.path(
+          R_output_dir,
+          paste0(Julia_prefix,
+                 sprintf("_OUTPUT-LWFBrook90R-%s-",packageVersion("LWFBrook90R")),
+                 result_name, ".csv")))
     }
-    writeLines(text = c(capture.output(Sys.time()),capture.output(stop-start)),
-               file.path(results_folder, paste0(Julia_prefix, "_benchmark.txt")))
+    if(run_LWFBrook90.jl) {
+      # system('julia --project="../../LWFBrook90.jl" ../../LWFBrook90.jl/run_simulation.jl "input_LWFBrook90.jl" "Hammel_loam-NLayer-27-RESET=FALSE"')
+      system(paste0('julia --project="../../LWFBrook90.jl" ../../LWFBrook90.jl/run_simulation.jl "',
+                    'input_LWFBrook90.jl',
+                    '" "',
+                    Julia_prefix,
+                    '"'))
+      # TODO(bernhard): This is very inefficient. Each time julia is started it will need to compile the code.
+      #                 It would be much better to start once the Julia REPL and perform many simulations.
+    }
+
+    return(res)
   }
 }
 #######

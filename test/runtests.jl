@@ -1,6 +1,12 @@
 using LWFBrook90
 using DataFrames
 using Test: @testset, @test, @test_throws
+using CSV: File
+
+############################################################################################
+############################################################################################
+############################################################################################
+# Unit testing
 
 # @testset "Module WAT" begin
 @testset "WAT.KKMEAN" begin
@@ -170,10 +176,98 @@ end
         p_WETINF = [1])
 end
 
+
+
+# TODO(bernhard): include unit tests of specific functions, e.g. during development of the Hammel-2001 infiltration test
+#                 it was noticed, that ISVP (snow evaporation rate could become negative, therby generating intercepted snow out of nowwhere...)
+# using LWFBrook90.EVP
+# # INTER24(, , , , , p_FRINTS, , , , , MONTHN)
+# @run LWFBrook90.EVP.INTER24(0.0, # p_fT_RFAL or p_fT_SFAL
+#     -0.8811, # p_fu_PINT
+#     1.7520, # p_fu_LAI
+#     1.0, # p_fu_SAI
+#     0.0, # p_FRINTL or p_FSINTL
+#     0.0, # p_FRINTS or p_FSINTS
+#     0.6, # p_CINTRL or p_CINTSL
+#     0.6, # p_CINTRS or p_CINTSS
+#     4.0, # p_DURATN
+#     0.0, # u_INTR or u_INTS
+#     1  # MONTHN
+# ) # returns (aux_du_RINT, aux_du_IRVP)
+
+# using LWFBrook90.EVP
+# LWFBrook90.EVP.INTER24
+# # INTER24(, , , , , p_FRINTS, , , , , MONTHN)
+# @run LWFBrook90.EVP.INTER24(0.0, # p_fT_RFAL or p_fT_SFAL
+#     -0.8811, # p_fu_PINT
+#     1.7520, # p_fu_LAI
+#     1.0, # p_fu_SAI
+#     0.0, # p_FRINTL or p_FSINTL
+#     0.0, # p_FRINTS or p_FSINTS
+#     0.6, # p_CINTRL or p_CINTSL
+#     0.6, # p_CINTRS or p_CINTSS
+#     4.0, # p_DURATN
+#     0.0, # u_INTR or u_INTS
+#     1  # MONTHN
+# ) # returns (aux_du_RINT, aux_du_IRVP)
+
+
+
+
+
+
+
+
+
+
+
+############################################################################################
+############################################################################################
+############################################################################################
+# Integration testing
+include("fct-helpers-for-integration-tests.jl")
+
+# TODO(bernhard): include further tests such as the Hammel-2001 fig 2.4/2.5 infiltration test
+
+@testset "Hammel-2001-θ" begin
+    @show pwd() # This is to help get the folder right.
+    # TODO: this is not unit testing, but integration testing (or functional testing)
+    #       Read up how this should be done for Julia Packages with CI:
+    #       e.g. in paragraph 12.5. More on Writing Tests on https://julia.quantecon.org/software_engineering/testing.html#id7
+    #       or https://scpo-compecon.github.io/CoursePack/Html/testing
+    #       ALso check out how they did "integration testing" in https://github.com/jump-dev/MINLPTests.jl
+    # TODO: this could also be done with other quantities such as ψ etc...
+
+    # Check the RMSE of θ in simulations is below a limit
+    sim1, ref1 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_loam-NLayer-27-RESET=TRUE")
+    sim2, ref2 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_loam-NLayer-103-RESET=TRUE")
+    # sim3, ref3 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_loam-NLayer-400-RESET=TRUE")
+    sim4, ref4 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_sand-NLayer-27-RESET=TRUE")
+    sim5, ref5 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_sand-NLayer-103-RESET=TRUE")
+    # sim6, ref6 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_sand-NLayer-400-RESET=TRUE")
+
+    function RMS_differences(sim, ref)
+        # computes root mean squared differences
+        differences = sim .- ref
+        mean_squared = sum(differences.^2) / length(differences)
+
+        return sqrt(mean_squared)
+    end
+
+    @test RMS_differences(sim1, ref1) < 0.03
+    @test RMS_differences(sim2, ref2) < 0.015
+    # @test RMS_differences(sim3, ref3) < 0.0015
+    @test RMS_differences(sim4, ref4) < 0.02
+    @test RMS_differences(sim5, ref5) < 0.01
+    # @test RMS_differences(sim6, ref6) < 0.005
+end
+
+
+
+
 # TODO(bernhard): while below testset works consistently on MacBook Pro,
 #                 in the GithubActions the values are slightly different.
 #                 TODO: investigate why. (DiffEq.jl, integrative testing, set some seed?)
-
 # @testset "run_example" begin
 #     example_result = LWFBrook90.run_example()
 
@@ -260,3 +354,11 @@ end
 #         #  181.3339268423993,
 #         #    1.913786847187571]
 # end
+
+
+
+
+
+
+
+

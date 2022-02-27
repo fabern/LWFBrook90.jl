@@ -4,10 +4,15 @@ using OrdinaryDiffEq  # instead of loading the full DifferentialEquations
 using DiffEqCallbacks # instead of loading the full DifferentialEquations
 using RecipesBase
 
-export read_inputData, discretize_soil
+using Dates: now
+
+export read_inputData
+export discretize_soil, Rootden_beta_
 export define_LWFB90_p, define_LWFB90_u0, define_LWFB90_ODE
 export KPT_SOILPAR_Mvg1d, KPT_SOILPAR_Ch1d
 export RelativeDaysFloat2DateTime, plot_LWFBrook90
+
+export run_simulation, plot_and_save_results, find_indices, get_auxiliary_variables, get_θ
 
 # on modules: https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
 include("module_CONSTANTS.jl");  # to bring into scope: using .CONSTANTS
@@ -28,6 +33,126 @@ include("func_DiffEq_definition_ode.jl")
 include("func_MSB_functions.jl")
 
 include("../example/BEA2016-reset-FALSE-input/func_run_example.jl") # defines RelativeDaysFloat2DateTime
+
+############################################################################################
+############################################################################################
+############################################################################################
+
+@doc raw"""
+    run_simulation(args)
+
+Runs a simulation defined by input files within a folder and returns solution object.
+
+The function run_simulation() takes as single argument a vector of two strings defining
+the input_path and input_prefix of a series of input definition files.
+The function loads these files, runs the simulation and returns the solution object and input arguments
+"""
+function run_simulation(args)
+    @show now()
+    @show args
+
+    input_path = args[1]
+    input_prefix = args[2]
+
+    (input_meteoveg,
+    input_meteoveg_reference_date,
+    input_param,
+    input_storm_durations,
+    input_initial_conditions,
+    input_soil_horizons,
+    simOption_FLAG_MualVanGen) = read_inputData(input_path, input_prefix)
+
+    input_soil_discretization = discretize_soil(input_path, input_prefix)
+
+    Reset = false                          # currently only Reset = 0 implemented
+    compute_intermediate_quantities = true # Flag whether ODE containes additional quantities than only states
+
+    ψM_initial, p = define_LWFB90_p(
+        input_meteoveg,
+        input_meteoveg_reference_date,
+        input_param,
+        input_storm_durations,
+        input_soil_horizons,
+        input_soil_discretization,
+        simOption_FLAG_MualVanGen;
+        Reset = Reset,
+        # soil_output_depths = collect(-0.05:-0.05:-1.1),
+        # soil_output_depths = [-0.1, -0.5, -1.0, -1.5, -1.9],
+        compute_intermediate_quantities = compute_intermediate_quantities)
+
+    u0 = define_LWFB90_u0(p, input_initial_conditions,
+        ψM_initial,
+        compute_intermediate_quantities)
+
+    tspan = (minimum(input_meteoveg[:, "days"]), maximum(input_meteoveg[:, "days"])) # simulate all available days
+
+    ode_LWFBrook90 = define_LWFB90_ODE(u0, tspan, p)
+
+    sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
+        progress = true,
+        saveat = tspan[1]:tspan[2], dt = 1e-3, adaptive = true); # dt is initial dt, but adaptive
+
+    @show now()
+
+    return (sol_LWFBrook90, input_prefix, input_path)
+end
+
+@doc raw"""
+    plot_and_save_results(sol, input_prefix, input_path)
+
+Output simulation results as plot and csv.
+
+The function takes a solution object and corresponding folder- and filenames. It generates a
+default plot and saves a png and csv containing the simulation results. It can be used with
+the output from run_simulation() by using `...`.
+E.g. `res = run_simulation(); plot_and_save_results(res...)``
+"""
+function plot_and_save_results(sol, input_prefix, input_path)
+    # parse input_prefix and input_path
+    png_filename = joinpath(input_path,
+        "output-" * input_prefix * "_plotRecipe_NLAYER" * string(sol.prob.p[1][1].NLAYER) * ".png")
+    csv_filename1 = joinpath(input_path,
+        "output-" * input_prefix * "_θ-depths_NLAYER" * string(sol.prob.p[1][1].NLAYER) * ".csv")
+    csv_filename2 = joinpath(input_path,
+        "output-" * input_prefix * "_ψ_kPa-full_NLAYER" * string(sol.prob.p[1][1].NLAYER) * ".csv")
+    csv_filename3 = joinpath(input_path,
+        "output-" * input_prefix * "_θ-full_NLAYER" * string(sol.prob.p[1][1].NLAYER) * ".csv")
+
+    # 0) using plotting recipe defined in LWFBrook90.jl
+    optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
+    savefig(LWFBrook90.plotlwfbrook90(sol, optim_ticks), png_filename)
+
+    # 1) write out CSVs
+    ## prepare data
+    ### all layers
+    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+        get_auxiliary_variables(sol)
+    #### get metadata on layers
+    z_to_plot = -cumsum(sol.prob.p[1][1].p_THICK)./1000
+    z_to_plot = round.(z_to_plot; digits=5)
+
+    ### specific layers
+    depth_to_read_out_mm = [100 500 1000 1500 1900]
+    u_aux_θ_specific_depths = get_θ(depth_to_read_out_mm, sol)
+
+    ## make DataFrames
+    df_out1 = DataFrame(u_aux_θ_specific_depths, "θ_" .* string.(depth_to_read_out_mm[:]) .* "mm")
+    df_out2 = DataFrame(u_aux_PSIM, "zLower=".*string.(z_to_plot))
+    df_out3 = DataFrame(u_aux_θ,    "zLower=".*string.(z_to_plot))
+
+    ## append time metadata
+    input_meteoveg_reference_date = sol.prob.p[2][15]
+    time_to_plot = LWFBrook90.RelativeDaysFloat2DateTime.(sol.t, input_meteoveg_reference_date)
+    df_out1.Date = time_to_plot
+    df_out2.Date = time_to_plot
+    df_out3.Date = time_to_plot
+
+    ## write
+    CSV.write(csv_filename1,df_out1)
+    CSV.write(csv_filename2,df_out2)
+    CSV.write(csv_filename3,df_out3)
+end
+
 
 function find_indices(depths_to_read_out_mm, solution)
     # depths and lower_boundaries must all be positive numbers
