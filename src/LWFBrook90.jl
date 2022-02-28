@@ -29,6 +29,52 @@ include("func_MSB_functions.jl")
 
 include("../example/BEA2016-reset-FALSE-input/func_run_example.jl") # defines RelativeDaysFloat2DateTime
 
+function find_indices(depths_to_read_out_mm, solution)
+    # depths and lower_boundaries must all be positive numbers
+    @assert all(depths_to_read_out_mm .> 0)
+
+    lower_boundaries = cumsum(solution.prob.p[1][1].p_THICK)
+
+    # Only read out values that are within the simulation domain
+    depths_to_read_out_mm = depths_to_read_out_mm[depths_to_read_out_mm .<= maximum(lower_boundaries)]
+
+    idx_to_read_out = []
+    for curr_depth_mm in depths_to_read_out_mm
+        # idx_to_read_out = findfirst(curr_depth_mm .<= y)
+        append!(idx_to_read_out, findfirst(curr_depth_mm .<= lower_boundaries))
+    end
+    return idx_to_read_out
+end
+
+function get_auxiliary_variables(solution)
+    p_soil = solution.prob.p[1][1]
+    NLAYER = p_soil.NLAYER
+    idx_u_vector_amounts = solution.prob.p[1][4][4]
+    u_SWATI = [solution.u[i][idx_u_vector_amounts] for i = 1:length(solution.u)]
+    # (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+    #         LWFBrook90.KPT.derive_auxiliary_SOILVAR.(u_SWATI, Ref(p_soil)) # Ref fixes scalar argument for broadcasting "."
+    u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK =
+        (fill(NaN, (size(u_SWATI, 1), size(u_SWATI[1], 1))) for i in 1:5)
+    for t in 1:length(u_SWATI)
+        (u_aux_WETNES[t, :], u_aux_PSIM[t, :], u_aux_PSITI[t, :], u_aux_θ[t, :], p_fu_KK[t, :]) =
+            LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI[t], p_soil)
+    end
+    # returns arrays of dimenstion (t,z) where t is number of timesteps and z number of computational layers
+    return (transpose(hcat(u_SWATI...)), u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
+end
+
+function get_θ(depths_to_read_out_mm, solution)
+    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+        get_auxiliary_variables(solution)
+
+    idx = find_indices(depths_to_read_out_mm, solution)
+
+    return u_aux_θ[:, idx]
+end
+
+############################################################################################
+############################################################################################
+############################################################################################
 
 @userplot PlotLWFBrook90
 

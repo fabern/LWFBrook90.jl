@@ -105,29 +105,97 @@ sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
 
 
 ####################
-## Plotting
+## Plotting and exporting to CSV
 mkpath("out")
-# 0) using plotting recipe defined in LWFBrook90.jl
+
+ref_date = sol_LWFBrook90.prob.p[2][15]
+time_to_plot = RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, ref_date) # define simulation times as dates
+
+using Plots # Install plot package at first use with `]` and then `add Plots`
+
+##### Plot 0 using plotting recipe defined in LWFBrook90.jl
 using Plots, Measures
-using LWFBrook90
 optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
 
 pl_final = LWFBrook90.plotlwfbrook90(sol_LWFBrook90, optim_ticks)
-savefig(pl_final,
-    joinpath("out", input_prefix * "_plotRecipe_NLAYER" * string(sol_LWFBrook90.prob.p[1][1].NLAYER) * ".png")
-    )
+savefig(pl_final, joinpath("out", input_prefix *
+    "_plotRecipe_NLAYER" * string(sol_LWFBrook90.prob.p[1][1].NLAYER) * ".png"))
 
-# 1) very basic
-# using Plots # Install plot package at first use with `]` and then `add Plots`
-# # Plot 1
-# plot(sol_LWFBrook90; vars = [1, 2, 3, 4, 5, 6],label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
-# # Plot 2
-# # http://docs.juliaplots.org/latest/generated/gr/#gr-ref43
-# x = LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date)
-# y = cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK)
-# z = sol_LWFBrook90[7 .+ (0:sol_LWFBrook90.prob.p[1][1].NLAYER-1), 1, :]./sol_LWFBrook90.prob.p[1][1].p_THICK
-# heatmap(x, y, z, yflip = true,
-#         xlabel = "Date",
-#         ylabel = "Depth [mm]",
-#         colorbar_title = "θ [-]")
+##### Plot 1 very basic
+# Plot a)
+plot(sol_LWFBrook90; vars = [1, 2, 3, 4, 5, 6],label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
+
+##### Plot 2
+# http://docs.juliaplots.org/latest/generated/gr/#gr-ref43 # Heatmap with DateTime axis
+(u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+    LWFBrook90.get_auxiliary_variables(sol_LWFBrook90)
+
+n = sol_LWFBrook90.prob.p[1][1].NLAYER
+# time_to_plot = #(see above)
+y_cell_centers = [0; cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK)[1:(n-1)]] + sol_LWFBrook90.prob.p[1][1].p_THICK / 2
+z = sol_LWFBrook90[7 .+ (0:sol_LWFBrook90.prob.p[1][1].NLAYER-1), 1, :]./sol_LWFBrook90.prob.p[1][1].p_THICK
+
+heatmap(time_to_plot, y_cell_centers, u_aux_θ', yflip = true,
+        xlabel = "Date",
+        ylabel = "Depth [mm]",
+        colorbar_title = "θ [-]")
+heatmap(time_to_plot, y_cell_centers, u_aux_PSIM', yflip = true,
+        xlabel = "Date",
+        ylabel = "Depth [mm]",
+        colorbar_title = "ψ [kPa]")
+
+##### Plot 3
+# aux_indices = sol_LWFBrook90.prob.p[1][4][5]
+# aux_names = sol_LWFBrook90.prob.p[1][4][7]
+# plot(sol_LWFBrook90; vars = aux_indices, label = aux_names)
+# plot(sol_LWFBrook90; vars = aux_indices[17:25], label = aux_names[:, 17:25])
+
+##### Plot 4: illustration how to extract certain depths and do manual calculations
+depth_to_read_out_mm = [10 150 500 1000 1150]
+pl_θ_fineSoil = plot(time_to_plot,
+    LWFBrook90.get_θ(depth_to_read_out_mm, sol_LWFBrook90),
+    labels = string.(depth_to_read_out_mm) .* "mm",
+    title = "Plot using get_θ()",
+    xlabel = "Date",
+    ylabel = "θ [-]",
+    legend = :bottomright)
+
+# Some manual computations to include the gravel fraction
+layer_indices = LWFBrook90.find_indices(depth_to_read_out_mm, sol_LWFBrook90)
+
+# Variant 1: compute θ and correct with gravel fraction
+θ_layers = u_aux_θ[:,layer_indices]
+gravel_fraction_layers = sol_LWFBrook90.prob.p[1][1].p_STONEF[layer_indices]
+θtotal_layers = θ_layers .* transpose(1 .- gravel_fraction_layers) # θtotal = θ*(1-gravelfrc) + 0.0*gravelfrc
+pl_θ_totalVolume1 = plot(time_to_plot, θtotal_layers,
+    labels = string.(depth_to_read_out_mm) .* "mm",
+    title = "Plot using get_θ() and divide by p_STONEF",
+    xlabel = "Date",
+    ylabel = "θ total soil+rock volume [-]",
+    legend = :bottomright)
+
+# Variant 1: compute SWATI and correct with thickness of cell/layer
+# u_SWATI # alternatively u_SWATI = transpose(sol_LWFBrook90[7 .+ (0:n-1), 1, :])
+θtotal = u_SWATI ./ transpose(sol_LWFBrook90.prob.p[1][1].p_THICK)
+θtotal_layers2 = θtotal[:, layer_indices]
+pl_θ_totalVolume2 = plot(time_to_plot, θtotal_layers2,
+    labels = string.(depth_to_read_out_mm) .* "mm",
+    title = "Plot using u_SWATI and divide by p_THICK",
+    xlabel = "Date",
+    ylabel = "θ total soil+rock volume [-]",
+    legend = :bottomright)
+
+plot(pl_θ_fineSoil, pl_θ_totalVolume1, pl_θ_totalVolume2;
+    layout=(3,1), size=(600,1200), left_margin = 10mm) # left_margin needed as soon as we use size
+savefig(joinpath("out",input_prefix * "_different_θ_depths_NLAYER" * string(sol_LWFBrook90.prob.p[1][1].NLAYER) * ".png"))
+
+##### Illustration how to export certain depths into a *.csv
+using CSV, DataFrames
+df_out = DataFrame(
+    LWFBrook90.get_θ(depth_to_read_out_mm, sol_LWFBrook90),
+    "θ_" .* string.(depth_to_read_out_mm[:]) .* "mm")
+df_out.Date = time_to_plot
+CSV.write(
+    joinpath("out",input_prefix * "_θ_depths_NLAYER" * string(sol_LWFBrook90.prob.p[1][1].NLAYER) * ".csv"),
+    df_out)
 ####################
