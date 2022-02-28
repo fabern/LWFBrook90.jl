@@ -15,7 +15,7 @@ Load different input files for LWFBrook90:
 - soil_discretization.csv
 
 These files were created with an R script `generate_LWFBrook90Julia_Input.R` that
-takes the same arguements as the R funciton `LWFBrook90R::run_LWFB90()` and generates
+takes the same arguements as the R function `LWFBrook90R::run_LWFB90()` and generates
 the corresponding input files for LWFBrook90.jl.
 """
 function read_inputData(folder::String, prefix::String; suffix::String = "")

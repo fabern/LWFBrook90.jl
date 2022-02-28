@@ -15,8 +15,18 @@ input_path = "example/" * input_prefix * "-input/"
     input_soil_horizons,
     simOption_FLAG_MualVanGen) = read_inputData(input_path, input_prefix)
 
-input_soil_discretization = discretize_soil(input_path, input_prefix)
+# Define grid for spatial discretization as well as initial conditions and root densities
+# a) either read the discretization from a file `soil_discretization.csv`
+unused = discretize_soil(input_path, input_prefix)
 
+# b) or define them manually
+ψ_init = unused.uAux_PSIM_init_kPa[1]
+# Δz_m = [fill(0.005, 4); fill(0.02, 99)]                          # grid spacing (heterogenous), meter (N=103)
+# Δz_m = round.(diff(0.0:0.05:-minimum(unused.Lower_m)), digits=5) # grid spacing (heterogenous), meter
+Δz_m = [0.04, 0.04, 0.12, 0.25, 0.3, 0.35, 0.1]
+f1 = (Δz_m) -> LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)  # function for root density as f(Δz)
+f2 = (Δz_m) -> fill(-6.3, length(Δz_m))          # function for initial conditions as f(Δz)
+input_soil_discretization = discretize_soil(;Δz_m = Δz_m, Rootden_ = f1, uAux_PSIM_init_kPa = f2)
 ####################
 
 ####################
