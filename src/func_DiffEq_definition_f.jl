@@ -32,8 +32,6 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         (p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC,
         _, _, _, _, _) = p[2]
 
-        DTRI = p_DTP
-
         ## C) state dependent parameters:
         # Calculate parameters:
         #  - solar parameters depending on DOY
@@ -95,7 +93,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
                     #
                     u_aux_PSITI, p_DPSIMAX,
                     #
-                    p_DRAIN, DTRI, p_DTIMAX,
+                    p_DRAIN, p_DTP, t, p_DTIMAX,
                     # for INFLOW:
                     p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP,
                     # for FDPSIDW:

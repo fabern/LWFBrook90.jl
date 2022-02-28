@@ -411,7 +411,7 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
                     #
                     u_aux_PSITI, p_DPSIMAX,
                     #
-                    p_DRAIN, DTRI, p_DTIMAX,
+                    p_DRAIN, p_DTP, t, p_DTIMAX,
                     # for INFLOW:
                     p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP,
                     # for FDPSIDW:
@@ -480,14 +480,21 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
 
     # first approximation on aux_du_VRFLI
     aux_du_VRFLI_1st_approx = aux_du_VRFLI
+    #@debug "u_aux_PSITI[1]: $(u_aux_PSITI[1]), sum(u_aux_PSITI): $(sum(u_aux_PSITI))"
+    #@debug "a) aux_du_VRFLI_1st_approx[1]: $(aux_du_VRFLI_1st_approx[1]), sum(aux_du_VRFLI_1st_approx): $(sum(aux_du_VRFLI_1st_approx))"
 
     # first approximation for iteration time step,time remaining or DTIMAX
+    p_DTP    # first approximation for iteration time step,time remaining or DTIMAX
+    DTRI = p_DTP - (t % p_DTP) # Time remaining
+    # DTRI = 1.0 - (t % 1.0)   # as p_DTP is 1.0 days in a default simulation
     DTI = min(DTRI, p_DTIMAX)
+
     # net inflow to each layer including E and T withdrawal adjusted for interception
     aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
         LWFBrook90.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
                                     aux_du_SLVP, p_soil.p_SWATMAX, u_SWATI,
                                     aux_du_VRFLI_1st_approx)
+    #@debug "b) aux_du_VRFLI[1]: $(aux_du_VRFLI[1]), sum(aux_du_VRFLI): $(sum(aux_du_VRFLI))"
 
     DPSIDW = LWFBrook90.KPT.FDPSIDWF(u_aux_WETNES, p_soil)
 
@@ -510,6 +517,7 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
                                         aux_du_SLVP, p_soil.p_SWATMAX, u_SWATI,
                                         aux_du_VRFLI_1st_approx)
     end
+    #@debug "c) aux_du_VRFLI[1]: $(aux_du_VRFLI[1]), sum(aux_du_VRFLI): $(sum(aux_du_VRFLI))"
 
     # groundwater flow and seepage loss
     du_GWFL, du_SEEP = LWFBrook90.WAT.GWATER(u_GWAT, p_GSC, p_GSP, aux_du_VRFLI[NLAYER])
