@@ -1,0 +1,41 @@
+# Title: Summary, imperative, start upper case, don't end with a period
+#        use build commit type: feat: fix: docs: style: refactor: test: perf: chore: (see below)
+# No more than 50 chars. #### ###################
+# ###############################################
+# [type: Enter commit title here, removing #]
+
+# Remember blank line between title and body.
+#
+# Body: Explain *what* and *why* (not *how*). Include task ID (Jira issue).
+# Wrap at 72 chars. ####################################################
+# ######################################################################
+# [Enter message here, removing #, explain rather what and why vs. how]
+
+# At the end: Include Co-authored-by for all contributors.
+# Include at least one empty line before it. Format:
+# Co-authored-by: name <user@users.noreply.github.com>
+#
+# How to Write a Git Commit Message:
+# https://chris.beams.io/posts/git-commit/
+#
+# 1. Separate subject from body with a blank line
+# 2. Limit the subject line to 50 characters
+# 3. Capitalize the subject line
+# 4. Do not end the subject line with a period
+# 5. Use the imperative mood in the subject line
+# 6. Wrap the body at 72 characters
+# 7. Use the body to explain what and why vs. how
+#
+# :source: https://github.com/angular/angular/blob/22b96b9/CONTRIBUTING.md#type
+# feat:     A new feature
+# fix:      A bug fix
+# docs:     Documentation only changes
+# style:    Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)
+# refactor: A code change that neither fixes a bug nor adds a feature
+# test:     Adding missing tests or correcting existing tests
+# perf:     A code change that improves performance
+#
+# chore:    Updating grunt tasks etc; no production code change
+#   build:  Changes that affect the build system or external dependencies (example scopes: gulp, broccoli, npm)
+#   ci:     Changes to our CI configuration files and scripts (example scopes: Travis, Circle, BrowserStack, SauceLabs)
+

@@ -96,6 +96,7 @@ sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
 
 ####################
 ## Plotting
+mkpath("out")
 # 0) using plotting recipe defined in LWFBrook90.jl
 using Plots, Measures
 using LWFBrook90
@@ -103,7 +104,8 @@ optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
 
 pl_final = LWFBrook90.plotlwfbrook90(sol_LWFBrook90, optim_ticks)
 savefig(pl_final,
-    input_prefix * "_plotRecipe_NLAYER" * string(sol_LWFBrook90.prob.p[1][1].NLAYER) * ".png")
+    joinpath("out", input_prefix * "_plotRecipe_NLAYER" * string(sol_LWFBrook90.prob.p[1][1].NLAYER) * ".png")
+    )
 
 # 1) very basic
 # using Plots # Install plot package at first use with `]` and then `add Plots`
