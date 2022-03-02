@@ -1,2 +1,0 @@
-[1] "2022-02-27 00:23:07 CET"
-Time difference of 4.827008 secs
