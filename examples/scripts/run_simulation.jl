@@ -1,6 +1,6 @@
 # Run this on the cmd line like:
 #  julia --project=. run_simulation.jl [] []
-#  julia --project=. run_simulation.jl "../Unit_Tests/Hammel-UnitTest-LWFBrook90/input_LWFBrook90.jl"
+#  julia --project=. run_simulation.jl "../Unit_Tests/Hammel-IntegrationTests-LWFBrook90/input_LWFBrook90.jl"
 # "Hammel_loam-NLayer-27-RESET=FALSE"
 #
 # Note: I am aware that this isn't efficient as LWFBrook90 gets recompiled each time. See:
@@ -22,23 +22,23 @@ plot_and_save_results(sim_result...)
 
 # Run this script interactively many simulations with run_simulation()
 # The ones with Reset=FALSE
-# run_simulation(["../Unit_Tests/Hammel-UnitTest-LWFBrook90/input_LWFBrook90.jl/" "Hammel_sand-NLayer-27-RESET=FALSE"])
-# run_simulation(["../Unit_Tests/Hammel-UnitTest-LWFBrook90/input_LWFBrook90.jl/" "Hammel_sand-NLayer-103-RESET=FALSE"])
-# run_simulation(["../Unit_Tests/Hammel-UnitTest-LWFBrook90/input_LWFBrook90.jl/" "Hammel_sand-NLayer-400-RESET=FALSE"])
+# run_simulation(["../Unit_Tests/Hammel-IntegrationTests-LWFBrook90/input_LWFBrook90.jl/" "Hammel_sand-NLayer-27-RESET=FALSE"])
+# run_simulation(["../Unit_Tests/Hammel-IntegrationTests-LWFBrook90/input_LWFBrook90.jl/" "Hammel_sand-NLayer-103-RESET=FALSE"])
+# run_simulation(["../Unit_Tests/Hammel-IntegrationTests-LWFBrook90/input_LWFBrook90.jl/" "Hammel_sand-NLayer-400-RESET=FALSE"])
 
-# run_simulation(["../Unit_Tests/Hammel-UnitTest-LWFBrook90/input_LWFBrook90.jl/" "Hammel_loam-NLayer-27-RESET=FALSE"])
-# run_simulation(["../Unit_Tests/Hammel-UnitTest-LWFBrook90/input_LWFBrook90.jl/" "Hammel_loam-NLayer-103-RESET=FALSE"])
-# run_simulation(["../Unit_Tests/Hammel-UnitTest-LWFBrook90/input_LWFBrook90.jl/" "Hammel_loam-NLayer-400-RESET=FALSE"])
+# run_simulation(["../Unit_Tests/Hammel-IntegrationTests-LWFBrook90/input_LWFBrook90.jl/" "Hammel_loam-NLayer-27-RESET=FALSE"])
+# run_simulation(["../Unit_Tests/Hammel-IntegrationTests-LWFBrook90/input_LWFBrook90.jl/" "Hammel_loam-NLayer-103-RESET=FALSE"])
+# run_simulation(["../Unit_Tests/Hammel-IntegrationTests-LWFBrook90/input_LWFBrook90.jl/" "Hammel_loam-NLayer-400-RESET=FALSE"])
 
 # The ones with Reset=TRUE (even if this is not implemented in Julia, but just for the comparison)
-# run_simulation(["../Unit_Tests/Hammel-UnitTest-LWFBrook90/input_LWFBrook90.jl/" "Hammel_sand-NLayer-27-RESET=TRUE"])
-# run_simulation(["../Unit_Tests/Hammel-UnitTest-LWFBrook90/input_LWFBrook90.jl/" "Hammel_sand-NLayer-103-RESET=TRUE"])
-# run_simulation(["../Unit_Tests/Hammel-UnitTest-LWFBrook90/input_LWFBrook90.jl/" "Hammel_sand-NLayer-400-RESET=TRUE"])
+# run_simulation(["../Unit_Tests/Hammel-IntegrationTests-LWFBrook90/input_LWFBrook90.jl/" "Hammel_sand-NLayer-27-RESET=TRUE"])
+# run_simulation(["../Unit_Tests/Hammel-IntegrationTests-LWFBrook90/input_LWFBrook90.jl/" "Hammel_sand-NLayer-103-RESET=TRUE"])
+# run_simulation(["../Unit_Tests/Hammel-IntegrationTests-LWFBrook90/input_LWFBrook90.jl/" "Hammel_sand-NLayer-400-RESET=TRUE"])
 
-# run_simulation(["../Unit_Tests/Hammel-UnitTest-LWFBrook90/input_LWFBrook90.jl/" "Hammel_loam-NLayer-27-RESET=TRUE"])
-# run_simulation(["../Unit_Tests/Hammel-UnitTest-LWFBrook90/input_LWFBrook90.jl/" "Hammel_loam-NLayer-103-RESET=TRUE"])
-# run_simulation(["../Unit_Tests/Hammel-UnitTest-LWFBrook90/input_LWFBrook90.jl/" "Hammel_loam-NLayer-400-RESET=TRUE"])
+# run_simulation(["../Unit_Tests/Hammel-IntegrationTests-LWFBrook90/input_LWFBrook90.jl/" "Hammel_loam-NLayer-27-RESET=TRUE"])
+# run_simulation(["../Unit_Tests/Hammel-IntegrationTests-LWFBrook90/input_LWFBrook90.jl/" "Hammel_loam-NLayer-103-RESET=TRUE"])
+# run_simulation(["../Unit_Tests/Hammel-IntegrationTests-LWFBrook90/input_LWFBrook90.jl/" "Hammel_loam-NLayer-400-RESET=TRUE"])
 
 # Test the plotting and saving
-# sol1 = run_simulation(["../Unit_Tests/Hammel-UnitTest-LWFBrook90/input_LWFBrook90.jl/" "Hammel_sand-NLayer-27-RESET=FALSE"])
+# sol1 = run_simulation(["../Unit_Tests/Hammel-IntegrationTests-LWFBrook90/input_LWFBrook90.jl/" "Hammel_sand-NLayer-27-RESET=FALSE"])
 # plot_and_save_results(sol1...)
