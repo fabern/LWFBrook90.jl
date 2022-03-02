@@ -4,7 +4,7 @@ CurrentModule = LWFBrook90
 
 # Function Documentations
 
-## Functions from file `example/BEA2016...-input/func_run_example.jl`
+## Functions from file `examples/BEA2016...-input/func_run_example.jl`
 ```@autodocs
 Modules = [LWFBrook90]
 Pages   = ["example/BEA2016-reset-FALSE-input/func_run_example.jl"]

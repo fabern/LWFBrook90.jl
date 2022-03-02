@@ -1,10 +1,12 @@
+# This is an example script. See others in folder "examples/scripts/".
+
 using LWFBrook90
 using OrdinaryDiffEq: solve, Tsit5
 # example = LWFBrook90.run_example()
 
 # Read in input data
 input_prefix = "BEA2016-reset-FALSE"
-input_path = "example/" * input_prefix * "-input/"
+input_path = "examples/" * input_prefix * "-input/"
 
 ####################
 (input_meteoveg,

@@ -32,7 +32,7 @@ include("func_DiffEq_definition_f.jl")
 include("func_DiffEq_definition_ode.jl")
 include("func_MSB_functions.jl")
 
-include("../example/BEA2016-reset-FALSE-input/func_run_example.jl") # defines RelativeDaysFloat2DateTime
+include("../examples/BEA2016-reset-FALSE-input/func_run_example.jl") # defines RelativeDaysFloat2DateTime
 
 ############################################################################################
 ############################################################################################

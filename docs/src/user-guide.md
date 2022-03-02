@@ -41,7 +41,7 @@ To run a simulation following input data are needed
 - `soil_discretization.csv` - containing the initial conditions of the soil water status in the form of the soil matric potential (kPa) (vector state variable); continuously defined parameters of relative root density distributions; as well as the definition of the numerical discretization of the soil domain (nodes with upper and lower limits).
 - `param.csv` - containing further scalar model parameters
 
-The structure of the input data is illustrated by the example input data set `BEA2016-*` located in the folder `example/`, as well as below in this documentation. Please follow these examples closely when generating your own input files, including the exact column names and header lines containing the units.
+The structure of the input data is illustrated by the example input data set `BEA2016-*` located in the folder `examples/`, as well as below in this documentation. Please follow these examples closely when generating your own input files, including the exact column names and header lines containing the units.
 
 For convenience, input files can be generated from a script that sets up a simulation with the R package [LWFBrook90R (v0.4.3)](https://github.com/pschmidtwalter/LWFBrook90R#usage). Instead of running the simulation with `run_LWFB90()`, the same arguments can be used to generate the input files for LWFBrook90.jl using the R function provided in the file `generate_LWFBrook90jl_Input.R`.
 

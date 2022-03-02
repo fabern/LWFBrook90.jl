@@ -1,7 +1,7 @@
 """
     run_example()
 
-Run example simulation located in "/example/BEA2016-reset-FALSE-input" for 100 days
+Run example simulation located in "/examples/BEA2016-reset-FALSE-input" for 100 days
 and return a Dict containing the solution (solution
 object of DifferentialEquations.jl) and other variables useful for plotting.
 
@@ -73,7 +73,7 @@ function run_example()
 
     # 1a) Read in input data
     input_prefix = "BEA2016-reset-FALSE"
-    # input_path = "example/"*input_prefix*"-input/"
+    # input_path = "examples/"*input_prefix*"-input/"
     input_path = @__DIR__ # https://stackoverflow.com/a/63021629
 
     ####################

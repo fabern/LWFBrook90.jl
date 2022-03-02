@@ -47,12 +47,12 @@ Hammel, K., & Kennel, M. (2001). Charakterisierung und Analyse der Wasserverfüg
 
 All literature references are reported in the section [References](https://fabern.github.io/LWFBrook90.jl/stable/#References) in the documentation.
 
-Matthias Häni, Katrin Meusburger, Peter Waldner, Lorenz Walthert, Stephan Zimmermann of [WSL](http://www.wsl.ch) and its Long-term Forest Ecosystem Research (LWF) project gratefully acknowledged for providing example data files located in `example/BEA2016*`.
+Matthias Häni, Katrin Meusburger, Peter Waldner, Lorenz Walthert, Stephan Zimmermann of [WSL](http://www.wsl.ch) and its Long-term Forest Ecosystem Research (LWF) project gratefully acknowledged for providing example data files located in `examples/BEA2016*`.
 
 ## For Users: getting started
 To get started with Julia: see the section [Installation](https://fabern.github.io/LWFBrook90.jl/stable/user-guide/#Installation) in the documentation.
 
-An example data set `BEA2016*` was generated using the R package LWFBrook90R and is located in the folder `example/`. See outputs in the next section.
+An example data set `BEA2016*` was generated using the R package LWFBrook90R and is located in the folder `examples/`. See outputs in the next section.
 
 To run this example simulation simply call `LWFBrook90.run_example()`. Note, that the first time might take some time to load and compile the package. Another possibility is to follow the script `main.jl`, which sets up a simulation and shows some simple plotting commands. See documentation section [Example](https://fabern.github.io/LWFBrook90.jl/stable/example/).
 
