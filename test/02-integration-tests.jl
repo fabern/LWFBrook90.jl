@@ -23,16 +23,16 @@ include("fct-helpers-for-integration-tests.jl")
 
     # Check the RMSE of θ in simulations is below a limit
     @githash_time sim1, ref1 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_loam-NLayer-27-RESET=TRUE")
-        # MacBookPro15,2-git-c4275ee: 4.394856 seconds (19.52 M allocations: 2.898 GiB, 16.30% gc time)
+        # amberMBP-git-c4275ee: 4.394856 seconds (19.52 M allocations: 2.898 GiB, 16.30% gc time)
     @githash_time sim2, ref2 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_loam-NLayer-103-RESET=TRUE")
-        # MacBookPro15,2-git-c4275ee: 13.704865 seconds (19.92 M allocations: 9.220 GiB, 15.41% gc time, 0.23% compilation time)
+        # amberMBP-git-c4275ee: 13.704865 seconds (19.92 M allocations: 9.220 GiB, 15.41% gc time, 0.23% compilation time)
     # sim3, ref3 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_loam-NLayer-400-RESET=TRUE")
         # not run
 
     @githash_time sim4, ref4 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_sand-NLayer-27-RESET=TRUE")
-        # MacBookPro15,2-git-c4275ee: 0.913546 seconds (4.04 M allocations: 605.712 MiB, 14.49% gc time, 3.67% compilation time)
+        # amberMBP-git-c4275ee: 0.913546 seconds (4.04 M allocations: 605.712 MiB, 14.49% gc time, 3.67% compilation time)
     @githash_time sim5, ref5 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_sand-NLayer-103-RESET=TRUE")
-        # MacBookPro15,2-git-c4275ee: 2.788329 seconds (3.92 M allocations: 1.817 GiB, 15.26% gc time)
+        # amberMBP-git-c4275ee: 2.788329 seconds (3.92 M allocations: 1.817 GiB, 15.26% gc time)
     # sim6, ref6 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_sand-NLayer-400-RESET=TRUE")
         # not run
 
