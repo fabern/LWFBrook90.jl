@@ -44,7 +44,7 @@ for (Hammel_select in c("Hammel_loam", "Hammel_sand")) {
 
   # read input files ####################################################################################################
   ## 1) meteo
-  meteo <- read.table("input_LWFBrook90R/meteo_Hammel-IntegrationTest.csv", header= TRUE, sep = ';') %>%
+  meteo <- read.table("input_LWFBrook90R/meteo_Hammel-UnitTest.csv", header= TRUE, sep = ';') %>%
     rename(windspeed = wind) %>%
     mutate(dates = as.Date(dates)) #%>%
   # filter(dates < lubridate::ymd("2010-01-11"))
@@ -116,7 +116,7 @@ for (Hammel_select in c("Hammel_loam", "Hammel_sand")) {
                     root_method       = "betamodel")
 
     ## 3) site properties affecting model parameters
-    site_and_standprop<-read.table("input_LWFBrook90R/standprop_Hammel-IntegrationTest.csv", header= TRUE, sep = ',')
+    site_and_standprop<-read.table("input_LWFBrook90R/standprop_Hammel-UnitTest.csv", header= TRUE, sep = ',')
 
     # 3a default params:
     param <- set_paramLWFB90()
@@ -294,8 +294,8 @@ for (Hammel_select in c("Hammel_loam", "Hammel_sand")) {
 
     ## Load Hydrus output
     hydrus_file <- if_else(Hammel_select == "Hammel_loam",
-                           "../Hammel-IntegrationTest-Hydrus/Hammel_Test_Loam/Obs_Node.out",
-                           "../Hammel-IntegrationTest-Hydrus/Hammel_Test_Sand/Obs_Node.out")
+                           "../Hammel-IntegrationTests-Hydrus/Hammel_Test_Loam/Obs_Node.out",
+                           "../Hammel-IntegrationTests-Hydrus/Hammel_Test_Sand/Obs_Node.out")
 
     dat_Hammel_Hydrus <- readr::read_table(hydrus_file,
                                            comment = "end", # ignores final line
@@ -462,6 +462,31 @@ for (Hammel_select in c("Hammel_loam", "Hammel_sand")) {
                                                       ncol=4, byrow = T)))
 
   }
+}
+
+
+
+# Output Hydrus data
+for (Hammel_select in c("Hammel_loam", "Hammel_sand")) {
+  
+  ## Load Hydrus output
+  hydrus_file <- if_else(Hammel_select == "Hammel_loam",
+                         "../Hammel-IntegrationTests-Hydrus/Hammel_Test_Loam/Obs_Node.out",
+                         "../Hammel-IntegrationTests-Hydrus/Hammel_Test_Sand/Obs_Node.out")
+  
+  dat_Hammel_Hydrus <- readr::read_table(hydrus_file,
+                                         comment = "end", # ignores final line
+                                         skip = 10) %>%
+    select(time, starts_with("theta")) %>%
+    tidyr::pivot_longer(-time, values_to = "theta") %>%
+    mutate(depth = case_when(name == "theta"  ~0.1,
+                             name == "theta_1"~0.5,
+                             name == "theta_2"~1.0,
+                             name == "theta_3"~1.5,
+                             name == "theta_4"~1.9))
+  write.csv(x = dat_Hammel_Hydrus, 
+            file = file.path(dirname(hydrus_file),
+                             "Obs_Node_processed.csv"))
 }
 
 

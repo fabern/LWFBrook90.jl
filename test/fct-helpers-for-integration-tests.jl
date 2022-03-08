@@ -17,11 +17,20 @@ function prepare_θ_from_sim_and_reference(
     )
 
     # Load reference solution
-    # reference_loam_27_daily = DataFrame(
+    ## Load Hydrus solution
+    HydrusSolution = DataFrame(
+        File(
+            joinpath(
+                "test-assets/Hammel-2001", "output_Hydrus1D",
+            "Hammel_Test_"*uppercasefirst(replace(input_prefix, r"Hammel_([[:alnum:]]*)-NLayer.*" => s"\g<1>")),
+            "", "Obs_Node_processed.csv")
+            ))
+    ## Load LWFbrook90R solution
+    # referenceSolution_daily = DataFrame(
     #     File(joinpath(
     #         folder_with_sim_input_and_ref_output, "output_LWFBrook90R",
     #         input_prefix*"_OUTPUT-LWFBrook90R-0.4.5-daily_output.csv")))
-    reference_loam_27_layer = DataFrame(
+    referenceSolution_layer = DataFrame(
         File(joinpath(
             folder_with_sim_input_and_ref_output, "output_LWFBrook90R",
             input_prefix*"_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv")))
@@ -36,7 +45,7 @@ function prepare_θ_from_sim_and_reference(
     idx = find_indices(depth_to_read_out_mm, sim_sol)
     ### Ref
     ref_θ = Matrix(unstack(
-        reference_loam_27_layer[:,[:yr, :mo, :da, :doy, :nl, :theta]],
+        referenceSolution_layer[:,[:yr, :mo, :da, :doy, :nl, :theta]],
         [:yr, :mo, :da, :doy], # ID variable
         :nl,   # variable that will be spread out into column names
         :theta,# value that will be filled into the wide table
@@ -46,6 +55,18 @@ function prepare_θ_from_sim_and_reference(
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
             get_auxiliary_variables(sim_sol)
     sim_θ = u_aux_θ[:,idx]
+
+    ### Hydrus
+    HydrusSolution_wide = unstack(
+        HydrusSolution[:, [:time, :depth, :theta]],
+        [:time], # ID variable
+        :depth,  # variable that will be spread out into column names
+        :theta,  # value that will be filled into the wide table
+        renamecols=x->Symbol(:depth_, x)
+        )
+
+    HydrusSolution_final =
+        Matrix(HydrusSolution_wide[HydrusSolution_wide[:, :time] .% 1.0 .== 0, Not(:time)])
 
     ## Compute norm of difference
     # if plot_comparison # Code snippte to visualize differences for development purposes
@@ -57,5 +78,9 @@ function prepare_θ_from_sim_and_reference(
 
     # TODO(bernhard): currently sim_θ needs to be shifted by 1 day.
     #                 is it the initial conditions? (That are not reported by LWFBrook90R?)
-    return (sim_θ[Not(1),:], ref_θ[Not(end),:]) # also remove from ref_θ a day at the end to have same number
+    return (
+        sim_θ[Not(1),:],
+        ref_θ[Not(end),:], # also remove from ref_θ a day at the end to have same number
+        HydrusSolution_final
+    )
 end
