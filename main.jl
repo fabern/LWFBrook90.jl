@@ -1,7 +1,7 @@
 # This is an example script. See others in folder "examples/scripts/".
 
 using LWFBrook90
-using OrdinaryDiffEq: solve, Tsit5
+using OrdinaryDiffEq: solve, Tsit5, init
 # example = LWFBrook90.run_example()
 
 # Read in input data
@@ -110,9 +110,22 @@ sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
 #     saveat = tspan[1]:tspan[2], dt=1e-1, adaptive = false);
 # @time sol_LWFBrook90 = solve(ode_LWFBrook90, progress = true, Euler(); # Note: Euler sometimes hangs
 #     saveat = tspan[1]:tspan[2], dt=1e-1, adaptive = false);
-# using BenchmarkTools # for benchmarking
+using BenchmarkTools # for benchmarking
 # sol_LWFBrook90 = @btime solve(ode_LWFBrook90; dt=1.0e-1, adaptive = false); # dt will be overwritten, adaptive deacives DiffEq.jl adaptivity
 # sol_LWFBrook90 = @btime solve(ode_LWFBrook90; saveat = tspan[1]:tspan[2], dt=1.0e-1, adaptive = false); # dt will be overwritten, adaptive deacives DiffEq.jl adaptivity
+
+## Performance optimizing
+@time LWFBrook90.f_LWFBrook90R(copy(u0), u0, p, 1.0) # 0.000039 seconds (59 allocations: 5.047 KiB)
+# @btime LWFBrook90.f_LWFBrook90R(copy(u0), u0, p, 1.0)
+# @code_warntype LWFBrook90.f_LWFBrook90R(copy(u0), u0, p, 1.0)
+@enter LWFBrook90.f_LWFBrook90R(copy(u0), u0, p, 1.0)
+# integrator = init(ode_LWFBrook90, Tsit5();
+#     progress = true,
+#     saveat = tspan[1]:tspan[2], dt = 1e-3, adaptive = true)
+# @time LWFBrook90.LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator) # 0.000048 seconds (119 allocations: 9.391 KiB)
+# @enter LWFBrook90.LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
+    # @time LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil) # 0.000010 seconds (10 allocations: 1.406 KiB)
+# @time LWFBrook90.KPT.derive_auxiliary_SOILVAR(integrator.u[integrator.p[1][4][4]], integrator.p[1][1]) # 0.000013 seconds (11 allocations: 1.547 KiB)
 ####################
 
 
