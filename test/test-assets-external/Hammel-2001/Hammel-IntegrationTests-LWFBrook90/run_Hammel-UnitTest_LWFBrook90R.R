@@ -1,0 +1,492 @@
+# F.Bernhard 2022-02-02
+
+rm(list=ls())
+# # ###################
+# # # Reinstall LWFBrook90R for comparison with LWFBrook90Julia
+# # # Reinstall either published version (Reset=1) or modified version (Reset=0)
+run_R_simulations = FALSE
+run_julia_simulations = FALSE
+Reset = TRUE
+if (Reset){
+  install.packages("LWFBrook90R")
+}
+if (!Reset){
+  devtools::install(
+    pkg = "~/switchdrive/Documents/Job/Anstellung_2019_WSL/Doktorat/Projects/Soil-water-model/Brook/LWFBrook90R/LWFBrook90R-0.4.3_modReset0-and-printing/",
+    # pkg = "~/switchdrive/Documents/Job/Anstellung_2019_WSL/Doktorat/Projects/Soil-water-model/Brook/LWFBrook90R/LWFBrook90R-0.4.3_modReset0/",
+    # pkg = "~/switchdrive/Documents/Job/Anstellung_2019_WSL/Doktorat/Projects/Soil-water-model/Brook/LWFBrook90R/LWFBrook90R",
+    reload = TRUE,
+    quick = FALSE,
+    args = getOption("devtools.install.args"),
+    quiet = FALSE,
+    dependencies = NA,
+    upgrade = "never",
+    build_vignettes = FALSE,
+    keep_source = getOption("keep.source.pkgs"),
+    force = FALSE
+  )
+}
+# # ##################
+library(data.table)
+source("fct_hydrusR_read_Nod_Inf_out.R")
+
+library(tidyr)
+library(dplyr)
+library(LWFBrook90R)
+library(ggplot2)
+library(gridExtra)
+
+# Hammel_select <- "Hammel_loam"
+Hammel_select <- "Hammel_sand"
+
+
+for (Hammel_select in c("Hammel_loam", "Hammel_sand")) {
+
+  # read input files ####################################################################################################
+  ## 1) meteo
+  meteo <- read.table("input_LWFBrook90R/meteo_Hammel-UnitTest.csv", header= TRUE, sep = ';') %>%
+    rename(windspeed = wind) %>%
+    mutate(dates = as.Date(dates)) #%>%
+  # filter(dates < lubridate::ymd("2010-01-11"))
+
+  ## 2) soil
+  Hammel_sand <- data.frame(mat = c(1),
+                            ths = c(0.375),
+                            thr = c(0.053),
+                            alpha = 10^-1.453 * 100, #c(3.5237), # 1/m
+                            npar = 10^0.502, # c(3.1769),
+                            ksat = 10^2.808 * 10,                # mm/day
+                            tort = c(0.5), # ...#c(4.67037), # ...
+                            gravel = c(0.001)) # ...
+  Hammel_loam <- data.frame(mat = c(1),
+                            ths = c(0.399),
+                            thr = c(0.061),
+                            alpha = 10^-1.954 * 100, #c(1.111732), # 1/m
+                            npar = 10^0.168, # c(1.472313),
+                            ksat = 10^1.081 * 10,                # mm/day
+                            tort = c(0.5), #c(4.67037), # ...
+                            gravel = c(0.001)) # ...
+  if (Hammel_select == "Hammel_loam"){
+    soil_materials <- Hammel_loam
+  } else {
+    soil_materials <- Hammel_sand
+  }
+
+
+  list_soil_nodes <- list(
+    # 3rd try (NLAYER = 27)
+    data.frame(upper = -c(seq(0.000, 0.015, by=0.005), seq(0.020, 0.080, by=0.020), seq(0.100, 1.900, by=0.100)),
+               lower = -c(seq(0.005, 0.020, by=0.005), seq(0.040, 0.100, by=0.020), seq(0.200, 2.000, by=0.100))),
+    # 4th try (NLAYER = 103)
+    data.frame(upper = -c(seq(0.000, 0.015, by=0.005), seq(0.020, 0.080, by=0.020), seq(0.100, 1.980, by=0.020)),
+               lower = -c(seq(0.005, 0.020, by=0.005), seq(0.040, 0.100, by=0.020), seq(0.120, 2.000, by=0.020))),
+    # 2nd try (NLAYER = 400)
+    data.frame(upper = -seq(0.000, 1.995, by=0.005),
+               lower = -seq(0.005, 2.000, by=0.005))
+  )
+  for (curr_discretization in list_soil_nodes) {
+    soil_layers_materials <- list(
+      soil_nodes = curr_discretization %>%
+        mutate(thick = -(lower - upper)*1000) %>% # thickness in mm
+        mutate(midpoint = upper - thick/2/1000) %>%
+        mutate(mat = 1L, layer = 1:n()),
+      soil_materials = soil_materials)
+
+    ## 3) additional options
+    # options <- set_optionsLWFB90()
+
+    start_date <- min(meteo$dates)
+    if (Hammel_select == "Hammel_loam"){
+      end_date <- start_date + 51
+    } else {
+      end_date <- start_date + 11
+    }
+    options <- list(startdate         = start_date,
+                    enddate           = end_date,
+                    fornetrad         = "globrad",
+                    prec_interval     = 1,
+                    correct_prec      = FALSE,
+                    budburst_method   = "fixed", #"Menzel",       # default: "fixed"
+                    leaffall_method   = "fixed", #"vonWilpert",   # defazlt; "fixed"
+                    standprop_input   = "parameters",
+                    standprop_interp  = "constant",
+                    use_growthperiod  = FALSE,
+                    lai_method        = "b90",
+                    imodel            = "MvG",
+                    root_method       = "betamodel")
+
+    ## 3) site properties affecting model parameters
+    site_and_standprop<-read.table("input_LWFBrook90R/standprop_Hammel-UnitTest.csv", header= TRUE, sep = ',')
+
+    # 3a default params:
+    param <- set_paramLWFB90()
+    param$eslope
+    param$aspect
+    # param <-
+    #   list(maxlai = 2.56,                         sai = 1,               sai_ini = 1,
+    #        height = 8.33333333333333,             height_ini = 13,
+    #        densef = 1,                            densef_ini = 1,
+    #        age_ini = 190,
+    #        standprop_table = NULL,                winlaifrac = 0.6,
+    #        budburst_species = "Pinus sylvestris", budburstdoy = 121,     leaffalldoy = 279,
+    #        shp_budburst = 0.3,                    shp_leaffall = 3,      shp_optdoy = 210,              emergedur = 28,          leaffalldur = 58,
+    #        lai_doy = NULL,                        lai_frac = NULL,
+    #        alb = 0.2,                             albsn = 0.5,
+    #        ksnvp = 0.3,                           fxylem = 0.5,          mxkpl = 8,                     lwidth = 0.1,            psicr = -2,
+    #        nooutf = 1,                            lpc = 4,               cs = 0.035,                    czs = 0.13,              czr = 0.05,
+    #        hs = 1,                                hr = 10,               rhotp = 2,                     nn = 2.5,                maxrlen = 3000,    initrlen = 12,
+    #        initrdep = 0.25,                       rrad = 0.35,           rgrorate = 0.03,               rgroper = 30,
+    #        maxrootdepth = -0.85,                  betaroot = 0.97,       rootden_table = NULL,
+    #        radex = 0.5,                           glmax = 0.0053,        glmin = 3e-04,                 rm = 1000,               r5 = 100,
+    #        cvpd = 2,                              tl = 0,                t1 = 10,                       t2 = 30,                 th = 40,           frintlai = 0.06,
+    #        frintsai = 0.06,                       fsintlai = 0.04,       fsintsai = 0.04,               cintrl = 0.15,
+    #        cintrs = 0.15,                         cintsl = 0.6,          cintss = 0.6,                  infexp = 0,              bypar = 0,
+    #        qfpar = 1,                             qffc = 0,              imperv = 0,                    drain = 1,               gsc = 0,           gsp = 0,
+    #        ilayer = 1,                            qlayer = 0,            z0s = 0.001,                   rstemp = -0.5,           melfac = 1.5,
+    #        ccfac = 0.3,                           laimlt = 0.2,          saimlt = 0.5,                  grdmlt = 0.35,           maxlqf = 0.05,
+    #        snoden = 0.3,                          obsheight = 0.025,     correct_prec_statexp = "mg",
+    #        rssa = 100,                            rssb = 1,              soil_nodes = NULL,             soil_materials = NULL,
+    #        dtimax = 0.5,                          dswmax = 0.05,         dpsimax = 5e-04,               wndrat = 0.3,
+    #        fetch = 5000,                          z0w = 0.005,           zw = 2,                        zminh = 2,               coords_x = 9.9095,
+    #        coords_y = 46.6837851266345,
+    #        c1 = 0.25,                             c2 = 0.5,              c3 = 0.2,
+    #        pdur = c(4,4,4,4,4,4,4,4,4,4,4,4),
+    #        eslope = 26.1,
+    #        aspect = 225,                          dslope = 0,            slopelen = 200,                intrainini = 0,
+    #        intsnowini = 0,                        gwatini = 0,           snowini = 0,                   psiini = -6.3)
+
+    # 3b modify default params
+    param$maxlai           = site_and_standprop$LAI_tree_
+    param$height           = site_and_standprop$tree_height_m
+    param$height_ini       = site_and_standprop$tree_height_m
+    param$age_ini          = site_and_standprop$tree_age_unknown_yr
+
+    param$winlaifrac       = 0.6
+    param$budburst_species = "Picea abies (spaet)"
+    # "Larix decidua",
+    # "Picea abies (frueh)",
+    # "Picea abies (spaet)",
+    # "Picea abies (noerdl.)",
+    # "Picea omorika",
+    # "Pinus sylvestris",
+    # "Betula pubescens",
+    # "Quercus robur",
+    # "Quercus petraea",
+    # "Fagus sylvatica".
+
+    param$coords_x = site_and_standprop$lon_WGS84
+    param$coords_y = site_and_standprop$lat_WGS84
+    # param$eslope   = site_and_standprop$slope_deg
+    # param$aspect   = site_and_standprop$aspect_deg
+
+
+    ## 4) output
+    # output <- set_outputLWFB90()
+    output <- structure(c(0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1,
+                          0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+                        .Dim = c(7L,5L),
+                        .Dimnames = list(c("Budg","Flow","Evap","Abov","Belo","Swat","Misc"),
+                                         c("Ann","Mon","Day","Pre","ITR")))
+    output[,] <- 0L
+    output['Swat','Day'] <- 1L
+    output['Evap','Day'] <- 1L
+    output['Flow','Day'] <- 1L
+    output['Budg','Day'] <- 1L
+    output['Abov','Day'] <- 1L
+    output['Misc','Day'] <- 1L
+
+    output
+    # options$enddate <- as.Date('2016-01-2')
+
+    # For Hammel Unit Test
+    param$dswmax <-  0.05 # 0.0005 # TODO(bernhard) is it really 0.05 % in Hammel et al 2001?
+    param$pdur <- rep(24, 12)
+    param$dswmax <-  0.05
+    param$maxrootdepth     = -0.01 # min(soil$lower)
+    param$psicr <- -1
+    param$rssa = 0 # ecoshift: To eliminate SLVP set RSSA to zero. [see PET-FRSS]
+    param$rssb = 0 # ecoshift: To turn off SLVP set RSSB to zero. [see PET]
+    # param$cintrl = 0 # TODO: unsure if this helps to keep SINT zero and prevent it from going negative
+    # param$cintrs = 0 # TODO: unsure if this helps to keep SINT zero and prevent it from going negative
+    # param$cintsl = 0 # TODO: unsure if this helps to keep SINT zero and prevent it from going negative
+    # param$cintrs = 0 # TODO: unsure if this helps to keep SINT zero and prevent it from going negative
+    param$frintlai = 0 # To turn off RINT, set both FRINTL and FRINTS to zero
+    param$frintsai = 0 # To turn off RINT, set both FRINTL and FRINTS to zero
+    param$fsintlai = 0 # To turn off SINT, set both FSINTL and FSINTS to zero.
+    param$fsintsai = 0 # To turn off SINT, set both FSINTL and FSINTS to zero.
+    param$rstemp = -100 # RSTEMP = -100 turns off SFAL and makes all precipitation rain.
+
+    param$glmax = 0.00001
+    param$glmin = 0.00001
+
+    if (Hammel_select == "Hammel_loam"){
+      param$psiini <- -116.4 # θv = 0.1603; for loam it seems Hammel et al. have used -116.4 kPa
+
+    } else {
+      # param$psiini <- -16.14 #kPa = -1645.54 mmH2O # for sand it seems Hammel et al. have used -16.14
+      param$psiini <- -14 # -16.14 kPa = -1645.54 mmH2O # for sand it seems Hammel et al. have used -16.14
+    }
+
+
+    # param$bypar <- 0 # To eliminate BYFL, set BYPAR = 0
+    # param$dslope <- 0 # To eliminate DSFL set DSLOPE to zero.
+    # param$imperv <- 0 # To turn off SRFL set both IMPERV and QDEPTH to zero.
+    # param$qlayer <- 0
+
+
+    # TODO: bernhard: find a way to make evaporation 0 instead of negative.
+
+    output['Belo','Day'] <- 1L
+
+    # Run and generate input files for the same simulation using Julia
+    fname <- sprintf("%s-NLayer-%d-RESET=%s", Hammel_select, nrow(soil_layers_materials$soil_nodes),Reset)
+
+    source("~/switchdrive/Documents/Job/Anstellung_2019_WSL/Doktorat/Projects/Soil-water-model/Brook/LWFBrook90.jl/src/generate_LWFBrook90jl_Input.R")
+    R_output_dir <- "output_LWFBrook90R"
+    result <- generate_LWFBrook90Julia_Input(Julia_target_dir = "input_LWFBrook90.jl/",
+                                             Julia_prefix = fname,
+                                             R_output_dir = R_output_dir,
+                                             run_LWFBrook90R = run_R_simulations, run_LWFBrook90.jl = run_julia_simulations,
+                                             options_b90 = options,
+                                             climate = meteo,
+                                             # param_b90 = param,soil = soilPuh, # when not used than soil_nodes and soil_materials need to be present in param
+                                             param_b90 = c(soil_layers_materials, param),
+                                             output= -1,
+                                             # output= output,
+                                             rtrn_output = TRUE, rtrn_input = TRUE,
+                                             verbose = TRUE)
+
+    if (!run_R_simulations) {
+      # Load data in case we did not simulate now, but earlier
+      result <- list(
+        layer_output = readRDS(file.path(R_output_dir, paste0(fname, "_OUTPUT-LWFBrook90R-0.4.5-layer_output.RDS"))),
+        daily_output = readRDS(file.path(R_output_dir, paste0(fname, "_OUTPUT-LWFBrook90R-0.4.5-daily_output.RDS")))
+      )
+    }
+
+    ### Plotting
+
+    # Postprocess LWFBrook90R output
+
+    dat_Hammel_LWFBrook90R <- select(result$layer_output, yr, mo, da, nl, theta) %>%
+      tidyr::unite(col = "date", yr, mo, da) %>%
+      mutate(date = lubridate::ymd(date)) %>%
+      left_join(select(soil_layers_materials$soil_nodes, nl = layer, midpoint, upper, lower), by = "nl") %>%
+      # doesn't work reliably with -1.9: filter(lower %in% c(-0.1, -0.5, -1.0, -1.5, -1.9))
+      # alternatively:
+      filter(abs(lower - -0.1)   < 0.00001 |
+               abs(lower - -0.5) < 0.00001 |
+               abs(lower - -1.0) < 0.00001 |
+               abs(lower - -1.5) < 0.00001 |
+               abs(lower - -1.9) < 0.00001)
+    # write.csv(x = dat_Hammel_LWFBrook90R, file = file.path(R_output_dir,paste0(fname,".csv")))
+
+    # Load other simulation outputs
+    ## Load Hammel et al. (2001) output (digitized)
+    dat_Hammel_digitized <- readr::read_csv("../Hammel-IntegrationTest-Digitized2001/Hammel-2001-.supp.digitized.txt") %>%
+      mutate(depth = case_when(group == "LWFBrook0.1"  ~0.1,
+                               group == "LWFBrook0.5"~0.5,
+                               group == "LWFBrook1.0"~1.0,
+                               group == "LWFBrook1.5"~1.5,
+                               group == "LWFBrook1.9"~1.9)) %>%
+      mutate(date = start_date + t_d) %>%
+      filter(simulation == Hammel_select)
+
+    ## Load Hydrus output
+    hydrus_file <- if_else(Hammel_select == "Hammel_loam",
+                           "../Hammel-IntegrationTests-Hydrus/Hammel_Test_Loam/Obs_Node.out",
+                           "../Hammel-IntegrationTests-Hydrus/Hammel_Test_Sand/Obs_Node.out")
+
+    dat_Hammel_Hydrus <- readr::read_table(hydrus_file,
+                                           comment = "end", # ignores final line
+                                           skip = 10) %>%
+      select(time, starts_with("theta")) %>%
+      tidyr::pivot_longer(-time, values_to = "theta") %>%
+      mutate(depth = case_when(name == "theta"  ~0.1,
+                               name == "theta_1"~0.5,
+                               name == "theta_2"~1.0,
+                               name == "theta_3"~1.5,
+                               name == "theta_4"~1.9)) %>%
+      mutate(date = start_date + time)
+
+    ## Load LWFBrook90.jl output
+    jl_file <- paste0("input_LWFBrook90.jl/output-",fname,"_θ-depths_NLAYER",gsub(".*-([0-9]*)-.*","\\1",fname),".csv")
+    jl_file2<- paste0("input_LWFBrook90.jl/output-",fname,"_θ-full_NLAYER",gsub(".*-([0-9]*)-.*","\\1",fname),".csv")
+    "output-Hammel_loam-NLayer-27-RESET=FALSE_θ-depths_NLAYER27.csv"
+    if(file.exists(jl_file)) {
+      dat_Hammel_LWFBrook90.jl <- readr::read_csv(jl_file) %>%
+        mutate(Date = lubridate::as_date(Date))  %>% rename(date = Date) %>%
+        tidyr::pivot_longer(cols = starts_with("θ"),
+                            values_to = "theta",
+                            names_pattern = "θ_([0-9]*)mm", names_to = "depth",
+                            names_transform = list(depth = function(x) as.numeric(x)/1000))
+    } else {
+      dat_Hammel_LWFBrook90.jl <- data.frame(date=NA, depth=NA, theta=NA)
+    }
+    if(file.exists(jl_file2)) {
+      dat_Hammel_LWFBrook90.jl_full <-
+        readr::read_csv(jl_file2) %>%
+        rename(Time = Date) %>%
+        # tibble::rownames_to_column("Time") %>% mutate(Time = as.numeric(Time)) %>%
+        pivot_longer(cols = starts_with("z"),
+                     names_to = "lower", names_prefix = "zLower=", names_transform = list(lower = as.numeric),
+                     values_to = "Moisture") %>%
+        mutate(upper = c(0, head(lower,-1)))
+    } else {
+      dat_Hammel_LWFBrook90.jl_full <- data.frame(Time=NA, lower=NA, Moisture=NA, upper=NA)
+    }
+
+
+    # Plot
+    pl0_aboveground <-
+      select(result$daily_output, yr, mo, da, doy, rfal, sfal, #prec, # rfal+sfal instead of prec
+             # rthr,
+             flow, evap, seep, snow, swat, gwat, intr, ints, sint, isvp) %>%
+      select(-doy) %>%
+      tidyr::unite(col = "date", yr, mo, da) %>%
+      mutate(date = lubridate::ymd(date)) %>%
+      tidyr::pivot_longer(cols = -date,
+                          # keep facets in ggplot in the same order as in data.frame
+                          names_transform = list(name = forcats::fct_inorder)) %>%
+      ggplot(aes(x=date, y=value, color = name)) +
+      geom_line() + theme_bw() + facet_grid(name~., scales = "free_y") +
+      theme(#strip.text = element_text(size=5),
+        axis.text.y = element_text(size=5),
+        legend.key.height = unit(1,"line")) +
+      labs(x=NULL)
+
+    pl1_belowground <-
+      select(result$layer_output, yr, mo, da, nl, theta) %>%
+      tidyr::unite(col = "date", yr, mo, da) %>%
+      mutate(date = lubridate::ymd(date)) %>%
+      left_join(select(soil_layers_materials$soil_nodes, nl = layer, midpoint, upper, lower), by = "nl") %>%
+      ggplot(aes(x=date, y=midpoint, fill = theta)) +
+      geom_rect(aes(xmin=date, xmax=date+1, ymin=lower, ymax=upper)) +
+      theme_bw() + labs(fill = "θ (-)", y = "Depth (m)", x=NULL)
+
+    pl_belowground_LWFBrook90.jl <- ggplot() +
+      { if (nrow(dat_Hammel_LWFBrook90.jl_full)>1)
+        geom_rect(data = dat_Hammel_LWFBrook90.jl_full,
+                  aes(xmin=Time, xmax=Time+24*3600, ymin=lower, ymax=upper,
+                      fill = Moisture)) } +
+      labs(x=NULL, y = "Depth (m)", fill = "θ (-)") +
+      theme_bw() + ggtitle("Belowground LWFBrook90.jl") #+ coord_cartesian(xlim = c(0,10))
+
+    pl_refHydrus_belowground <- read.nod_inf(project.path = dirname(hydrus_file)) %>%
+      select(Time, Depth, Moisture) %>%
+      mutate(Depth_m = Depth/1000) %>%
+      ggplot(aes(x=Time, y=Depth_m, fill = Moisture)) +
+      geom_tile() + labs(x=NULL, y = "Depth (m)", fill = "θ (-)") +
+      theme_bw() + ggtitle("Belowground Hydrus") #+ coord_cartesian(xlim = c(0,10))
+
+    pl_compareReferences <- ggplot(color="black", size=1.5) +
+      #### 0) Add LWFBrook90.jl results (as dots)
+      ({if (nrow(dat_Hammel_LWFBrook90.jl)>1){
+        list(geom_point(data = dat_Hammel_LWFBrook90.jl, #color ="darkred",
+                        mapping = aes(x=date-1, y=theta, shape = "LWFBrook90.jl"
+                        )),
+             annotation_custom(grid::textGrob(label = "NOTE: Results from LWFBrook90.jl and Hydrus needed to be\nshifted one day more to the left than from LWFBrook90R.",
+                                              x = unit(0.5, "npc"),
+                                              y = unit(0.9, "npc"),
+                                              gp=grid::gpar(fontsize=6, col="black")))) }}) +
+      #### 1) Add Hydrus
+      geom_line(data = dat_Hammel_Hydrus, #color = "grey",
+                aes(x=date-1, y=theta, group = as.factor(depth),
+                    linetype = "Hydrus", color = "Hydrus")) +
+      # geom_point(data = dat_Hammel_Hydrus, aes(x=date, y=theta, shape = "Hydrus")) +
+      #### 2) Add Hammel 2001 LWFBrook90
+      ({if (Hammel_select == "Hammel_loam"){
+        list(geom_point(data = dat_Hammel_digitized,
+                        aes(x=date, y=theta_,
+                            shape = "Hammel (2001)"),
+                        color ="darkred"),
+             geom_line(data = dat_Hammel_digitized, size = 0.2,
+                       aes(x=date, y=theta_, group = as.factor(depth)),
+                       color ="darkred"))
+      } else {labs(caption = "Hammel (2001) solution not shown for sand, as it showed artifacts.")}}) +
+      #### 3) Add LWFBrook90R results
+      geom_line(data = mutate(dat_Hammel_LWFBrook90R, depth = -lower),
+                mapping = aes(x=date, y=theta, group = as.factor(depth),
+                              # for geom_point():shape = "LWFBrook90R", size=3, show.legend = FALSE,
+                              linetype = "LWFBrook90R", color = "LWFBrook90R")) +
+      #### 0) Add LWFBrook90.jl results (as line)
+      ({if (nrow(dat_Hammel_LWFBrook90.jl)>1){
+        geom_line(data = dat_Hammel_LWFBrook90.jl, #color ="darkred",
+                  mapping = aes(x=date-1, y=theta, group = as.factor(depth),
+                                linetype = "LWFBrook90.jl", color = "LWFBrook90.jl"))
+      }}) +
+      # Layout
+      scale_shape_manual(NULL, values = c("Hammel (2001)" = 1,
+                                          #"Hydrus" = 46,#3,
+                                          # "LWFBrook90R" = 0,
+                                          "LWFBrook90.jl" = 16)) +
+      labs(x=NULL, y= "θ (-)", linetype=NULL, color=NULL, shape=NULL) +
+      theme_bw() + theme(plot.caption = element_text(size=3),
+                         plot.title = element_text(size=8),
+                         legend.key.height = unit(1,"line")) +
+      ggtitle(fname) + # ggtitle(paste0("NLAYER = ", nrow(soil_layers_materials$soil_nodes))) +
+      scale_y_continuous(breaks = 0.05*0:10, minor_breaks = 0.01*0:100) +
+      facet_grid(round(depth, 1)~., labeller = as_labeller(function(x) paste0(x, " m")))
+
+    # Output the plots
+    # ggsave(filename = file.path(R_output_dir,paste0("1_",fname,".png")),
+    #        width = 2000, height = 1400, units = "px", dpi = 250,
+    #        plot = grid.arrange(pl0_aboveground + ggtitle("Aboveground"),
+    #                            pl1_belowground + ggtitle("Belowground"),
+    #                            pl_compareReferences,
+    #                            layout_matrix = matrix(c(c(1,2),
+    #                                                     c(1,3)),
+    #                                                   ncol=2, byrow = T)))
+    # ggsave(filename = file.path(R_output_dir,paste0("2_",fname,".png")),
+    #        width = 2300, height = 1400, units = "px", dpi = 250,
+    #        plot = grid.arrange(pl0_aboveground + ggtitle("Aboveground LWFBrook90R"),
+    #                            pl1_belowground + ggtitle("Belowground LWFBrook90R"),
+    #                            pl_compareReferences,
+    #                            pl_refHydrus_belowground,
+    #                            layout_matrix = matrix(c(c(1,2,4),
+    #                                                     c(1,3,3)),
+    #                                                   ncol=3, byrow = T)))
+
+    ggsave(filename = file.path(R_output_dir,paste0("3_",fname,".png")),
+           width = 2800, height = 1400, units = "px", dpi = 220,
+           plot = grid.arrange(pl0_aboveground + ggtitle("Aboveground LWFBrook90R"),
+
+                               pl1_belowground              + ggtitle("Belowground LWFBrook90R"),
+                               pl_belowground_LWFBrook90.jl + ggtitle("Belowground LWFBrook90.jl"),
+                               pl_refHydrus_belowground,
+
+                               pl_compareReferences,
+                               layout_matrix = matrix(c(c(1,2,5, 5),
+                                                        c(1,3,5, 5),
+                                                        c(1,4,5, 5)),
+                                                      ncol=4, byrow = T)))
+
+  }
+}
+
+
+
+# Output Hydrus data
+for (Hammel_select in c("Hammel_loam", "Hammel_sand")) {
+  
+  ## Load Hydrus output
+  hydrus_file <- if_else(Hammel_select == "Hammel_loam",
+                         "../Hammel-IntegrationTests-Hydrus/Hammel_Test_Loam/Obs_Node.out",
+                         "../Hammel-IntegrationTests-Hydrus/Hammel_Test_Sand/Obs_Node.out")
+  
+  dat_Hammel_Hydrus <- readr::read_table(hydrus_file,
+                                         comment = "end", # ignores final line
+                                         skip = 10) %>%
+    select(time, starts_with("theta")) %>%
+    tidyr::pivot_longer(-time, values_to = "theta") %>%
+    mutate(depth = case_when(name == "theta"  ~0.1,
+                             name == "theta_1"~0.5,
+                             name == "theta_2"~1.0,
+                             name == "theta_3"~1.5,
+                             name == "theta_4"~1.9))
+  write.csv(x = dat_Hammel_Hydrus, 
+            file = file.path(dirname(hydrus_file),
+                             "Obs_Node_processed.csv"))
+}
+
+

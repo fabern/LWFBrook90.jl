@@ -1,6 +1,6 @@
 # Example
 
-Example data from Beatenberg is located in subfolder `example/`. WSL is acknowledged for providing the input data (see section [Acknowledgments](@ref)).
+Example data from Beatenberg is located in subfolder `examples/`. WSL is acknowledged for providing the input data (see section [Acknowledgments](@ref)).
 
 ## Step-by-step instructions
 To run the example simulation simulation simply call LWFBrook90.run_example(). For more control either run the script `main.jl`or follow the step-by-step instructiosn below.
@@ -15,7 +15,7 @@ using OrdinaryDiffEq: solve, Tsit5
  ```Julia
 # Read in input data
 input_prefix = "BEA2016-reset-FALSE"
-input_path = "example/"*input_prefix*"-input/"
+input_path = "examples/"*input_prefix*"-input/"
 
 ####################
 (input_meteoveg,

@@ -120,7 +120,7 @@ end
 #     rename(Dict(:dates => :days))
 # end
 
-# path_meteoveg = "example/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_meteoveg.csv"
+# path_meteoveg = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_meteoveg.csv"
 function read_path_meteoveg(path_meteoveg)
     parsing_types =
         Dict(:dates          => DateTime,
@@ -182,7 +182,7 @@ function read_path_meteoveg(path_meteoveg)
     return input_meteoveg, reference_date
 end
 
-# path_initial_conditions = "example/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_initial_conditions.csv"
+# path_initial_conditions = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_initial_conditions.csv"
 function read_path_initial_conditions(path_initial_conditions)
     parsing_types =
         Dict(# Initial conditions (except for depth-dependent u_aux_PSIM) -------
@@ -199,7 +199,7 @@ function read_path_initial_conditions(path_initial_conditions)
     return input_initial_conditions
 end
 
-# path_param = "example/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_param.csv"
+# path_param = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_param.csv"
 function read_path_param(path_param)
     parsing_types =
         Dict(# Meteorologic site parameters -------
@@ -258,7 +258,7 @@ function read_path_param(path_param)
     return input_param
 end
 
-# path_storm_durations = "example/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_meteo_storm_durations.csv"
+# path_storm_durations = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_meteo_storm_durations.csv"
 function read_path_storm_durations(path_storm_durations)
     parsing_types =
         Dict("month" => String, "average_storm_duration_h" => Float64)
@@ -285,7 +285,7 @@ function read_path_storm_durations(path_storm_durations)
 
     return input_storm_durations
 end
-# path_soil_horizons = "example/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_soil_horizons.csv"
+# path_soil_horizons = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_soil_horizons.csv"
 function read_path_soil_horizons(path_soil_horizons)
     # Derive whether to use Clapp Hornberger or MualemVanGenuchten based on the input data
     MualVanGen_expected_column_names =
@@ -350,7 +350,7 @@ function read_path_soil_horizons(path_soil_horizons)
     return input_soil_horizons, FLAG_MualVanGen
 end
 
-# path_soil_discretization = "example/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_soil_discretization.csv"
+# path_soil_discretization = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_soil_discretization.csv"
 function read_path_soil_discretization(path_soil_discretization)
     parsing_types =
         Dict("Upper_m"      => Float64,

@@ -64,7 +64,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, t)
 
         (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-            LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil)
+            LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil) # 0.000010 seconds (10 allocations: 1.406 KiB)
 
         ##################
         # Update soil limited boundary flows during iteration loop
@@ -77,7 +77,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
         # Bypass fraction of infiltration to each layer
         p_fu_BYFRAC = LWFBrook90.WAT.BYFLFR(
-                      NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_soil)
+                      NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_soil) # 0.000002 seconds (1 allocation: 144 bytes)
 
         # Water movement through soil
         (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, DTI, aux_du_INFLI, aux_du_BYFLI,
@@ -101,7 +101,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
                     # for ITER:
                     p_DSWMAX, u_aux_θ,
                     # for GWATER:
-                    u_GWAT, p_GSC, p_GSP)
+                    u_GWAT, p_GSC, p_GSP) # 0.000011 seconds (15 allocations: 2.109 KiB)
 
         # Transport flow (heat, solutes, isotopes, ...)
         # TODO(bernhard): see initial prototype code... (script3)
