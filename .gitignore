@@ -32,6 +32,7 @@ Manifest.toml
 # VisualStudioCode Patch
 # Ignore all local history of files
 **/.history
+**/.Rhistory
 
 # Project specific
 Ecoshift-webpage/
