@@ -141,7 +141,7 @@ absorbing roots per unit ground area in m/m2. Lr and R1 only affect rhizosphere 
 and thus are only important for dry soil or when Lr is small.
 "
 """
-function PLNTRES(NLAYER, p_soil, p_RTLEN, p_fT_RELDEN, p_RTRAD, p_RPLANT, p_FXYLEM, p_PI, p_RHOWG) # TODO(bernhard) find out how to import p_PI and p_RHOWG from the moduel CONSTANTS
+function PLNTRES(NLAYER, p_soil, p_fT_RTLEN, p_fT_RELDEN, p_RTRAD, p_fT_RPLANT, p_FXYLEM, p_PI, p_RHOWG) # TODO(bernhard) find out how to import p_PI and p_RHOWG from the moduel CONSTANTS
     p_THICK = p_soil.p_THICK
     p_STONEF = p_soil.p_STONEF
     # compute stone-free layer thickness D
@@ -154,20 +154,20 @@ function PLNTRES(NLAYER, p_soil, p_RTLEN, p_fT_RELDEN, p_RTRAD, p_RPLANT, p_FXYL
     RTFRAC = p_fT_RELDEN[1:NLAYER].*D[1:NLAYER] ./ sum(p_fT_RELDEN[1:NLAYER].*D[1:NLAYER])
 
     # compute xylem resistance, MPa d/mm
-    RXYLEM = p_FXYLEM * p_RPLANT
+    RXYLEM = p_FXYLEM * p_fT_RPLANT
     # compute RROOTI and ALPHA
     RROOTI = zeros(NLAYER)
     ALPHA  = zeros(NLAYER)
     for i = 1:NLAYER
-        if (p_fT_RELDEN[i] < 0.00001 || p_RTLEN < 0.1)
+        if (p_fT_RELDEN[i] < 0.00001 || p_fT_RTLEN < 0.1)
             # no roots in layer
             RROOTI[i] = 1E+20
             ALPHA[i]  = 1E+20
         else
             # root resistance for layer
-            RROOTI[i] = (p_RPLANT - RXYLEM) / RTFRAC[i]
+            RROOTI[i] = (p_fT_RPLANT - RXYLEM) / RTFRAC[i]
             # rhizosphere resistance for layer
-            RTDENI = RTFRAC[i] * 0.001 * p_RTLEN / D[i] # .001 is (mm/mm2)/(m/m2) conversion
+            RTDENI = RTFRAC[i] * 0.001 * p_fT_RTLEN / D[i] # .001 is (mm/mm2)/(m/m2) conversion
             DELT = p_PI * p_RTRAD ^ 2 * RTDENI
             ALPHA[i] = (1 / (8 * p_PI * RTDENI)) * (DELT - 3 - 2 * (log(DELT)) / (1 - DELT))
             ALPHA[i] = ALPHA[i] * 0.001 * p_RHOWG / D[i] # .001 is MPa/kPa conversion
