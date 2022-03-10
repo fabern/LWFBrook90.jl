@@ -89,7 +89,7 @@ In case you're unfamiliar to Julia, there are various ways to run a script such 
 
 `meteo_storm_durations.csv`:
 
-| month                                                        | average_storm_duration_h |
+| month                                                        | average\_storm\_duration_h |
 | ------------------------------------------------------------ | ------------------------ |
 | ### Typical average durations of a single  storm event for each month ------- | NA                       |
 | January                                                      | 4                        |
@@ -110,17 +110,17 @@ In case you're unfamiliar to Julia, there are various ways to run a script such 
 
 | param_id                                                            | x    |
 | ------------------------------------------------------------------- | ---- |
-| ### Initial conditions (except for  depth-dependent u_aux_PSIM) --- | NA   |
-| u_GWAT_init_mm                                                      | 0    |
-| u_INTS_init_mm                                                      | 0    |
-| u_INTR_init_mm                                                      | 0    |
-| u_SNOW_init_mm                                                      | 0    |
-| u_CC_init_MJ_per_m2                                                 | 0    |
-| u_SNOWLQ_init_mm                                                    | 0    |
+| ### Initial conditions (except for  depth-dependent u\_aux\_PSIM) --- | NA   |
+| u\_GWAT\_init\_mm                                                      | 0    |
+| u\_INTS\_init\_mm                                                      | 0    |
+| u\_INTR\_init\_mm                                                      | 0    |
+| u\_SNOW\_init\_mm                                                      | 0    |
+| u\_CC\_init\_MJ\_per\_m2                                                 | 0    |
+| u\_SNOWLQ\_init\_mm                                                    | 0    |
 
 `soil_discretization.csv` contains the initial conditions of the soil water status, root density distributions, and the definition of the numerical discretization of the soil domain (nodes with upper and lower limits):
 
-| Upper_m | Lower_m | Rootden_ | uAux_PSIM_init_kPa | u_delta18O_init_mUr | u_delta2H_init_mUr |
+| Upper\_m | Lower\_m | Rootden\_ | uAux\_PSIM\_init\_kPa | u\_delta18O\_init\_mUr | u\_delta2H\_init\_mUr |
 | ------- | ------- | -------- | ------------------ | ------------------- | ------------------ |
 | m       | m       | -        | kPa                | mUr                 | mUr                |
 | 0       | -0.04   | 0.02868  | -6.3               | NA                  | NA                 |
