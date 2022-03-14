@@ -137,7 +137,6 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
             # 1) Either set daily sum if rate is constant throughout precipitation interval: p_DTP*(...)
             # 2) or then set daily sum to zero and use ODE to accumulate flow.
-            6+0+0+1*NLAYER .+ (1:25)
             du[idx_u_vector_accumulators[ 1]] = 0 # cum_d_prec, was computed in callback
             du[idx_u_vector_accumulators[ 2]] = 0 # cum_d_rfal, was computed in callback
             du[idx_u_vector_accumulators[ 3]] = 0 # cum_d_sfal, was computed in callback

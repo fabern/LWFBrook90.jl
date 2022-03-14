@@ -285,8 +285,8 @@ Based on the state `u_SWATI` it returns (`u_aux_WETNES`, `u_aux_PSIM`, `u_aux_PS
 """
 function derive_auxiliary_SOILVAR(u_SWATI,  p::KPT_SOILPAR_Mvg1d)
 
-    u_aux_WETNES = (p.p_THSAT .* u_SWATI ./ p.p_SWATMAX .- p.p_θr) ./ (p.p_THSAT - p.p_θr)
-    u_aux_WETNES = min.(1, u_aux_WETNES)
+    u_aux_WETNES = (p.p_THSAT .* u_SWATI ./ p.p_SWATMAX .- p.p_θr) ./ (p.p_THSAT .- p.p_θr)
+    u_aux_WETNES .= min.(1, u_aux_WETNES)
 
     u_aux_PSIM   = FPSIM(u_aux_WETNES, p)
     u_aux_θ      = FTheta(u_aux_WETNES, p)
@@ -296,6 +296,7 @@ function derive_auxiliary_SOILVAR(u_SWATI,  p::KPT_SOILPAR_Mvg1d)
 
     return (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
 end
+
 function derive_auxiliary_SOILVAR(u_SWATI,  p::KPT_SOILPAR_Ch1d)
     NLAYER   = size(p.p_KSAT,1)
 
@@ -383,19 +384,14 @@ function FPSIM_CH(u_aux_WETNES,p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN)
     return ψM
 end
 function FPSIM(u_aux_WETNES, p::KPT_SOILPAR_Mvg1d)
-    eps = 1.e-6
-    # MvGm = 1-1/MvGn
-    AWET = max.(u_aux_WETNES, eps)
-    ψM = (-1 ./ p.p_MvGα) .* (AWET .^ (-1 ./ (1 .- 1 ./ p.p_MvGn)) .- 1) .^ (1 ./ p.p_MvGn)
-
-    return ψM * 9.81 # 9.81 conversion from m to kPa #TODO define and use const
-end # TODO(bernhard): FPSIM for p::KPT_SOILPAR_Mvg1d seems unused
+    FPSIM_MvG(u_aux_WETNES, p.p_MvGα, p.p_MvGn)
+end
 function FPSIM_MvG(u_aux_WETNES, p_MvGα, p_MvGn)
     eps = 1.e-6
     # MvGm = 1-1/MvGn
     AWET = max.(u_aux_WETNES, eps)
-    ψM = (-1 ./ p_MvGα) .* (AWET .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
-    return ψM * 9.81 # 9.81 conversion from m to kPa #TODO define and use const
+    ψM = 9.81 .* (-1 ./ p_MvGα) .* (AWET .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
+    # 9.81 conversion from m to kPa #TODO define and use const
 end
 
 """
@@ -452,7 +448,7 @@ function FDPSIDWF(u_aux_WETNES, p::KPT_SOILPAR_Mvg1d)
     eps = 1.e-6
     m = 1 .- 1 ./ n
     dψδW = zeros(size(u_aux_WETNES))
-    for i = 1:length(u_aux_WETNES)
+    @inbounds for i = 1:length(u_aux_WETNES)
         if (u_aux_WETNES[i] <= eps)
             dψδW[i] = (-1/α[i])*(1/n[i])*(            eps^(-1/(m[i]))-1)^(1/n[i]-1)*(-1/(m[i]))*            eps^(-1/(m[i])-1)
         end
@@ -464,7 +460,7 @@ function FDPSIDWF(u_aux_WETNES, p::KPT_SOILPAR_Mvg1d)
         end
     end
 
-    return dψδW = dψδW * 9.81 # # 9.81 conversion from m to kPa #TODO define and use const
+    return dψδW .* 9.81 # # 9.81 conversion from m to kPa #TODO define and use const
                               # d PSI/d WETNES, kPa
 end
 
@@ -474,8 +470,11 @@ end
 Compute θ based on Se.
 """
 function FTheta(u_aux_WETNES, p::KPT_SOILPAR_Mvg1d)
+    return FTheta_MvG(u_aux_WETNES, p.p_THSAT, p.p_θr)
+end
+function FTheta_MvG(u_aux_WETNES, p_THSAT, p_θr)
     # Computes θ(Se) = Se*(θs-θr) + θr
-    return u_aux_WETNES .* (p.p_THSAT .- p.p_θr) .+ p.p_θr
+    return u_aux_WETNES .* (p_THSAT .- p_θr) .+ p_θr
 end
 function FTheta(u_aux_WETNES, p::KPT_SOILPAR_Ch1d)
     # Computes θ(Se) = Se*(θs-θr) + θr
@@ -485,10 +484,6 @@ function FTheta(u_aux_WETNES, p::KPT_SOILPAR_Ch1d)
     # return u_aux_WETNES*(p_THSAT-p_θr)+p_θr
     # variant 2:
     return u_aux_WETNES .* p.p_THSAT
-end
-function FTheta_MvG(u_aux_WETNES, p_THSAT, p_θr)
-    # needed only for construction of KPT_SOILPAR_Mvg1d
-    return u_aux_WETNES .* (p_THSAT .- p_θr) .+ p_θr
 end
 
 """
