@@ -204,12 +204,8 @@ function LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     integrator.u[6] = u_SNOWLQ # SNOWLQ
 
     # save intermediate results for use in ODE (function f())
-    # integrator.p[3] = [p_fu_RNET, aux_du_SMLT, aux_du_TRANI, aux_du_SLVP]
-    integrator.p[3][1] = p_fu_RNET
-    integrator.p[3][2] = aux_du_SMLT
-    integrator.p[3][3] = aux_du_TRANI
-    integrator.p[3][4] = aux_du_SLVP
-
+    integrator.p[3][1] .= [p_fu_RNET, aux_du_SMLT, aux_du_SLVP]
+    integrator.p[3][2] .= aux_du_TRANI
 
 
     ##########################################
@@ -256,5 +252,7 @@ function LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         # TODO(bernhard): use SavingCallback() for all quantities that have u=... and du=0
         #                 only keep du=... for quantities for which we compute cumulative sums
     end
+
+    return nothing
     ##########################################
 end

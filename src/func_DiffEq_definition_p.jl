@@ -425,7 +425,8 @@ function define_LWFB90_p(
     #     can temporarily be saved in the parameter vector to avoid computing them twice
 
     # Initialize placeholder for parameters that depend on solution and are computed
-    p_fu = [NaN, NaN, fill(NaN, NLAYER), NaN] # Use array instead of tuple to be able to mutate
+    p_fu = ([NaN, NaN, NaN],
+            fill(NaN, NLAYER)) # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto
 
     # 3) Return different types of parameters as a single object
     return (soil_discr["PSIM_init"], (p_cst, p_fT, p_fu))
