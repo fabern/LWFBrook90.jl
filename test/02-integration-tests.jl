@@ -21,15 +21,19 @@ include("fct-helpers-for-integration-tests.jl")
     # Check the RMSE of θ in simulations is below a limit
     @githash_time sim1, ref1, hyd1 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_loam-NLayer-27-RESET=TRUE")
         # amberMBP-git-c4275ee: 4.394856 seconds (19.52 M allocations: 2.898 GiB, 16.30% gc time)
+        # amberMBP-git-eae940b: 3.882331 seconds (9.10 M allocations: 2.408 GiB, 15.04% gc time)
     @githash_time sim2, ref2, hyd2 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_loam-NLayer-103-RESET=TRUE")
         # amberMBP-git-c4275ee: 13.704865 seconds (19.92 M allocations: 9.220 GiB, 15.41% gc time, 0.23% compilation time)
+        # amberMBP-git-eae940b: 12.581113 seconds (9.21 M allocations: 8.018 GiB, 13.85% gc time)
     # @githash_time sim3, ref3, hyd3 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_loam-NLayer-400-RESET=TRUE")
         # not run
 
     @githash_time sim4, ref4, hyd4 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_sand-NLayer-27-RESET=TRUE")
         # amberMBP-git-c4275ee: 0.913546 seconds (4.04 M allocations: 605.712 MiB, 14.49% gc time, 3.67% compilation time)
+        # amberMBP-git-eae940b: 0.859826 seconds (1.85 M allocations: 499.565 MiB, 13.78% gc time)
     @githash_time sim5, ref5, hyd5 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_sand-NLayer-103-RESET=TRUE")
         # amberMBP-git-c4275ee: 2.788329 seconds (3.92 M allocations: 1.817 GiB, 15.26% gc time)
+        # amberMBP-git-eae940b: 2.626265 seconds (1.83 M allocations: 1.586 GiB, 13.83% gc time)
     # @githash_time sim6, ref6, hyd6 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_sand-NLayer-400-RESET=TRUE")
         # not run
 

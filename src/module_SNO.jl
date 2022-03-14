@@ -355,7 +355,6 @@ function SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN, u_CC, u_SNOW,
         # potential rates need to be adapted to actual ones
         aux_du_SMLT = p_GRDMLT / FRAC
         aux_du_SNVP = p_fu_PSNVP / FRAC
-        aux_du_RSNO = 0. # FB: unused
         u_SNOW      = 0.
         u_SNOWLQ    = 0.
         u_CC        = 0.
@@ -366,6 +365,11 @@ function SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN, u_CC, u_SNOW,
     ####
     # Operator splitting: step 4: update u_SNOWLQ, and u_CC by considering
     #                             snowpack cooling or warming
+    #                             and define rain on snow aux_du_RSNO and its effect on
+    #                             u_SNOWLQ and u_CC
+    if (u_SNOW == 0.)
+        aux_du_RSNO = 0.
+    end
     if (u_SNOW > 0)
         # equivalent ice melted by energy input including warm rain (mm)
         EQEN = p_DTP * (p_fu_SNOEN + p_fu_RTHR * max(p_fu_TA, 0) * p_CVLQ) / p_LF

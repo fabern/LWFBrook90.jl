@@ -24,6 +24,8 @@
   @githash_time example_result = LWFBrook90.run_example()
   # amberMBP-git-c4275ee: 0.020843 seconds (202.36 k allocations: 16.009 MiB)
   # amberMBP-git-c4275ee: 0.018723 seconds (202.36 k allocations: 16.010 MiB)
+  # amberMBP-git-eae940b: 0.028672 seconds (93.92 k allocations: 12.045 MiB)
+  # amberMBP-git-eae940b: @btime: 14.003 ms (93919 allocations: 12.05 MiB)
 
   idx_of_state_variables = 1:(7+(example_result["NLAYER"]-1))
   @test_skip example_result["solution"].u[10][idx_of_state_variables] ≈ [
