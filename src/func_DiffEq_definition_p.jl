@@ -397,11 +397,11 @@ function define_LWFB90_p(
             idx_u_vector_accumulators = 6+4+4+3*NLAYER .+ (1:25)
         else
             idx_u_vector_accumulators = 6 + 0 + 0 + 1 * NLAYER .+ (1:25)
-            names_u_vector_accumulators = [
+        end
+        names_u_vector_accumulators = [
                 "cum_d_prec"  "cum_d_rfal"  "cum_d_sfal"  "cum_d_rint" "cum_d_sint"  "cum_d_rsno"  "cum_d_rnet"  "cum_d_smlt"  "cum_d_evap"  "cum_d_tran"  "cum_d_irvp"  "cum_d_isvp"  "cum_d_slvp"  "cum_d_snvp"  "cum_d_pint"  "cum_d_ptran"  "cum_d_pslvp" "flow"  "seep"  "srfl"  "slfl"  "byfl"  "dsfl"  "gwfl"  "vrfln"
                 #"cum_d_rthr", "cum_d_sthr"
             ]
-        end
     else
         idx_u_vector_accumulators = []
     end

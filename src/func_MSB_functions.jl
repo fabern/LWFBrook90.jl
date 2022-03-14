@@ -304,7 +304,7 @@ function MSBDAYNIGHT_postprocess(FLAG_MualVanGen, NLAYER,
 
     return (p_fu_PTRAN, # average potential transpiration rate for day (mm/d)
             p_fu_GEVP,  # average ground evaporation for day (mm/d)
-            p_fu_PINT,  # average potential interception for day (mm/d)
+            p_fu_PINT,  # average potential evaporation rate of intercepted water for day (mm/d)
             p_fu_GIVP,  # average ground evaporation for day with interception (mm/d)
             p_fu_PSLVP, # average potential evaporation rate from soil for day (mm/d) TODO(bernhard) seems unused further on
             aux_du_TRANI) # average transpiration rate for day from layer (mm/d)

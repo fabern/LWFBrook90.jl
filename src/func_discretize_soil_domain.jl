@@ -27,7 +27,7 @@ discretize_soil(;
     Rootden_::Function,
     uAux_PSIM_init_kPa::Function,
     u_delta18O_init_mUr = missing,
-    u_delta2H_init_mUR = missing)
+    u_delta2H_init_mUr = missing)
 
 Manually generate a soil- and root-discretization for LWFBrook90.jl. This function can be
 used as alternative to loading an input file `soil_discretization.csv`.
@@ -44,7 +44,7 @@ function discretize_soil(;
     Rootden_::Function,
     uAux_PSIM_init_kPa::Function,
     u_delta18O_init_mUr = missing,
-    u_delta2H_init_mUR = missing) where {T<:Number}
+    u_delta2H_init_mUr = missing) where {T<:Number}
 
     # Derive cell interfaces based on the cell spacing Δz_m
     z_cell_interfaces = -[0; cumsum(Δz_m)]
@@ -57,7 +57,7 @@ function discretize_soil(;
         Rootden_ = Rootden_(Δz_m),
         uAux_PSIM_init_kPa = uAux_PSIM_init_kPa(Δz_m),
         u_delta18O_init_mUr = u_delta18O_init_mUr,
-        u_delta2H_init_mUR = u_delta2H_init_mUR)
+        u_delta2H_init_mUr = u_delta2H_init_mUr)
 
 end
 

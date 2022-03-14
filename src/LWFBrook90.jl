@@ -28,7 +28,6 @@ include("module_SNO.jl");        # to bring into scope: using .SNO
 include("module_EVP.jl");        # to bring into scope: using .SNO
 include("module_ISO.jl");        # to bring into scope: using .ISO
 
-include("func_read_inputData.jl")
 include("func_discretize_soil_domain.jl")
 include("func_DiffEq_definition_u0.jl")
 include("func_DiffEq_definition_p.jl")
