@@ -788,7 +788,7 @@ function SWGRA(UA, p_fu_ZA, p_fu_HEIGHT, p_fu_Z0, p_fu_DISP, p_fu_Z0C, p_fu_DISP
     KH = p_K * USTAR * (p_fu_HEIGHT - p_fu_DISP)
     RAS = (p_fu_HEIGHT * exp(p_NN) / (p_NN * KH)) * (exp(-p_NN * p_fu_Z0GS / p_fu_HEIGHT) - exp(-p_NN * (p_fu_Z0C + p_fu_DISPC) / p_fu_HEIGHT))
     if (RAS < 1)
-        RAS = 1
+        RAS = 1.
     end
     RAA = log((p_fu_ZA - p_fu_DISP) / (p_fu_HEIGHT - p_fu_DISP)) / (p_K * USTAR) + (p_fu_HEIGHT / (p_NN * KH)) * (-1 + exp(p_NN * (p_fu_HEIGHT - p_fu_DISPC - p_fu_Z0C) / p_fu_HEIGHT))
     UH = (USTAR / p_K) * log((p_fu_HEIGHT - p_fu_DISP) / p_fu_Z0)

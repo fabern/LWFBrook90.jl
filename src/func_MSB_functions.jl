@@ -65,7 +65,7 @@ function MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
     p_fT_RXYLEM, p_fT_RROOTI, p_fT_ALPHA = LWFBrook90.EVP.PLNTRES(NLAYER, p_soil, p_fT_RTLEN, p_fT_RELDEN, p_RTRAD, p_fT_RPLANT, p_FXYLEM, LWFBrook90.CONSTANTS.p_PI, LWFBrook90.CONSTANTS.p_RHOWG)
 
     # calculated weather data
-    p_fu_SHEAT = 0
+    p_fu_SHEAT = 0.
     (p_fu_SOLRADC, p_fu_TA, p_fu_TADTM, p_fu_TANTM, UA, p_fu_UADTM, p_fu_UANTM) =
         LWFBrook90.PET.WEATHER(p_fT_TMAX, p_fT_TMIN, p_fT_DAYLEN, p_fT_I0HDAY, p_fT_EA, p_fT_UW, p_fu_ZA, p_fu_DISP, p_fu_Z0, p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_fT_SOLRAD)
     # fraction of precipitation as p_fT_SFAL
@@ -77,10 +77,10 @@ function MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
         # potential snow evaporation PSNVP
         p_fu_PSNVP=LWFBrook90.SNO.SNOVAP(p_fu_TSNOW, p_fu_TA, p_fT_EA, UA, p_fu_ZA, p_fu_HEIGHTeff, p_fu_Z0, p_fu_DISP, p_fu_Z0C, p_fu_DISPC, p_fu_Z0GS, p_LWIDTH, p_RHOTP, p_NN, p_fu_LAIeff, p_fT_SAIeff, p_KSNVP)
         p_fu_ALBEDO = p_ALBSN
-        p_fu_RSS = 0
+        p_fu_RSS = 0.
     else
-        p_fu_TSNOW = 0
-        p_fu_PSNVP = 0
+        p_fu_TSNOW = 0.
+        p_fu_PSNVP = 0.
         p_fu_ALBEDO = p_ALB
         # soil evaporation resistance
         p_fu_RSS = LWFBrook90.PET.FRSS(p_RSSA, p_RSSB, u_aux_PSIM[1], p_soil)
@@ -323,7 +323,8 @@ function MSBPREINT(#arguments:
                    #
                    u_SNOW, p_fu_PTRAN, NLAYER, aux_du_TRANI, p_fu_GIVP, p_fu_GEVP,
                    # for SNOWPACK
-                   u_CC, u_SNOWLQ, p_fu_PSNVP, p_fu_SNOEN, p_MAXLQF, p_GRDMLT)
+                   u_CC, u_SNOWLQ, p_fu_PSNVP, p_fu_SNOEN, p_MAXLQF, p_GRDMLT,
+                   p_CVICE, p_LF, p_CVLQ)
 
     p_fT_SFAL = p_fT_SNOFRC * p_fT_PREC # rate in mm/day
     p_fT_RFAL = p_fT_PREC - p_fT_SFAL   # rate in mm/day
@@ -381,7 +382,8 @@ function MSBPREINT(#arguments:
           LWFBrook90.SNO.SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN,
                    # States that are overwritten:
                    u_CC, u_SNOW, u_SNOWLQ,
-                   p_DTP, p_fu_TA, p_MAXLQF, p_GRDMLT)
+                   p_DTP, p_fu_TA, p_MAXLQF, p_GRDMLT,
+                   p_CVICE, p_LF, p_CVLQ)
 
         p_fu_RNET = p_fu_RTHR - aux_du_RSNO
         aux_du_SLVP = 0.0
@@ -438,8 +440,8 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
     ## Within soil compute flows from layers:
     #  a) vertical flux between layers VRFLI,
     #  b) downslope flow from the layers DSFLI
-    aux_du_VRFLI = fill(NaN, NLAYER)
-    aux_du_DSFLI = fill(NaN, NLAYER)
+    aux_du_VRFLI = fill(NaN, NLAYER) # 0.000001 seconds (1 allocation: 144 bytes)
+    aux_du_DSFLI = fill(NaN, NLAYER) # 0.000001 seconds (1 allocation: 144 bytes)
 
     # downslope flow rates
     if (p_LENGTH_SLOPE == 0 || p_DSLOPE == 0)
@@ -493,10 +495,10 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
     aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
         LWFBrook90.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
                                     aux_du_SLVP, p_soil.p_SWATMAX, u_SWATI,
-                                    aux_du_VRFLI_1st_approx)
+                                    aux_du_VRFLI_1st_approx) # 0.000003 seconds (4 allocations: 576 bytes)
     #@debug "b) aux_du_VRFLI[1]: $(aux_du_VRFLI[1]), sum(aux_du_VRFLI): $(sum(aux_du_VRFLI))"
 
-    DPSIDW = LWFBrook90.KPT.FDPSIDWF(u_aux_WETNES, p_soil)
+    DPSIDW = LWFBrook90.KPT.FDPSIDWF(u_aux_WETNES, p_soil) # 0.000004 seconds (3 allocations: 432 bytes)
 
     # limit step size
     #       TODO(bernhard): This could alternatively be achieved with a stepsize limiter callback
@@ -507,7 +509,7 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
     #   between adjacent layers does not change sign during the iteration time step
     DTINEW=LWFBrook90.WAT.ITER(NLAYER, FLAG_MualVanGen, DTI, LWFBrook90.CONSTANTS.p_DTIMIN, DPSIDW,
                                     du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMAX,
-                    p_soil)
+                    p_soil) # 0.000002 seconds (2 allocations: 288 bytes)
     # recompute step
     if (DTINEW < DTI)
         # recalculate flow rates with new DTI

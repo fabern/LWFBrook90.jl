@@ -59,12 +59,12 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         #u_SNOW     = u[4]
         #u_CC       = u[5]
         #u_SNOWLQ   = u[6]
-        u_SWATI     = u[idx_u_vector_amounts]
+        u_SWATI     = u[idx_u_vector_amounts] # 0.000002 seconds (1 allocation: 144 bytes)
 
         LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, t)
 
         (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-            LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil) # 0.000010 seconds (10 allocations: 1.406 KiB)
+            LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil) # 0.000007 seconds (7 allocations: 1008 bytes)
 
         ##################
         # Update soil limited boundary flows during iteration loop
@@ -117,7 +117,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         #du[9] = 0
         #du[10] = 0
         #du[11] = 0
-        du[idx_u_vector_amounts] .= du_NTFLI[:]
+        du[idx_u_vector_amounts] .= du_NTFLI[:] # 0.000002 seconds (3 allocations: 224 bytes)
 
         # Do not modify INTS, INTR, SNOW, CC, SNOWLQ
         # as they are separately modified by the callback.

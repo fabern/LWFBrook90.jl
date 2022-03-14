@@ -174,7 +174,8 @@ function LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
                #
                u_SNOW, p_fu_PTRAN, NLAYER, aux_du_TRANI, p_fu_GIVP, p_fu_GEVP,
                # for SNOWPACK
-               u_CC, u_SNOWLQ, p_fu_PSNVP, p_fu_SNOEN, p_MAXLQF, p_GRDMLT)
+               u_CC, u_SNOWLQ, p_fu_PSNVP, p_fu_SNOEN, p_MAXLQF, p_GRDMLT,
+               LWFBrook90.CONSTANTS.p_CVICE, LWFBrook90.CONSTANTS.p_LF, LWFBrook90.CONSTANTS.p_CVLQ)
                # 0.000016 seconds (28 allocations: 3.609 KiB)
 
 
