@@ -10,7 +10,7 @@ input_path = "examples/" * input_prefix * "-input/"
 
 ####################
 (input_meteoveg,
-    _input_meteoiso, # unused
+    _input_meteoiso, # TODO possibly unused
     input_meteoveg_reference_date,
     input_param,
     input_storm_durations,
@@ -55,9 +55,9 @@ compute_intermediate_quantities = true # Flag whether ODE containes additional q
 
 ####################
 # Define parameters for differential equation
-ψM_initial, p = define_LWFB90_p(
+(ψM_initial, _δ18O_initial, _δ2H_initial), p = define_LWFB90_p(
     input_meteoveg,
-    _input_meteoiso, # unused
+    _input_meteoiso, # TODO: possibly unused
     input_meteoveg_reference_date,
     input_param,
     input_storm_durations,
@@ -76,8 +76,8 @@ compute_intermediate_quantities = true # Flag whether ODE containes additional q
 # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
 # Create u0 for DiffEq.jl
 u0 = define_LWFB90_u0(p, input_initial_conditions,
-    ψM_initial,
-    compute_intermediate_quantities,
+    ψM_initial, _δ18O_initial, _δ2H_initial, # TODO: possibly unused
+    compute_intermediate_quantities;
     simulate_isotopes = false)
 ####################
 
@@ -104,6 +104,7 @@ ode_LWFBrook90, unstable_check_function = define_LWFB90_ODE(u0, tspan, p);
 ####################
 ## Solve ODE:
 @time sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
+    unstable_check = unstable_check_function,
     progress = true,
     saveat = tspan[1]:tspan[2], dt = 1e-3, adaptive = true); # dt is initial dt, but adaptive
 ####################

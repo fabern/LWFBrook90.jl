@@ -19,6 +19,7 @@ input_path = "examples/"*input_prefix*"-input/"
 
 ####################
 (input_meteoveg,
+    _input_meteoiso, # TODO possibly unused
     input_meteoveg_reference_date,
     input_param,
     input_storm_durations,
@@ -53,8 +54,9 @@ Then functions from the package are used to define the problem that will be hand
 ```Julia
 ####################
 # Define parameters for differential equation
-p = define_LWFB90_p(
+(ψM_initial, _δ18O_initial, _δ2H_initial), p = define_LWFB90_p(
     input_meteoveg,
+    _input_meteoiso, # TODO: possibly unused
     input_meteoveg_reference_date,
     input_param,
     input_storm_durations,
@@ -81,8 +83,9 @@ end
 
 # Create u0 for DiffEq.jl
 u0 = define_LWFB90_u0(p, input_initial_conditions,
-                      uSoil_initial,
-                      compute_intermediate_quantities)
+    ψM_initial, _δ18O_initial, _δ2H_initial, # TODO: possibly unused
+    compute_intermediate_quantities;
+    simulate_isotopes = false)
 ####################
 ```
 
@@ -101,7 +104,7 @@ tspan = (minimum(input_meteoveg[:,"days"]),
          maximum(input_meteoveg[:,"days"])) # simulate all available days
 
 # Define ODE:
-ode_LWFBrook90 = define_LWFB90_ODE(u0, tspan, p)
+ode_LWFBrook90, unstable_check_function = (u0, tspan, p)
 
 # Alternative definitions of tspan:
 # tspan = (0.,  5.) # simulate days 0 to 5 (in the reference frame of the input data)

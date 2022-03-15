@@ -100,6 +100,7 @@ function run_example()
 
     ####################
     (input_meteoveg,
+        _input_meteoiso, # TODO possibly unused
         input_meteoveg_reference_date,
         input_param,
         input_storm_durations,
@@ -124,9 +125,9 @@ function run_example()
 
     ####################
     # Define parameters for differential equation
-    uSoil_initial, p = define_LWFB90_p(
+    (ψM_initial, _δ18O_initial, _δ2H_initial), p = define_LWFB90_p(
         input_meteoveg,
-        input_meteoiso, # TODO.... undefined in case we
+        _input_meteoiso, # TODO: possibly unused
         input_meteoveg_reference_date,
         input_param,
         input_storm_durations,
@@ -143,8 +144,8 @@ function run_example()
     # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
     # Create u0 for DiffEq.jl
     u0 = define_LWFB90_u0(p, input_initial_conditions,
-        uSoil_initial,
-        compute_intermediate_quantities,
+        ψM_initial, _δ18O_initial, _δ2H_initial, # TODO: possibly unused
+        compute_intermediate_quantities;
         simulate_isotopes = false)
     ####################
 
@@ -158,7 +159,7 @@ function run_example()
 
     # Define simulation time span:
     tspan = (0.0, 100.0) # simulate 100 days
-    ode_LWFBrook90 = define_LWFB90_ODE(u0, tspan, p)
+    ode_LWFBrook90, unstable_check_function = (u0, tspan, p)
     ####################
 
     ####################

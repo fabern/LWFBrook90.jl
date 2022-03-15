@@ -311,7 +311,7 @@ end
 function read_path_param(path_param; simulate_isotopes::Bool = false)
     parsing_types =
         Dict(### Isotope tranpsport parameters  -------,NA
-            "TODO" => Float64, "TODO2" => Float64,
+            # "TODO" => Float64, "TODO2" => Float64,
             # Meteorologic site parameters -------
             "LAT_DEG" => Float64,
             "ESLOPE_DEG" => Float64,       "ASPECT_DEG" => Float64,

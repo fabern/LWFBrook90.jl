@@ -4,9 +4,9 @@ using OrdinaryDiffEq: solve, Tsit5
 
 # Read in input data
 # input_prefix = "isoBEA2016-reset-FALSE"
-# input_path = "example/BEA2016-reset-FALSE-input/"
+# input_path = "examples/BEA2016-reset-FALSE-input/"
 input_prefix = "isoBEA2010-18-reset-FALSE";
-input_path = "example/isoBEA2010-18-reset-FALSE-input/";
+input_path = "examples/isoBEA2010-18-reset-FALSE-input/";
 
 ####################
 simulate_isotopes = true
@@ -17,8 +17,8 @@ simulate_isotopes = true
     input_storm_durations,
     input_initial_conditions,
     input_soil_horizons,
-    input_soil_discretization,
-    simOption_FLAG_MualVanGen) = read_inputData(input_path, input_prefix;
+    simOption_FLAG_MualVanGen) =
+    read_inputData(input_path, input_prefix;
                                                 simulate_isotopes = simulate_isotopes);
 ####################
 
@@ -36,7 +36,7 @@ compute_intermediate_quantities = true; # Flag whether ODE containes additional 
 
 ####################
 # Define parameters for differential equation
-uSoil_initial, p = define_LWFB90_p(
+(ψM_initial,δ18O_initial,δ2H_initial), p = define_LWFB90_p(
     input_meteoveg,
     input_meteoiso,
     input_meteoveg_reference_date,
@@ -63,9 +63,9 @@ uSoil_initial, p = define_LWFB90_p(
 # Create u0 for DiffEq.jl
 #TODO:simulate_isotopes, input_soil_discretization
 u0 = define_LWFB90_u0(p, input_initial_conditions,
-                      uSoil_initial,
-                      compute_intermediate_quantities;
-                      simulate_isotopes = simulate_isotopes);
+    ψM_initial, δ18O_initial, δ2H_initial,
+    compute_intermediate_quantities;
+    simulate_isotopes = simulate_isotopes)
 ####################
 
 ####################

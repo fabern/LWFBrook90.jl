@@ -52,6 +52,7 @@ the input_path and input_prefix of a series of input definition files.
 The function loads these files, runs the simulation and returns the solution object and input arguments
 """
 function run_simulation(args)
+    # args = ("test-assets/Hammel-2001/input-files", "Hammel_loam-NLayer-27-RESET=TRUE")
     @show now()
     @show args
 
@@ -59,6 +60,7 @@ function run_simulation(args)
     input_prefix = args[2]
 
     (input_meteoveg,
+    _input_meteoiso, # TODO: possibly unused
     input_meteoveg_reference_date,
     input_param,
     input_storm_durations,
@@ -71,8 +73,9 @@ function run_simulation(args)
     Reset = false                          # currently only Reset = 0 implemented
     compute_intermediate_quantities = true # Flag whether ODE containes additional quantities than only states
 
-    ψM_initial, p = define_LWFB90_p(
+    (ψM_initial, _δ18O_initial, _δ2H_initial), p = define_LWFB90_p(
         input_meteoveg,
+        _input_meteoiso, # TODO: possibly unused
         input_meteoveg_reference_date,
         input_param,
         input_storm_durations,
@@ -85,14 +88,16 @@ function run_simulation(args)
         compute_intermediate_quantities = compute_intermediate_quantities)
 
     u0 = define_LWFB90_u0(p, input_initial_conditions,
-        ψM_initial,
-        compute_intermediate_quantities)
+        ψM_initial, _δ18O_initial, _δ2H_initial, # TODO: possibly unused
+        compute_intermediate_quantities;
+        simulate_isotopes = false)
 
     tspan = (minimum(input_meteoveg[:, "days"]), maximum(input_meteoveg[:, "days"])) # simulate all available days
 
-    ode_LWFBrook90 = define_LWFB90_ODE(u0, tspan, p)
+    ode_LWFBrook90, unstable_check_function = define_LWFB90_ODE(u0, tspan, p)
 
     sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
+        unstable_check = unstable_check_function,
         progress = true,
         saveat = tspan[1]:tspan[2], dt = 1e-3, adaptive = true); # dt is initial dt, but adaptive
 
@@ -145,7 +150,7 @@ function plot_and_save_results(sol, input_prefix, input_path)
     df_out3 = DataFrame(u_aux_θ,    "zLower=".*string.(z_to_plot))
 
     ## append time metadata
-    input_meteoveg_reference_date = sol.prob.p[2][15]
+    input_meteoveg_reference_date = sol.prob.p[2][17]
     time_to_plot = LWFBrook90.RelativeDaysFloat2DateTime.(sol.t, input_meteoveg_reference_date)
     df_out1.Date = time_to_plot
     df_out2.Date = time_to_plot
@@ -237,7 +242,7 @@ end
     # idx_u_vector_amounts       = sol.prob.p[1][4][4]
     # idx_u_vector_accumulators  = sol.prob.p[1][4][5]
 
-    t_ref = sol.prob.p[2][15]
+    t_ref = sol.prob.p[2][17]
     x = RelativeDaysFloat2DateTime.(sol.t, t_ref)
     y = cumsum(sol.prob.p[1][1].p_THICK) - sol.prob.p[1][1].p_THICK / 2
     n = sol.prob.p[1][1].NLAYER

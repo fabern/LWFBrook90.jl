@@ -3,7 +3,8 @@
 
 Generate vector u0 needed for ODE() problem in DiffEq.jl package.
 """
-function define_LWFB90_u0(p, uScalar_initial, uSoil_initial_ψM_kPa,
+function define_LWFB90_u0(p, uScalar_initial,
+    uSoil_initial_ψM_kPa, uSoil_initial_δ18O_mUr, uSoil_initial_δ2H_mUr,
     compute_intermediate_quantities;
     simulate_isotopes::Bool = false)
 
@@ -41,7 +42,7 @@ function define_LWFB90_u0(p, uScalar_initial, uSoil_initial_ψM_kPa,
         u_SNOW_init_d18O      = uScalar_initial[2, "u_SNOW_init_mm"]
         # u_CC_init_MJ_per_m2_d18O = uScalar_initial[2, "u_CC_init_MJ_per_m2"] # state has no isotopic signature
         # u_SNOWLQ_init_d18O       = uScalar_initial[2, "u_SNOWLQ_init_mm"]    # state has no isotopic signature
-        u_SWATIinit_d18O      = 0 # TODO: bernhard: include correct treatment of this....
+        u_SWATIinit_d18O      = uSoil_initial_δ18O_mUr
         # isotopes d2H
         u_GWAT_init_d2H      = uScalar_initial[3, "u_GWAT_init_mm"]
         u_INTS_init_d2H      = uScalar_initial[3, "u_INTS_init_mm"]
@@ -49,7 +50,7 @@ function define_LWFB90_u0(p, uScalar_initial, uSoil_initial_ψM_kPa,
         u_SNOW_init_d2H      = uScalar_initial[3, "u_SNOW_init_mm"]
         # u_CC_init_MJ_per_m2_d2H = uScalar_initial[3, "u_CC_init_MJ_per_m2"] # state has no isotopic signature
         # u_SNOWLQ_init_d2H       = uScalar_initial[3, "u_SNOWLQ_init_mm"]    # state has no isotopic signature
-        u_SWATIinit_d2H      = 0 # TODO: bernhard: include correct treatment of this....
+        u_SWATIinit_d2H      = uSoil_initial_δ2H_mUr
 
 
         u0 = [u0;
