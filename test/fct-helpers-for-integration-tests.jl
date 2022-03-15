@@ -138,22 +138,22 @@ function prepare_sim_and_ref_for_BEA_2016(
             input_prefix*"_NLAYER70_LWFBrook90R-0.4.5daily_output.csv"))
 
     ## Belowground
-    ref_below_1 = read_LWFBrook90R_layerCSV_extract_theta_depths(;
+    ref_below_1 = read_LWFBrook90R_layerCSV_extract_depths(;
         path = joinpath(folder_with_sim_input_and_ref_output, "output_LWFBrook90R",
                         input_prefix*"_NLAYER7_LWFBrook90R-0.4.5layer_output.csv"),
         depth_to_read_out_mm = [100 500 1000 1500 1900])
 
-    ref_below_2 = read_LWFBrook90R_layerCSV_extract_theta_depths(;
+    ref_below_2 = read_LWFBrook90R_layerCSV_extract_depths(;
         path = joinpath(folder_with_sim_input_and_ref_output, "output_LWFBrook90R",
                         input_prefix*"_NLAYER14_LWFBrook90R-0.4.5layer_output.csv"),
         depth_to_read_out_mm = [100 500 1000 1500 1900])
 
-    ref_below_3 = read_LWFBrook90R_layerCSV_extract_theta_depths(;
+    ref_below_3 = read_LWFBrook90R_layerCSV_extract_depths(;
         path = joinpath(folder_with_sim_input_and_ref_output, "output_LWFBrook90R",
                         input_prefix*"_NLAYER21_LWFBrook90R-0.4.5layer_output.csv"),
         depth_to_read_out_mm = [100 500 1000 1500 1900])
 
-    ref_below_4 = read_LWFBrook90R_layerCSV_extract_theta_depths(;
+    ref_below_4 = read_LWFBrook90R_layerCSV_extract_depths(;
         path = joinpath(folder_with_sim_input_and_ref_output, "output_LWFBrook90R",
                         input_prefix*"_NLAYER70_LWFBrook90R-0.4.5layer_output.csv"),
         depth_to_read_out_mm = [100 500 1000 1500 1900])
