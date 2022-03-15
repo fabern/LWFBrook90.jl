@@ -208,11 +208,13 @@ end
 
     # 1a) extract data from solution object `sol`
     # idx_u_vector_amounts       = sol.prob.p[1][4][4]
-    idx_u_scalar_isotopes_d18O = sol.prob.p[1][4][5]
-    idx_u_vector_isotopes_d18O = sol.prob.p[1][4][6]
-    idx_u_scalar_isotopes_d2H  = sol.prob.p[1][4][7]
-    idx_u_vector_isotopes_d2H  = sol.prob.p[1][4][8]
-    # idx_u_vector_accumulators  = sol.prob.p[1][4][9]
+    # idx_u_vector_accumulators  = sol.prob.p[1][4][5]
+    # idx_u_scalar_amounts       = sol.prob.p[1][4][6]
+    # names_u_vector_accumulators= sol.prob.p[1][4][7]
+    idx_u_scalar_isotopes_d18O = sol.prob.p[1][4][8]
+    idx_u_vector_isotopes_d18O = sol.prob.p[1][4][9]
+    idx_u_scalar_isotopes_d2H  = sol.prob.p[1][4][10]
+    idx_u_vector_isotopes_d2H  = sol.prob.p[1][4][11]
 
     t_ref = sol.prob.p[2][17]
     x = RelativeDaysFloat2DateTime.(sol.t, t_ref);

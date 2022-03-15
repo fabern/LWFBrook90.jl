@@ -406,14 +406,24 @@ function define_LWFB90_p(
         idx_u_vector_accumulators = []
     end
 
-    p_cst_4 = (NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, simulate_isotopes, #TODO(bernhard): check that this works
-        idx_u_scalar_isotopes_d18O, idx_u_vector_isotopes_d18O,
-        idx_u_scalar_isotopes_d2H,  idx_u_vector_isotopes_d2H,
+    p_cst_4 = (
+        FLAG_MualVanGen,
+        compute_intermediate_quantities,
+        simulate_isotopes,
         idx_u_vector_amounts,
         idx_u_vector_accumulators,
         idx_u_scalar_amounts,
-        names_u_vector_accumulators)
-
+        names_u_vector_accumulators,
+        idx_u_scalar_isotopes_d18O, idx_u_vector_isotopes_d18O,
+        idx_u_scalar_isotopes_d2H,  idx_u_vector_isotopes_d2H)
+# idx_u_vector_amounts       = sol_LWFBrook90.prob.p[1][4][4]
+# idx_u_vector_accumulators  = sol_LWFBrook90.prob.p[1][4][5]
+# idx_u_scalar_amounts       = sol_LWFBrook90.prob.p[1][4][6]
+# names_u_vector_accumulators = sol_LWFBrook90.prob.p[1][4][7]
+# idx_u_scalar_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][8]
+# idx_u_vector_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][9]
+# idx_u_scalar_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4][10]
+# idx_u_vector_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4][11]
     p_cst = (p_cst_1, p_cst_2, p_cst_3, p_cst_4)
 
     # 2b) Time varying parameters (e.g. meteorological forcings)
@@ -433,7 +443,6 @@ function define_LWFB90_p(
             interpolated_meteoveg["p_SAI"],
             interpolated_meteoveg["p_AGE"],
             interpolated_meteoveg["p_RELDEN"],
-            interpolated_meteoveg["REFERENCE_DATE"],
             interpolated_meteoveg["p_d18OPREC"],
             interpolated_meteoveg["p_d2HPREC"],
             interpolated_meteoveg["REFERENCE_DATE"])
@@ -451,18 +460,9 @@ function define_LWFB90_p(
     #TODO(bernhard): what are the additional 3x NaNs needed for in isotope code???
     #Earlier it was simply: [NaN, NaN, NaN, NaN, NaN, NaN], fill(NaN, NLAYER)
 
-    # 3) Compute intial state of soil in terms of the state variable SWATI instead of PSIM
-    # Transform initial value of auxiliary state u_aux_PSIM_init into state u_SWATIinit:
-    if any( soil_discr["PSIM_init"].> 0)
-        error("Initial matrix psi must be negative or zero. Please check column `uAux_PSIM_init_kPa` in the input files.")
-    end
-    u_aux_WETNESinit = LWFBrook90.KPT.FWETNES(soil_discr["PSIM_init"], p_cst[1])
-    u_SWATIinit = p_cst[1].p_SWATMAX ./ p_cst[1].p_THSAT .* LWFBrook90.KPT.FTheta(u_aux_WETNESinit, p_cst[1])
-    u_d18O_init = soil_discr["d18O_init"]
-    u_d2H_init  = soil_discr["d2H_init"]
-
-    # 4) Return different types of parameters as a single object
-    return ((u_SWATIinit,u_d18O_init,u_d2H_init), (p_cst, p_fT, p_fu))
+    # 3) Return different types of parameters as a single object
+    return ((soil_discr["PSIM_init"], soil_discr["d18O_init"],soil_discr["d2H_init"]),
+            (p_cst, p_fT, p_fu))
 end
 
 

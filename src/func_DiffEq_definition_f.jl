@@ -29,9 +29,9 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # unused are the constant parameters saved in: = p[1][3]
 
         ## B) time dependent parameters
-        (p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC,
-        _, _, _, _, _, _,
-        p_δ18O_PREC, p_δ2H_PREC) = p[2]
+        p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC,
+            p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE, p_RELDEN,
+            p_δ18O_PREC, p_δ2H_PREC, ref_date = p[2]
 
         ## C) state dependent parameters:
         # Calculate parameters:
@@ -63,15 +63,12 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         #u_SNOWLQ   = u[6]
         u_SWATI     = u[idx_u_vector_amounts] # 0.000002 seconds (1 allocation: 144 bytes)
 
-        # update δ values of GWAT and SWATI
-        # do not update δ values of INTS, INTR, SNOW (is done in cb())
-        simulate_isotopes = p[1][4][10] #TODO(bernhard): this is not working. Scope issue??
-        if simulate_isotopes #TODO(bernhard): this is not working. Scope issue??
-            idx_u_scalar_isotopes_d18O = p[1][4][5]
-            idx_u_scalar_isotopes_d2H  = p[1][4][7]
-            idx_u_vector_isotopes_d18O = p[1][4][6]
-            idx_u_vector_isotopes_d2H  = p[1][4][8]
-            # idx_u_vector_accumulators = p[1][4][9]
+        simulate_isotopes = p[1][4][3]
+        if simulate_isotopes
+            idx_u_scalar_isotopes_d18O = p[1][4][8]
+            idx_u_vector_isotopes_d18O = p[1][4][9]
+            idx_u_scalar_isotopes_d2H  = p[1][4][10]
+            idx_u_vector_isotopes_d2H  = p[1][4][11]
 
             u_δ18O_GWAT = u[idx_u_scalar_isotopes_d18O[1]]
             u_δ2H_GWAT  = u[idx_u_scalar_isotopes_d2H[1] ]
@@ -128,20 +125,21 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
                     u_GWAT, p_GSC, p_GSP) # 0.000011 seconds (15 allocations: 2.109 KiB)
 
         # Transport flow (heat, solutes, isotopes, ...)
+        if simulate_isotopes
+            EffectiveDiffusivity_18O = 0  # TODO(bernhard): compute correct values using eq 33 Zhou-2021-Environ_Model_Softw.pdf
+            EffectiveDiffusivity_2H  = 0  # TODO(bernhard): compute correct values using eq 33 Zhou-2021-Environ_Model_Softw.pdf
+            δ18O_INFLI = δ18O_SLFL
+            δ2H_INFLI  = δ2H_SLFL
 
-        EffectiveDiffusivity_18O = 0  # TODO(bernhard): compute correct values using eq 33 Zhou-2021-Environ_Model_Softw.pdf
-        EffectiveDiffusivity_2H  = 0  # TODO(bernhard): compute correct values using eq 33 Zhou-2021-Environ_Model_Softw.pdf
-        δ18O_INFLI = δ18O_SLFL
-        δ2H_INFLI  = δ2H_SLFL
-
-        du_δ18O_GWAT, du_δ2H_GWAT, du_δ18O_SWATI, du_δ2H_SWATI =
-            compute_isotope_du_GWAT_SWATI(
-                # for GWAT:
-                u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT,
-                # for SWATI:
-                du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI,  # (non-fractionating)
-                aux_du_SLVP, p_fu_TADTM, p_EA(t), p_δ2H_PREC(t), p_δ18O_PREC(t), u_aux_WETNES, # (fractionating)
-                u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, 0, 0) #EffectiveDiffusivity_18O, EffectiveDiffusivity_2H)
+            du_δ18O_GWAT, du_δ2H_GWAT, du_δ18O_SWATI, du_δ2H_SWATI =
+                compute_isotope_du_GWAT_SWATI(
+                    # for GWAT:
+                    u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT,
+                    # for SWATI:
+                    du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI,  # (non-fractionating)
+                    aux_du_SLVP, p_fu_TADTM, p_EA(t), p_δ2H_PREC(t), p_δ18O_PREC(t), u_aux_WETNES, # (fractionating)
+                    u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, 0, 0) #EffectiveDiffusivity_18O, EffectiveDiffusivity_2H)
+        end
 
         ##################
         # Update solution:

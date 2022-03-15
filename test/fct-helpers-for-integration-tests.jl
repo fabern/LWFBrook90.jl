@@ -92,8 +92,8 @@ function prepare_sim_and_ref_for_BEA_2016(
     folder_with_sim_input_and_ref_output,
     input_prefix)
 
-    #e.g. folder_with_sim_input_and_ref_output = "test/test-assets/Hammel-2001"
-    #e.g. input_prefix = "Hammel_loam-NLayer-27-RESET=TRUE"
+    # folder_with_sim_input_and_ref_output = "test-assets/BEA-2016"
+    # input_prefix = "BEA2016-reset-FALSE"
 
     # Run  simulation
     sim_sol, _, _ = run_simulation(
@@ -171,6 +171,7 @@ function prepare_sim_and_ref_for_BEA_2016(
     )
 
     # # Code snippte to visualize differences for development purposes
+    # using Plots
     # ## Aboveground
     # pl_ab_all = plot(sim_sol; vars = [1, 2, 3, 4, 5, 6],
     #      label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
@@ -186,14 +187,14 @@ function prepare_sim_and_ref_for_BEA_2016(
     #     [ref_above_1.gwat,
     #       ref_above_1.intr,
     #       ref_above_1.ints,
-    #       ref_above_1.snow], label = "LWFBrook90R", line = :dash)
+    #       ref_above_1.snow], label = "LWFBrook90R", color = :black, line = :dash)
     # plot!(pl_ab_3,
     #     [ref_above_1.intr,
     #       ref_above_1.ints,
-    #       ref_above_1.snow], label = "LWFBrook90R", line = :dash)
+    #       ref_above_1.snow], label = "LWFBrook90R", color = :black, line = :dash)
     # plot!(pl_ab_2,
     #     [ref_above_1.intr,
-    #       ref_above_1.ints], label = "LWFBrook90R", line = :dash)
+    #       ref_above_1.ints], label = "LWFBrook90R", color = :black, line = :dash)
     #
     # ## Belowground
     # ## θ

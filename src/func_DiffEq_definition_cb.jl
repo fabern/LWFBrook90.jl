@@ -60,7 +60,8 @@ function LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
 
     ## B) time dependent parameters
     p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC,
-        p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE, p_RELDEN = integrator.p[2]
+        p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE, p_RELDEN,
+        p_δ18O_PREC, p_δ2H_PREC, ref_date = integrator.p[2]
 
     p_fT_DENSEF = max(0.050, p_DENSEF(integrator.t))
 
@@ -85,6 +86,26 @@ function LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     u_SWATI    = integrator.u[idx_u_vector_amounts]
 
     LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, integrator.t)
+
+    simulate_isotopes = integrator.p[1][4][3]
+    if simulate_isotopes # TODO: this seems not working, scope issue?
+        idx_u_scalar_isotopes_d18O = integrator.p[1][4][8]
+        # idx_u_vector_isotopes_d18O = integrator.p[1][4][9]
+        idx_u_scalar_isotopes_d2H  = integrator.p[1][4][10]
+        # idx_u_vector_isotopes_d2H  = integrator.p[1][4][11]
+
+        # u_δ18O_GWAT = integrator.u[idx_u_scalar_isotopes_d18O[1]]
+        # u_δ2H_GWAT  = integrator.u[idx_u_scalar_isotopes_d2H[1] ]
+        u_δ18O_INTS = integrator.u[idx_u_scalar_isotopes_d18O[2]]
+        u_δ2H_INTS  = integrator.u[idx_u_scalar_isotopes_d2H[2] ]
+        u_δ18O_INTR = integrator.u[idx_u_scalar_isotopes_d18O[3]]
+        u_δ2H_INTR  = integrator.u[idx_u_scalar_isotopes_d2H[3] ]
+        u_δ18O_SNOW = integrator.u[idx_u_scalar_isotopes_d18O[4]]
+        u_δ2H_SNOW  = integrator.u[idx_u_scalar_isotopes_d2H[4] ]
+        # u_δ18O_SWATI = integrator.u[idx_u_vector_isotopes_d18O]
+        # u_δ2H_SWATI  = integrator.u[idx_u_vector_isotopes_d2H]
+    end
+
 
     # Derive (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) from u_SWATI
     (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
@@ -175,24 +196,34 @@ function LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
                u_SNOW, p_fu_PTRAN, NLAYER, aux_du_TRANI, p_fu_GIVP, p_fu_GEVP,
                # for SNOWPACK
                u_CC, u_SNOWLQ, p_fu_PSNVP, p_fu_SNOEN, p_MAXLQF, p_GRDMLT,
+               # Constants
                LWFBrook90.CONSTANTS.p_CVICE, LWFBrook90.CONSTANTS.p_LF, LWFBrook90.CONSTANTS.p_CVLQ)
                # 0.000016 seconds (28 allocations: 3.609 KiB)
-
-    compute_isotope_INTS_INTR_SNOW(
-        # for INTS (in: SINT; out: ISVP):
-        aux_du_SINT, aux_du_ISVP, p_DTP, δ2H_INTS, δ18O_INTS,
-        # for INTR (in: RINT; out: IRVP):
-        aux_du_RINT, aux_du_IRVP, δ2H_INTR, δ18O_INTR,
-        # for SNOW (in: STHR, RSNO (both δ_PREC); out: SMLT, SNVP (δ_SNOW and fractionated)):
-        p_fu_STHR, aux_du_RSNO, aux_du_SMLT, aux_du_SNVP, δ2H_PREC, δ18O_PREC, δ2H_SNOW, δ18O_SNOW
-    ) # check chart "../docs/src/assets/b90flow.gif"
-
 
     ####################################################################
     # 2) Update states of interception storage over entire precipitation
     #    interval: u_INTS, u_INTR
-    u_INTS = u_INTS + (aux_du_SINT - aux_du_ISVP) * p_DTP
-    u_INTR = u_INTR + (aux_du_RINT - aux_du_IRVP) * p_DTP
+    if simulate_isotopes # TODO: this seems not working, scope issue?
+        δ18O_SLFL, δ2H_SLFL,
+        u_INTS,            u_δ18O_INTS, u_δ2H_INTS,
+        u_INTR,            u_δ18O_INTR, u_δ2H_INTR,
+        u_SNOW_iso_update, u_δ18O_SNOW, u_δ2H_SNOW =
+            compute_isotope_INTS_INTR_SNOW_and_SLFL(
+                p_δ2H_PREC(integrator.t), p_δ18O_PREC(integrator.t), p_fu_TADTM, p_EA(integrator.t),
+                # for INTS (in: SINT; out: ISVP):
+                u_INTS, aux_du_SINT, aux_du_ISVP, p_DTP, u_δ2H_INTS, u_δ18O_INTS,
+                # for INTR (in: RINT; out: IRVP):
+                u_INTR, aux_du_RINT, aux_du_IRVP, u_δ2H_INTR, u_δ18O_INTR,
+                # for SNOW (in: STHR, RSNO (both δ_PREC); out: SMLT, SNVP (δ_SNOW and fractionated)):
+                u_SNOW_old, p_fu_STHR, aux_du_RSNO, aux_du_SMLT, aux_du_SNVP, u_δ2H_SNOW, u_δ18O_SNOW,
+                # to compute isotopic signature of soil infiltration: SLFL
+                p_fu_RNET)
+        # NOTE: mixing and fractionation is computed with u_SNOW_old, yielding u_SNOW_iso_update.
+        #       However, u_SNOW_iso_update is neglected and u_SNOW is used
+    else
+        u_INTS = u_INTS + (aux_du_SINT - aux_du_ISVP) * p_DTP
+        u_INTR = u_INTR + (aux_du_RINT - aux_du_IRVP) * p_DTP
+    end
 
     ####################################################################
     # 3) Update soil water using substeps smaller than precipitation
@@ -213,9 +244,27 @@ function LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     integrator.u[6] = u_SNOWLQ # SNOWLQ
 
     # save intermediate results for use in ODE (function f())
-    integrator.p[3][1] .= [p_fu_RNET, aux_du_SMLT, aux_du_SLVP]
+    if simulate_isotopes # TODO: this seems not working, scope issue?
+        integrator.p[3][1] .= [p_fu_RNET, aux_du_SMLT, aux_du_SLVP, δ18O_SLFL, δ2H_SLFL, p_fu_TADTM]
+    else
+        integrator.p[3][1] .= [p_fu_RNET, aux_du_SMLT, aux_du_SLVP, NaN, NaN, NaN]
+    end
     integrator.p[3][2] .= aux_du_TRANI
 
+    # update δ values of INTS, INTR, SNOW
+    # do not update δ values of GWAT and SWATI (is done in f())
+    if simulate_isotopes
+        # integrator.u[idx_u_scalar_isotopes_d18O[1]] = u_δ18O_GWAT
+        # integrator.u[idx_u_scalar_isotopes_d2H[1] ] = u_δ2H_GWAT
+        integrator.u[idx_u_scalar_isotopes_d18O[2]] = u_δ18O_INTS
+        integrator.u[idx_u_scalar_isotopes_d2H[2] ] = u_δ2H_INTS
+        integrator.u[idx_u_scalar_isotopes_d18O[3]] = u_δ18O_INTR
+        integrator.u[idx_u_scalar_isotopes_d2H[3] ] = u_δ2H_INTR
+        integrator.u[idx_u_scalar_isotopes_d18O[4]] = u_δ18O_SNOW
+        integrator.u[idx_u_scalar_isotopes_d2H[4] ] = u_δ2H_SNOW
+        # integrator.u[idx_u_vector_isotopes_d18O]    = u_δ18O_SWATI
+        # integrator.u[idx_u_vector_isotopes_d2H]     = u_δ2H_SWATI
+    end
 
     ##########################################
     # Accumulate flows to compute daily sums
