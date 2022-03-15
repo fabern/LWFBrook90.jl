@@ -1,0 +1,9 @@
+Upper_m,Lower_m,Rootden_,uAux_PSIM_init_kPa,u_delta18O_init_mUr,u_delta2H_init_mUr
+m,m,-,kPa,mUr,mUr
+0,-0.04,0.02868,-6.3,NA,NA
+-0.04,-0.08,0.02539,-6.3,NA,NA
+-0.08,-0.2,0.02,-6.3,NA,NA
+-0.2,-0.45,0.01159,-6.3,NA,NA
+-0.45,-0.75,0.00507,-6.3,NA,NA
+-0.75,-1.1,0.00191,-6.3,NA,NA
+-1.1,-1.2,0.00092,-6.3,NA,NA
