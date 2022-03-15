@@ -7,8 +7,8 @@ function prepare_θ_from_sim_and_reference(
     folder_with_sim_input_and_ref_output,
     input_prefix)
 
-    #e.g. folder_with_sim_input_and_ref_output = "test/test-assets/Hammel-2001"
-    #e.g. input_prefix = "Hammel_loam-NLayer-27-RESET=TRUE"
+    # folder_with_sim_input_and_ref_output = "test-assets/Hammel-2001"
+    # input_prefix = "Hammel_loam-NLayer-27-RESET=TRUE"
 
     # Run  simulation
     sim_sol, _, _ = run_simulation(
@@ -21,7 +21,7 @@ function prepare_θ_from_sim_and_reference(
     HydrusSolution = DataFrame(
         File(
             joinpath(
-                "test-assets/Hammel-2001", "output_Hydrus1D",
+                folder_with_sim_input_and_ref_output, "output_Hydrus1D",
             "Hammel_Test_"*uppercasefirst(replace(input_prefix, r"Hammel_([[:alnum:]]*)-NLayer.*" => s"\g<1>")),
             "", "Obs_Node_processed.csv")
             ))
@@ -50,7 +50,9 @@ function prepare_θ_from_sim_and_reference(
         :nl,   # variable that will be spread out into column names
         :theta,# value that will be filled into the wide table
         renamecols=x->Symbol(:nl_, x)
-        )[:,idx])
+        )[:,
+            Symbol.("nl_" .* string.(idx))])
+            # [:yr; :mo; :da; :doy; Symbol.("nl_" .* string.(idx))]]))
     ### Sim
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
             get_auxiliary_variables(sim_sol)
@@ -70,10 +72,11 @@ function prepare_θ_from_sim_and_reference(
 
     ## Compute norm of difference
     # if plot_comparison # Code snippte to visualize differences for development purposes
-    #     pl = plot(sim_θ[Not(1),:], line = :solid,
-    #         labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-    #     plot!(ref_θ, line = :dash, color = :black,
-    #         labels = "LWFBrook90R: " .* string.(depth_to_read_out_mm) .* " mm")
+        # using Plots
+        # pl = plot(sim_θ[Not(1),:], line = :solid,
+        #     labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
+        # plot!(ref_θ, line = :dash, color = :black,
+        #     labels = "LWFBrook90R: " .* string.(depth_to_read_out_mm) .* " mm")
     # end
 
     # TODO(bernhard): currently sim_θ needs to be shifted by 1 day.
