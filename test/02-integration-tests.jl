@@ -75,3 +75,73 @@ include("fct-helpers-for-integration-tests.jl")
     # plot!(hyd4, line = :dash, color = :green, labels = "Hydrus: " .* string.(depth_to_read_out_mm) .* " mm")
 
 end
+
+
+# NOTE: locally, i.e. not on CI system, one might need to do manually cd("test")
+@testset "BEA-2016-θ-ψ-aboveground-states" begin
+
+    # @show pwd() # This is to help get the folder right.
+
+    # # Check the RMSE of θ in simulations is below a limit
+    sim, ref_NLAYER7, ref_NLAYER14, ref_NLAYER21, ref_NLAYER70 =
+        prepare_sim_and_ref_for_BEA_2016("test-assets/BEA-2016","BEA2016-reset-FALSE")
+
+    function RMS_differences(sim, ref)
+        # computes root mean squared differences
+        differences = sim .- ref
+        mean_squared = sum(differences.^2) / length(differences)
+
+        return sqrt(mean_squared)
+    end
+
+    # # Use sensible accuracy values to compare the two solutions (e.g. θ of 0.02, and ψ of 1 kPa)
+    # # (e.g. RMSE(reference, simulated) < [hardcoded_value])
+    # # Floating point accuracy is used by regression tests.
+    # # (Or could be used, once I compare with a very high-fidelity solution, of which I known
+    # #  that my code should converge to. E.g. a high-resolution Hydrus simulation.)
+
+    # Compare with LWFBrook90R as reference solution
+    # θ:
+    @test RMS_differences(sim.θ, ref_NLAYER7.θ) < 0.007
+    # ψ:
+    @test RMS_differences(sim.ψ, ref_NLAYER7.ψ) < 0.07
+    # "GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)", (not done for: "CC (MJ/m2)" "SNOWLQ (mm)"]):
+    @test RMS_differences(sim.above[:,1:4], Matrix(ref_NLAYER7.above[:,[:gwat,:ints,:intr,:snow]])) < 0.6
+
+    # Note that below we compare a NLAYER7 LWFBrook90.jl solution, with finer resolved
+    # LWFBrook90R solutions. It is therefore normal, that the uncertainty can increase...
+    @test RMS_differences(sim.θ, ref_NLAYER14.θ) < 0.03
+    @test RMS_differences(sim.ψ, ref_NLAYER14.ψ) < 0.6
+    @test RMS_differences(sim.above[:,1:4], Matrix(ref_NLAYER14.above[:,[:gwat,:ints,:intr,:snow]])) < 0.6
+    @test RMS_differences(sim.θ, ref_NLAYER21.θ) < 0.04
+    @test RMS_differences(sim.ψ, ref_NLAYER21.ψ) < 0.6
+    @test RMS_differences(sim.above[:,1:4], Matrix(ref_NLAYER21.above[:,[:gwat,:ints,:intr,:snow]])) < 0.6
+    @test RMS_differences(sim.θ, ref_NLAYER70.θ) < 0.04
+    @test RMS_differences(sim.ψ, ref_NLAYER70.ψ) < 0.7
+    @test RMS_differences(sim.above[:,1:4], Matrix(ref_NLAYER70.above[:,[:gwat,:ints,:intr,:snow]])) < 0.6
+
+    # TODO(bernhard): we could run multiple LWFBrook90.jl simulations and compare with the
+    # finest LWFBrook90R simulation only.
+
+    # # if some error appears, the following code can be used to plot the solutions
+    # using Plots
+    # pl = plot(sim.θ, line = :solid, labels = "LWFBrook90.jl")
+    # plot!(ref_NLAYER7.θ, line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
+    # plot!(ref_NLAYER14.θ, line = :dash, color = :black, labels = "LWFBrook90R_NLayer14")
+    # plot!(ref_NLAYER21.θ, line = :dash, color = :black, labels = "LWFBrook90R_NLayer21")
+    # plot!(ref_NLAYER70.θ, line = :dash, color = :black, labels = "LWFBrook90R_NLayer70")
+    # pl = plot(sim.ψ, line = :solid, labels = "LWFBrook90.jl")
+    # plot!(ref_NLAYER7.ψ, line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
+    # plot!(ref_NLAYER14.ψ, line = :dash, color = :black, labels = "LWFBrook90R_NLayer14")
+    # plot!(ref_NLAYER21.ψ, line = :dash, color = :black, labels = "LWFBrook90R_NLayer21")
+    # plot!(ref_NLAYER70.ψ, line = :dash, color = :black, labels = "LWFBrook90R_NLayer70")
+    # pl = plot(sim.above, line = :solid, label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
+    # plot!(Matrix(ref_NLAYER7.above[:,[:intr,:ints,:snow,:gwat]]),
+    #         line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
+    # plot!(Matrix(ref_NLAYER14.above[:,[:intr,:ints,:snow,:gwat]]),
+    #         line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
+    # plot!(Matrix(ref_NLAYER21.above[:,[:intr,:ints,:snow,:gwat]]),
+    #         line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
+    # plot!(Matrix(ref_NLAYER70.above[:,[:intr,:ints,:snow,:gwat]]),
+    #         line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
+end
