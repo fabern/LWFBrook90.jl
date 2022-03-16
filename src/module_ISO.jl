@@ -115,7 +115,7 @@ function update_δ_with_mixing_and_evaporation(dt, u₀, δ₀, inflow, δin, ou
     # (2') δ⁺  = -1 + (δ₀ + 1) * W₀/W⁺ + dt/W⁺ (∑ (δin + 1) * Win - ∑ (δ₀ + 1) * Wout)
     # (4') δ⁺⁺ = [δ⁺ + 1 + A/B(δₐ + 1)]*f^B - [1 + A/B*(δₐ + 1)]
 
-    @assert all(inflow .>= 0) "Inflows should not be negative"
+    #### TODO 16.03: reactivate @assert all(inflow .>= 0) "Inflows should not be negative"
     #########
     # Step 1)
     u⁺ = u₀ + dt * (sum(inflow) - sum(outflow)) # [mm]
@@ -126,8 +126,8 @@ function update_δ_with_mixing_and_evaporation(dt, u₀, δ₀, inflow, δin, ou
         if u⁺ == 0
             δ⁺ = NaN
         else
-            # @assert sum(outflow) == 0 # No, this is not correct: we can start with u₀ = 0 and have both in and outflows...
-            @assert sum(outflow) <= sum(inflow)
+            #### TODO 16.03: reactivate # @assert sum(outflow) == 0 # No, this is not correct: we can start with u₀ = 0 and have both in and outflows...
+            #### TODO 16.03: reactivate @assert sum(outflow) <= sum(inflow)
             δ⁺ = dt/u⁺ * (sum( (δin .+ 1).* inflow)) - 1
             δ⁺ = (sum( (δin .+ 1).* dt .* inflow)) / u⁺ - 1
             # (δ⁺ + 1) * u⁺ = (sum( (δin .+ 1).* inflow * dt))
@@ -145,11 +145,11 @@ function update_δ_with_mixing_and_evaporation(dt, u₀, δ₀, inflow, δin, ou
 
     #########
     # Step 2)
-    @assert dt*E >= 0 "Evaporation rate must be positive"
+    #### TODO 16.03: reactivate @assert dt*E >= 0 "Evaporation rate must be positive"
 
     u⁺⁺ = u⁺ - dt*E
     # u⁺⁺ = max(0, u⁺ - dt*E) # TODO(bernhard): as below assert was triggered, this is a quick workaround
-    @assert u⁺⁺ >= 0 "End amount must still be positive after evaporation"
+    #### TODO 16.03: reactivate @assert u⁺⁺ >= 0 "End amount must still be positive after evaporation"
 
     #### TODO(bernhard): reactivation fractionation f     = u⁺⁺ / u⁺
     #### TODO(bernhard): reactivation fractionation AdivB = h * α_eq/(γ - α_eq * α_dif^X *(γ-h))

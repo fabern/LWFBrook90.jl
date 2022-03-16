@@ -23,6 +23,9 @@ function define_LWFB90_ODE(u0, tspan, p)
     # swcheck_cb = ContinuousCallback()    #TODO(bernhard) Implement swchek as ContinuousCallback
     # Reset_cb = FunctionCallingCallback() #TODO(bernhard) low priority: implement Reset==1
 
+  @assert !any(ismissing.(u0)) """
+  There are missing values in the provided initial conditions `u0`. Please correct!"""
+
     # Define ODE problem
     ode = ODEProblem(f_LWFBrook90R,
                      u0,

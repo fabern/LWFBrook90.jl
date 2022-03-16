@@ -43,6 +43,7 @@ function define_LWFB90_u0(p, uScalar_initial,
         # u_CC_init_MJ_per_m2_d18O = uScalar_initial[2, "u_CC_init_MJ_per_m2"] # state has no isotopic signature
         # u_SNOWLQ_init_d18O       = uScalar_initial[2, "u_SNOWLQ_init_mm"]    # state has no isotopic signature
         u_SWATIinit_d18O      = uSoil_initial_δ18O_mUr
+
         # isotopes d2H
         u_GWAT_init_d2H      = uScalar_initial[3, "u_GWAT_init_mm"]
         u_INTS_init_d2H      = uScalar_initial[3, "u_INTS_init_mm"]
@@ -61,6 +62,7 @@ function define_LWFB90_u0(p, uScalar_initial,
             # u_CC_init_d18O;
             # u_SNOWLQ_init_d18O;
             u_SWATIinit_d18O;
+
             u_GWAT_init_d2H;
             u_INTS_init_d2H;
             u_INTR_init_d2H;

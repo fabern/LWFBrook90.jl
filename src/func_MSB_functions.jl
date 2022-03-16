@@ -371,6 +371,7 @@ function MSBPREINT(#arguments:
         aux_du_SNVP = 0.0
         aux_du_SMLT = 0.0
 
+        # TODO(bernhard): check if we need suffix _new
         u_CC_new = u_CC # added by FB
         u_SNOW_new = u_SNOW # added by FB
         u_SNOWLQ_new = u_SNOWLQ # added by FB
@@ -547,7 +548,7 @@ end
         # to compute isotopic signature of soil infiltration: SLFL
         p_fu_RNET)
 
-In-line update of amounts of states INTS, INTR, and SNOW as well as their isotopic composition.
+Computes update of amounts of states INTS, INTR, and SNOW as well as their isotopic composition.
 Compute mixing and evaporative fractionation, and also compute the isotopic composotion of
 the resulting flux that infiltrates into the soil: δ18O_SLFL, δ2H_SLFL
 
@@ -564,14 +565,14 @@ The function returns (δ18O_SLFL, δ2H_SLFL) but also modifies the following inp
     u_δ18O_SNOW
     u_δ2H_SNOW
 """
-function compute_isotope_INTS_INTR_SNOW!(
+function compute_isotope_INTS_INTR_SNOW_and_SLFL(
     p_δ2H_PREC, p_δ18O_PREC, p_fu_TADTM, p_EA,
     # for INTS (in: SINT; out: ISVP):
     u_INTS, aux_du_SINT, aux_du_ISVP, p_DTP, u_δ2H_INTS, u_δ18O_INTS,
     # for INTR (in: RINT; out: IRVP):
     u_INTR, aux_du_RINT, aux_du_IRVP, u_δ2H_INTR, u_δ18O_INTR,
     # for SNOW (in: STHR, RSNO (both δ_PREC); out: SMLT, SNVP (δ_SNOW and fractionated)):
-    u_SNOW, u_SNOW_new, p_fu_STHR, aux_du_RSNO, aux_du_SMLT, aux_du_SNVP, u_δ2H_SNOW, u_δ18O_SNOW,
+    u_SNOW, u_SNOW_MSBupdate, p_fu_STHR, aux_du_RSNO, aux_du_SMLT, aux_du_SNVP, u_δ2H_SNOW, u_δ18O_SNOW,
     # to compute isotopic signature of soil infiltration: SLFL
     p_fu_RNET)
     # check chart "../docs/src/assets/b90flow.gif"
@@ -734,6 +735,11 @@ function compute_isotope_INTS_INTR_SNOW!(
     δ18O_SLFL = p_δ18O_PREC
     δ2H_SLFL  = p_δ2H_PREC
 
+    return (δ18O_SLFL, δ2H_SLFL,
+        u_INTS_final, u_δ18O_INTS_final, u_δ2H_INTS_final,
+        u_INTR_final, u_δ18O_INTR_final, u_δ2H_INTR_final,
+        u_SNOW_final, u_δ18O_SNOW_final, u_δ2H_SNOW_final)
+
     # In-place modify
     # u_INTS      = u_INTS_final
     # u_δ18O_INTS = u_δ18O_INTS_final
@@ -744,8 +750,6 @@ function compute_isotope_INTS_INTR_SNOW!(
     # u_SNOW      = u_SNOW_final
     # u_δ18O_SNOW = u_δ18O_SNOW_final
     # u_δ2H_SNOW  = u_δ2H_SNOW_final
-
-    return δ18O_SLFL, δ2H_SLFL, u_INTS_final, u_δ18O_INTS_final, u_δ2H_INTS_final, u_INTR_final, u_δ18O_INTR_final, u_δ2H_INTR_final, u_SNOW_final, u_δ18O_SNOW_final, u_δ2H_SNOW_final
 end
 
 

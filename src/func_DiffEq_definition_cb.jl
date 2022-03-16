@@ -175,6 +175,7 @@ function LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     ####################################################################
     # 1) Update snow accumulation/melt: u_SNOW, u_CC, u_SNOWLQ
     #    and compute fluxes to/from interception storage
+    u_SNOW_old = u_SNOW
     (# compute some fluxes as intermediate results:
     p_fT_SFAL, p_fT_RFAL, p_fu_RNET, p_fu_PTRAN,
     # compute changes in soil water storage:
@@ -184,7 +185,7 @@ function LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     # compute change in snow storage:
     aux_du_RSNO, aux_du_SNVP, aux_du_SMLT, p_fu_STHR,
     # compute updated states:
-    u_SNOW, u_CC, u_SNOWLQ) =
+    u_SNOW_MSBupdate, u_CC, u_SNOWLQ) =
         MSBPREINT(p_PREC(integrator.t), p_DTP, p_fT_SNOFRC, p_NPINT, p_fu_PINT, p_fu_TA,
                # for INTER (snow)
                u_INTS, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS,
@@ -203,7 +204,7 @@ function LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     ####################################################################
     # 2) Update states of interception storage over entire precipitation
     #    interval: u_INTS, u_INTR
-    if simulate_isotopes # TODO: this seems not working, scope issue?
+    if simulate_isotopes
         δ18O_SLFL, δ2H_SLFL,
         u_INTS,            u_δ18O_INTS, u_δ2H_INTS,
         u_INTR,            u_δ18O_INTR, u_δ2H_INTR,
@@ -215,14 +216,16 @@ function LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
                 # for INTR (in: RINT; out: IRVP):
                 u_INTR, aux_du_RINT, aux_du_IRVP, u_δ2H_INTR, u_δ18O_INTR,
                 # for SNOW (in: STHR, RSNO (both δ_PREC); out: SMLT, SNVP (δ_SNOW and fractionated)):
-                u_SNOW_old, p_fu_STHR, aux_du_RSNO, aux_du_SMLT, aux_du_SNVP, u_δ2H_SNOW, u_δ18O_SNOW,
+                u_SNOW_old, u_SNOW_MSBupdate, p_fu_STHR, aux_du_RSNO, aux_du_SMLT, aux_du_SNVP, u_δ2H_SNOW, u_δ18O_SNOW,
                 # to compute isotopic signature of soil infiltration: SLFL
                 p_fu_RNET)
         # NOTE: mixing and fractionation is computed with u_SNOW_old, yielding u_SNOW_iso_update.
         #       However, u_SNOW_iso_update is neglected and u_SNOW is used
+        u_SNOW = u_SNOW_MSBupdate
     else
         u_INTS = u_INTS + (aux_du_SINT - aux_du_ISVP) * p_DTP
         u_INTR = u_INTR + (aux_du_RINT - aux_du_IRVP) * p_DTP
+        u_SNOW = u_SNOW_MSBupdate
     end
 
     ####################################################################

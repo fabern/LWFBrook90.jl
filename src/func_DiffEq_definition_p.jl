@@ -380,10 +380,10 @@ function define_LWFB90_p(
     idx_u_vector_amounts       = 7:(6+NLAYER)
     if simulate_isotopes
         # 4 is the number of states except SWAT that have concentrations: i.e. INTS, INTR, SNOW, GWAT
-        idx_u_scalar_isotopes_d18O = 6+NLAYER     .+ (1:4)
-        idx_u_vector_isotopes_d18O = 6+NLAYER     .+ (4 .+ (1:NLAYER))
-        idx_u_scalar_isotopes_d2H  = 6+4+2*NLAYER .+ (1:4)
-        idx_u_vector_isotopes_d2H  = 6+4+2*NLAYER .+ (4 .+ (1:NLAYER))
+        idx_u_scalar_isotopes_d18O = 6+NLAYER          .+ (1:4)
+        idx_u_vector_isotopes_d18O = 6+NLAYER          .+ (4 .+ (1:NLAYER))
+        idx_u_scalar_isotopes_d2H  = 6+NLAYER+4+NLAYER .+ (1:4)
+        idx_u_vector_isotopes_d2H  = 6+NLAYER+4+NLAYER .+ (4 .+ (1:NLAYER))
 
     else
         idx_u_scalar_isotopes_d18O = []
@@ -394,9 +394,9 @@ function define_LWFB90_p(
     if compute_intermediate_quantities
         # 25 is the number of currently programmed intermediate quantities
         if simulate_isotopes
-            idx_u_vector_accumulators = 6+4+4+3*NLAYER .+ (1:25)
+            idx_u_vector_accumulators = 6+NLAYER+4+NLAYER+4+NLAYER .+ (1:25)
         else
-            idx_u_vector_accumulators = 6 + 0 + 0 + 1 * NLAYER .+ (1:25)
+            idx_u_vector_accumulators = 6+NLAYER                   .+ (1:25)
         end
         names_u_vector_accumulators = [
                 "cum_d_prec"  "cum_d_rfal"  "cum_d_sfal"  "cum_d_rint" "cum_d_sint"  "cum_d_rsno"  "cum_d_rnet"  "cum_d_smlt"  "cum_d_evap"  "cum_d_tran"  "cum_d_irvp"  "cum_d_isvp"  "cum_d_slvp"  "cum_d_snvp"  "cum_d_pint"  "cum_d_ptran"  "cum_d_pslvp" "flow"  "seep"  "srfl"  "slfl"  "byfl"  "dsfl"  "gwfl"  "vrfln"
