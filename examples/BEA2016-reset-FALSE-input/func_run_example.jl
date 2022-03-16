@@ -159,12 +159,13 @@ function run_example()
 
     # Define simulation time span:
     tspan = (0.0, 100.0) # simulate 100 days
-    ode_LWFBrook90, unstable_check_function = (u0, tspan, p)
+    ode_LWFBrook90, unstable_check_function = define_LWFB90_ODE(u0, tspan, p)
     ####################
 
     ####################
     ## Solve ODE:
     sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
+        unstable_check = unstable_check_function,
         progress = true,
         saveat = tspan[1]:tspan[2], dt = 1e-6, adaptive = true) # dt is initial dt, but adaptive
     ####################

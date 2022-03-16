@@ -104,7 +104,7 @@ tspan = (minimum(input_meteoveg[:,"days"]),
          maximum(input_meteoveg[:,"days"])) # simulate all available days
 
 # Define ODE:
-ode_LWFBrook90, unstable_check_function = (u0, tspan, p)
+ode_LWFBrook90, unstable_check_function = define_LWFB90_ODE(u0, tspan, p)
 
 # Alternative definitions of tspan:
 # tspan = (0.,  5.) # simulate days 0 to 5 (in the reference frame of the input data)
@@ -120,6 +120,7 @@ Then the ODE problem can be solved:
 ####################
 ## Solve ODE:
 sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
+    unstable_check = unstable_check_function,
     progress = true,
     saveat = tspan[1]:tspan[2], dt=1e-6, adaptive = true); # dt is initial dt, but adaptive
 ####################

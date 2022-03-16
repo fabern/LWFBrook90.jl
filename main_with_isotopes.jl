@@ -124,9 +124,14 @@ ode_LWFBrook90, unstable_check_function = define_LWFB90_ODE(u0, tspan, p);
 # plot(pl_final_δ18O, pl_final_δ2H,
 #     layout = (2,1), size=(1000,1400), leftmargin = 15mm);
 # savefig(input_prefix*".png")
+mkpath("out")
 
 using Plots, Measures
-using LWFBrook90
+fname = joinpath(
+    "out",
+    input_prefix*"_NLAYER" * string(sol_LWFBrook90.prob.p[1][1].NLAYER)*
+    "-git"*chomp(read(`git rev-parse --short HEAD`, String)))
+
 optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
 # pl1 = LWFBrook90.ISO.plotisotopes(sol_LWFBrook90);
 pl2 = LWFBrook90.ISO.plotisotopes(
@@ -134,7 +139,28 @@ pl2 = LWFBrook90.ISO.plotisotopes(
     layout = grid(4, 1, heights=[0.1 ,0.4, 0.1, 0.4]),
     size=(1000,1400), dpi = 300, leftmargin = 15mm);
 plot!(pl2, link = :x);
-savefig(pl2, input_prefix*"_plotRecipe.png")
+savefig(pl2, fname*"_plotRecipe.png")
+
+using DataFrames
+using CSV: File
+ref_aboveground =
+    DataFrame(File(
+    # "test/test-assets-external/BEA-2016/BEA-IntegrationTests-LWFBrook90/output_LWFBrook90R/BEA2016-reset-FALSE_NLAYER14_LWFBrook90R-0.4.5daily_output.csv"))[:,
+    "out/BEA2016-reset-FALSE_NLAYER14_LWFBrook90R-0.4.5daily_output.csv"))[:,
+        [:yr, :mo, :da, :doy, :intr, :ints, :snow, :gwat]]
+pl_ab_3 = plot(sol_LWFBrook90; vars = [2, 3, 4],
+     label=["INTS (mm)" "INTR (mm)" "SNOW (mm)"])
+plot!(pl_ab_3,
+        [ref_aboveground.intr,
+          ref_aboveground.ints,
+          ref_aboveground.snow], label = "LWFBrook90R", line = :dash, color = :black)
+savefig(fname*"_plot-INTS_INTR_SNOW.png")
+pl_ab_4 = plot(sol_LWFBrook90; vars = [2, 3],
+     label=["INTS (mm)" "INTR (mm)"])
+plot!(pl_ab_4,
+        [ref_aboveground.intr,
+          ref_aboveground.ints], label = "LWFBrook90R", line = :dash, color = :black)
+savefig(fname*"_plot-INTS_INTR.png")
 
 # # 1) very basic
 # using Plots # Install plot package at first use with `]` and then `add Plots`
