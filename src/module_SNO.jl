@@ -318,9 +318,9 @@ function SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN, u_CC, u_SNOW,
     du_SNOW_step1 = p_fu_STHR
     du_CC_step1   = p_CVICE * max(-p_fu_TA, 0.) * p_fu_STHR
     # Update u_SNOW, u_CC
-    u_SNOW_new = u_SNOW + du_SNOW_step1 * p_DTP
-    u_CC_new   = u_CC   + du_CC_step1   * p_DTP
-    u_SNOWLQ_new = u_SNOWLQ # added by FB
+    u_SNOW = u_SNOW + du_SNOW_step1 * p_DTP
+    u_CC   = u_CC   + du_CC_step1   * p_DTP
+    u_SNOWLQ = u_SNOWLQ # added by FB
 
     ####
     # Operator splitting: step 2: update u_SNOWLQ and u_CC using cold content:
@@ -346,19 +346,19 @@ function SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN, u_CC, u_SNOW,
 
     # groundmelt and evaporation loss as fraction of u_SNOW
     # variant1:
-    FRAC = (p_GRDMLT + p_fu_PSNVP) * p_DTP / u_SNOW_new
+    FRAC = (p_GRDMLT + p_fu_PSNVP) * p_DTP / u_SNOW
     # FRAC can be negative if condensation (p_fu_PSNVP<0) exceeds groundmelt
     if (FRAC < 1)
         # entire potential_SNOW_decrease can be realized
         aux_du_SMLT = p_GRDMLT
         aux_du_SNVP = p_fu_PSNVP
-        # reduce u_CC_new, u_SNOWLQ_new, and u_SNOW_new proportionally for groundmelt and evaporation
+        # reduce u_CC, u_SNOWLQ, and u_SNOW proportionally for groundmelt and evaporation
         # increase them proportionally if condensation exceeds groundmelt
         u_SNOW   = u_SNOW   * (1. - FRAC)
         u_SNOWLQ = u_SNOWLQ * (1. - FRAC)
         u_CC     = u_CC     * (1. - FRAC)
     else
-        # all u_SNOW_new disappears from groundmelt and/or evaporation
+        # all u_SNOW disappears from groundmelt and/or evaporation
         # potential rates need to be adapted to actual ones
         aux_du_SMLT = p_GRDMLT / FRAC
         aux_du_SNVP = p_fu_PSNVP / FRAC
@@ -368,7 +368,7 @@ function SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN, u_CC, u_SNOW,
     end
 
     ####
-    # Operator splitting: step 4: update u_SNOWLQ_new, and u_CC_new by considering
+    # Operator splitting: step 4: update u_SNOWLQ, and u_CC by considering
     #                             snowpack cooling or warming
     #                             and define rain on snow aux_du_RSNO and its effect on
     #                             u_SNOWLQ and u_CC
@@ -392,12 +392,12 @@ function SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN, u_CC, u_SNOW,
                 u_SNOWLQ = 0.
                 u_CC = u_CC + NMLT * p_LF
                 # do not allow p_fu_TSNOW to cool below p_fu_TA
-                u_CC_new = min(u_CC_new, -p_fu_TA * u_SNOW_new * p_CVICE)
+                u_CC = min(u_CC, -p_fu_TA * u_SNOW * p_CVICE)
             end
         else
-            # case 2) snowpack warming  (cant have both u_CC_new and u_SNOWLQ_new)
-            if (EQEN * p_LF < u_CC_new || p_fu_TA < 0)
-                # 2a) reduce but dont eliminate u_CC_new
+            # case 2) snowpack warming  (cant have both u_CC and u_SNOWLQ)
+            if (EQEN * p_LF < u_CC || p_fu_TA < 0)
+                # 2a) reduce but dont eliminate u_CC
                 if (p_fu_TA < 0)
                     # do not allow p_fu_TSNOW to warm above p_fu_TA when p_fu_TA < 0
                     u_CC = max(u_CC - EQEN * p_LF, -p_fu_TA * u_SNOW * p_CVICE)
@@ -407,9 +407,9 @@ function SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN, u_CC, u_SNOW,
                     u_SNOWLQ = 0.
                 end
             else
-                # 2b) u_CC_new eliminated
-                EQEN = EQEN - u_CC_new / p_LF
-                if (EQEN <= p_MAXLQF * u_SNOW_new - u_SNOWLQ_new)
+                # 2b) u_CC eliminated
+                EQEN = EQEN - u_CC / p_LF
+                if (EQEN <= p_MAXLQF * u_SNOW - u_SNOWLQ)
                     # 2b-i) remaining energy increases liquid water
                     u_SNOWLQ = u_SNOWLQ + EQEN
                     u_CC = 0.
@@ -439,15 +439,15 @@ function SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN, u_CC, u_SNOW,
             # FB: note u_SNOW will never == 0 at this point, as this is inside: "if (u_SNOW > 0)"
             aux_du_RSNO = 0.
         else
-            # rain on u_SNOW_new
+            # rain on u_SNOW
             RIN = p_fu_RTHR * p_DTP
-            if (u_CC_new > 0)
-                # use u_CC_new to refreeze rain
-                if (u_CC_new > RIN * p_LF)
+            if (u_CC > 0)
+                # use u_CC to refreeze rain
+                if (u_CC > RIN * p_LF)
                     # refreezes all rain
-                    u_CC_new = u_CC_new - RIN * p_LF
+                    u_CC = u_CC - RIN * p_LF
                     aux_du_RSNO = p_fu_RTHR
-                    u_SNOW_new = u_SNOW_new + RIN
+                    u_SNOW = u_SNOW + RIN
                 else
                     # u_CC refreezes part of rain
                     u_SNOW = u_SNOW + u_CC / p_LF
@@ -460,7 +460,7 @@ function SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN, u_CC, u_SNOW,
                         # remaining RIN all to u_SNOWLQ
                         u_SNOWLQ = RIN
                         aux_du_RSNO = aux_du_RSNO + RIN / p_DTP
-                        u_SNOW_new = u_SNOW_new + RIN
+                        u_SNOW = u_SNOW + RIN
                     else
                         u_SNOWLQ = p_MAXLQF * u_SNOW / (1. - p_MAXLQF)
                         aux_du_RSNO = aux_du_RSNO + u_SNOWLQ / p_DTP
@@ -473,12 +473,12 @@ function SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN, u_CC, u_SNOW,
                     # u_SNOW already holding maximum liquid
                     aux_du_RSNO = 0.
                 else
-                    ALQ = p_MAXLQF * u_SNOW_new - u_SNOWLQ_new
+                    ALQ = p_MAXLQF * u_SNOW - u_SNOWLQ
                     if (RIN < ALQ)
-                        # all RIN to u_SNOW_new
+                        # all RIN to u_SNOW
                         aux_du_RSNO = p_fu_RTHR
-                        u_SNOWLQ_new = u_SNOWLQ_new + RIN
-                        u_SNOW_new = u_SNOW_new + RIN
+                        u_SNOWLQ = u_SNOWLQ + RIN
+                        u_SNOW = u_SNOW + RIN
                     else
                         # maximum liquid reached
                         aux_du_RSNO = (ALQ / (1. - p_MAXLQF)) / p_DTP
@@ -489,7 +489,7 @@ function SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN, u_CC, u_SNOW,
             end
         end
     end
-    return (u_SNOW_new, u_CC_new, u_SNOWLQ_new, aux_du_RSNO, aux_du_SNVP, aux_du_SMLT)
+    return (u_SNOW, u_CC, u_SNOWLQ, aux_du_RSNO, aux_du_SNVP, aux_du_SMLT)
 end
 
 
