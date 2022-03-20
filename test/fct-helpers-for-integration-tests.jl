@@ -44,19 +44,24 @@ function prepare_θ_from_sim_and_reference(
     depth_to_read_out_mm = [100 500 1000 1500 1900]
     idx = find_indices(depth_to_read_out_mm, sim_sol)
     ### Ref
-    ref_θ = Matrix(unstack(
+    ref_θ = unstack(
         referenceSolution_layer[:,[:yr, :mo, :da, :doy, :nl, :theta]],
         [:yr, :mo, :da, :doy], # ID variable
         :nl,   # variable that will be spread out into column names
         :theta,# value that will be filled into the wide table
         renamecols=x->Symbol(:nl_, x)
         )[:,
-            Symbol.("nl_" .* string.(idx))])
+            # Symbol.("nl_" .* string.(idx))]
+            [:doy; Symbol.("nl_" .* string.(idx))]]
             # [:yr; :mo; :da; :doy; Symbol.("nl_" .* string.(idx))]]))
+    rename!(ref_θ, :doy => :time)
+
     ### Sim
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
             get_auxiliary_variables(sim_sol)
-    sim_θ = u_aux_θ[:,idx]
+    # sim_θ = u_aux_θ[:,idx]
+    sim_θ = DataFrame(u_aux_θ[:,idx], :auto)
+    sim_θ.time = sim_sol.t
 
     ### Hydrus
     HydrusSolution_wide = unstack(
@@ -67,8 +72,8 @@ function prepare_θ_from_sim_and_reference(
         renamecols=x->Symbol(:depth_, x)
         )
 
-    HydrusSolution_final =
-        Matrix(HydrusSolution_wide[HydrusSolution_wide[:, :time] .% 1.0 .== 0, Not(:time)])
+    HydrusSolution_daily =
+        HydrusSolution_wide[HydrusSolution_wide[:, :time] .% 1.0 .== 0, :] # Not(:time)]
 
     ## Compute norm of difference
     # if plot_comparison # Code snippte to visualize differences for development purposes
@@ -84,7 +89,8 @@ function prepare_θ_from_sim_and_reference(
     return (
         sim_θ[Not(1),:],
         ref_θ[Not(end),:], # also remove from ref_θ a day at the end to have same number
-        HydrusSolution_final
+        HydrusSolution_daily,
+        HydrusSolution_wide # this is continuous in time
     )
 end
 
@@ -112,11 +118,15 @@ function prepare_sim_and_ref_for_BEA_2016(
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
             get_auxiliary_variables(sim_sol)
 
-    sim = (θ = u_aux_θ[:,idx_sim_sol],
-           ψ = u_aux_PSIM[:,idx_sim_sol],
-           above = [sim_sol.u[t_idx][u_idx] for
+    sim = (θ = insertcols!(DataFrame(u_aux_θ[:,idx_sim_sol], :auto),
+                :time => sim_sol.t),
+           ψ = insertcols!(DataFrame(u_aux_PSIM[:,idx_sim_sol], :auto),
+                :time => sim_sol.t),
+           above = insertcols!(DataFrame([sim_sol.u[t_idx][u_idx] for
                     t_idx in 1:length(sim_sol),
-                    u_idx in [1,2,3,4,5,6]])
+                    u_idx in [1,2,3,4,5,6]],
+                ["GWAT","INTS","INTR", "SNOW", "CC", "SNOWLQ"]),
+            :time => sim_sol.t))
 
     # Load LWFbrook90R solution
     ## Aboveground
@@ -176,12 +186,13 @@ function prepare_sim_and_ref_for_BEA_2016(
     # pl_ab_all = plot(sim_sol; vars = [1, 2, 3, 4, 5, 6],
     #      label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
     # # alternatively:
-    # plot(sim.above,
-    #     label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
-    #
+    # plot(sim.above.time,
+    #      Matrix(sim.above[:,Not(:time)]),
+    #      label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
+
     # pl_ab_3 = plot(sim_sol; vars = [2, 3, 4], label=["INTS (mm)" "INTR (mm)" "SNOW (mm)"])
     # pl_ab_2 = plot(sim_sol; vars = [2, 3],    label=["INTS (mm)" "INTR (mm)"])
-    #
+
     # # add LWFBrook90References
     # plot!(pl_ab_all,
     #     [ref_above_1.gwat,
@@ -195,10 +206,10 @@ function prepare_sim_and_ref_for_BEA_2016(
     # plot!(pl_ab_2,
     #     [ref_above_1.intr,
     #       ref_above_1.ints], label = "LWFBrook90R", color = :black, line = :dash)
-    #
+
     # ## Belowground
     # ## θ
-    # pl = plot(sim.θ[Not(1),:], line = :solid,
+    # pl = plot(Matrix(sim.θ[Not(1),Not(:time)]), line = :solid,
     #     labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
     # plot!(ref_below_1.θ, line = :dash, color = :black,
     #     labels = "LWFBrook90R: " .* string.(depth_to_read_out_mm) .* " mm")
@@ -209,7 +220,7 @@ function prepare_sim_and_ref_for_BEA_2016(
     # plot!(ref_below_4.θ, line = :dash, color = :black,
     #     labels = "LWFBrook90R: " .* string.(depth_to_read_out_mm) .* " mm")
     # ## ψ
-    # pl = plot(sim.ψ[Not(1),:], line = :solid,
+    # pl = plot(Matrix(sim.ψ[Not(1),Not(:time)]), line = :solid,
     #     labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
     # plot!(ref_below_1.ψ, line = :dash, color = :black,
     #     labels = "LWFBrook90R: " .* string.(depth_to_read_out_mm) .* " mm")
@@ -232,9 +243,11 @@ function read_LWFBrook90R_dailyCSV(;path)
     referenceSolution_daily = DataFrame(File(path))
 
     ref_aboveground = referenceSolution_daily[:,
-            [:yr, :mo, :da, :doy, :intr, :ints, :snow, :gwat,
+            [#:yr, :mo, :da,
+             :doy, :intr, :ints, :snow, :gwat,
                 #:snowlq, :cc
             ]]
+    rename!(ref_aboveground, :doy => :time)
 end
 
 function read_LWFBrook90R_layerCSV_extract_depths(;path, depth_to_read_out_mm)
@@ -252,25 +265,29 @@ function read_LWFBrook90R_layerCSV_extract_depths(;path, depth_to_read_out_mm)
     end
 
     ## Process into wide data frame
-    ref_θ = Matrix(unstack(
+    ref_θ = unstack(
         referenceSolution_layer[:,[:yr, :mo, :da, :doy, :nl, :theta]],
         [:yr, :mo, :da, :doy], # ID variable
         :nl,   # variable that will be spread out into column names
         :theta,# value that will be filled into the wide table
         renamecols=x->Symbol(:nl_, x)
         )[:,
-            Symbol.("nl_" .* string.(idx_referenceSolution))])
-            # [:yr; :mo; :da; :doy; Symbol.("nl_" .* string.(idx_referenceSolution))]]))
+            [:doy; Symbol.("nl_" .* string.(idx_referenceSolution))]]
+            # Symbol.("nl_" .* string.(idx_referenceSolution))]
+            # [:yr; :mo; :da; :doy; Symbol.("nl_" .* string.(idx_referenceSolution))]])
+    rename!(ref_θ, :doy => :time)
 
-    ref_ψ = Matrix(unstack(
+    ref_ψ = unstack(
             referenceSolution_layer[:,[:yr, :mo, :da, :doy, :nl, :psimi]],
             [:yr, :mo, :da, :doy], # ID variable
             :nl,   # variable that will be spread out into column names
             :psimi,# value that will be filled into the wide table
             renamecols=x->Symbol(:nl_, x)
             )[:,
-                Symbol.("nl_" .* string.(idx_referenceSolution))])
-                # [:yr; :mo; :da; :doy; Symbol.("nl_" .* string.(idx_referenceSolution))]]))
+                [:doy; Symbol.("nl_" .* string.(idx_referenceSolution))]]
+                # Symbol.("nl_" .* string.(idx_referenceSolution))]
+                # [:yr; :mo; :da; :doy; Symbol.("nl_" .* string.(idx_referenceSolution))]]
+    rename!(ref_ψ, :doy => :time)
 
     return (θ = ref_θ, ψ = ref_ψ)
 end

@@ -19,27 +19,33 @@ include("fct-helpers-for-integration-tests.jl")
     @show pwd() # This is to help get the folder right.
 
     # Check the RMSE of θ in simulations is below a limit
-    @githash_time sim4, ref4, hyd4 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_sand-NLayer-27-RESET=TRUE")
+    @githash_time sim4, ref4, hyd4, hyd4_cont = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_sand-NLayer-27-RESET=TRUE")
         # amberMBP-git-c4275ee: 0.913546 seconds (4.04 M allocations: 605.712 MiB, 14.49% gc time, 3.67% compilation time)
         # amberMBP-git-eae940b: 0.859826 seconds (1.85 M allocations: 499.565 MiB, 13.78% gc time)
-    @githash_time sim5, ref5, hyd5 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_sand-NLayer-103-RESET=TRUE")
+    @githash_time sim5, ref5, hyd5, hyd5_cont = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_sand-NLayer-103-RESET=TRUE")
         # amberMBP-git-c4275ee: 2.788329 seconds (3.92 M allocations: 1.817 GiB, 15.26% gc time)
         # amberMBP-git-eae940b: 2.626265 seconds (1.83 M allocations: 1.586 GiB, 13.83% gc time)
-    # @githash_time sim6, ref6, hyd6 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_sand-NLayer-400-RESET=TRUE")
+    # @githash_time sim6, ref6, hyd6, hyd6_cont = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_sand-NLayer-400-RESET=TRUE")
         # not run
 
-    @githash_time sim1, ref1, hyd1 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_loam-NLayer-27-RESET=TRUE")
+    @githash_time sim1, ref1, hyd1, hyd1_cont = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_loam-NLayer-27-RESET=TRUE")
         # amberMBP-git-c4275ee: 4.394856 seconds (19.52 M allocations: 2.898 GiB, 16.30% gc time)
         # amberMBP-git-eae940b: 3.882331 seconds (9.10 M allocations: 2.408 GiB, 15.04% gc time)
-    @githash_time sim2, ref2, hyd2 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_loam-NLayer-103-RESET=TRUE")
+    @githash_time sim2, ref2, hyd2, hyd2_cont = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_loam-NLayer-103-RESET=TRUE")
         # amberMBP-git-c4275ee: 13.704865 seconds (19.92 M allocations: 9.220 GiB, 15.41% gc time, 0.23% compilation time)
         # amberMBP-git-eae940b: 12.581113 seconds (9.21 M allocations: 8.018 GiB, 13.85% gc time)
-    # @githash_time sim3, ref3, hyd3 = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_loam-NLayer-400-RESET=TRUE")
+    # @githash_time sim3, ref3, hyd3, hyd3_cont = prepare_θ_from_sim_and_reference("test-assets/Hammel-2001","Hammel_loam-NLayer-400-RESET=TRUE")
         # not run
 
     function RMS_differences(sim, ref)
         # computes root mean squared differences
-        differences = sim .- ref
+
+        if ("time" in names(sim) && "time" in names(ref))
+            # case where: typeof(sim) <: DataFrame
+            differences = Matrix(sim[:,Not(:time)]) .- Matrix(ref[:,Not(:time)])
+        else # case where: typeof(sim) <: Matrix
+            differences = sim .- ref
+        end
         mean_squared = sum(differences.^2) / length(differences)
 
         return sqrt(mean_squared)
@@ -52,12 +58,12 @@ include("fct-helpers-for-integration-tests.jl")
     #  that my code should converge to. E.g. a high-resolution Hydrus simulation.)
 
     # Compare with LWFBrook90R as reference solution
-    @test RMS_differences(sim1, ref1) < 0.03
-    @test RMS_differences(sim2, ref2) < 0.015
-    # @test RMS_differences(sim3, ref3) < 0.0015
-    @test RMS_differences(sim4, ref4) < 0.02
-    @test RMS_differences(sim5, ref5) < 0.01
-    # @test RMS_differences(sim6, ref6) < 0.005
+    @test RMS_differences(sim1, ref1) < 0.0015
+    @test RMS_differences(sim2, ref2) < 0.00035
+    # @test RMS_differences(sim3, ref3) < 0.00045
+    @test RMS_differences(sim4, ref4) < 0.00035
+    @test RMS_differences(sim5, ref5) < 0.00035
+    # @test RMS_differences(sim6, ref6) < 0.00035
 
     # Compare with Hydrus1D
     @test RMS_differences(sim1[Not(end),:], hyd1) < 0.005
@@ -67,13 +73,31 @@ include("fct-helpers-for-integration-tests.jl")
     @test RMS_differences(sim5[Not(end),:], hyd5) < 0.007
     # @test RMS_differences(sim6[Not(end),:], hyd6) < 0.005
 
-    # if some error appears, the following code can be used to plot the solutions
+    # # if some error appears, the following code can be used to plot the solutions
     # using Plots
     # depth_to_read_out_mm = [100 500 1000 1500 1900]
-    # pl = plot(sim4, line = :solid, labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-    # plot!(ref4, line = :dash, color = :black, labels = "LWFBrook90R: " .* string.(depth_to_read_out_mm) .* " mm")
-    # plot!(hyd4, line = :dash, color = :green, labels = "Hydrus: " .* string.(depth_to_read_out_mm) .* " mm")
-
+    # pl = plot(sim5[:,:time],
+    #         Matrix(sim5[:,Not(:time)]),
+    #         line = :solid, labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
+    # plot!(ref5[:,:time],
+    #     Matrix(ref5[:,Not(:time)]),
+    #     line = :dash, color = :black, labels = "LWFBrook90R: " .* string.(depth_to_read_out_mm) .* " mm")
+    # plot!(hyd5_cont[:,:time],
+    #     Matrix(hyd5_cont[:,Not(:time)]),
+    #     line = :dash, color = :green, labels = "Hydrus: " .* string.(depth_to_read_out_mm) .* " mm")
+    # plot!(size=(1200,600))
+    # savefig("test-assets/Hammel-2001/out_Sand.png")
+    # pl = plot(sim2[:,:time],
+    #         Matrix(sim2[:,Not(:time)]),
+    #         line = :solid, labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
+    # plot!(ref2[:,:time],
+    #     Matrix(ref2[:,Not(:time)]),
+    #     line = :dash, color = :black, labels = "LWFBrook90R: " .* string.(depth_to_read_out_mm) .* " mm")
+    # plot!(hyd2_cont[:,:time],
+    #     Matrix(hyd2_cont[:,Not(:time)]),
+    #     line = :dash, color = :green, labels = "Hydrus: " .* string.(depth_to_read_out_mm) .* " mm")
+    # plot!(size=(1200,600))
+    # savefig("test-assets/Hammel-2001/out_Loam.png")
 end
 
 
@@ -88,7 +112,13 @@ end
 
     function RMS_differences(sim, ref)
         # computes root mean squared differences
-        differences = sim .- ref
+
+        if ("time" in names(sim) && "time" in names(ref))
+            # case where: typeof(sim) <: DataFrame
+            differences = Matrix(sim[:,Not(:time)]) .- Matrix(ref[:,Not(:time)])
+        else # case where: typeof(sim) <: Matrix
+            differences = sim .- ref
+        end
         mean_squared = sum(differences.^2) / length(differences)
 
         return sqrt(mean_squared)
@@ -106,42 +136,63 @@ end
     # ψ:
     @test RMS_differences(sim.ψ, ref_NLAYER7.ψ) < 0.07
     # "GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)", (not done for: "CC (MJ/m2)" "SNOWLQ (mm)"]):
-    @test RMS_differences(sim.above[:,1:4], Matrix(ref_NLAYER7.above[:,[:gwat,:ints,:intr,:snow]])) < 0.6
+    @test RMS_differences(sim.above[Not(1),[:time,:GWAT, :INTS, :INTR, :SNOW]],
+                            ref_NLAYER7.above[Not(end),[:time, :gwat,:ints,:intr,:snow]]) < 0.0005
 
     # Note that below we compare a NLAYER7 LWFBrook90.jl solution, with finer resolved
     # LWFBrook90R solutions. It is therefore normal, that the uncertainty can increase...
     @test RMS_differences(sim.θ, ref_NLAYER14.θ) < 0.03
     @test RMS_differences(sim.ψ, ref_NLAYER14.ψ) < 0.6
-    @test RMS_differences(sim.above[:,1:4], Matrix(ref_NLAYER14.above[:,[:gwat,:ints,:intr,:snow]])) < 0.6
+    @test RMS_differences(sim.above[Not(1),[:time,:GWAT,:INTS,:INTR,:SNOW]],
+                            ref_NLAYER14.above[Not(end),[:time,:gwat,:ints,:intr,:snow]]) < 0.0005
     @test RMS_differences(sim.θ, ref_NLAYER21.θ) < 0.04
     @test RMS_differences(sim.ψ, ref_NLAYER21.ψ) < 0.6
-    @test RMS_differences(sim.above[:,1:4], Matrix(ref_NLAYER21.above[:,[:gwat,:ints,:intr,:snow]])) < 0.6
+    @test RMS_differences(sim.above[Not(1),[:time,:GWAT,:INTS,:INTR,:SNOW]],
+                            ref_NLAYER21.above[Not(end),[:time,:gwat,:ints,:intr,:snow]]) < 0.0005
     @test RMS_differences(sim.θ, ref_NLAYER70.θ) < 0.04
     @test RMS_differences(sim.ψ, ref_NLAYER70.ψ) < 0.7
-    @test RMS_differences(sim.above[:,1:4], Matrix(ref_NLAYER70.above[:,[:gwat,:ints,:intr,:snow]])) < 0.6
+    @test RMS_differences(sim.above[Not(1),[:time,:GWAT,:INTS,:INTR,:SNOW]],
+                            ref_NLAYER70.above[Not(end),[:time,:gwat,:ints,:intr,:snow]]) < 0.0005
 
     # TODO(bernhard): we could run multiple LWFBrook90.jl simulations and compare with the
     # finest LWFBrook90R simulation only.
 
     # # if some error appears, the following code can be used to plot the solutions
     # using Plots
-    # pl = plot(sim.θ, line = :solid, labels = "LWFBrook90.jl")
-    # plot!(ref_NLAYER7.θ, line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
-    # plot!(ref_NLAYER14.θ, line = :dash, color = :black, labels = "LWFBrook90R_NLayer14")
-    # plot!(ref_NLAYER21.θ, line = :dash, color = :black, labels = "LWFBrook90R_NLayer21")
-    # plot!(ref_NLAYER70.θ, line = :dash, color = :black, labels = "LWFBrook90R_NLayer70")
-    # pl = plot(sim.ψ, line = :solid, labels = "LWFBrook90.jl")
-    # plot!(ref_NLAYER7.ψ, line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
-    # plot!(ref_NLAYER14.ψ, line = :dash, color = :black, labels = "LWFBrook90R_NLayer14")
-    # plot!(ref_NLAYER21.ψ, line = :dash, color = :black, labels = "LWFBrook90R_NLayer21")
-    # plot!(ref_NLAYER70.ψ, line = :dash, color = :black, labels = "LWFBrook90R_NLayer70")
-    # pl = plot(sim.above, line = :solid, label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
+    #     # Compare with LWFBrook90R as reference solution
+    # # θ:
+    # @test RMS_differences(sim.θ, ref_NLAYER7.θ) < 0.007
+    # # ψ:
+    # @test RMS_differences(sim.ψ, ref_NLAYER7.ψ) < 0.07
+    # # "GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)", (not done for: "CC (MJ/m2)" "SNOWLQ (mm)"]):
+    # @test RMS_differences(sim.above[Not(1),[:time,:GWAT, :INTS, :INTR, :SNOW]],
+    #                         ref_NLAYER7.above[Not(end),[:time, :gwat,:ints,:intr,:snow]]) < 0.0005
+
+    # pl_θ = plot(sim.θ.time,
+    #         Matrix(sim.θ[:,Not(:time)]), line = :solid, labels = "LWFBrook90.jl",
+    #         ylabel = "θ (-)")
+    # plot!(Matrix(ref_NLAYER7.θ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
+    # # plot!(Matrix(ref_NLAYER14.θ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer14")
+    # # plot!(Matrix(ref_NLAYER21.θ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer21")
+    # # plot!(Matrix(ref_NLAYER70.θ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer70")
+    # pl_ψ = plot(sim.ψ.time,
+    #         Matrix(sim.ψ[:,Not(:time)]), line = :solid, labels = "LWFBrook90.jl",
+    #         ylabel = "ψ (kPa)")
+    # plot!(Matrix(ref_NLAYER7.ψ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
+    # # plot!(Matrix(ref_NLAYER14.ψ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer14")
+    # # plot!(Matrix(ref_NLAYER21.ψ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer21")
+    # # plot!(Matrix(ref_NLAYER70.ψ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer70")
+    # pl_a = plot(sim.above.time,
+    #         Matrix(sim.above[:,Not(:time)]), line = :solid, label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
     # plot!(Matrix(ref_NLAYER7.above[:,[:intr,:ints,:snow,:gwat]]),
     #         line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
-    # plot!(Matrix(ref_NLAYER14.above[:,[:intr,:ints,:snow,:gwat]]),
-    #         line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
-    # plot!(Matrix(ref_NLAYER21.above[:,[:intr,:ints,:snow,:gwat]]),
-    #         line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
-    # plot!(Matrix(ref_NLAYER70.above[:,[:intr,:ints,:snow,:gwat]]),
-    #         line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
+    # # plot!(Matrix(ref_NLAYER14.above[:,[:intr,:ints,:snow,:gwat]]),
+    # #         line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
+    # # plot!(Matrix(ref_NLAYER21.above[:,[:intr,:ints,:snow,:gwat]]),
+    # #         line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
+    # # plot!(Matrix(ref_NLAYER70.above[:,[:intr,:ints,:snow,:gwat]]),
+    # #         line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
+    # plot(pl_θ, pl_ψ, pl_a, layout = (3,1), size = (600,800))
+    # savefig("test-assets/BEA-2016/out.png")
+
 end
