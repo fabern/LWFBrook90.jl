@@ -31,7 +31,7 @@ unused = discretize_soil(input_path, input_prefix)
 # Δz_m = round.(diff(0.0:0.05:-minimum(unused.Lower_m)), digits=5) # grid spacing (heterogenous), meter
 
 # As a test: subsequently increase resolution of the top layers.
-# Δz_m = [0.04, 0.04, 0.12, 0.25, 0.3, 0.35, 0.1]                            # grid spacing (heterogenous), meter (N=7)
+Δz_m = [0.04, 0.04, 0.12, 0.25, 0.3, 0.35, 0.1]                            # grid spacing (heterogenous), meter (N=7)
 # Δz_m = [0.04, 0.04, 0.04, 0.08, 0.25, 0.3, 0.35, 0.1]                    # grid spacing (heterogenous), meter (N=8)
 # Δz_m = [0.04, 0.04, 0.04, 0.04, 0.04, 0.25, 0.3, 0.35, 0.1]              # grid spacing (heterogenous), meter (N=9)
 # Δz_m = [fill(0.04, 5); fill(0.05, 5); 0.3; 0.35; 0.1]                    # grid spacing (heterogenous), meter (N=13)

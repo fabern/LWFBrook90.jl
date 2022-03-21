@@ -197,6 +197,26 @@ function get_auxiliary_variables(solution)
     return (transpose(hcat(u_SWATI...)), u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
 end
 
+
+# function get_δ_soil(solution)
+#     p_soil = solution.prob.p[1][1]
+#     NLAYER = p_soil.NLAYER
+#     idx_u_vector_amounts = solution.prob.p[1][4][4]
+# idx_u_vector_isotopes_d18O = solution.prob.p[1][4][9]
+# idx_u_vector_isotopes_d2H  = solution.prob.p[1][4][11]
+#   ### TODO: develop u_SWATI = [solution.u[i][idx_u_vector_amounts] for i = 1:length(solution.u)]
+#   ### TODO: develop # (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+#   ### TODO: develop #         LWFBrook90.KPT.derive_auxiliary_SOILVAR.(u_SWATI, Ref(p_soil)) # Ref fixes scalar argument for broadcasting "."
+#   ### TODO: develop u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK =
+#   ### TODO: develop     (fill(NaN, (size(u_SWATI, 1), size(u_SWATI[1], 1))) for i in 1:5)
+#   ### TODO: develop for t in 1:length(u_SWATI)
+#   ### TODO: develop     (u_aux_WETNES[t, :], u_aux_PSIM[t, :], u_aux_PSITI[t, :], u_aux_θ[t, :], p_fu_KK[t, :]) =
+#   ### TODO: develop         LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI[t], p_soil)
+#   ### TODO: develop end
+#   ### TODO: develop # returns arrays of dimenstion (t,z) where t is number of timesteps and z number of computational layers
+#   ### TODO: develop return (transpose(hcat(u_SWATI...)), u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
+# end
+
 function get_θ(depths_to_read_out_mm, solution)
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
         get_auxiliary_variables(solution)
