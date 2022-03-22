@@ -47,8 +47,9 @@ include("../examples/BEA2016-reset-FALSE-input/func_run_example.jl") # defines R
 
 Runs a simulation defined by input files within a folder and returns solution object.
 
-The function run_simulation() takes as single argument a vector of two strings defining
-the input_path and input_prefix of a series of input definition files.
+The function run_simulation() takes as single argument a vector of two or three strings defining
+the input_path and input_prefix of a series of input definition files (and "true"/"false" whether
+to simulate isotopes).
 The function loads these files, runs the simulation and returns the solution object and input arguments
 """
 function run_simulation(args)
@@ -56,17 +57,25 @@ function run_simulation(args)
     @show now()
     @show args
 
+    @assert length(args) >= 2
+
     input_path = args[1]
     input_prefix = args[2]
+    if (length(args) == 3)
+        simulate_isotopes = args[3] == "true"
+    else
+        simulate_isotopes = false
+    end
 
     (input_meteoveg,
-    _input_meteoiso, # TODO: possibly unused
+    _input_meteoiso, # NOTE: _ indicates that it is possibly unused (depends on simulate_isotopes)
     input_meteoveg_reference_date,
     input_param,
     input_storm_durations,
     input_initial_conditions,
     input_soil_horizons,
-    simOption_FLAG_MualVanGen) = read_inputData(input_path, input_prefix)
+    simOption_FLAG_MualVanGen) = read_inputData(input_path, input_prefix;
+                                                simulate_isotopes = simulate_isotopes)
 
     input_soil_discretization = discretize_soil(input_path, input_prefix)
 
@@ -75,7 +84,7 @@ function run_simulation(args)
 
     (ψM_initial, _δ18O_initial, _δ2H_initial), p = define_LWFB90_p(
         input_meteoveg,
-        _input_meteoiso, # TODO: possibly unused
+        _input_meteoiso, # NOTE: _ indicates that it is possibly unused (depends on simulate_isotopes)
         input_meteoveg_reference_date,
         input_param,
         input_storm_durations,
@@ -85,21 +94,22 @@ function run_simulation(args)
         Reset = Reset,
         # soil_output_depths = collect(-0.05:-0.05:-1.1),
         # soil_output_depths = [-0.1, -0.5, -1.0, -1.5, -1.9],
-        compute_intermediate_quantities = compute_intermediate_quantities)
+        compute_intermediate_quantities = compute_intermediate_quantities,
+        simulate_isotopes = simulate_isotopes)
 
     u0 = define_LWFB90_u0(p, input_initial_conditions,
-        ψM_initial, _δ18O_initial, _δ2H_initial, # TODO: possibly unused
+        ψM_initial, _δ18O_initial, _δ2H_initial, # NOTE: _ indicates that it is possibly unused (depends on simulate_isotopes)
         compute_intermediate_quantities;
-        simulate_isotopes = false)
+        simulate_isotopes = simulate_isotopes)
 
     tspan = (minimum(input_meteoveg[:, "days"]), maximum(input_meteoveg[:, "days"])) # simulate all available days
 
     ode_LWFBrook90, unstable_check_function = define_LWFB90_ODE(u0, tspan, p)
 
-    sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
+    sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5(); progress = true,
         unstable_check = unstable_check_function,
-        progress = true,
-        saveat = tspan[1]:tspan[2], dt = 1e-3, adaptive = true); # dt is initial dt, but adaptive
+        saveat = tspan[1]:tspan[2], dt = 1e-4, #adaptive = true); # dt is initial dt, but adaptive
+        adaptive = false); # TODO(bernhard): check if adaptive is working with isotopes
 
     @show now()
 

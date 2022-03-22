@@ -810,7 +810,7 @@ function compute_isotope_du_GWAT_SWATI(
         # source: Benettin 2018 HESS eq. 1 and Gibson 2016 QSR eq. 3
         #         and Craig Gordon 1965 eq. 23 (and text above)
         #
-        # Above equation is not used, instead one is derived from Gonfiantini 2018:
+        # Above equation of the Craig-Gordon model is not used, instead one is derived from Gonfiantini 2018:
         #   4) R_esc = R_w / ( α * (α_dif)^X )
         #   5) R_cap = R_A / (α_dif)^X
         #   6) Evaporation E = (γ - h) φ_vap

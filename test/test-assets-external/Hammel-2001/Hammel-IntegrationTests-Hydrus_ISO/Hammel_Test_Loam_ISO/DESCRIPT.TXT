@@ -1,0 +1,6 @@
+Pcp_File_Version=1
+Hammel et al. 2001 infiltration simulation in Loam
+- On day 1 100mm of rain is applied and infiltrates into a soil
+- Initial conditions of soil were at θ = 0.16
+- Isotope: rain has δ=-20 permil -> δ_shifted = δ+120 = 100 permil
+- Isotope: IC of soil is δ=-100.5 permil -> δ_shifted = δ+120 = 20.5 permil

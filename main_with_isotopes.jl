@@ -17,8 +17,7 @@ simulate_isotopes = true
     input_storm_durations,
     input_initial_conditions,
     input_soil_horizons,
-    simOption_FLAG_MualVanGen) =
-    read_inputData(input_path, input_prefix;
+    simOption_FLAG_MualVanGen) = read_inputData(input_path, input_prefix;
                                                 simulate_isotopes = simulate_isotopes);
 # Define grid for spatial discretization as well as initial conditions and root densities
 # a) either read the discretization from a file `soil_discretization.csv`
