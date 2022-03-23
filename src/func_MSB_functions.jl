@@ -805,6 +805,24 @@ function compute_isotope_du_GWAT_SWATI(
         #       And in delta notation this is:
         #                                     δ_E = 1000*(1 + 1/((γ - h)*(α_dif)^X) * (γ/α*(1+δ_w/1000) - h*(1+δ_A/1000)))
 
+        # Note that above mixing equation is expressed with C, which is exact if we take for C
+        # the isotope-amount fraction x, a.k.a. isotopic abundance, a.k.a. atom fraction
+        # (see Coplen-2011-Rapid_Commun_Mass_Spectrom). Using δ would introduce an error.
+        #
+        # δ and x are related in the following way:
+        #   x = 1 / (1 + 1/(R_std*(δ+1)) )
+        #   δ = 1 / ( R_std*(1/x - 1) ) - 1, respectively
+
+        δ_to_x(δ_permil,R_std) = δ_permil #TODO(bernhard): reactivate correct: δ_to_x(δ_permil,R_std) = 1 ./ (1 .+ 1 ./ (R_std .* ( δ_permil./1000 .+ 1 )) )
+        x_to_δ(x,R_std) = x               #TODO(bernhard): reactivate correct: x_to_δ(x,R_std) = (1 ./ ( R_std .* (1 ./ x .- 1) ) .- 1) .* 1000 # in permil
+
+        dxdt_to_dδdt(dxdt,x,R_std) = dxdt #TODO(bernhard): reactivate correct: dxdt_to_dδdt(dxdt, x, R_std) = dxdt .* 1 ./ R_std .* 1 ./ (x .- 1).^2 .* 1000  # using dδ/dt = dδ/dx * dx/dt
+
+        # where R_std are:
+        R_VSMOW¹⁸O = 2005.2e-6 # (source: Baertschi-1976-Earth_Planet_Sci_Lett)
+        R_VSMOW²H  = 155.76e-6 # (source: Hagemann-1970-Tellus)
+
+
     # OLD IMPLEMENTATION FROM A TOY MODEL:
     ## FROM: 4a Julia Guswa-2002-Water_Resour_Res.pdf
     #    # Isotopic compositions of fluxes.
@@ -837,7 +855,7 @@ function compute_isotope_du_GWAT_SWATI(
     # X_INTR = 0.5  # -, turbulence incex of the atmosphere above the evaporating water
     # X_SNOW = 1.0  # -, turbulence incex of the atmosphere above the evaporating water
 
-    # 1c) Atmospheric vapor composition assumed to be in equilibrium with precipitation
+    # Atmospheric vapor composition assumed to be in equilibrium with precipitation
     #     Benettin-2018-Hydrol_Earh_Syst_Sci citing Gibson et al. 2008
     δₐ(δ_p, α_eq) = (δ_p - 1000 * (α_eq - 1))/α_eq
     δ²H_a  = δₐ(p_δ2H_PREC,  LWFBrook90.ISO.α²H_eq(Tc))
@@ -893,28 +911,29 @@ function compute_isotope_du_GWAT_SWATI(
     ##################
     ##################
     # 2) Compute isotopic composition (or solute concentrations) of all other water fluxes
-    Cᵢ¹⁸ = u_δ18O_SWATI
-    Cᵢ²H = u_δ2H_SWATI
+    # Note: transform the fluxes into isotope-amount fraction x, a.k.a. isotopic abundance, a.k.a. atom fraction
+    Cᵢ¹⁸O = δ_to_x.(u_δ18O_SWATI, R_VSMOW¹⁸O)
+    Cᵢ²H = δ_to_x.(u_δ2H_SWATI,  R_VSMOW²H)
 
-    diff_upp = 0 #TODO(bernhard): include diffusive flux of isotopes
-    diff_low = 0 #TODO(bernhard): include diffusive flux of isotopes
-    qCᵢ¹⁸O_upp  = [0; aux_du_VRFLI[1:(NLAYER-1)]] .* [0; u_δ18O_SWATI[1:(NLAYER-1)]]
-    qCᵢ¹⁸O_low  = aux_du_VRFLI[1:(NLAYER)]        .* u_δ18O_SWATI[1:(NLAYER)]
-    qCᵢ²H_upp  = [0; aux_du_VRFLI[1:(NLAYER-1)]] .* [0; u_δ2H_SWATI[1:(NLAYER-1)]]
-    qCᵢ²H_low  = aux_du_VRFLI[1:(NLAYER)]        .* u_δ2H_SWATI[1:(NLAYER)]
+    diff_upp = 0 #.* similar(aux_du_VRFLI) #TODO(bernhard): change this to include diffusive flux of isotopes, (note it generated an earlier bug when I included it as vector of 0's instead of a scalar of 0)
+    diff_low = 0 #.* similar(aux_du_VRFLI) #TODO(bernhard): change this to include diffusive flux of isotopes, (note it generated an earlier bug when I included it as vector of 0's instead of a scalar of 0)
+    qCᵢ¹⁸O_upp  = [0; aux_du_VRFLI[1:(NLAYER-1)]] .* [0; δ_to_x.(u_δ18O_SWATI[1:(NLAYER-1)], R_VSMOW¹⁸O)]
+    qCᵢ¹⁸O_low  = aux_du_VRFLI[1:(NLAYER)]        .* δ_to_x.(u_δ18O_SWATI[1:(NLAYER)], R_VSMOW¹⁸O)
+    qCᵢ²H_upp   = [0; aux_du_VRFLI[1:(NLAYER-1)]] .* [0; δ_to_x.(u_δ2H_SWATI[1:(NLAYER-1)],  R_VSMOW²H )]
+    qCᵢ²H_low   = aux_du_VRFLI[1:(NLAYER)]        .* δ_to_x.(u_δ2H_SWATI[1:(NLAYER)],  R_VSMOW²H )
 
-    Cᵢ¹⁸O_INFLI = p_δ18O_PREC # TODO(bernhard): for debugging, remove this again and replace with δ18O_INFLI
+    Cᵢ¹⁸O_INFLI = δ_to_x.(p_δ18O_PREC, R_VSMOW¹⁸O)  # TODO(bernhard): for debugging, remove this again and replace with δ18O_INFLI
     # Cᵢ¹⁸O_INFLI = δ18O_INFLI
     # Cᵢ¹⁸O_INFLI = ifelse(sum(aux_du_INFLI) == 0, 0, δ18O_INFLI) # in case there is no inflow δ18O_INFLI was set to NaN, set it to zero for below equation
-    Cᵢ¹⁸O_TRANI = Cᵢ¹⁸ # no fractionation occurring, i.e. outflux composition equal to storage composition
-    Cᵢ¹⁸O_DSFL  = Cᵢ¹⁸ # no fractionation occurring, i.e. outflux composition equal to storage composition
-    Cᵢ¹⁸O_SLVP  = [δ¹⁸O_SLVP; fill(0, NLAYER-1)]
-    Cᵢ²H_INFLI = p_δ2H_PREC # TODO(bernhard): for debugging, remove this again and replace with δ2H_INFLI
+    Cᵢ¹⁸O_TRANI = Cᵢ¹⁸O # no fractionation occurring, i.e. outflux composition equal to storage composition
+    Cᵢ¹⁸O_DSFL  = Cᵢ¹⁸O # no fractionation occurring, i.e. outflux composition equal to storage composition
+    Cᵢ¹⁸O_SLVP  = [δ_to_x.(δ¹⁸O_SLVP, R_VSMOW¹⁸O); fill(0, NLAYER-1)]
+    Cᵢ²H_INFLI = δ_to_x.(p_δ2H_PREC,  R_VSMOW²H )   # TODO(bernhard): for debugging, remove this again and replace with δ2H_INFLI
     # Cᵢ²H_INFLI = δ2H_INFLI
     # Cᵢ²H_INFLI = ifelse(sum(aux_du_INFLI) == 0, 0, δ2H_INFLI) # in case there is no inflow δ2H_INFLI was set to NaN, set it to zero for below equation
     Cᵢ²H_TRANI = Cᵢ²H # no fractionation occurring, i.e. outflux composition equal to storage composition
     Cᵢ²H_DSFL  = Cᵢ²H # no fractionation occurring, i.e. outflux composition equal to storage composition
-    Cᵢ²H_SLVP  = [δ²H_SLVP;  fill(0, NLAYER-1)]
+    Cᵢ²H_SLVP  = [δ_to_x.(δ²H_SLVP,  R_VSMOW²H );  fill(0, NLAYER-1)]
     ##################
     ##################
     ##################
@@ -927,6 +946,12 @@ function compute_isotope_du_GWAT_SWATI(
     dVdt = du_NTFLI # [mm/day]
     # θ = u_aux_θ
     # dθdt = aux_du_VRFLI[NLAYER] - du_GWFL - du_SEEP # dV/dt [-/day] # TODO(bernhard)
+
+                    # du_NTFL was computed in MSBITERATE as following:
+                                #                      = ∫∂/∂z[K_h(∂h/∂z + 1)] dz   - ∫S dz
+                                # for i=1:    NTFLI[i] = 0          - VRFLI[i]      + INFLI[i] - aux_du_TRANI[i] - aux_du_DSFLI[i] - aux_du_SLVP
+                                # for i=x:    NTFLI[i] = VRFLI[i-1] - VRFLI[i]      + INFLI[i] - aux_du_TRANI[i] - aux_du_DSFLI[i]
+
     ##################
     ##################
     ##################
@@ -938,7 +963,12 @@ function compute_isotope_du_GWAT_SWATI(
     # 4) Isotope balance equation:
 
     # SOIL WATER
-    # du_δ18O_SWATI = -Cᵢ¹⁸./u_SWATI .* dVdt .+ 1 ./ u_SWATI .* (
+    ### THEORY:
+    ### ∂/∂t Cᵢ     = [- Cᵢ/SWATI * ∂/∂t SWATI]           + 1/SWATI *
+    ###                      [diff(z_upper) - diff(z_lower) - qCᵢ(z_upper) + qCᵢ(z_lower) +
+    ###                       INFLI*Cᵢ_{INFLI} - TRANI*Cᵢ_{TRANI} - DSFL*Cᵢ_{DSFL} - SLVP*Cᵢ_{SLVP}]
+
+    # du_δ18O_SWATI = -Cᵢ¹⁸O./u_SWATI .* dVdt .+ 1 ./ u_SWATI .* (
     #                         diff_upp .- diff_low .- qCᵢ¹⁸O_upp .+ qCᵢ¹⁸O_low .+
     #                         aux_du_INFLI.*Cᵢ¹⁸O_INFLI .- aux_du_TRANI.*Cᵢ¹⁸O_TRANI .- aux_du_DSFLI.*Cᵢ¹⁸O_DSFL .- aux_du_SLVP.*Cᵢ¹⁸O_SLVP
     #                     )
@@ -947,11 +977,11 @@ function compute_isotope_du_GWAT_SWATI(
     #                         aux_du_INFLI.*Cᵢ²H_INFLI .- aux_du_TRANI.*Cᵢ²H_TRANI .- aux_du_DSFLI.*Cᵢ²H_DSFL .- aux_du_SLVP.*Cᵢ²H_SLVP
     #                     )
     # NOTE: below max(0.001,u_SWATI) makes the code more robust
-    du_δ18O_SWATI = -Cᵢ¹⁸./max.(0.001,u_SWATI) .* dVdt .+ 1 ./ max.(0.001,u_SWATI) .* (
+    du_Cᵢ¹⁸_SWATI = -Cᵢ¹⁸O./max.(0.001,u_SWATI) .* dVdt .+ 1 ./ max.(0.001,u_SWATI) .* (
                             diff_upp .- diff_low .+ qCᵢ¹⁸O_upp .- qCᵢ¹⁸O_low .+ # TODO(bernhard): check sign for qC
                             aux_du_INFLI.*Cᵢ¹⁸O_INFLI .- aux_du_TRANI.*Cᵢ¹⁸O_TRANI .- aux_du_DSFLI.*Cᵢ¹⁸O_DSFL .- aux_du_SLVP.*Cᵢ¹⁸O_SLVP
                         )
-    du_δ2H_SWATI = -Cᵢ²H./max.(0.001,u_SWATI) .* dVdt .+ 1 ./ max.(0.001,u_SWATI) .* (
+    du_Cᵢ²H_SWATI = -Cᵢ²H./max.(0.001,u_SWATI) .* dVdt .+ 1 ./ max.(0.001,u_SWATI) .* (
                             diff_upp .- diff_low .+ qCᵢ²H_upp .- qCᵢ²H_low .+ # TODO(bernhard): check sign for qC
                             aux_du_INFLI.*Cᵢ²H_INFLI .- aux_du_TRANI.*Cᵢ²H_TRANI .- aux_du_DSFLI.*Cᵢ²H_DSFL .- aux_du_SLVP.*Cᵢ²H_SLVP
                         )
@@ -969,7 +999,7 @@ function compute_isotope_du_GWAT_SWATI(
         du_δ2H_GWAT  = 0
 
         u_δ18O_GWAT = u_δ18O_SWATI[end]
-        u_δ2H_GWAT  = u_δ2H_SWATI[end]  # TODO(bernhard): make sure this is actually modifying the state vector (it doesn't seem it does: https://discourse.julialang.org/t/78335)
+        u_δ2H_GWAT  = u_δ2H_SWATI[end]  # TODO(benrhard): make sure this is actually modifying the state vector
     else
         # composition of fluxes
         δ18O_in_GWAT  = u_δ18O_SWATI[end]
@@ -984,9 +1014,19 @@ function compute_isotope_du_GWAT_SWATI(
         # out_GWAT = (du_GWFL + du_SEEP)
 
         # isotope balance
-        du_δ18O_GWAT = in_GWAT/V_GWAT*(δ18O_in_GWAT - u_δ18O_GWAT) # - out_GWAT*(δ18O_out_GWAT - u_δ18O_GWAT) # <- last part == 0
-        du_δ2H_GWAT  = in_GWAT/V_GWAT*(δ2H_in_GWAT  - u_δ2H_GWAT)  # - out_GWAT*(δ2H_out_GWAT  - u_δ2H_GWAT)  # <- last part == 0
+        Cᵢ¹⁸O_GWAT = δ_to_x.(u_δ18O_GWAT,R_VSMOW¹⁸O)
+        Cᵢ²H_GWAT  = δ_to_x.(u_δ2H_GWAT,R_VSMOW²H )
+        du_Cᵢ¹⁸_GWAT = in_GWAT/V_GWAT*(δ_to_x.(δ18O_in_GWAT, R_VSMOW¹⁸O) -  Cᵢ¹⁸O_GWAT) # - out_GWAT*(δ18O_out_GWAT - u_δ18O_GWAT) # <- last part == 0
+        du_Cᵢ²H_GWAT = in_GWAT/V_GWAT*(δ_to_x.(δ2H_in_GWAT,  R_VSMOW²H ) -  Cᵢ²H_GWAT) # - out_GWAT*(δ2H_out_GWAT  - u_δ2H_GWAT)  # <- last part == 0
+
+        # go back from atom fraction to delta values
+        du_δ18O_GWAT  = dxdt_to_dδdt.(du_Cᵢ¹⁸_GWAT, Cᵢ¹⁸O_GWAT, R_VSMOW¹⁸O)
+        du_δ2H_GWAT   = dxdt_to_dδdt.(du_Cᵢ²H_GWAT, Cᵢ²H_GWAT, R_VSMOW²H)
     end
+    # go back from atom fraction to delta values
+    du_δ18O_SWATI = dxdt_to_dδdt.(du_Cᵢ¹⁸_SWATI, Cᵢ¹⁸O, R_VSMOW¹⁸O)
+    du_δ2H_SWATI  = dxdt_to_dδdt.(du_Cᵢ²H_SWATI, Cᵢ²H, R_VSMOW²H)
+
     ##################
     ##################
     ##################
