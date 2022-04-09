@@ -24,7 +24,7 @@ DiffEqCallbacks = "2"
 Interpolations = "0.13"
 OrdinaryDiffEq = "5, 6"
 RecipesBase = "1"
-Roots = "1"
+Roots = "1, 2"
 julia = "1"
 
 [extras]
