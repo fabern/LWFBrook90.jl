@@ -17,7 +17,7 @@ Implementation of the LWF-BROOK90 hydrological model in Julia
 
 ## What is LWFBrook90.jl?
 <p align="center"><img src="https://github.com/fabern/LWFBrook90.jl/blob/develop/docs/src/assets/logo2.png?raw=true" width="150"><p>
-The model LWF-BROOK90 is a 1D Soil-Vegetation-Atmosphere Transfer (SVAT) model, calculating the soil water balance in forest soil. Modelled processes include vertical soil water movement, soil and plant evapotranspiration and temporary storages in snowpack or interception layer.
+The model LWF-BROOK90 is a 1D Soil-Vegetation-Atmosphere Transfer (SVAT) model, calculating the soil water balance in forest soil on the scale of forest stands. Modelled processes include vertical soil water movement, soil and plant evapotranspiration and temporary storages in snowpack or interception layer.
 LWFBrook90.jl is an implementation of the existing LWF-BROOK90 rewritten entirely in the Julia programming language.
 
 Processes and state variables of the model in LWF-BROOK90 are summarised visually in Figure 1 below.
@@ -42,12 +42,14 @@ Development of LWFBrook90.jl builds on the following works:
 - BROOK90 (v4.8) by C. Anthony Federer, Licensed under CC0 1.0, http://www.ecoshift.net/brook/brook90.htm
 - LWFBrook90R (v0.4.3) by Paul Schmidt-Walter, Volodymyr Trotsiuk, Klaus Hammel, Martin Kennel, Anthony Federer, Robert Nuske, Licensed under GPL-3.0, https://github.com/pschmidtwalter/LWFBrook90R
 
-Note that LWFBrook90R itself uses LWF-BROOK90 by Hammel and Kennel, 2001:
-Hammel, K., & Kennel, M. (2001). Charakterisierung und Analyse der Wasserverfügbarkeit und des Wasserhaushalts von Waldstandorten in Bayern mit dem Simulationsmodell BROOK90 (No. 185; *Forstliche Forschungsberichte München*, p. 135). Technische Uni München Wissenschaftszentrum Weihenstephan. ISBN 3-933506-16-6
+Note that LWFBrook90R itself uses LWF-BROOK90 by Hammel and Kennel, 2001
+(Hammel, K., & Kennel, M. (2001). Charakterisierung und Analyse der Wasserverfügbarkeit und des Wasserhaushalts von Waldstandorten in Bayern mit dem Simulationsmodell BROOK90 (No. 185; *Forstliche Forschungsberichte München*, p. 135). Technische Uni München Wissenschaftszentrum Weihenstephan. ISBN 3-933506-16-6)
 
 All literature references are reported in the section [References](https://fabern.github.io/LWFBrook90.jl/stable/#References) in the documentation.
 
-Matthias Häni, Katrin Meusburger, Peter Waldner, Lorenz Walthert, Stephan Zimmermann of [WSL](http://www.wsl.ch) and its Long-term Forest Ecosystem Research (LWF) project gratefully acknowledged for providing example data files located in `examples/BEA2016*`.
+The Swiss National Science Foundation is acknowledged for funding the development of this package through the project "Give and take: How much water does soil retain for trees?" (project number 185093, https://p3.snf.ch/project-185093).
+
+Matthias Häni, Katrin Meusburger, Peter Waldner, Lorenz Walthert, Stephan Zimmermann of [WSL](http://www.wsl.ch) and its Long-term Forest Ecosystem Research (LWF) project are gratefully acknowledged for providing example data files located in `examples/BEA2016*`.
 
 ## For Users: getting started
 To get started with Julia: see the section [Installation](https://fabern.github.io/LWFBrook90.jl/stable/user-guide/#Installation) in the documentation.
