@@ -5,6 +5,7 @@ using DiffEqCallbacks # instead of loading the full DifferentialEquations
 using RecipesBase
 
 using Dates: now
+# using Infiltrator
 
 export read_inputData
 export discretize_soil, Rootden_beta_
@@ -12,7 +13,8 @@ export define_LWFB90_p, define_LWFB90_u0, define_LWFB90_ODE
 export KPT_SOILPAR_Mvg1d, KPT_SOILPAR_Ch1d
 export RelativeDaysFloat2DateTime, plot_LWFBrook90
 
-export run_simulation, plot_and_save_results, find_indices, get_auxiliary_variables, get_θ
+export run_simulation, plot_and_save_results, find_indices
+export get_auxiliary_variables, get_θ, get_δ, get_δsoil
 
 # Include code before defining modules
 include("func_read_inputData.jl") # defines RelativeDaysFloat2DateTime which is used in module ISO
@@ -54,6 +56,7 @@ The function loads these files, runs the simulation and returns the solution obj
 """
 function run_simulation(args)
     # args = ("test-assets/Hammel-2001/input-files", "Hammel_loam-NLayer-27-RESET=TRUE")
+    # args = ["examples/isoBEAdense2010-18-reset-FALSE-input/" "isoBEAdense2010-18-reset-FALSE" "true"]
     @show now()
     @show args
 
@@ -66,6 +69,7 @@ function run_simulation(args)
     else
         simulate_isotopes = false
     end
+    @show simulate_isotopes
 
     (input_meteoveg,
     _input_meteoiso, # NOTE: _ indicates that it is possibly unused (depends on simulate_isotopes)
@@ -108,13 +112,22 @@ function run_simulation(args)
 
     sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5(); progress = true,
         unstable_check = unstable_check_function,
-        saveat = tspan[1]:tspan[2], dt = 1e-4, #adaptive = true); # dt is initial dt, but adaptive
-        adaptive = false); # TODO(bernhard): check if adaptive is working with isotopes
-
+        saveat = tspan[1]:tspan[2],
+        dt = 1e-3, #adaptive = true); # dt is initial dt, but adaptive
+        # dt       = ifelse(simulate_isotopes,1e-4,1e-3),
+        adaptive = ifelse(simulate_isotopes,false,true)); # TODO(bernhard): adaptive is currently not working with isotopes
+    # using Plots, Measures
+    # optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
+    # pl2 = LWFBrook90.ISO.plotisotopes(
+    #     sol_LWFBrook90, optim_ticks;
+    #     layout = grid(4, 1, heights=[0.1 ,0.4, 0.1, 0.4]),
+    #     size=(1000,1400), dpi = 300, leftmargin = 15mm);
+    # plot!(pl2, link = :x)
     @show now()
 
     return (sol_LWFBrook90, input_prefix, input_path)
 end
+
 
 @doc raw"""
     plot_and_save_results(sol, input_prefix, input_path)
@@ -207,26 +220,6 @@ function get_auxiliary_variables(solution)
     return (transpose(hcat(u_SWATI...)), u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
 end
 
-
-# function get_δ_soil(solution)
-#     p_soil = solution.prob.p[1][1]
-#     NLAYER = p_soil.NLAYER
-#     idx_u_vector_amounts = solution.prob.p[1][4][4]
-# idx_u_vector_isotopes_d18O = solution.prob.p[1][4][9]
-# idx_u_vector_isotopes_d2H  = solution.prob.p[1][4][11]
-#   ### TODO: develop u_SWATI = [solution.u[i][idx_u_vector_amounts] for i = 1:length(solution.u)]
-#   ### TODO: develop # (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-#   ### TODO: develop #         LWFBrook90.KPT.derive_auxiliary_SOILVAR.(u_SWATI, Ref(p_soil)) # Ref fixes scalar argument for broadcasting "."
-#   ### TODO: develop u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK =
-#   ### TODO: develop     (fill(NaN, (size(u_SWATI, 1), size(u_SWATI[1], 1))) for i in 1:5)
-#   ### TODO: develop for t in 1:length(u_SWATI)
-#   ### TODO: develop     (u_aux_WETNES[t, :], u_aux_PSIM[t, :], u_aux_PSITI[t, :], u_aux_θ[t, :], p_fu_KK[t, :]) =
-#   ### TODO: develop         LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI[t], p_soil)
-#   ### TODO: develop end
-#   ### TODO: develop # returns arrays of dimenstion (t,z) where t is number of timesteps and z number of computational layers
-#   ### TODO: develop return (transpose(hcat(u_SWATI...)), u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
-# end
-
 function get_θ(depths_to_read_out_mm, solution)
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
         get_auxiliary_variables(solution)
@@ -235,7 +228,61 @@ function get_θ(depths_to_read_out_mm, solution)
 
     return u_aux_θ[:, idx]
 end
+function get_ψ(depths_to_read_out_mm, solution)
+    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+        get_auxiliary_variables(solution)
 
+    idx = find_indices(depths_to_read_out_mm, solution)
+
+    return u_aux_PSIM[:, idx]
+end
+
+function get_δ(solution)
+    idx_u_scalar_isotopes_d18O = solution.prob.p[1][4][8]
+    idx_u_vector_isotopes_d18O = solution.prob.p[1][4][9]
+    idx_u_scalar_isotopes_d2H  = solution.prob.p[1][4][10]
+    idx_u_vector_isotopes_d2H  = solution.prob.p[1][4][11]
+
+    # row_NaN       = fill(NaN, 1,length(x))
+    # input quantities δ-values:
+    row_PREC_d18O = reshape(solution.prob.p[2][15].(solution.t), 1, :)
+    row_PREC_d2H  = reshape(solution.prob.p[2][16].(solution.t), 1, :)
+    # scalar quantities δ-values:
+    row_INTS_d18O = reshape(solution[idx_u_scalar_isotopes_d18O[2],1,:], 1, :)
+    row_INTR_d18O = reshape(solution[idx_u_scalar_isotopes_d18O[3],1,:], 1, :)
+    row_SNOW_d18O = reshape(solution[idx_u_scalar_isotopes_d18O[4],1,:], 1, :)
+    row_GWAT_d18O = reshape(solution[idx_u_scalar_isotopes_d18O[1],1,:], 1, :)
+    row_INTS_d2H  = reshape(solution[idx_u_scalar_isotopes_d2H[2],1,:], 1, :)
+    row_INTR_d2H  = reshape(solution[idx_u_scalar_isotopes_d2H[3],1,:], 1, :)
+    row_SNOW_d2H  = reshape(solution[idx_u_scalar_isotopes_d2H[4],1,:], 1, :)
+    row_GWAT_d2H  = reshape(solution[idx_u_scalar_isotopes_d2H[1],1,:], 1, :)
+    # vector quantities δ-values:
+    rows_SWAT_d18O = solution[idx_u_vector_isotopes_d18O,1,:];
+    rows_SWAT_d2H  = solution[idx_u_vector_isotopes_d2H, 1,:];
+
+    return (SWAT = (d18O = rows_SWAT_d18O, d2H = rows_SWAT_d2H),
+            PREC = (d18O = row_PREC_d18O,  d2H = row_PREC_d2H),
+            INTS = (d18O = row_INTS_d18O,  d2H = row_INTS_d2H),
+            INTR = (d18O = row_INTR_d18O,  d2H = row_INTR_d2H),
+            SNOW = (d18O = row_SNOW_d18O,  d2H = row_SNOW_d2H),
+            GWAT = (d18O = row_GWAT_d18O,  d2H = row_GWAT_d2H))
+end
+
+function get_δsoil(solution)
+    u_δ = get_δ(solution)
+
+    return (d18O = transpose(u_δ.SWAT.d18O),
+            d2H  = transpose(u_δ.SWAT.d2H))
+end
+
+function get_δsoil(depths_to_read_out_mm, solution)
+    u_d18O, u_d2H = LWFBrook90.get_δsoil(solution)
+
+    idx = find_indices(depths_to_read_out_mm, solution)
+
+    return (d18O = u_d18O[:, idx],
+            d2H  = u_d2H[:, idx])
+end
 ############################################################################################
 ############################################################################################
 ############################################################################################

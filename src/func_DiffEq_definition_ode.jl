@@ -27,7 +27,7 @@ function define_LWFB90_ODE(u0, tspan, p)
   There are missing values in the provided initial conditions `u0`. Please correct!"""
 
     # Define ODE problem
-    ode = ODEProblem(f_LWFBrook90R,
+    ode = ODEProblem(LWFBrook90.f_LWFBrook90R,
                      u0,
                      tspan,
                      p,

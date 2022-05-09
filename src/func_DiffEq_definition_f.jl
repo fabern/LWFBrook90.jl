@@ -222,6 +222,10 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
             #                 only keep du=... for quantities for which we compute cumulative sums
         end
 
+        # @infiltrate any(abs.(du_δ2H_SWATI) .> 10)
+        # @infiltrate any(abs.(du_δ18O_SWATI) .> 10)
+        # @infiltrate any(isnan.(du_δ2H_SWATI))
+        # @infiltrate any(isnan.(du_δ18O_SWATI))
         return
 
 

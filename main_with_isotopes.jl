@@ -5,8 +5,10 @@ using OrdinaryDiffEq: solve, Tsit5, init
 # Read in input data
 # input_prefix = "isoBEA2016-reset-FALSE"
 # input_path = "examples/isoBEA2016-reset-FALSE-input/"
-input_prefix = "isoBEA2010-18-reset-FALSE";
-input_path = "examples/isoBEA2010-18-reset-FALSE-input/";
+# input_prefix = "isoBEA2010-18-reset-FALSE";
+# input_path = "examples/isoBEA2010-18-reset-FALSE-input/";
+input_prefix = "isoBEAdense2010-18-reset-FALSE";
+input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
 
 ####################
 simulate_isotopes = true
@@ -166,9 +168,10 @@ for Δz_m in (
         "out",
         input_prefix*"_NLAYER+" * string(sol_LWFBrook90.prob.p[1][1].NLAYER)*
         "-git+"*chomp(read(`git rev-parse --short HEAD`, String)))*
+        ifelse(length(read(`git status --porcelain`, String))==0, "+gitclean","+gitdirty")*
         "-iso+"*string(simulate_isotopes)
 
-    if input_prefix == "BEA2016-reset-FALSE" || input_prefix == "isoBEA2016-reset-FALSE"
+    if input_prefix == "BEA2016-reset-FALSE" || input_prefix == "isoBEA2016-reset-FALSE" || input_prefix == "isoBEAdense2016-reset-FALSE"
         ref_aboveground =
             DataFrame(File(
             # "test/test-assets-external/BEA-2016/BEA-IntegrationTests-LWFBrook90/output_LWFBrook90R/BEA2016-reset-FALSE_NLAYER14_LWFBrook90R-0.4.5daily_output.csv"))[:,
@@ -262,28 +265,28 @@ end
 
 # # # Plot 2
 # # # http://docs.juliaplots.org/latest/generated/gr/#gr-ref43
-x = LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date)
-y = cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK)
-n = sol_LWFBrook90.prob.p[1][1].NLAYER
-y_centers = [ 0; cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK)[1:(n-1)] ] +
-    sol_LWFBrook90.prob.p[1][1].p_THICK / 2
+# x = LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date)
+# y = cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK)
+# n = sol_LWFBrook90.prob.p[1][1].NLAYER
+# y_centers = [ 0; cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK)[1:(n-1)] ] +
+#     sol_LWFBrook90.prob.p[1][1].p_THICK / 2
 
-z = sol_LWFBrook90[7 .+ (0:sol_LWFBrook90.prob.p[1][1].NLAYER-1),
-                    1,
-                    :]./sol_LWFBrook90.prob.p[1][1].p_THICK;
+# z = sol_LWFBrook90[7 .+ (0:sol_LWFBrook90.prob.p[1][1].NLAYER-1),
+#                     1,
+#                     :]./sol_LWFBrook90.prob.p[1][1].p_THICK;
 # z2 = sol_LWFBrook90[idx_u_vector_isotopes_d18O,1,:];
 # z3 = sol_LWFBrook90[idx_u_vector_isotopes_d2H,1,:];
 
-heatmap(x, y_centers, z, yflip = true,
-        xlabel = "Date",
-        ylabel = "Depth [mm]",
-        colorbar_title = "θ [-]")
-hline!([0; cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK)], yflip = true, xticks = false,
-    color = :black, linestyle = :dot
-    #title = "N_layer = "*string(sol_LWFBrook90.prob.[1][1].NLAYER)
-    )
-hline!(y_centers, yflip = true, xticks = false,
-    color = :blue, linestyle = :dot)
+# heatmap(x, y_centers, z, yflip = true,
+#         xlabel = "Date",
+#         ylabel = "Depth [mm]",
+#         colorbar_title = "θ [-]")
+# hline!([0; cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK)], yflip = true, xticks = false,
+#     color = :black, linestyle = :dot
+#     #title = "N_layer = "*string(sol_LWFBrook90.prob.[1][1].NLAYER)
+#     )
+# hline!(y_centers, yflip = true, xticks = false,
+#     color = :blue, linestyle = :dot)
 # heatmap(x, y, z2, yflip = true,
 #         xlabel = "Date",
 #         ylabel = "Depth [mm]",
@@ -328,14 +331,46 @@ hline!(y_centers, yflip = true, xticks = false,
 # TODO: e.g. plots_heatmap_edges: plot(t = :plots_heatmap, x[1:50], y_centers, z[:,1:50]) # doesn't work
 # TODO: e.g. plots_heatmap_edges: plot(t = :plots_heatmap_edges, x[1:50], y_centers, z[:,1:50]) # doesn't work either
 # # ###################
-# depth_to_read_out_mm = [10 150 500 1000 1150]
-# plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
-#     LWFBrook90.get_θ(depth_to_read_out_mm, sol_LWFBrook90),
-#     labels = string.(depth_to_read_out_mm) .* "mm",
-#      xlabel = "Date",
-#      ylabel = "θ [-]",
-#      legend = :bottomright)
-# savefig(input_prefix*"_θ-feinerde-_depths_NLAYER"*string(sol_LWFBrook90.prob.p[1][1].NLAYER)*".png")
+
+depth_to_read_out_mm = [150 500 800 1500]
+pl_θ = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+    LWFBrook90.get_θ(depth_to_read_out_mm, sol_LWFBrook90),
+    labels = string.(depth_to_read_out_mm) .* "mm",
+     xlabel = "Date",
+     ylabel = "θ\n[-]",
+     legend = :outerright)
+pl_ψ = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+    # -LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90) .+ 1, yaxis = :log, yflip = true,
+    LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90),
+    labels = string.(depth_to_read_out_mm) .* "mm",
+     xlabel = "Date",
+     ylabel = "ψ\n[kPa]",
+     legend = :outerright)
+
+δ_results = LWFBrook90.get_δsoil(depth_to_read_out_mm, sol_LWFBrook90)
+
+pl_δ18O = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+    δ_results[1],
+    labels = string.(depth_to_read_out_mm) .* "mm",
+     xlabel = "Date",
+     ylabel = "δ¹⁸O soil\n[‰]",
+     legend = :outerright)
+pl_δ2H = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+    δ_results[2],
+    labels = string.(depth_to_read_out_mm) .* "mm",
+     xlabel = "Date",
+     ylabel = "δ²H soil\n[‰]",
+     legend = :outerright)
+
+
+plot(plot(pl_θ; xlab = "", xticks = :none),
+    plot(pl_ψ; xlab = "", xticks = :none),
+    plot(pl_δ18O; xlab = "", xticks = :none),
+    pl_δ2H, link = :x,
+    layout = grid(4, 1, heights=[0.3 ,0.3, 0.2, 0.2]),
+    size=(600,500), dpi = 300, leftmargin = 15mm)
+savefig(fname*"_plot-θ-ψ-δ.png")
+
 
 # plot(x,
 #      z[LWFBrook90.find_indices(depth_to_read_out_mm, sol_LWFBrook90), :]',
