@@ -813,10 +813,10 @@ function compute_isotope_du_GWAT_SWATI(
         #   x = 1 / (1 + 1/(R_std*(δ+1)) )
         #   δ = 1 / ( R_std*(1/x - 1) ) - 1, respectively
 
-        δ_to_x(δ_permil,R_std) = δ_permil #TODO(bernhard): reactivate correct: δ_to_x(δ_permil,R_std) = 1 ./ (1 .+ 1 ./ (R_std .* ( δ_permil./1000 .+ 1 )) )
-        x_to_δ(x,R_std) = x               #TODO(bernhard): reactivate correct: x_to_δ(x,R_std) = (1 ./ ( R_std .* (1 ./ x .- 1) ) .- 1) .* 1000 # in permil
+        δ_to_x(δ_permil,R_std) = 1 ./ (1 .+ 1 ./ (R_std .* ( δ_permil./1000 .+ 1 )) )
+        x_to_δ(x,R_std) = (1 ./ ( R_std .* (1 ./ x .- 1) ) .- 1) .* 1000 # in permil
 
-        dxdt_to_dδdt(dxdt,x,R_std) = dxdt #TODO(bernhard): reactivate correct: dxdt_to_dδdt(dxdt, x, R_std) = dxdt .* 1 ./ R_std .* 1 ./ (x .- 1).^2 .* 1000  # using dδ/dt = dδ/dx * dx/dt
+        dxdt_to_dδdt(dxdt, x, R_std) = dxdt .* 1 ./ R_std .* 1 ./ (x .- 1).^2 .* 1000  # using dδ/dt = dδ/dx * dx/dt
 
         # where R_std are:
         R_VSMOW¹⁸O = 2005.2e-6 # (source: Baertschi-1976-Earth_Planet_Sci_Lett)
