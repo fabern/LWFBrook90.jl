@@ -78,7 +78,7 @@ function read_inputData(folder::String, prefix::String;
     #                 PRECDAT would allow to have smaller resolution (would require changes).
     # unused: input_precdat = read(path_precdat, DataFrame;
     # unused:           missingstring = "-999",
-    # unused:           datarow=2, header=["year","month","day","interval_number","prec"], delim=',',
+    # unused:           skipto=2, header=["year","month","day","interval_number","prec"], delim=',',
     # unused:           ignorerepeated=true)
 
     return (input_meteoveg,
@@ -163,7 +163,7 @@ function read_path_meteoveg(path_meteoveg)
             :age_yrs         => Float64)
 
     input_meteoveg = @linq DataFrame(File(path_meteoveg;
-        datarow=3, delim=',', ignorerepeated=true, types=parsing_types))  |>
+        skipto=3, delim=',', ignorerepeated=true, types=parsing_types))  |>
         transform(dates = DateTime.(:dates))
 
     expected_names = [String(k) for k in keys(parsing_types)]
@@ -433,7 +433,7 @@ function read_path_soil_horizons(path_soil_horizons)
 
         # Load file
         input_soil_horizons = DataFrame(File(path_soil_horizons;
-            datarow=3, header=MualVanGen_expected_column_names,
+            skipto=3, header=MualVanGen_expected_column_names,
             types=[Int64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64],
             delim=','))
     else # FLAG_MualVanGen = 0 (Clapp-Hornberger)
@@ -445,7 +445,7 @@ function read_path_soil_horizons(path_soil_horizons)
 
         # Load file
         input_soil_horizons = DataFrame(File(path_soil_horizons;
-            datarow=3, header=ClappHornberger_expected_column_names,
+            skipto=3, header=ClappHornberger_expected_column_names,
             types=[Int64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64],
             delim=','))# ignorerepeated=true
     end
@@ -475,7 +475,7 @@ function read_path_soil_discretization(path_soil_discretization)
              "u_delta2H_init_mUr"  => Float64)
 
     input_soil_discretization = DataFrame(File(path_soil_discretization;
-        datarow=3, missingstring = "NA", types=parsing_types))
+        skipto=3, missingstring = "NA", types=parsing_types))
 
     # Assert colnames
     expected_names = [String(k) for k in keys(parsing_types)]
@@ -517,14 +517,14 @@ function assert_colnames_as_expected(input_df, input_path, expected_names)
 end
 
 function assert_unitsHeader_as_expected(path, expected_units)
-    @assert DataFrame(File(path;datarow=2,limit=1)) == expected_units """
+    @assert DataFrame(File(path;skipto=2,limit=1)) == expected_units """
     Unexpected units in input file $path. Expected units:
     $expected_units"""
 end
 
 function assert_unitsColumn_as_expected(path, expected_units)
     # TODO(bernhard): define units in and implement this check.
-    # @assert DataFrame(File(path;datarow=2,limit=1)) == expected_units """
+    # @assert DataFrame(File(path;skipto=2,limit=1)) == expected_units """
     # Unexpected units in input file $path. Expected units:
     # $expected_units"""
 end
