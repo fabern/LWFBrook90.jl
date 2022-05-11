@@ -141,7 +141,7 @@ end
 #     # Subset
 #     where(:dates .>= start, :dates .<= stop) |>
 #     # Compute time relative to reference date
-#     transform(dates = DateTime2RelativeDaysFloat.(:dates, reference)) |>
+#     transform(:dates = DateTime2RelativeDaysFloat.(:dates, reference)) |>
 #     # Rename colum
 #     rename(Dict(:dates => :days))
 # end
@@ -164,7 +164,7 @@ function read_path_meteoveg(path_meteoveg)
 
     input_meteoveg = @linq DataFrame(File(path_meteoveg;
         skipto=3, delim=',', ignorerepeated=true, types=parsing_types))  |>
-        transform(dates = DateTime.(:dates))
+        transform(:dates = DateTime.(:dates))
 
     expected_names = [String(k) for k in keys(parsing_types)]
     assert_colnames_as_expected(input_meteoveg, path_meteoveg, expected_names)
@@ -202,7 +202,7 @@ function read_path_meteoveg(path_meteoveg)
     reference_date = starting_date
 
     input_meteoveg = @linq input_meteoveg |>
-        transform(dates = DateTime2RelativeDaysFloat.(:dates, reference_date)) |>
+        transform(:dates = DateTime2RelativeDaysFloat.(:dates, reference_date)) |>
         rename(Dict(:dates => :days))
 
     return input_meteoveg, reference_date
@@ -241,7 +241,7 @@ function read_path_meteoiso(path_meteoiso,
     input_meteoiso_first = deepcopy(input_meteoiso[1,:])
     input_meteoiso_first.Date = floor(input_meteoiso_first.Date, Month)
     input_meteoiso = @linq input_meteoiso |>
-            transform(Date = ceil.(:Date, Month))
+            transform(:Date = ceil.(:Date, Month))
     push!(input_meteoiso, input_meteoiso_first) # repeat the first
     sort!(input_meteoiso, [:Date])
     input_meteoiso[end,:].Date = input_meteoiso[end,:].Date - Day(1) # Modify last to remain within year (31.12. instead of 01.01)
@@ -249,7 +249,7 @@ function read_path_meteoiso(path_meteoiso,
 
     # Transform times from DateTimes to simulation time (Float of Days)
     input_meteoiso = @linq input_meteoiso |>
-        transform(Date = DateTime2RelativeDaysFloat.(:Date, input_meteoveg_reference_date)) |>
+        transform(:Date = DateTime2RelativeDaysFloat.(:Date, input_meteoveg_reference_date)) |>
         rename(Dict(:Date => :days))
 
     # Check period
