@@ -43,7 +43,7 @@ task = ["test", "overwrite"][1]
   fname = "../examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_u_sol_reference.jld2"
   if task == "test"
     loaded_u_ref = load(fname, "u_ref")
-    @test all((u_ref  .- loaded_u_ref) ./ (loaded_u_ref  .+ eps(Float64)) .< 1e-3) # adding eps for values where _ref is zero
+    @test all(abs.((u_ref  .- loaded_u_ref) ./ (loaded_u_ref  .+ eps(Float64)) .< 1e-3)) # adding eps for values where _ref is zero
   elseif task == "overwrite"
     jldsave(fname; u_ref)
   else
@@ -134,24 +134,24 @@ end
   if task == "test"
     loaded_SWAT_d18O_ref = load(fname*"_OUTPUT-SWAT_d18O_reference.jld2", "SWAT_d18O_ref")
     loaded_SWAT_d2H_ref  = load(fname*"_OUTPUT-SWAT_d2H_reference.jld2",  "SWAT_d2H_ref")
-    @test all((SWAT_d18O_ref .- loaded_SWAT_d18O_ref) ./ (loaded_SWAT_d18O_ref .+ eps(Float64)) .< 1e-3) # adding eps for values where _ref is zero
-    @test all((SWAT_d2H_ref  .- loaded_SWAT_d2H_ref ) ./ (loaded_SWAT_d2H_ref  .+ eps(Float64)) .< 1e-3) # adding eps for values where _ref is zero
+    @test all(abs.((SWAT_d18O_ref .- loaded_SWAT_d18O_ref) ./ (loaded_SWAT_d18O_ref .+ eps(Float64))) .< 1e-5) # adding eps for values where _ref is zero
+    @test all(abs.((SWAT_d2H_ref  .- loaded_SWAT_d2H_ref ) ./ (loaded_SWAT_d2H_ref  .+ eps(Float64))) .< 1e-5) # adding eps for values where _ref is zero
   elseif task == "overwrite"
 
     # overwrite output
     jldsave(fname*"_OUTPUT-SWAT_d18O_reference.jld2"; SWAT_d18O_ref)
     jldsave(fname*"_OUTPUT-SWAT_d2H_reference.jld2"; SWAT_d2H_ref)
 
-    # plot
-    using Plots, Measures
-    optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
-    # pl1 = LWFBrook90.ISO.plotisotopes(sol_LWFBrook90);
-    pl2 = LWFBrook90.ISO.plotisotopes(
-        sol[1], optim_ticks;
-        layout = grid(4, 1, heights=[0.1 ,0.4, 0.1, 0.4]),
-        size=(1000,1400), dpi = 300, leftmargin = 15mm);
-    plot!(pl2, link = :x)
-    savefig("../examples/isoBEAdense2010-18-reset-FALSE-input/idoBEAdense2010-18-reset-FALSE_OUTPUT-simulated.png")
+    # # plot
+    # using Plots, Measures
+    # optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
+    # # pl1 = LWFBrook90.ISO.plotisotopes(sol_LWFBrook90);
+    # pl2 = LWFBrook90.ISO.plotisotopes(
+    #     sol[1], optim_ticks;
+    #     layout = grid(4, 1, heights=[0.1 ,0.4, 0.1, 0.4]),
+    #     size=(1000,1400), dpi = 300, leftmargin = 15mm);
+    # plot!(pl2, link = :x)
+    # savefig("../examples/isoBEAdense2010-18-reset-FALSE-input/idoBEAdense2010-18-reset-FALSE_OUTPUT-simulated.png")
   else
     # do nothing
   end

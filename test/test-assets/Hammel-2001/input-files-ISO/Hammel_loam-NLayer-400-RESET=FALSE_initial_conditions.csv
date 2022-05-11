@@ -1,5 +1,5 @@
-param_id,x
-### Initial conditions (except for depth-dependent u_aux_PSIM) -------,NA
+param_id,amount,u_delta18O_init_mUr,u_delta2H_init_mUr
+### Initial conditions (except for depth-dependent u_aux_PSIM) -------,NA,NA,NA
 u_GWAT_init_mm,0,-10,-120
 u_INTS_init_mm,0,-10,-120
 u_INTR_init_mm,0,-10,-120

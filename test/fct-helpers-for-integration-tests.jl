@@ -31,6 +31,10 @@ function prepare_θψδ_from_sim_and_reference(;
     # path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_loam-NLayer-103-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv"
     # path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_loam-NLayer-103-RESET=FALSE"
     # path_Hydrus = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Loam_ISO2"
+        # path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_sand-NLayer-27-RESET=FALSE"
+        # path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-27-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv"
+        # path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand_ISO2"
+        # simulate_isotopes   = true
     # Run  simulation
         # cd("test")
     sim_sol, _, _ = run_simulation([dirname(path_jl_prefix),
@@ -128,7 +132,7 @@ function prepare_θψδ_from_sim_and_reference(;
     ## Load Hydrus solution
     # HydrusSolution_denseTime = DataFrame(File(joinpath(path_Hydrus,"Obs_Node_processed.csv")))
     HydrusSolution_sparseTime = DataFrame(File(joinpath(path_Hydrus,"Nod_inf_processed.csv");
-         missingstrings = ["","NA"]
+         missingstring = ["","NA"]
                 ))[:,[:timeStep, :depth_cm, :theta, :head_cm, :delta18O, :delta2H]]
     HydrusSolution_sparseTime = rename(subset(HydrusSolution_sparseTime,
         :depth_cm => ByRow(in([-10., -50., -100., -150., -190.]))),

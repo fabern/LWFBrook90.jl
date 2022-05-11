@@ -269,8 +269,8 @@ function read_path_meteoiso(path_meteoiso,
         it will be cropped to the period determined by the other meteorologic inputs going from
         $(input_meteoveg_reference_date + Day(startday_veg)) to $(input_meteoveg_reference_date + Day(stopday_veg)).
         """
-        input_meteoiso = @linq input_meteoiso |>
-            where(:days .>= startday, :days .<= endday)
+        # input_meteoiso = @linq input_meteoiso |>
+        #    where(:days .>= startday, :days .<= endday) # Acutally not needed to crop
         input_meteoveg_mod = input_meteoveg #Not needed to crop
     elseif ((stopday_iso < stopday_veg) | (startday_iso > startday_veg))
         @warn """

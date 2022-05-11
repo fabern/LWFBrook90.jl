@@ -18,25 +18,25 @@ include("fct-helpers-for-integration-tests.jl")
     @show pwd() # This is to help get the folder right.
 
     # 1) Run simulation and load references (LWFBrook90R and Hydrus1D)
-    # @githash_time sim4, ref4, hyd4 = prepare_θψδ_from_sim_and_reference(;
-    #     path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_sand-NLayer-27-RESET=FALSE",
-    #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-27-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
-    #     path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand", simulate_isotopes   = false);
-    #     # amberMBP-git-c4275ee: 0.913546 seconds (4.04 M allocations: 605.712 MiB, 14.49% gc time, 3.67% compilation time)
-    #     # amberMBP-git-eae940b: 0.859826 seconds (1.85 M allocations: 499.565 MiB, 13.78% gc time)
-    #     # amberMBP-git-b5cd0a6: 1.000577 seconds (2.51 M allocations: 476.224 MiB, 14.86% gc time)
-    # @githash_time sim5, ref5, hyd5 = prepare_θψδ_from_sim_and_reference(;
-    #     path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_sand-NLayer-103-RESET=FALSE",
-    #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-103-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
-    #     path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand");
-    #     # amberMBP-git-c4275ee: 2.788329 seconds (3.92 M allocations: 1.817 GiB, 15.26% gc time)
-    #     # amberMBP-git-eae940b: 2.626265 seconds (1.83 M allocations: 1.586 GiB, 13.83% gc time)
-    #     # amberMBP-git-b5cd0a6: 2.885293 seconds (2.57 M allocations: 1.456 GiB, 13.65% gc time)
-    # # @githash_time sim6, ref6, hyd6 = prepare_θψδ_from_sim_and_reference(;
-    # #     path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_sand-NLayer-400-RESET=FALSE",
-    # #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
-    # #     path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand")
-    #     # not run
+    @githash_time sim4, ref4, hyd4 = prepare_θψδ_from_sim_and_reference(;
+        path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_sand-NLayer-27-RESET=FALSE",
+        path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-27-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
+        path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand");
+        # amberMBP-git-c4275ee: 0.913546 seconds (4.04 M allocations: 605.712 MiB, 14.49% gc time, 3.67% compilation time)
+        # amberMBP-git-eae940b: 0.859826 seconds (1.85 M allocations: 499.565 MiB, 13.78% gc time)
+        # amberMBP-git-b5cd0a6: 1.000577 seconds (2.51 M allocations: 476.224 MiB, 14.86% gc time)
+    @githash_time sim5, ref5, hyd5 = prepare_θψδ_from_sim_and_reference(;
+        path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_sand-NLayer-103-RESET=FALSE",
+        path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-103-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
+        path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand");
+        # amberMBP-git-c4275ee: 2.788329 seconds (3.92 M allocations: 1.817 GiB, 15.26% gc time)
+        # amberMBP-git-eae940b: 2.626265 seconds (1.83 M allocations: 1.586 GiB, 13.83% gc time)
+        # amberMBP-git-b5cd0a6: 2.885293 seconds (2.57 M allocations: 1.456 GiB, 13.65% gc time)
+    # @githash_time sim6, ref6, hyd6 = prepare_θψδ_from_sim_and_reference(;
+    #     path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_sand-NLayer-400-RESET=FALSE",
+    #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
+    #     path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand")
+        # not run
 
     @githash_time sim1, ref1, hyd1 = prepare_θψδ_from_sim_and_reference(;
         path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_loam-NLayer-27-RESET=FALSE",
@@ -121,16 +121,16 @@ include("fct-helpers-for-integration-tests.jl")
     @test RMS_differences(sim1.θ, ref1.θ) < 0.0015
     @test RMS_differences(sim2.θ, ref2.θ) < 0.00035
     # @test RMS_differences(sim3.θ, ref3.θ) < 0.00045
-    # @test RMS_differences(sim4.θ, ref4.θ) < 0.00035
-    # @test RMS_differences(sim5.θ, ref5.θ) < 0.00035
+    @test RMS_differences(sim4.θ, ref4.θ) < 0.00035
+    @test RMS_differences(sim5.θ, ref5.θ) < 0.00035
     # # @test RMS_differences(sim6.θ, ref6.θ) < 0.00035
 
     # Compare with Hydrus1D
     @test RMS_differences(sim1.θ[Not(end),:], hyd1.θ[Not(1),:]) < 0.005
     @test RMS_differences(sim2.θ[Not(end),:], hyd2.θ[Not(1),:]) < 0.002
     # @test RMS_differences(sim3.θ[Not(end),:], hyd3.θ[Not(1),:]) < 0.001
-    # @test RMS_differences(sim4.θ[Not(end),:], hyd4.θ[Not(1),:]) < 0.006
-    # @test RMS_differences(sim5.θ[Not(end),:], hyd5.θ[Not(1),:]) < 0.007
+    @test RMS_differences(sim4.θ[Not(end),:], hyd4.θ[Not(1),:]) < 0.006
+    @test RMS_differences(sim5.θ[Not(end),:], hyd5.θ[Not(1),:]) < 0.007
     # # @test RMS_differences(sim6.θ[Not(end),:], hyd6.θ[Not(1),:]) < 0.005
 
     # Compare ψ
@@ -138,16 +138,16 @@ include("fct-helpers-for-integration-tests.jl")
     @test RMS_differences(sim1.ψ, ref1.ψ) < 2.0 # kPa
     @test RMS_differences(sim2.ψ, ref2.ψ) < 0.2 # kPa
     # @test RMS_differences(sim3.ψ, ref3.ψ) < 0.2 # kPa
-    # @test RMS_differences(sim4.ψ, ref4.ψ) < 0.003 # kPa
-    # @test RMS_differences(sim5.ψ, ref5.ψ) < 0.004 # kPa
+    @test RMS_differences(sim4.ψ, ref4.ψ) < 0.003 # kPa
+    @test RMS_differences(sim5.ψ, ref5.ψ) < 0.004 # kPa
     # # @test RMS_differences(sim6.ψ, ref6.ψ) < 0.0025 # kPa
 
     # Compare with Hydrus1D
     @test RMS_differences(sim1.ψ[Not(end),:], hyd1.ψ[Not(1),:]) < 6 # kPa
     @test RMS_differences(sim2.ψ[Not(end),:], hyd2.ψ[Not(1),:]) < 2.2 # kPa
     # @test RMS_differences(sim3.ψ[Not(end),:], hyd3.ψ[Not(1),:]) < 1.2 # kPa
-    # @test RMS_differences(sim4.ψ[Not(end),:], hyd4.ψ[Not(1),:]) < 1.0 # kPa
-    # @test RMS_differences(sim5.ψ[Not(end),:], hyd5.ψ[Not(1),:]) < 1.5 # kPa
+    @test RMS_differences(sim4.ψ[Not(end),:], hyd4.ψ[Not(1),:]) < 1.0 # kPa
+    @test RMS_differences(sim5.ψ[Not(end),:], hyd5.ψ[Not(1),:]) < 1.5 # kPa
     # # @test RMS_differences(sim6.ψ[Not(end),:], hyd6.ψ[Not(1),:]) < 1.0 # kPa
 end
 
@@ -159,23 +159,24 @@ end
     @show pwd() # This is to help get the folder right.
 
     # # 1) Run simulation and load references (LWFBrook90R and Hydrus1D)
-    # @githash_time sim4, ref4, hyd4 = prepare_θψδ_from_sim_and_reference(;
-    #     path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_sand-NLayer-27-RESET=FALSE",
-    #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-27-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
+    @githash_time sim4, ref4, hyd4 = prepare_θψδ_from_sim_and_reference(;
+        path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_sand-NLayer-27-RESET=FALSE",
+        path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-27-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
+        path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand_ISO2",
+        simulate_isotopes   = true);
+        # amberMBP-git-8806cd8: 5.731435 seconds (11.12 M allocations: 1.274 GiB, 7.61% gc time, 74.89% compilation time)
+    @githash_time sim5, ref5, hyd5 = prepare_θψδ_from_sim_and_reference(;
+        path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_sand-NLayer-103-RESET=FALSE",
+        path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-103-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
+        path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand_ISO2",
+        simulate_isotopes   = true);
+        # amberMBP-git-8806cd8: 6.073306 seconds (7.10 M allocations: 3.247 GiB, 13.81% gc time, 37.73% compilation time)
+    # @githash_time sim6, ref6, hyd6 = prepare_θψδ_from_sim_and_reference(;
+    #     path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_sand-NLayer-400-RESET=FALSE",
+    #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
     #     path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand_ISO2",
     #     simulate_isotopes   = true);
-    #     #
-    # @githash_time sim5, ref5, hyd5 = prepare_θψδ_from_sim_and_reference(;
-    #     path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_sand-NLayer-103-RESET=FALSE",
-    #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-103-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
-    #     path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand_ISO2",
-    #     simulate_isotopes   = true);
-    # # @githash_time sim6, ref6, hyd6 = prepare_θψδ_from_sim_and_reference(;
-    # #     path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_sand-NLayer-400-RESET=FALSE",
-    # #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
-    # #     path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand_ISO2",
-    # #     simulate_isotopes   = true);
-    #     # not run
+        # not run
 
     @githash_time sim1, ref1, hyd1 = prepare_θψδ_from_sim_and_reference(;
         path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_loam-NLayer-27-RESET=FALSE",
@@ -200,97 +201,117 @@ end
 
     # 2) Plot (optional, not done when testing in CI)
     # Illustrate with a plot what will be compared in the tests below
-    using Plots, Measures
-    function my_plot(df; args...)
-        plot(df[:,:time], Matrix(df[:,Not(:time)]); args...)
+    if (false) # Do these manually outside of automatic testing in order not to require Plots pkg
+        using Plots, Measures
+        function my_plot(df; args...)
+            plot(df[:,:time], Matrix(df[:,Not(:time)]); args...)
+        end
+        function my_plot!(pl, df; args...)
+            plot!(pl, df[:,:time], Matrix(df[:,Not(:time)]); args...)
+        end
+        depth_to_read_out_mm = [100 500 1000 1500 1900]
+        ## Go for simulation 2
+        pl2_θ = my_plot(sim2.θ;      line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
+        my_plot!(pl2_θ, ref2.θ;      line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
+        my_plot!(pl2_θ, hyd2.θ;      line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
+        # my_plot!(pl2_θ, hyd2.θdense,line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
+        pl2_ψ = my_plot(sim2.ψ; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
+        my_plot!(pl2_ψ, ref2.ψ; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
+        my_plot!(pl2_ψ, hyd2.ψ; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
+        pl2_δ18O = my_plot(sim2.δ18O; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
+        # my_plot!(pl2_δ18O, ref2.δ18O; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
+        my_plot!(pl2_δ18O, hyd2.δ18O; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
+        pl2_δ2H = my_plot(sim2.δ2H; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
+        # my_plot!(pl2_δ2H, ref2.δ2H; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
+        my_plot!(pl2_δ2H, hyd2.δ2H; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
+        plot(title = "Simulation from Hammel et al. (2001) - Loam",
+            plot!(pl2_θ,ylabel = "θ (-)"),
+            plot!(pl2_ψ,ylabel = "ψ (kPa)"),
+            plot!(pl2_δ18O,ylabel = "δ18O (‰)"),
+            plot!(pl2_δ2H,ylabel = "δ2H (‰)"),
+            size = (1200,1200), layout = (4,1), leftmargin = 8mm)
+        savefig("test-assets/Hammel-2001/out_Iso-Loam.png")
+        ## Go for simulation 5
+        pl5_θ = my_plot(sim5.θ;      line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
+        my_plot!(pl5_θ, ref5.θ;      line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
+        my_plot!(pl5_θ, hyd5.θ;      line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
+        # my_plot!(pl5_θ, hyd5.θdense,line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
+        pl5_ψ = my_plot(sim5.ψ; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
+        my_plot!(pl5_ψ, ref5.ψ; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
+        my_plot!(pl5_ψ, hyd5.ψ; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
+        pl5_δ18O = my_plot(sim5.δ18O; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
+        # my_plot!(pl5_δ18O, ref5.δ18O; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
+        my_plot!(pl5_δ18O, hyd5.δ18O; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
+        pl5_δ2H = my_plot(sim5.δ2H; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
+        # my_plot!(pl5_δ2H, ref5.δ2H; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
+        my_plot!(pl5_δ2H, hyd5.δ2H; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
+        plot(title = "Simulation from Hammel et al. (2001) - Sand",
+            plot!(pl5_θ,ylabel = "θ (-)"),
+            plot!(pl5_ψ,ylabel = "ψ (kPa)"),
+            plot!(pl5_δ18O,ylabel = "δ18O (‰)"),
+            plot!(pl5_δ2H,ylabel = "δ2H (‰)"),
+            size = (1200,1200), layout = (4,1), leftmargin = 8mm)
+        savefig("test-assets/Hammel-2001/out_Iso-Sand.png")
     end
-    function my_plot!(pl, df; args...)
-        plot!(pl, df[:,:time], Matrix(df[:,Not(:time)]); args...)
-    end
-    depth_to_read_out_mm = [100 500 1000 1500 1900]
-    ## Go for simulation 2
-    pl2_θ = my_plot(sim2.θ;      line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-    my_plot!(pl2_θ, ref2.θ;      line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
-    my_plot!(pl2_θ, hyd2.θ;      line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
-    # my_plot!(pl2_θ, hyd2.θdense,line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
-    pl2_ψ = my_plot(sim2.ψ; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-    my_plot!(pl2_ψ, ref2.ψ; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
-    my_plot!(pl2_ψ, hyd2.ψ; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
-    pl2_δ18O = my_plot(sim2.δ18O; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-    # my_plot!(pl2_δ18O, ref2.δ18O; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
-    my_plot!(pl2_δ18O, hyd2.δ18O; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
-    pl2_δ2H = my_plot(sim2.δ2H; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-    # my_plot!(pl2_δ2H, ref2.δ2H; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
-    my_plot!(pl2_δ2H, hyd2.δ2H; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
-    plot(title = "Simulation from Hammel et al. (2001) - Loam",
-         plot!(pl2_θ,ylabel = "θ (-)"),
-         plot!(pl2_ψ,ylabel = "ψ (kPa)"),
-         plot!(pl2_δ18O,ylabel = "δ18O (‰)"),
-         plot!(pl2_δ2H,ylabel = "δ2H (‰)"),
-         size = (1200,1200), layout = (4,1), leftmargin = 8mm)
-    savefig("test-assets/Hammel-2001/out_Iso-Loam.png")
-    # ## Go for simulation 5
-    # pl5_θ = my_plot(sim5.θ;      line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-    # my_plot!(pl5_θ, ref5.θ;      line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
-    # my_plot!(pl5_θ, hyd5.θ;      line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
-    # # my_plot!(pl5_θ, hyd5.θdense,line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
-    # pl5_ψ = my_plot(sim5.ψ; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-    # my_plot!(pl5_ψ, ref5.ψ; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
-    # my_plot!(pl5_ψ, hyd5.ψ; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
-    # pl5_δ18O = my_plot(sim5.δ18O; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-    # # my_plot!(pl5_δ18O, ref5.δ18O; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
-    # my_plot!(pl5_δ18O, hyd5.δ18O; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
-    # pl5_δ2H = my_plot(sim5.δ2H; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-    # # my_plot!(pl5_δ2H, ref5.δ2H; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
-    # my_plot!(pl5_δ2H, hyd5.δ2H; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
-    # plot(title = "Simulation from Hammel et al. (2001) - Sand",
-    #      plot!(pl5_θ,ylabel = "θ (-)"),
-    #      plot!(pl5_ψ,ylabel = "ψ (kPa)"),
-    #      plot!(pl5_δ18O,ylabel = "δ18O (‰)"),
-    #      plot!(pl5_δ2H,ylabel = "δ2H (‰)"),
-    #      size = (1200,1200), layout = (2,1), leftmargin = 8mm)
-    # savefig("test-assets/Hammel-2001/out_Iso-Sand.png")
 
-#     # Use sensible accuracy values to compare the two solutions (e.g. θ of 0.02, and ψ of 1 kPa)
-#     # (e.g. RMSE(reference, simulated) < [hardcoded_value])
-#     # Floating point accuracy is used by regression tests.
-#     # (Or could be used, once I compare with a very high-fidelity solution, of which I known
-#     #  that my code should converge to. E.g. a high-resolution Hydrus simulation.)
+    # Use sensible accuracy values to compare the two solutions (e.g. θ of 0.02, and ψ of 1 kPa)
+    # (e.g. RMSE(reference, simulated) < [hardcoded_value])
+    # Floating point accuracy is used by regression tests.
+    # (Or could be used, once I compare with a very high-fidelity solution, of which I known
+    #  that my code should converge to. E.g. a high-resolution Hydrus simulation.)
 
-#     # 3) Test RMSE
-#     # Compare θ
-#     # Compare with LWFBrook90R as reference solution
-#     @test RMS_differences(sim1.θ, ref1.θ) < 0.0015
-#     @test RMS_differences(sim2.θ, ref2.θ) < 0.00035
-#     # @test RMS_differences(sim3.θ, ref3.θ) < 0.00045
-#     @test RMS_differences(sim4.θ, ref4.θ) < 0.00035
-#     @test RMS_differences(sim5.θ, ref5.θ) < 0.00035
-#     # @test RMS_differences(sim6.θ, ref6.θ) < 0.00035
+    # 3) Test RMSE
+    # Compare θ
+    # θ: Compare with LWFBrook90R as reference solution
+    @test_skip RMS_differences(sim1.θ, ref1.θ) < 0.0015
+    @test_skip RMS_differences(sim2.θ, ref2.θ) < 0.00035
+    # @test_skip RMS_differences(sim3.θ, ref3.θ) < 0.00045
+    @test_skip RMS_differences(sim4.θ, ref4.θ) < 0.00035
+    @test_skip RMS_differences(sim5.θ, ref5.θ) < 0.00035
+    # @test_skip RMS_differences(sim6.θ, ref6.θ) < 0.00035
 
-#     # Compare with Hydrus1D
-#     @test RMS_differences(sim1.θ[Not(end),:], hyd1.θ[Not(1),:]) < 0.005
-#     @test RMS_differences(sim2.θ[Not(end),:], hyd2.θ[Not(1),:]) < 0.002
-#     # @test RMS_differences(sim3.θ[Not(end),:], hyd3.θ[Not(1),:]) < 0.001
-#     @test RMS_differences(sim4.θ[Not(end),:], hyd4.θ[Not(1),:]) < 0.006
-#     @test RMS_differences(sim5.θ[Not(end),:], hyd5.θ[Not(1),:]) < 0.007
-#     # @test RMS_differences(sim6.θ[Not(end),:], hyd6.θ[Not(1),:]) < 0.005
+    # θ: Compare with Hydrus1D-Iso
+    @test_skip RMS_differences(sim1.θ[Not(end),:], hyd1.θ[Not(1),:]) < 0.005
+    @test_skip RMS_differences(sim2.θ[Not(end),:], hyd2.θ[Not(1),:]) < 0.002
+    # @test_skip RMS_differences(sim3.θ[Not(end),:], hyd3.θ[Not(1),:]) < 0.001
+    @test_skip RMS_differences(sim4.θ[Not(end),:], hyd4.θ[Not(1),:]) < 0.006
+    @test_skip RMS_differences(sim5.θ[Not(end),:], hyd5.θ[Not(1),:]) < 0.007
+    # @test_skip RMS_differences(sim6.θ[Not(end),:], hyd6.θ[Not(1),:]) < 0.005
 
-#     # Compare ψ
-#     # Compare with LWFBrook90R as reference solution
-#     @test RMS_differences(sim1.ψ, ref1.ψ) < 2.0 # kPa
-#     @test RMS_differences(sim2.ψ, ref2.ψ) < 0.2 # kPa
-#     # @test RMS_differences(sim3.ψ, ref3.ψ) < 0.2 # kPa
-#     @test RMS_differences(sim4.ψ, ref4.ψ) < 0.003 # kPa
-#     @test RMS_differences(sim5.ψ, ref5.ψ) < 0.004 # kPa
-#     # @test RMS_differences(sim6.ψ, ref6.ψ) < 0.0025 # kPa
+    # Compare ψ
+    # ψ: Compare with LWFBrook90R as reference solution
+    @test_skip RMS_differences(sim1.ψ, ref1.ψ) < 2.0 # kPa
+    @test_skip RMS_differences(sim2.ψ, ref2.ψ) < 0.2 # kPa
+    # @test_skip RMS_differences(sim3.ψ, ref3.ψ) < 0.2 # kPa
+    @test_skip RMS_differences(sim4.ψ, ref4.ψ) < 0.003 # kPa
+    @test_skip RMS_differences(sim5.ψ, ref5.ψ) < 0.004 # kPa
+    # @test_skip RMS_differences(sim6.ψ, ref6.ψ) < 0.0025 # kPa
 
-#     # Compare with Hydrus1D
-#     @test RMS_differences(sim1.ψ[Not(end),:], hyd1.ψ[Not(1),:]) < 6 # kPa
-#     @test RMS_differences(sim2.ψ[Not(end),:], hyd2.ψ[Not(1),:]) < 2.2 # kPa
-#     # @test RMS_differences(sim3.ψ[Not(end),:], hyd3.ψ[Not(1),:]) < 1.2 # kPa
-#     @test RMS_differences(sim4.ψ[Not(end),:], hyd4.ψ[Not(1),:]) < 1.0 # kPa
-#     @test RMS_differences(sim5.ψ[Not(end),:], hyd5.ψ[Not(1),:]) < 1.5 # kPa
-#     # @test RMS_differences(sim6.ψ[Not(end),:], hyd6.ψ[Not(1),:]) < 1.0 # kPa
+    # ψ: Compare with Hydrus1D-Iso
+    @test_skip RMS_differences(sim1.ψ[Not(end),:], hyd1.ψ[Not(1),:]) < 6 # kPa
+    @test_skip RMS_differences(sim2.ψ[Not(end),:], hyd2.ψ[Not(1),:]) < 2.2 # kPa
+    # @test_skip RMS_differences(sim3.ψ[Not(end),:], hyd3.ψ[Not(1),:]) < 1.2 # kPa
+    @test_skip RMS_differences(sim4.ψ[Not(end),:], hyd4.ψ[Not(1),:]) < 1.0 # kPa
+    @test_skip RMS_differences(sim5.ψ[Not(end),:], hyd5.ψ[Not(1),:]) < 1.5 # kPa
+    # @test_skip RMS_differences(sim6.ψ[Not(end),:], hyd6.ψ[Not(1),:]) < 1.0 # kPa
+
+    # Compare δ18O with Hydrus1D-Iso
+    @test_skip RMS_differences(sim1.δ18O[Not(end),:], hyd1.δ18O[Not(1),:]) < 5 # unit: ‰
+    @test_skip RMS_differences(sim2.δ18O[Not(end),:], hyd2.δ18O[Not(1),:]) < 2.2 # unit: ‰
+    # @test_skip RMS_differences(sim3.δ18O[Not(end),:], hyd3.δ18O[Not(1),:]) < 1.2 # unit: ‰
+    @test_skip RMS_differences(sim4.δ18O[Not(end),:], hyd4.δ18O[Not(1),:]) < 1.0 # unit: ‰
+    @test_skip RMS_differences(sim5.δ18O[Not(end),:], hyd5.δ18O[Not(1),:]) < 1.5 # unit: ‰
+    # @test_skip RMS_differences(sim6.δ18O[Not(end),:], hyd6.δ18O[Not(1),:]) < 1.0 # unit: ‰
+    # Compare δ2H with Hydrus1D-Iso
+    @test_skip RMS_differences(sim1.δ2H[Not(end),:], hyd1.δ2H[Not(1),:]) < 5 # unit: ‰
+    @test_skip RMS_differences(sim2.δ2H[Not(end),:], hyd2.δ2H[Not(1),:]) < 2.2 # unit: ‰
+    # @test_skip RMS_differences(sim3.δ2H[Not(end),:], hyd3.δ2H[Not(1),:]) < 1.2 # unit: ‰
+    @test_skip RMS_differences(sim4.δ2H[Not(end),:], hyd4.δ2H[Not(1),:]) < 1.0 # unit: ‰
+    @test_skip RMS_differences(sim5.δ2H[Not(end),:], hyd5.δ2H[Not(1),:]) < 1.5 # unit: ‰
+    # @test_skip RMS_differences(sim6.δ2H[Not(end),:], hyd6.δ2H[Not(1),:]) < 1.0 # unit: ‰
+
+    # TODO(bernhard): fix Hydrus1D-Iso test for simulations 4 and 5 w.r.t d2Η (hyd4.δ2H and hyd5.δ2H remain unchanged)
+
 end
 
 
