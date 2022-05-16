@@ -804,6 +804,15 @@ function compute_isotope_du_GWAT_SWATI(
         #                                         = (γ*R_w/α - h*R_A) / ((γ - h) * (α_dif)^X)
         #       And in delta notation this is:
         #                                     δ_E = 1000*(1 + 1/((γ - h)*(α_dif)^X) * (γ/α*(1+δ_w/1000) - h*(1+δ_A/1000)))
+        #
+        # This can be used either:
+        #  a) to solve the evolution of δ numerically considering all the in and outflows at the same time
+        #  b) solve the evolution of δ analytically (assuming a single outflow due to evaporation) (Note that we could use
+        #     operator splitting to compute first the new δ due to non-fractionating in-/outflows and then the fractionating
+        #     evaporation). ==> R_w = R_{w,0} + (A/B*R_A)*f^B -A/B*R_A,
+        #                   where: B = γ / ( α * (α_dif)^X * (γ - h) ) -1
+        #                   where: A/B = - h * α / (γ - ( α * (α_dif)^X * (γ - h) ))
+        #                   and unused: A = - h / ((α_dif)^X * (γ - h))
 
         # Note that above mixing equation is expressed with C, which is exact if we take for C
         # the isotope-amount fraction x, a.k.a. isotopic abundance, a.k.a. atom fraction
@@ -887,7 +896,7 @@ function compute_isotope_du_GWAT_SWATI(
     # ε¹⁸O_eq = (α¹⁸O_eq-1)*1000    # equilibrium fractionation
     # ε²H_eq  = (α²H_eq-1)*1000     # equilibrium fractionation
 
-    ### b) Compute δ signature of evaporating flux
+    ### b1) Compute δ signature of evaporating flux (for numerical solution)
     # Equation derived based on Gonfiantini (see 60 lines above in comment)
     # δ_E = 1000*(1 + 1/((γ - h)*(α_dif)^X) * (γ/α*(1+δ_w/1000) - h*(1+δ_A/1000)))
     δ¹⁸O_SLVP = 1000*( 1 + (γ/α¹⁸O_eq*(1 + u_δ18O_SWATI[1] / 1000) - h*(1 + δ¹⁸O_a/1000)) /
@@ -902,6 +911,23 @@ function compute_isotope_du_GWAT_SWATI(
     # (Above is an alternative to formulation in Benettin 2018 HESS eq. 1 and Gibson 2016)
     # Cᵢ_SLVP = ( (Cᵢ - ε¹⁸O_eq)/α¹⁸O_eq - h*δ¹⁸O_a - ε¹⁸O_dif ) /
     #             (1 - h + ε¹⁸O_dif/1000) # [‰]
+
+    # ### b2) Compute δ signature taking into account effect of evaporating flux (for analytical solution)
+    # # Equation derived based on Gonfiantini (see 60 lines above in comment)
+    # #   R_w = R_{w,0} + (A/B*R_A)*f^B -A/B*R_A,
+    # #                   where: B = γ / ( α * (α_dif)^X * (γ - h) ) -1
+    # #                   where: A/B = - h * α / (γ - ( α * (α_dif)^X * (γ - h) ))
+    # B¹⁸O = γ / ( α¹⁸O_eq * (LWFBrook90.ISO.α¹⁸O_dif)^X_SOIL * (γ - h) ) -1
+    # B²H  = γ / ( α²H_eq  * (LWFBrook90.ISO.α²H_dif )^X_SOIL * (γ - h) ) -1
+    # AdivB¹⁸O = - h * α¹⁸O_eq / (γ - ( α¹⁸O_eq * (LWFBrook90.ISO.α¹⁸O_dif)^X_SOIL * (γ - h) ))
+    # AdivB²H  = - h * α¹⁸O_eq / (γ - ( α¹⁸O_eq * (LWFBrook90.ISO.α²H_dif )^X_SOIL * (γ - h) ))
+
+    # # Precise: R_w = R_{w,0} + (A/B*R_A)*f^B -A/B*R_A,
+    # # Approximative (?): δ = (δ0 + 1 + A/B*(δA + 1)) * f^B - (1 + A/B*(δA + 1))
+    # f_SWATI = aux_du_SLVP / u_δ18O_SWATI[1]
+    # u_δ18O_SWATI[1] = ( u_δ18O_SWATI[1] + 1 + AdivB¹⁸O * (δ¹⁸O_a + 1) ) * f_SWATI^B¹⁸O - (1 + AdivB¹⁸O * (δ¹⁸O_a + 1) )
+    # u_δ18O_SWATI[1] = ( u_δ18O_SWATI[1] + 1 + AdivB²H  * (δ¹⁸O_a + 1) ) * f_SWATI^B²H  - (1 + AdivB²H  * (δ¹⁸O_a + 1) )
+
     ##################
     ##################
     ##################

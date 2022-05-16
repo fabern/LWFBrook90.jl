@@ -427,10 +427,8 @@ function define_LWFB90_p(
     p_cst = (p_cst_1, p_cst_2, p_cst_3, p_cst_4)
 
     # 2b) Time varying parameters (e.g. meteorological forcings)
-    p_DOY_REF    = (t) -> LWFBrook90.p_DOY(t,    interpolated_meteoveg["REFERENCE_DATE"])
-    p_MONTHN_REF = (t) -> LWFBrook90.p_MONTHN(t, interpolated_meteoveg["REFERENCE_DATE"])
-    p_fT = (p_DOY_REF,
-            p_MONTHN_REF,
+    p_fT = ((t) -> LWFBrook90.p_DOY(t,    interpolated_meteoveg["REFERENCE_DATE"]),
+            (t) -> LWFBrook90.p_MONTHN(t, interpolated_meteoveg["REFERENCE_DATE"]),
             interpolated_meteoveg["p_GLOBRAD"],
             interpolated_meteoveg["p_TMAX"],
             interpolated_meteoveg["p_TMIN"],
@@ -455,7 +453,7 @@ function define_LWFB90_p(
     #     can temporarily be saved in the parameter vector to avoid computing them twice
 
     # Initialize placeholder for parameters that depend on solution and are computed
-    p_fu = ([NaN, NaN, NaN, NaN, NaN, NaN],
+    p_fu = ([NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN],
             fill(NaN, NLAYER)) # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto
     #TODO(bernhard): what are the additional 3x NaNs needed for in isotope code???
     #Earlier it was simply: [NaN, NaN, NaN, NaN, NaN, NaN], fill(NaN, NLAYER)

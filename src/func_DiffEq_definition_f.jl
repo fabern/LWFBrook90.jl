@@ -45,7 +45,10 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
         # These were computed in the callback and are kept constant in between two
         # callbacks.
-        (p_fu_RNET, aux_du_SMLT, aux_du_SLVP, δ18O_SLFL, δ2H_SLFL, p_fu_TADTM) = p[3][1]
+        (δ18O_SLFL, δ2H_SLFL,
+            p_fu_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
+            p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
+            aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old) = p[3][1]
         aux_du_TRANI = p[3][2]
 
 
