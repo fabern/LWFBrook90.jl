@@ -319,10 +319,16 @@ end
     # 1a) extract data from solution object `sol`
     # idx_u_vector_amounts       = sol.prob.p[1][4][4]
     # idx_u_vector_accumulators  = sol.prob.p[1][4][5]
+    # idx_u_scalar_amounts       = sol.prob.p[1][4][6]
+    # names_u_vector_accumulators= sol.prob.p[1][4][7]
+    # idx_u_scalar_isotopes_d18O = sol.prob.p[1][4][8]
+    # idx_u_vector_isotopes_d18O = sol.prob.p[1][4][9]
+    # idx_u_scalar_isotopes_d2H  = sol.prob.p[1][4][10]
+    # idx_u_vector_isotopes_d2H  = sol.prob.p[1][4][11]
 
     t_ref = sol.prob.p[2][17]
     x = RelativeDaysFloat2DateTime.(sol.t, t_ref)
-    y = cumsum(sol.prob.p[1][1].p_THICK) - sol.prob.p[1][1].p_THICK / 2
+    # y = cumsum(sol.prob.p[1][1].p_THICK) - sol.prob.p[1][1].p_THICK / 2
     n = sol.prob.p[1][1].NLAYER
     y_centers = [0; cumsum(sol.prob.p[1][1].p_THICK)[1:(n-1)]] +
                 sol.prob.p[1][1].p_THICK / 2
@@ -331,9 +337,13 @@ end
     # y_labels   = [round.(y_soil_ticks; digits=0)]
 
     # row_PREC_amt = sol.prob.p[2][8].(sol.t)
-    rows_SWAT_amt = sol[7 .+ (0:sol.prob.p[1][1].NLAYER-1),
-        1,
-        :] ./ sol.prob.p[1][1].p_THICK
+    # rows_SWAT_amt_old = sol[7 .+ (0:sol.prob.p[1][1].NLAYER-1),
+    #     1,
+    #     :] ./ sol.prob.p[1][1].p_THICK
+    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+        LWFBrook90.get_auxiliary_variables(sol)
+    rows_SWAT_amt = u_aux_θ'
+    rows_ψₘ = u_aux_PSIM'
 
     # row_NaN = fill(NaN, 1, length(x))
 
@@ -391,7 +401,7 @@ end
     # NOTE: --> sets attributes only when they don't already exist
     # NOTE: :=  sets attributes even when they already exist
     # link := :x #TODO(bernhard): link doesn't seem to work...
-    layout --> (2, 1)
+    layout --> (3, 1)
     # using layout because @layout is unsupported: https://github.com/JuliaPlots/RecipesBase.jl/issues/15
     # TODO(bernhard): find an easy way to do: l = @layout [grid(2, 1, heights=[0.2, 0.8]) a{0.055w}]
     # Possibly it needs to be provided when calling `plot_LWFBrook90_isotopes(... ; layout = ...)`
@@ -419,7 +429,7 @@ end
         # and other arguments:
         x, transpose(sol[1:6, 1, :]) #transpose(sol[1:6, 1, :])
     end
-    # # 3b) Heatmap (containing SWATI)
+    # # 3b) Heatmap (containing θ)
     @series begin # pl2
         title := "Soil (distributed state)"
         seriestype := :heatmap
@@ -436,6 +446,29 @@ end
         # x, y, rows_SWAT_amt
         x, y_centers, rows_SWAT_amt
     end
+    # display(plot(t = :heatmap, x, y_centers, rows_SWAT_amt_old; yflip = true))
+    # display(plot(t = :heatmap, x, y_centers[1:20], rows_SWAT_amt_old[1:20,:]; yflip = true))
+    # display(plot(t = :heatmap, x, y_centers, u_aux_θ'; yflip = true))
+    # display(plot(t = :plots_heatmap, x, y_centers, u_aux_θ'; yflip = true)) # doesn't work
+    # display(plot(t = :plots_heatmap_edges, x, y_centers, u_aux_θ'; yflip = true)) # works
+    # # 3b) Heatmap (containing ψₘ)
+    @series begin # pl3
+        title := "Soil (distributed state)"
+        seriestype := :heatmap
+        yflip := true
+        yticks := y_soil_ticks #(y_ticks, y_labels)
+        colorbar := true #true_to_check_colorbar
+        yguide := "Depth [mm]"
+        colorbar_title := "ψₘ [kPa]"
+        # clims := clims_d18O
+        subplot := 3
+
+        # and other arguments:
+        x, y_centers, rows_ψₘ
+    end
+    # display(plot(t = :heatmap, x, y_centers, rows_ψₘ; yflip = true))
+    # display(plot(t = :plots_heatmap, x, y_centers, rows_ψₘ; yflip = true)) # doesn't work
+    # display(plot(t = :plots_heatmap_edges, x, y_centers, rows_ψₘ; yflip = true)) # works
 
     # TODO: edges of cells in heatmap are not entirely correct. Find a way to override heatmap()
     #       where we provide cell edges (n+1) instead of cell centers (n)

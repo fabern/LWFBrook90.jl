@@ -145,6 +145,9 @@ for Δz_m in (
         #  git+c4d37eb+gitdirty: NLAYER=7:  25.944645 seconds (196.27 M allocations: 16.947 GiB, 15.09% gc time)
         #  git+c4d37eb+gitdirty: NLAYER=13: 34.060465 seconds (213.98 M allocations: 24.347 GiB, 17.25% gc time)
         #  git+c4d37eb+gitdirty: NLAYER=21: 47.000202 seconds (237.66 M allocations: 34.254 GiB, 16.13% gc time)
+        #  git+61a19ed+gitclean: NLAYER=7:  22.871329 seconds (175.84 M allocations: 16.795 GiB, 16.08% gc time)
+        #  git+61a19ed+gitclean: NLAYER=13: 31.875148 seconds (176.05 M allocations: 24.064 GiB, 17.32% gc time)
+        #  git+61a19ed+gitclean: NLAYER=21: 45.809290 seconds (176.38 M allocations: 33.797 GiB, 16.53% gc time)
 
     # @time sol_LWFBrook90 = solve(ode_LWFBrook90, progress = true, Euler(); # Note: Euler sometimes hangs
     #     saveat = tspan[1]:tspan[2], dt=1e-1, adaptive = false);
