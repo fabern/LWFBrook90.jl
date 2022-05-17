@@ -40,19 +40,6 @@ function prepare_θψδ_from_sim_and_reference(;
     sim_sol, _, _ = run_simulation([dirname(path_jl_prefix),
                                     basename(path_jl_prefix),
                                     ifelse(simulate_isotopes,"true","false")]) # "Hammel_loam-NLayer-27-RESET=TRUE"]
-    # TODO: below Infiltrator.store was generated before we switched the code to using C (or x) instead of δ
-    # using Infiltrator
-    # # @run LWFBrook90.compute_isotope_du_GWAT_SWATI(
-    #                 # for GWAT:
-    #                 Infiltrator.store.u_GWAT, Infiltrator.store.u_δ18O_GWAT, Infiltrator.store.u_δ2H_GWAT,
-    #                 # for SWATI:
-    #                 Infiltrator.store.du_NTFLI, Infiltrator.store.aux_du_VRFLI, Infiltrator.store.aux_du_TRANI, Infiltrator.store.aux_du_DSFLI, Infiltrator.store.aux_du_INFLI, Infiltrator.store.δ18O_INFLI, Infiltrator.store.δ2H_INFLI,  # (non-fractionating)
-    #                 Infiltrator.store.aux_du_SLVP, Infiltrator.store.p_fu_TADTM, Infiltrator.store.p_EA(Infiltrator.store.t), Infiltrator.store.p_δ2H_PREC(Infiltrator.store.t), Infiltrator.store.p_δ18O_PREC(Infiltrator.store.t), Infiltrator.store.u_aux_WETNES,
-    #                 Infiltrator.store.u_SWATI, Infiltrator.store.u_δ18O_SWATI, Infiltrator.store.u_δ2H_SWATI, 0, 0)
-    # sim_sol_long, _, _ = run_simulation(["../examples/isoBEA2010-18-reset-FALSE-input/",
-    #                                 "isoBEA2010-18-reset-FALSE",
-    #                                 "true"])
-    # sim_sol_long
     # using Plots, Measures
     # optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
     # # pl1 = LWFBrook90.ISO.plotisotopes(sol_LWFBrook90);

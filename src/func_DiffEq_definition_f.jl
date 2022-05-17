@@ -66,24 +66,24 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         #u_SNOWLQ   = u[6]
         u_SWATI     = u[idx_u_vector_amounts] # 0.000002 seconds (1 allocation: 144 bytes)
 
-        simulate_isotopes = p[1][4][3]
-        if simulate_isotopes
-            idx_u_scalar_isotopes_d18O = p[1][4][8]
-            idx_u_vector_isotopes_d18O = p[1][4][9]
-            idx_u_scalar_isotopes_d2H  = p[1][4][10]
-            idx_u_vector_isotopes_d2H  = p[1][4][11]
+        # simulate_isotopes = p[1][4][3]
+        # if simulate_isotopes
+        #     idx_u_scalar_isotopes_d18O = p[1][4][8]
+        #     idx_u_vector_isotopes_d18O = p[1][4][9]
+        #     idx_u_scalar_isotopes_d2H  = p[1][4][10]
+        #     idx_u_vector_isotopes_d2H  = p[1][4][11]
 
-            u_δ18O_GWAT = u[idx_u_scalar_isotopes_d18O[1]]
-            u_δ2H_GWAT  = u[idx_u_scalar_isotopes_d2H[1] ]
-            # u_δ18O_INTS = u[idx_u_scalar_isotopes_d18O[2]]
-            # u_δ2H_INTS  = u[idx_u_scalar_isotopes_d2H[2] ]
-            # u_δ18O_INTR = u[idx_u_scalar_isotopes_d18O[3]]
-            # u_δ2H_INTR  = u[idx_u_scalar_isotopes_d2H[3] ]
-            # u_δ18O_SNOW = u[idx_u_scalar_isotopes_d18O[4]]
-            # u_δ2H_SNOW  = u[idx_u_scalar_isotopes_d2H[4] ]
-            u_δ18O_SWATI = u[idx_u_vector_isotopes_d18O]
-            u_δ2H_SWATI  = u[idx_u_vector_isotopes_d2H]
-        end
+        #     u_δ18O_GWAT = u[idx_u_scalar_isotopes_d18O[1]]
+        #     u_δ2H_GWAT  = u[idx_u_scalar_isotopes_d2H[1] ]
+        #     # u_δ18O_INTS = u[idx_u_scalar_isotopes_d18O[2]]
+        #     # u_δ2H_INTS  = u[idx_u_scalar_isotopes_d2H[2] ]
+        #     # u_δ18O_INTR = u[idx_u_scalar_isotopes_d18O[3]]
+        #     # u_δ2H_INTR  = u[idx_u_scalar_isotopes_d2H[3] ]
+        #     # u_δ18O_SNOW = u[idx_u_scalar_isotopes_d18O[4]]
+        #     # u_δ2H_SNOW  = u[idx_u_scalar_isotopes_d2H[4] ]
+        #     u_δ18O_SWATI = u[idx_u_vector_isotopes_d18O]
+        #     u_δ2H_SWATI  = u[idx_u_vector_isotopes_d2H]
+        # end
 
         LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, t)
 
@@ -128,21 +128,24 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
                     u_GWAT, p_GSC, p_GSP) # 0.000011 seconds (15 allocations: 2.109 KiB)
 
         # Transport flow (heat, solutes, isotopes, ...)
-        if simulate_isotopes
-            EffectiveDiffusivity_18O = 0  # TODO(bernhard): compute correct values using eq 33 Zhou-2021-Environ_Model_Softw.pdf
-            EffectiveDiffusivity_2H  = 0  # TODO(bernhard): compute correct values using eq 33 Zhou-2021-Environ_Model_Softw.pdf
-            δ18O_INFLI = δ18O_SLFL
-            δ2H_INFLI  = δ2H_SLFL
+        # If we compute scalar transport as ODEs, the du's need to be computed here in the f-function
+        # However, if we compute scalar transport as separate step from the flow equation, we can
+        #     compute them separately in a callback function that is called after each time step
+        # if simulate_isotopes
+        #     EffectiveDiffusivity_18O = 0  # TODO(bernhard): compute correct values using eq 33 Zhou-2021-Environ_Model_Softw.pdf
+        #     EffectiveDiffusivity_2H  = 0  # TODO(bernhard): compute correct values using eq 33 Zhou-2021-Environ_Model_Softw.pdf
+        #     δ18O_INFLI = δ18O_SLFL
+        #     δ2H_INFLI  = δ2H_SLFL
 
-            du_δ18O_GWAT, du_δ2H_GWAT, du_δ18O_SWATI, du_δ2H_SWATI =
-                compute_isotope_du_GWAT_SWATI(
-                    # for GWAT:
-                    u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT,
-                    # for SWATI:
-                    du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI,  # (non-fractionating)
-                    aux_du_SLVP, p_fu_TADTM, p_EA(t), p_δ2H_PREC(t), p_δ18O_PREC(t), u_aux_WETNES, # (fractionating)
-                    u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, 0, 0) #EffectiveDiffusivity_18O, EffectiveDiffusivity_2H)
-        end
+        #     du_δ18O_GWAT, du_δ2H_GWAT, du_δ18O_SWATI, du_δ2H_SWATI =
+        #         compute_isotope_du_GWAT_SWATI(
+        #             # for GWAT:
+        #             u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT,
+        #             # for SWATI:
+        #             du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI,  # (non-fractionating)
+        #             aux_du_SLVP, p_fu_TADTM, p_EA(t), p_δ2H_PREC(t), p_δ18O_PREC(t), u_aux_WETNES, # (fractionating)
+        #             u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, 0, 0) #EffectiveDiffusivity_18O, EffectiveDiffusivity_2H)
+        # end
 
         ##################
         # Update solution:
@@ -162,20 +165,24 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # Update SWATI for each layer:
         du[idx_u_vector_amounts] .= du_NTFLI[:] # 0.000002 seconds (3 allocations: 224 bytes)
 
-        # update δ values of GWAT and SWATI
-        # do not update δ values of INTS, INTR, SNOW (is done in cb())
-        if simulate_isotopes
-            du[idx_u_scalar_isotopes_d18O[1]]   = du_δ18O_GWAT     #TODO(bernhard)
-            du[idx_u_scalar_isotopes_d2H[1] ]   = du_δ2H_GWAT      #TODO(bernhard)
-            # du[idx_u_scalar_isotopes_d18O[2]]   = du_δ18O_INTS   #du_δ18O_INTS, was computed in callback
-            # du[idx_u_scalar_isotopes_d2H[2] ]   = du_δ2H_INTS    #du_δ2H_INTS,  was computed in callback
-            # du[idx_u_scalar_isotopes_d18O[3]]   = du_δ18O_INTR   #du_δ18O_INTR, was computed in callback
-            # du[idx_u_scalar_isotopes_d2H[3] ]   = du_δ2H_INTR    #du_δ2H_INTR,  was computed in callback
-            # du[idx_u_scalar_isotopes_d18O[4]]   = du_δ18O_SNOW   #du_δ18O_SNOW, was computed in callback
-            # du[idx_u_scalar_isotopes_d2H[4] ]   = du_δ2H_SNOW    #du_δ2H_SNOW,  was computed in callback
-            du[idx_u_vector_isotopes_d18O]      = du_δ18O_SWATI    #TODO(bernhard)
-            du[idx_u_vector_isotopes_d2H]       = du_δ2H_SWATI     #TODO(bernhard)
-        end
+        # # update δ values of GWAT and SWATI
+        # # do not update δ values of INTS, INTR, SNOW (is done in cb())
+        # if simulate_isotopes
+        #     du[idx_u_scalar_isotopes_d18O[1]]   = du_δ18O_GWAT     #TODO(bernhard)
+        #     du[idx_u_scalar_isotopes_d2H[1] ]   = du_δ2H_GWAT      #TODO(bernhard)
+        #     # du[idx_u_scalar_isotopes_d18O[2]]   = du_δ18O_INTS   #du_δ18O_INTS, was computed in callback
+        #     # du[idx_u_scalar_isotopes_d2H[2] ]   = du_δ2H_INTS    #du_δ2H_INTS,  was computed in callback
+        #     # du[idx_u_scalar_isotopes_d18O[3]]   = du_δ18O_INTR   #du_δ18O_INTR, was computed in callback
+        #     # du[idx_u_scalar_isotopes_d2H[3] ]   = du_δ2H_INTR    #du_δ2H_INTR,  was computed in callback
+        #     # du[idx_u_scalar_isotopes_d18O[4]]   = du_δ18O_SNOW   #du_δ18O_SNOW, was computed in callback
+        #     # du[idx_u_scalar_isotopes_d2H[4] ]   = du_δ2H_SNOW    #du_δ2H_SNOW,  was computed in callback
+        #     du[idx_u_vector_isotopes_d18O]      = du_δ18O_SWATI    #TODO(bernhard)
+        #     du[idx_u_vector_isotopes_d2H]       = du_δ2H_SWATI     #TODO(bernhard)
+        # end
+
+        # save intermediate results from flow calculation into a cache
+        # for efficient use in transport calculation (in callbacks)
+        p[3][3] .=  [du_NTFLI  aux_du_VRFLI  aux_du_DSFLI  aux_du_INFLI  u_aux_WETNES]
 
         ##########################################
         # Accumulate flows to compute daily sums

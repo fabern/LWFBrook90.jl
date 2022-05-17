@@ -137,11 +137,15 @@ for Δz_m in (
     # @time sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5(); progress = true,
     #     unstable_check = unstable_check_function, # = (dt,u,p,t) -> false, #any(isnan,u),
     #     saveat = tspan[1]:tspan[2], dt=1e-6, dtmax=1e-3, adaptive = true);
-    sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5(); progress = true,
+    @time sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5(); progress = true,
         unstable_check = unstable_check_function, # = (dt,u,p,t) -> false, #any(isnan,u),
         saveat = tspan[1]:tspan[2], dt=1e-3, adaptive = false);
         # 700 days in: 40 seconds dt=1e-3, adaptive = false (isoBea default spacing: NLAYER = 7)
         # 700 days in: 90 seconds dt=1e-3, adaptive = false (isoBea dense spacing (0.05m): NLAYER = 26)
+        #  git+c4d37eb+gitdirty: NLAYER=7:  25.944645 seconds (196.27 M allocations: 16.947 GiB, 15.09% gc time)
+        #  git+c4d37eb+gitdirty: NLAYER=13: 34.060465 seconds (213.98 M allocations: 24.347 GiB, 17.25% gc time)
+        #  git+c4d37eb+gitdirty: NLAYER=21: 47.000202 seconds (237.66 M allocations: 34.254 GiB, 16.13% gc time)
+
     # @time sol_LWFBrook90 = solve(ode_LWFBrook90, progress = true, Euler(); # Note: Euler sometimes hangs
     #     saveat = tspan[1]:tspan[2], dt=1e-1, adaptive = false);
     # using BenchmarkTools # for benchmarking

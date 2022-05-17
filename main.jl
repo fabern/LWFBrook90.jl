@@ -127,8 +127,8 @@ using BenchmarkTools # for benchmarking
 # integrator = init(ode_LWFBrook90, Tsit5();
 #     progress = true,
 #     saveat = tspan[1]:tspan[2], dt = 1e-3, adaptive = true)
-# @time LWFBrook90.LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator) # 0.000048 seconds (119 allocations: 9.391 KiB)
-# @enter LWFBrook90.LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
+# @time LWFBrook90.LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator) # 0.000048 seconds (119 allocations: 9.391 KiB)
+# @enter LWFBrook90.LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     # @time LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil) # 0.000010 seconds (10 allocations: 1.406 KiB)
 # @time LWFBrook90.KPT.derive_auxiliary_SOILVAR(integrator.u[integrator.p[1][4][4]], integrator.p[1][1]) # 0.000013 seconds (11 allocations: 1.547 KiB)
 ####################
