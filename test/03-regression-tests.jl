@@ -69,6 +69,7 @@ end
     ["../examples/isoBEAdense2010-18-reset-FALSE-input/" "isoBEAdense2010-18-reset-FALSE" "true"]);
   # amberMBP-git-9d3342b: 59.289101 seconds (333.36 M allocations: 53.804 GiB, 20.36% gc time)
   # amberMBP-git-61a19ed: 89.440982 seconds (244.98 M allocations: 37.225 GiB, 9.13% gc time, 49.97% compilation time)
+  # amberMBP-git-da150a8: 44.940979 seconds (176.47 M allocations: 33.808 GiB, 15.84% gc time)
   # sol[1] # solution
   # sol[2] # input_prefix
   # sol[3] # input_path
