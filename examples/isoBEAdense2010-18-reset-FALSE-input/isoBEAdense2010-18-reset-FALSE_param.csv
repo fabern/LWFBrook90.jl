@@ -82,7 +82,7 @@ IMPERV,0
 DSLOPE,0
 LENGTH_SLOPE,200
 DRAIN,1
-GSC,0
+GSC,0.01
 GSP,0
 ### Numerical solver parameters -------,NA
 DTIMAX,0.5
