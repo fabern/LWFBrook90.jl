@@ -1176,13 +1176,18 @@ function compute_isotope_GWAT_SWATI(solution_type, integrator,
         if ((u_GWAT == 0) & (aux_du_VRFLI[NLAYER] == 0)) # initially no groundwater and no new is added
             du_δ18O_GWAT = δ18O_empty
             du_δ2H_GWAT  = δ2H_empty
-        elseif aux_du_VRFLI[NLAYER] > 0 # initially no groundwater but some is added
+        elseif ((u_GWAT == 0) & (aux_du_VRFLI[NLAYER] > 0)) # initially no groundwater but some is added
+            # If no groundwater initially (u_δ_GWAT were NaN)
+            # In that case override u to fixed value and set du to zero
+            idx_u_scalar_isotopes_d18O = integrator.p[1][4][8]
+            idx_u_scalar_isotopes_d2H  = integrator.p[1][4][10]
+            integrator.u[idx_u_scalar_isotopes_d18O[1]] = u_δ18O_SWATI[end] # u_δ18O_GWAT
+            integrator.u[idx_u_scalar_isotopes_d2H[1] ] = u_δ2H_SWATI[end]  # u_δ2H_GWAT
+
             du_δ18O_GWAT = 0
             du_δ2H_GWAT  = 0
-
-            u_δ18O_GWAT = u_δ18O_SWATI[end]
-            u_δ2H_GWAT  = u_δ2H_SWATI[end]  # TODO(benrhard): make sure this is actually modifying the state vector
         else
+            # If there is groundwater initially set du to required value
             # composition of fluxes
             δ18O_in_GWAT  = u_δ18O_SWATI[end]
             δ2H_in_GWAT   = u_δ2H_SWATI[end]
