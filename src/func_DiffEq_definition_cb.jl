@@ -402,7 +402,7 @@ end
 
 function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
 
-    use_numerical_solution = true
+    use_numerical_solution = false
     simulate_isotopes = integrator.p[1][4][3]
 
     if simulate_isotopes
@@ -502,6 +502,10 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
             u[idx_u_scalar_isotopes_d2H[1] ]   = u_δ2H_GWAT
             u[idx_u_vector_isotopes_d18O]      = u_δ18O_SWATI
             u[idx_u_vector_isotopes_d2H]       = u_δ2H_SWATI
+            #TODO(bernhard): this update generates an error message with adaptive solvers:
+            # Warning: dt <= dtmin. Aborting. There is either an error in your model specification or the true solution is unstable.
+            # └ @ SciMLBase ~/.julia/packages/SciMLBase/BoNUy/src/integrator_interface.jl:345
+            # TODO(bernhard): we can force the solving by using force_dtmin = true
         end
     end
 

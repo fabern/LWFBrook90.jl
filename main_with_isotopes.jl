@@ -54,9 +54,8 @@ for Δz_m in (
         Δz_m = Δz_m,
         Rootden_ = f1,
         uAux_PSIM_init_kPa = f2,
-        u_delta18O_init_mUr = ifelse.(cumsum(Δz_m) .< 0.2, -13., -10.),
-        u_delta2H_init_mUr  = ifelse.(cumsum(Δz_m) .< 0.2, -95., -70.))
-
+        u_delta18O_init_mUr = ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.),
+        u_delta2H_init_mUr  = ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.))
     ####################
 
     ####################
@@ -140,7 +139,18 @@ for Δz_m in (
     #     saveat = tspan[1]:tspan[2], dt=1e-6, dtmax=1e-3, adaptive = true);
     @time sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5(); progress = true,
         unstable_check = unstable_check_function, # = (dt,u,p,t) -> false, #any(isnan,u),
-        saveat = tspan[1]:tspan[2], dt=1e-3, adaptive = false);
+        saveat = tspan[1]:tspan[2],
+        # Variant2: less sophisticated but robust:
+        adaptive = false, dt=1e-3 #dt=5/60/24 # fixed 5 minutes time steps
+        # # Variant2: more sophisticated but giving errors:
+        # dt=1e-3,  # if adaptive this is just the starting value of dt
+        # adaptive = true, dtmin = 1e-3,
+        # force_dtmin = true,# without this callbacks generate an abort "dt <= dtmin",
+        #                    # e.g. see: https://github.com/SciML/DifferentialEquations.jl/issues/648
+        # maxiters = (tspan[2]-tspan[1])/1e-3 # when using force_dtmin also use maxiters
+        #                 # TODO(bernhard): regarding maxiters it seems to be the callback for δ of SNOW, INTR, INTS that causes the dtmin to be so small to reach large maxiters
+        );
+
         # 700 days in: 40 seconds dt=1e-3, adaptive = false (isoBea default spacing: NLAYER = 7)
         # 700 days in: 90 seconds dt=1e-3, adaptive = false (isoBea dense spacing (0.05m): NLAYER = 26)
         #  git+c4d37eb+gitdirty: NLAYER=7:  25.944645 seconds (196.27 M allocations: 16.947 GiB, 15.09% gc time)
@@ -209,6 +219,70 @@ for Δz_m in (
             size=(1000,1400), dpi = 300, leftmargin = 15mm);
         plot!(pl2, link = :x);
         savefig(pl2, fname*"_plotRecipe.png")
+    end
+
+    if true
+        # theme(:default) # theme(:sand)
+        PREC_color = :black
+        depth_to_read_out_mm = [150 500 800 1500]
+        if simulate_isotopes
+            δ_resultsSoil = LWFBrook90.get_δsoil(depth_to_read_out_mm, sol_LWFBrook90)
+            δ_results = get_δ(sol_LWFBrook90)
+        end
+
+        pl_θ = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+            LWFBrook90.get_θ(depth_to_read_out_mm, sol_LWFBrook90),
+            labels = string.(depth_to_read_out_mm) .* "mm",
+            xlabel = "Date",
+            ylabel = "θ\n[-]",
+            legend = :outerright);
+        pl_ψ = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+            # -LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90) .+ 1, yaxis = :log, yflip = true,
+            LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90),
+            labels = string.(depth_to_read_out_mm) .* "mm",
+            xlabel = "Date",
+            ylabel = "ψ\n[kPa]",
+            legend = :outerright);
+        if simulate_isotopes
+            pl_δ18O = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+                δ_resultsSoil[1],
+                labels = string.(depth_to_read_out_mm) .* "mm",
+                xlabel = "Date",
+                ylabel = "δ¹⁸O soil\n[‰]",
+                legend = :outerright);
+            pl_δ2H = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+                δ_resultsSoil[2],
+                labels = string.(depth_to_read_out_mm) .* "mm",
+                xlabel = "Date",
+                ylabel = "δ²H soil\n[‰]",
+                legend = :outerright);
+            # add precipitation to soil δ
+            plot!(pl_δ2H,
+                LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+                δ_results.PREC.d2H', labels = "PREC", color = PREC_color, linestyle = :dot);
+            plot!(pl_δ18O,
+                LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+                δ_results.PREC.d18O', labels = "PREC", color = PREC_color, linestyle = :dot);
+        else
+            pl_δ18O = plot();
+            pl_δ2H = plot();
+        end
+        pl_PREC = plot(
+            LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+            sol_LWFBrook90.prob.p[2][8].(sol_LWFBrook90.t),
+            t = :bar, color=PREC_color,
+            legend = :outerright, labels = "PREC    ", # whitespace for hardcoded alignment of legend
+            ylabel = "PREC\n[mm]");
+        plot(plot(pl_PREC, xlab = "", xticks = :none, topmargin = 5mm, bottommargin = 0mm),
+            plot(pl_θ;     xlab = "", xticks = :none, topmargin = 0mm, bottommargin = 0mm),
+            plot(pl_ψ;     xlab = "", xticks = :none, topmargin = 0mm, bottommargin = 0mm),
+            plot(pl_δ18O;  xlab = "", xticks = :none, topmargin = 0mm, bottommargin = 0mm),
+            plot(pl_δ2H;   xtick_direction=:out     , topmargin = 0mm, bottommargin = 5mm),
+            link = :x,
+            layout = grid(5, 1, heights=[0.1, 0.25 ,0.25, 0.2, 0.2]),
+            size=(600,500), dpi = 300, margin = 5mm);
+
+            savefig(fname*"_plot-θ-ψ-δ.png")
     end
 
 
@@ -339,46 +413,6 @@ end
 # TODO: e.g. plots_heatmap_edges: plot(t = :plots_heatmap, x[1:50], y_centers, z[:,1:50]) # doesn't work
 # TODO: e.g. plots_heatmap_edges: plot(t = :plots_heatmap_edges, x[1:50], y_centers, z[:,1:50]) # doesn't work either
 # # ###################
-
-depth_to_read_out_mm = [150 500 800 1500]
-pl_θ = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
-    LWFBrook90.get_θ(depth_to_read_out_mm, sol_LWFBrook90),
-    labels = string.(depth_to_read_out_mm) .* "mm",
-     xlabel = "Date",
-     ylabel = "θ\n[-]",
-     legend = :outerright)
-pl_ψ = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
-    # -LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90) .+ 1, yaxis = :log, yflip = true,
-    LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90),
-    labels = string.(depth_to_read_out_mm) .* "mm",
-     xlabel = "Date",
-     ylabel = "ψ\n[kPa]",
-     legend = :outerright)
-
-δ_results = LWFBrook90.get_δsoil(depth_to_read_out_mm, sol_LWFBrook90)
-
-pl_δ18O = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
-    δ_results[1],
-    labels = string.(depth_to_read_out_mm) .* "mm",
-     xlabel = "Date",
-     ylabel = "δ¹⁸O soil\n[‰]",
-     legend = :outerright)
-pl_δ2H = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
-    δ_results[2],
-    labels = string.(depth_to_read_out_mm) .* "mm",
-     xlabel = "Date",
-     ylabel = "δ²H soil\n[‰]",
-     legend = :outerright)
-
-
-plot(plot(pl_θ; xlab = "", xticks = :none),
-    plot(pl_ψ; xlab = "", xticks = :none),
-    plot(pl_δ18O; xlab = "", xticks = :none),
-    pl_δ2H, link = :x,
-    layout = grid(4, 1, heights=[0.3 ,0.3, 0.2, 0.2]),
-    size=(600,500), dpi = 300, leftmargin = 15mm)
-savefig(fname*"_plot-θ-ψ-δ.png")
-
 
 # plot(x,
 #      z[LWFBrook90.find_indices(depth_to_read_out_mm, sol_LWFBrook90), :]',
