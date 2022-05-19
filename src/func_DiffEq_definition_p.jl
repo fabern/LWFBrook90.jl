@@ -455,8 +455,9 @@ function define_LWFB90_p(
     # Initialize placeholder for parameters that depend on solution and are computed
     p_fu = ([NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN],
             fill(NaN, NLAYER),     # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto
-            fill(NaN, (NLAYER,5))) # for du_NTFLI, aux_du_VRFLI, aux_du_DSFLI, aux_du_INFLI, u_aux_WETNES)
+            fill(NaN, (NLAYER,5)), # for du_NTFLI, aux_du_VRFLI, aux_du_DSFLI, aux_du_INFLI, u_aux_WETNES)
             # TODO(bernhard): should we combine these caches to a matrix of (NLAYER,6)?
+            fill(NaN, 2))          # for du_GWFL du_SEEP
     #TODO(bernhard): what are the additional 3x NaNs needed for in isotope code???
     #Earlier it was simply: [NaN, NaN, NaN, NaN, NaN, NaN], fill(NaN, NLAYER)
 

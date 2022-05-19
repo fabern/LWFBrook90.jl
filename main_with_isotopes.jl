@@ -32,13 +32,14 @@ unused = discretize_soil(input_path, input_prefix)
 # Δz_m = round.(diff(0.0:0.05:-minimum(unused.Lower_m)), digits=5) # grid spacing (heterogenous), meter
 
 # As a test: subsequently increase resolution of the top layers.
-Δz_m = [0.04, 0.04, 0.12, 0.25, 0.3, 0.35, 0.1]                            # grid spacing (heterogenous), meter (N=7)
+Δz_m = [0.04, 0.04, 0.12, 0.25, 0.3, 0.35, 0.1];                           # grid spacing (heterogenous), meter (N=7)
 # Δz_m = [0.04, 0.04, 0.04, 0.08, 0.25, 0.3, 0.35, 0.1]                    # grid spacing (heterogenous), meter (N=8)
 # Δz_m = [0.04, 0.04, 0.04, 0.04, 0.04, 0.25, 0.3, 0.35, 0.1]              # grid spacing (heterogenous), meter (N=9)
 # Δz_m = [fill(0.04, 5); fill(0.05, 5); 0.3; 0.35; 0.1]                    # grid spacing (heterogenous), meter (N=13)
 # Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); 0.35; 0.1]          # grid spacing (heterogenous), meter (N=17)
-Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5); 0.1] # grid spacing (heterogenous), meter (N=21)
-Δz_m = [fill(0.02, 10); fill(0.025, 10); fill(0.03, 10); fill(0.035, 10); 0.1] # grid spacing (heterogenous), meter (N=41)
+Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5); 0.1]; # grid spacing (heterogenous), meter (N=21)
+Δz_m = [fill(0.02, 10); fill(0.025, 10); fill(0.03, 10); fill(0.035, 10); 0.1]; # grid spacing (heterogenous), meter (N=41)
+Δz_m = [0.04, 0.04, 0.12, 0.25, 0.3, 0.35, 0.1];                           # grid spacing (heterogenous), meter (N=7)
 
 
 for Δz_m in (
@@ -54,7 +55,7 @@ for Δz_m in (
         Rootden_ = f1,
         uAux_PSIM_init_kPa = f2,
         u_delta18O_init_mUr = ifelse.(cumsum(Δz_m) .< 0.2, -13., -10.),
-        u_delta2H_init_mUr  = ifelse.(cumsum(Δz_m) .< 0.2, -95., -90.))
+        u_delta2H_init_mUr  = ifelse.(cumsum(Δz_m) .< 0.2, -95., -70.))
 
     ####################
 

@@ -183,6 +183,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # save intermediate results from flow calculation into a cache
         # for efficient use in transport calculation (in callbacks)
         p[3][3] .=  [du_NTFLI  aux_du_VRFLI  aux_du_DSFLI  aux_du_INFLI  u_aux_WETNES]
+        p[3][4][1:2] .=  [du_GWFL, du_SEEP]
 
         ##########################################
         # Accumulate flows to compute daily sums

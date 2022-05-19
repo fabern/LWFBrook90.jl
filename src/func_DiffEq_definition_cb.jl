@@ -441,6 +441,8 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
         aux_du_DSFLI = integrator.p[3][3][:,3]
         aux_du_INFLI = integrator.p[3][3][:,4]
         u_aux_WETNES = integrator.p[3][3][:,5]
+        du_GWFL      = integrator.p[3][4][1]
+        du_SEEP      = integrator.p[3][4][2]
 
         idx_u_scalar_isotopes_d18O = integrator.p[1][4][8]
         idx_u_vector_isotopes_d18O = integrator.p[1][4][9]
@@ -487,10 +489,19 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
             u[idx_u_vector_isotopes_d18O]      .+= integrator.dt * du_δ18O_SWATI    #TODO(bernhard)
             u[idx_u_vector_isotopes_d2H]       .+= integrator.dt * du_δ2H_SWATI     #TODO(bernhard)
         else # using analytical solution
-            u[idx_u_scalar_isotopes_d18O[1]]   +=  0 # TODO(bernhard): replace this with analytical solution
-            u[idx_u_scalar_isotopes_d2H[1] ]   +=  0 # TODO(bernhard): replace this with analytical solution
-            u[idx_u_vector_isotopes_d18O]      .+= 0 # TODO(bernhard): replace this with analytical solution
-            u[idx_u_vector_isotopes_d2H]       .+= 0 # TODO(bernhard): replace this with analytical solution
+            u_δ18O_GWAT, u_δ2H_GWAT, u_δ18O_SWATI, u_δ2H_SWATI =
+                compute_isotope_u_GWAT_SWATI(integrator,
+                    # for GWAT:
+                    u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT, du_GWFL, du_SEEP,
+                    # for SWATI:
+                    du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI,  # (non-fractionating)
+                    aux_du_SLVP, p_fu_TADTM, p_EA(t), p_δ2H_PREC(t), p_δ18O_PREC(t), u_aux_WETNES, # (fractionating)
+                    u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, 0, 0) #EffectiveDiffusivity_18O, EffectiveDiffusivity_2H)
+
+            u[idx_u_scalar_isotopes_d18O[1]]   = u_δ18O_GWAT
+            u[idx_u_scalar_isotopes_d2H[1] ]   = u_δ2H_GWAT
+            u[idx_u_vector_isotopes_d18O]      = u_δ18O_SWATI
+            u[idx_u_vector_isotopes_d2H]       = u_δ2H_SWATI
         end
     end
 

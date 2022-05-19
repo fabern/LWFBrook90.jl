@@ -781,21 +781,20 @@ function compute_isotope_du_GWAT_SWATI(
     u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, EffectiveDiffusivity_18O, EffectiveDiffusivity_2H,
     )
 
-    return compute_isotope_GWAT_SWATI("numerical-du",
+    return compute_isotope_GWAT_SWATI("numerical-du", NaN,
         # for GWAT:
-        u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT,
+        u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT,NaN,NaN,
         # for SWATI:
         du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI, # (non-fractionating)
         aux_du_SLVP, p_fu_TADTM, p_EA, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
         u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, EffectiveDiffusivity_18O, EffectiveDiffusivity_2H,
         )
-
 end
 
 """
-    compute_isotope_u_GWAT_SWATI(
+    compute_isotope_u_GWAT_SWATI(integrator,
         # for GWAT:
-        u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT,
+        u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT, du_GWFL, du_SEEP,
         # for SWATI:
         du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI, # (non-fractionating)
         aux_du_SLVP, p_fu_TADTM, p_EA, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
@@ -816,10 +815,10 @@ by using the alternative function `compute_isotope_du_GWAT_SWATI()`
 
 The function returns: u_δ18O_GWAT, u_δ2H_GWAT, u_δ18O_SWATI, u_δ2H_SWATI
 """
-function compute_isotope_u_GWAT_SWATI(
+function compute_isotope_u_GWAT_SWATI(integrator,
     # TODO(bernhard): make non-allocating and rename as compute_isotope_u_GWAT_SWATI!()
     # for GWAT:
-    u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT,
+    u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT, du_GWFL, du_SEEP,
     # for SWATI:
     du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI, # (non-fractionating)
     aux_du_SLVP, p_fu_TADTM, p_EA, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
@@ -829,24 +828,20 @@ function compute_isotope_u_GWAT_SWATI(
     # Code below is very condensed. Refer to implementation notes in programming comments
     # noted within the function `compute_isotope_du_GWAT_SWATI()`.
 
-    return compute_isotope_GWAT_SWATI("analytical-u",
+    return compute_isotope_GWAT_SWATI("analytical-u", integrator,
         # for GWAT:
-        u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT,
+        u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT, du_GWFL, du_SEEP,
         # for SWATI:
         du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI, # (non-fractionating)
         aux_du_SLVP, p_fu_TADTM, p_EA, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
         u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, EffectiveDiffusivity_18O, EffectiveDiffusivity_2H,
         )
-
-
-    return u_δ18O_GWAT, u_δ2H_GWAT, u_δ18O_SWATI, u_δ2H_SWATI
-
 end
 
 
-function compute_isotope_GWAT_SWATI(solution_type,
+function compute_isotope_GWAT_SWATI(solution_type, integrator,
         # for GWAT:
-        u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT,
+        u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT, du_GWFL, du_SEEP,
         # for SWATI:
         du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI, # (non-fractionating)
         aux_du_SLVP, p_fu_TADTM, p_EA, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
