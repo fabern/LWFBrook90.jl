@@ -207,6 +207,8 @@ end
     # 1) data to plot
 
     # 1a) extract data from solution object `sol`
+    simulate_isotopes            = sol.prob.p[1][4][3]
+    @assert simulate_isotopes "Provided solution did not simulate isotopes"
     # idx_u_vector_amounts       = sol.prob.p[1][4][4]
     # idx_u_vector_accumulators  = sol.prob.p[1][4][5]
     # idx_u_scalar_amounts       = sol.prob.p[1][4][6]
