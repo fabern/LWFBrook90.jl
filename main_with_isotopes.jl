@@ -284,6 +284,15 @@ for Δz_m in (
             savefig(fname*"_plot-θ-ψ-δ.png")
     end
 
+    aux_indices = sol_LWFBrook90.prob.p[1][4][5]
+    aux_names = sol_LWFBrook90.prob.p[1][4][7]
+    plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+                [sol_LWFBrook90[aux_indices[30],:] sol_LWFBrook90[aux_indices[31],:]],
+                legend = :outerright, labels = aux_names[:, 30:31],
+                ylabel = "Water balance error [mm]")
+            savefig(fname*"_plot-water-balance-error.png")
+
+
 
 end
 

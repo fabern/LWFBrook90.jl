@@ -54,9 +54,9 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
         ##################
         # Parse states
-        idx_u_vector_amounts       = p[1][4][4] # 7:(6+NLAYER)
-        idx_u_vector_accumulators  = p[1][4][5] # 6+0+0+1*NLAYER .+ (1:25)
-        # idx_u_scalar_amounts       = p[1][4][6] # 1:6
+        idx_u_vector_amounts       = p[1][4][4]
+        idx_u_vector_accumulators  = p[1][4][5]
+        # idx_u_scalar_amounts       = p[1][4][6]
 
         u_GWAT     = u[1]
         #u_INTS     = u[2]
@@ -227,7 +227,10 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
             # du[idx_u_vector_accumulators[26]]= 0 # cum_d_rthr, was computed in callback
             # du[idx_u_vector_accumulators[27]]= 0 # cum_d_sthr, was computed in callback
-            # balerd[IDAY]=BALERD
+            du[idx_u_vector_accumulators[28]] = 0 # new_SWAT, is computed in callback
+            du[idx_u_vector_accumulators[29]] = 0 # new_totalWATER, is computed in callback
+            du[idx_u_vector_accumulators[30]] = 0 # BALERD_SWAT, is computed in callback
+            du[idx_u_vector_accumulators[31]] = 0 # BALERD_total, is computed in callback
 
             # TODO(bernhard): use SavingCallback() for all quantities that have du=0
             #                 only keep du=... for quantities for which we compute cumulative sums

@@ -30,7 +30,7 @@ function define_LWFB90_u0(p, uScalar_initial,
         u_SWATIinit_mm]
 
     # idx_u_vector_amounts       = p[1][4][4]
-    # idx_u_vector_accumulators  = p[1][4][5]
+    idx_u_vector_accumulators  = p[1][4][5]
     # idx_u_scalar_amounts       = p[1][4][6]
 
     # isotopes:
@@ -90,11 +90,19 @@ function define_LWFB90_u0(p, uScalar_initial,
 
     if compute_intermediate_quantities
         # accumulation variables:
-        N_accumulate_variables = 25
+        N_accumulate_variables = 31
         u0 = [u0; fill(0, N_accumulate_variables, 1)]
         # Set idx_u_vector_accumulators
         # idx_u_vector_accumulators = (length(u0)-N_accumulate_variables+1):length(u0)
-        #idx_u_vector_accumulators = 6+4+4+3*p[1][1].NLAYER .+ (1:25)
+        #idx_u_vector_accumulators = 6+4+4+3*p[1][1].NLAYER .+ (1:31)
+
+        # initialize terms for balance errors with initial values from u0
+        new_SWAT       = sum(u_SWATIinit_mm) # total soil water in all layers, mm
+        new_totalWATER = u_INTR_init_mm + u_INTS_init_mm + u_SNOW_init_mm + new_SWAT + u_GWAT_init_mm # total water in all compartments, mm
+
+        u0[idx_u_vector_accumulators[28]] = new_SWAT
+        u0[idx_u_vector_accumulators[29]] = new_totalWATER
+
     else
         #TODO(bernhard): In order to set idx_u_vector_accumulators, we need to solve the follwoing:
         #                How to define a quantity that can return an empty vector when within []

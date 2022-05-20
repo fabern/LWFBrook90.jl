@@ -392,15 +392,14 @@ function define_LWFB90_p(
         idx_u_vector_isotopes_d2H  = []
     end
     if compute_intermediate_quantities
-        # 25 is the number of currently programmed intermediate quantities
+        # 31 is the number of currently programmed intermediate quantities
         if simulate_isotopes
-            idx_u_vector_accumulators = 6+NLAYER+4+NLAYER+4+NLAYER .+ (1:25)
+            idx_u_vector_accumulators = 6+NLAYER+4+NLAYER+4+NLAYER .+ (1:31)
         else
-            idx_u_vector_accumulators = 6+NLAYER                   .+ (1:25)
+            idx_u_vector_accumulators = 6+NLAYER                   .+ (1:31)
         end
         names_u_vector_accumulators = [
-                "cum_d_prec"  "cum_d_rfal"  "cum_d_sfal"  "cum_d_rint" "cum_d_sint"  "cum_d_rsno"  "cum_d_rnet"  "cum_d_smlt"  "cum_d_evap"  "cum_d_tran"  "cum_d_irvp"  "cum_d_isvp"  "cum_d_slvp"  "cum_d_snvp"  "cum_d_pint"  "cum_d_ptran"  "cum_d_pslvp" "flow"  "seep"  "srfl"  "slfl"  "byfl"  "dsfl"  "gwfl"  "vrfln"
-                #"cum_d_rthr", "cum_d_sthr"
+                "cum_d_prec"  "cum_d_rfal"  "cum_d_sfal"  "cum_d_rint" "cum_d_sint"  "cum_d_rsno"  "cum_d_rnet"  "cum_d_smlt"  "cum_d_evap"  "cum_d_tran"  "cum_d_irvp"  "cum_d_isvp"  "cum_d_slvp"  "cum_d_snvp"  "cum_d_pint"  "cum_d_ptran"  "cum_d_pslvp" "flow"  "seep"  "srfl"  "slfl"  "byfl"  "dsfl"  "gwfl"  "vrfln" "cum_d_rthr" "cum_d_sthr" "totalSWAT" "new_totalWATER" "BALERD_SWAT" "BALERD_total"
             ]
     else
         idx_u_vector_accumulators = []

@@ -13,6 +13,10 @@ function define_LWFB90_cb()
     #     (u,t,integrator) -> nothing;    # TODO(bernhard): this can be used to implement the corrector step of Lai-2015 (or Li-2021-J_Hydrol.pdf) after DiffEq.jl is used for the predictor step
     #     func_everystep=true, func_start=false)
 
+    cb_check_balance_errors = PeriodicCallback(LWFBrook90R_check_balance_errors!,  1.0;
+                                initial_affect = false, # we do not need to check balance errors at the initial conditions...
+                                save_positions=(false,false));
+
     cb_INTS_INTR_SNOW_amounts = PeriodicCallback(LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!,  1.0;
                                 initial_affect = true,
                                 save_positions=(false,false));
@@ -27,6 +31,7 @@ function define_LWFB90_cb()
 
     cb_set = CallbackSet(
         # cb_LaiRichardsCorrectorStep,
+        cb_check_balance_errors,
         cb_INTS_INTR_SNOW_amounts,
         cb_INTS_INTR_SNOW_deltas,
         cb_SWAT_GWAT_deltas
@@ -94,8 +99,8 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     #  - fraction of precipitation as snowfall depending on DOY
     #  - snowpack temperature, potential snow evaporation and soil evaporation resistance depending on u_SNOW
 
-    idx_u_vector_amounts       = integrator.p[1][4][4] # 7:(6+NLAYER)
-    idx_u_vector_accumulators  = integrator.p[1][4][5] # 6+0+0+1*NLAYER .+ (1:25)
+    idx_u_vector_amounts       = integrator.p[1][4][4]
+    idx_u_vector_accumulators  = integrator.p[1][4][5]
 
     u_INTS     = integrator.u[2]
     u_INTR     = integrator.u[3]
@@ -241,7 +246,6 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     # Note that below state variables serve only as accumulator but do not affect
     # the evolution of the system.
     if compute_intermediate_quantities
-        # @assert length(idx_u_vector_accumulators) == 25
 
         # 1) Either set daily sum if rate is constant throughout precipitation interval: p_DTP*(...)
         # 2) or then set daily sum to zero and use ODE to accumulate flow.
@@ -275,7 +279,12 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
 
         # integrator.u[idx_u_vector_accumulators[26]] = p_DTP*(p_fT_RFAL - aux_du_RINT) # cum_d_rthr
         # integrator.u[idx_u_vector_accumulators[27]] = p_DTP*(p_fT_SFAL - aux_du_SINT) # cum_d_sthr
-        # timeseries_balerd[IDAY]=BALERD
+
+        # below are computed in separate callback:
+        # integrator.u[idx_u_vector_accumulators[28]] = new_SWAT
+        # integrator.u[idx_u_vector_accumulators[29]] = new_totalWATER
+        # integrator.u[idx_u_vector_accumulators[30]] = BALERD_SWAT
+        # integrator.u[idx_u_vector_accumulators[31]] = BALERD_total
 
         # TODO(bernhard): use SavingCallback() for all quantities that have u=... and du=0
         #                 only keep du=... for quantities for which we compute cumulative sums
@@ -299,8 +308,8 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         #  - fraction of precipitation as snowfall depending on DOY
         #  - snowpack temperature, potential snow evaporation and soil evaporation resistance depending on u_SNOW
 
-        # idx_u_vector_amounts       = integrator.p[1][4][4] # 7:(6+NLAYER)
-        # idx_u_vector_accumulators  = integrator.p[1][4][5] # 6+0+0+1*NLAYER .+ (1:25)
+        # idx_u_vector_amounts       = integrator.p[1][4][4]
+        # idx_u_vector_accumulators  = integrator.p[1][4][5]
 
         u_INTS     = integrator.u[2]
         u_INTR     = integrator.u[3]
@@ -402,13 +411,13 @@ end
 
 function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
 
-    use_numerical_solution = false
+    use_numerical_solution = true
     simulate_isotopes = integrator.p[1][4][3]
 
     if simulate_isotopes
-        idx_u_vector_amounts       = integrator.p[1][4][4] # 7:(6+NLAYER)
-        idx_u_vector_accumulators  = integrator.p[1][4][5] # 6+0+0+1*NLAYER .+ (1:25)
-        # idx_u_scalar_amounts     = integrator.p[1][4][6] # 1:6
+        idx_u_vector_amounts       = integrator.p[1][4][4]
+        idx_u_vector_accumulators  = integrator.p[1][4][5]
+        # idx_u_scalar_amounts     = integrator.p[1][4][6]
 
         u_GWAT     = integrator.u[1]
         u_INTS     = integrator.u[2]
@@ -507,6 +516,67 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
             # └ @ SciMLBase ~/.julia/packages/SciMLBase/BoNUy/src/integrator_interface.jl:345
             # TODO(bernhard): we can force the solving by using force_dtmin = true
         end
+    end
+
+    return nothing
+end
+
+
+
+
+function LWFBrook90R_check_balance_errors!(integrator)
+
+    # Compute daily water balance errors
+
+    (NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, Reset,
+    p_DTP, p_NPINT,
+
+    _, _, _, _, _, _,
+    _, _, _, _,
+    _, _, _, _,
+    _, _,
+
+    _) = integrator.p[1][2]
+
+    idx_u_vector_amounts       = integrator.p[1][4][4]
+    idx_u_vector_accumulators  = integrator.p[1][4][5]
+
+    u_GWAT     = integrator.u[2]
+    u_INTS     = integrator.u[2]
+    u_INTR     = integrator.u[3]
+    u_SNOW     = integrator.u[4]
+    # u_CC       = integrator.u[5]
+    # u_SNOWLQ   = integrator.u[6]
+    u_SWATI    = integrator.u[idx_u_vector_amounts]
+
+    if compute_intermediate_quantities
+        # a) Get change in total storages
+        # Get old total water volumes and compute new total water volumes
+        old_SWAT       = integrator.uprev[idx_u_vector_accumulators[28]]
+        old_totalWATER = integrator.uprev[idx_u_vector_accumulators[29]]
+        new_SWAT       = sum(u_SWATI) # total soil water in all layers, mm
+        new_totalWATER = u_INTR + u_INTS + u_SNOW + new_SWAT + u_GWAT # total water in all compartments, mm
+
+        # Save current totals into caches to check error for next period
+        integrator.u[idx_u_vector_accumulators[28]] = new_SWAT
+        integrator.u[idx_u_vector_accumulators[29]] = new_totalWATER
+
+        # a) Get fluxes that caused change in total storages
+        idx_cum_d_prec = idx_u_vector_accumulators[ 1]
+        idx_cum_d_evap = idx_u_vector_accumulators[ 9]
+        idx_cum_flow   = idx_u_vector_accumulators[18]
+        idx_cum_seep   = idx_u_vector_accumulators[19]
+
+        # c) Compute balance error
+        # BALERD_SWAT  = old_SWAT       - new_SWAT       +
+        BALERD_SWAT = 0 # TODO(bernhard)
+        # BALERD_total = old_totalWATER - new_totalWATER + PRECD - EVAPD - FLOWD - SEEPD
+        BALERD_total = old_totalWATER - new_totalWATER +
+            integrator.u[idx_cum_d_prec ] - integrator.u[idx_cum_d_evap ] - integrator.u[idx_cum_flow   ] - integrator.u[idx_cum_seep   ]
+
+        # d) Store balance errors into state vector
+        integrator.u[idx_u_vector_accumulators[30]] = BALERD_SWAT
+        integrator.u[idx_u_vector_accumulators[31]] = BALERD_total
     end
 
     return nothing
