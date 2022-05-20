@@ -561,18 +561,32 @@ function LWFBrook90R_check_balance_errors!(integrator)
         integrator.u[idx_u_vector_accumulators[28]] = new_SWAT
         integrator.u[idx_u_vector_accumulators[29]] = new_totalWATER
 
-        # a) Get fluxes that caused change in total storages
+        # b) Get fluxes that caused change in total storages
+        # Across outer boundaries of above and belowground system:
         idx_cum_d_prec = idx_u_vector_accumulators[ 1]
         idx_cum_d_evap = idx_u_vector_accumulators[ 9]
         idx_cum_flow   = idx_u_vector_accumulators[18]
         idx_cum_seep   = idx_u_vector_accumulators[19]
 
+        # Across outer boundaries of belowground system (SWATI):
+        # SLFL  # idx_u_vector_accumulators[21] # cum_d_slfl
+        # BYFL  # idx_u_vector_accumulators[22] # cum_d_byfl
+        # INFLI # as sum(INFLI) =  SLFL - sum(BYFL)
+        idx_cum_slfl = idx_u_vector_accumulators[21]
+        idx_cum_byfl = idx_u_vector_accumulators[22]
+        idx_cum_dsfl  = idx_u_vector_accumulators[23]# cum_d_dsfl
+        idx_cum_vrfln = idx_u_vector_accumulators[25] # cum_d_vrfln
+        idx_cum_tran  = idx_u_vector_accumulators[10] # cum_d_tran
+        idx_cum_slvp  = idx_u_vector_accumulators[13] # cum_d_slvp
+
+
         # c) Compute balance error
-        # BALERD_SWAT  = old_SWAT       - new_SWAT       +
-        BALERD_SWAT = 0 # TODO(bernhard)
+        # BALERD_SWAT  = old_SWAT - new_SWAT + INFLI - DSFLI - VRFL(NLAYER) - TRANI - SLVP
+        BALERD_SWAT  = old_SWAT - new_SWAT +
+            (integrator.u[idx_cum_slfl] - integrator.u[idx_cum_byfl]) - integrator.u[idx_cum_dsfl] - integrator.u[idx_cum_vrfln] - integrator.u[idx_cum_tran] - integrator.u[idx_cum_slvp]
         # BALERD_total = old_totalWATER - new_totalWATER + PRECD - EVAPD - FLOWD - SEEPD
         BALERD_total = old_totalWATER - new_totalWATER +
-            integrator.u[idx_cum_d_prec ] - integrator.u[idx_cum_d_evap ] - integrator.u[idx_cum_flow   ] - integrator.u[idx_cum_seep   ]
+            integrator.u[idx_cum_d_prec] - integrator.u[idx_cum_d_evap] - integrator.u[idx_cum_flow] - integrator.u[idx_cum_seep]
 
         # d) Store balance errors into state vector
         integrator.u[idx_u_vector_accumulators[30]] = BALERD_SWAT
