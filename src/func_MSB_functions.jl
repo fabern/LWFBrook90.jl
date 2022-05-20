@@ -705,15 +705,19 @@ function compute_isotope_U_of_INTS_INTR_SNOW_and_SLFL(
     # 2c) SNOW (in: p_fu_STHR*δ_STHR, aux_du_RSNO*δ_RSNO; out: aux_du_SMLT*δ_SMLT, aux_du_SNVP*δ_SNVP)
     #          with δ_STHR = δ_PREC, δ_RSNO = δ_PREC; δ_SMLT = δ_SNOW, δ_SNVP = f(f, α, ...)
 
+
+
+
+
     # update_δ_with_mixing_and_evaporation(dt, u₀, δ₀, inflow, δin, outflow, E, δₐ, h, α_eq, α_dif, γ, X)
-    u_INTS_final, u_δ2H_INTS_final  = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(p_DTP, u_INTS, u_δ2H_INTS,  aux_du_SINT,               p_δ2H_PREC,                0,           aux_du_ISVP, δ²H_a,  h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,  γ, X_INTS)
-    _,            u_δ18O_INTS_final = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(p_DTP, u_INTS, u_δ18O_INTS, aux_du_SINT,               p_δ18O_PREC,               0,           aux_du_ISVP, δ¹⁸O_a, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif, γ, X_INTS)
-    u_INTR_final, u_δ2H_INTR_final  = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(p_DTP, u_INTR, u_δ2H_INTR,  aux_du_RINT,               p_δ2H_PREC,                0,           aux_du_IRVP, δ²H_a,  h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,  γ, X_INTR)
-    _,            u_δ18O_INTR_final = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(p_DTP, u_INTR, u_δ18O_INTR, aux_du_RINT,               p_δ18O_PREC,               0,           aux_du_IRVP, δ¹⁸O_a, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif, γ, X_INTR)
+    u_INTS_final, u_δ2H_INTS_final  = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(p_DTP, u_INTS, u_δ2H_INTS,  aux_du_SINT,               p_δ2H_PREC,                0,           LWFBrook90.ISO.R_VSMOW²H,  aux_du_ISVP, δ²H_a,  h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,  γ, X_INTS)
+    _,            u_δ18O_INTS_final = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(p_DTP, u_INTS, u_δ18O_INTS, aux_du_SINT,               p_δ18O_PREC,               0,           LWFBrook90.ISO.R_VSMOW¹⁸O, aux_du_ISVP, δ¹⁸O_a, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif, γ, X_INTS)
+    u_INTR_final, u_δ2H_INTR_final  = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(p_DTP, u_INTR, u_δ2H_INTR,  aux_du_RINT,               p_δ2H_PREC,                0,           LWFBrook90.ISO.R_VSMOW²H,  aux_du_IRVP, δ²H_a,  h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,  γ, X_INTR)
+    _,            u_δ18O_INTR_final = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(p_DTP, u_INTR, u_δ18O_INTR, aux_du_RINT,               p_δ18O_PREC,               0,           LWFBrook90.ISO.R_VSMOW¹⁸O, aux_du_IRVP, δ¹⁸O_a, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif, γ, X_INTR)
     # NOTE: for SNOW the isotope balance is greatly simplified. The most precise
     #       approach would be to define mixing concentrattion within `SNOWPACK()` in `module_SNO.jl`
-    u_SNOW_final, u_δ2H_SNOW_final  = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(p_DTP, u_SNOW, u_δ2H_SNOW,  (p_fu_STHR, aux_du_RSNO), (p_δ2H_PREC,  p_δ2H_PREC),  aux_du_SMLT, aux_du_SNVP, δ²H_a,  h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,  γ, X_SNOW)
-    _,            u_δ18O_SNOW_final = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(p_DTP, u_SNOW, u_δ18O_SNOW, (p_fu_STHR, aux_du_RSNO), (p_δ18O_PREC, p_δ18O_PREC), aux_du_SMLT, aux_du_SNVP, δ¹⁸O_a, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif, γ, X_SNOW)
+    u_SNOW_final, u_δ2H_SNOW_final  = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(p_DTP, u_SNOW, u_δ2H_SNOW,  (p_fu_STHR, aux_du_RSNO), (p_δ2H_PREC,  p_δ2H_PREC),  aux_du_SMLT, LWFBrook90.ISO.R_VSMOW²H,  aux_du_SNVP, δ²H_a,  h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,  γ, X_SNOW)
+    _,            u_δ18O_SNOW_final = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(p_DTP, u_SNOW, u_δ18O_SNOW, (p_fu_STHR, aux_du_RSNO), (p_δ18O_PREC, p_δ18O_PREC), aux_du_SMLT, LWFBrook90.ISO.R_VSMOW¹⁸O, aux_du_SNVP, δ¹⁸O_a, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif, γ, X_SNOW)
 
 
 
@@ -996,21 +1000,21 @@ function compute_isotope_GWAT_SWATI(solution_type, integrator,
 
     else
         # TODO(bernhard): current analytical code doesn't take diffusive fluxes into account
+        dt = integrator.dt # should be equal to integrator.tprev - t
 
         ### b2) Compute δ signature taking into account effect of evaporating flux (for analytical solution)
         # Equation derived based on Gonfiantini (see 60 lines above in comment)
         #   R_w = R_{w,0} + (A/B*R_A)*f^B -A/B*R_A,
         #                   where: B = γ / ( α * (α_dif)^X * (γ - h) ) -1
         #                   where: A/B = - h * α / (γ - ( α * (α_dif)^X * (γ - h) ))
-        B¹⁸O = γ / ( α¹⁸O_eq * (LWFBrook90.ISO.α¹⁸O_dif)^X_SOIL * (γ - h) ) -1
-        B²H  = γ / ( α²H_eq  * (LWFBrook90.ISO.α²H_dif )^X_SOIL * (γ - h) ) -1
-        AdivB¹⁸O = - h * α¹⁸O_eq / (γ - ( α¹⁸O_eq * (LWFBrook90.ISO.α¹⁸O_dif)^X_SOIL * (γ - h) ))
-        AdivB²H  = - h * α¹⁸O_eq / (γ - ( α¹⁸O_eq * (LWFBrook90.ISO.α²H_dif )^X_SOIL * (γ - h) ))
+        # B¹⁸O = γ / ( α¹⁸O_eq * (LWFBrook90.ISO.α¹⁸O_dif)^X_SOIL * (γ - h) ) -1
+        # B²H  = γ / ( α²H_eq  * (LWFBrook90.ISO.α²H_dif )^X_SOIL * (γ - h) ) -1
+        # AdivB¹⁸O = - h * α¹⁸O_eq / (γ - ( α¹⁸O_eq * (LWFBrook90.ISO.α¹⁸O_dif)^X_SOIL * (γ - h) ))
+        # AdivB²H  = - h * α¹⁸O_eq / (γ - ( α¹⁸O_eq * (LWFBrook90.ISO.α²H_dif )^X_SOIL * (γ - h) ))
 
         # Precise: R_w = R_{w,0} + (A/B*R_A)*f^B -A/B*R_A,
         # Approximative (?): δ = (δ0 + 1 + A/B*(δA + 1)) * f^B - (1 + A/B*(δA + 1))
 
-        dt = integrator.dt # should be equal to integrator.tprev - t
         # # u_SWATI1_before_evaporation_flux = u_SWATI[1] + aux_du_SLVP * dt
         # # f_SWATI1 = aux_du_SLVP / u_SWATI1_before_evaporation_flux
         # f_SWATI1 = aux_du_SLVP / (u_SWATI[1] + aux_du_SLVP * dt) # fraction remaining due to fractionating flux
@@ -1043,20 +1047,20 @@ function compute_isotope_GWAT_SWATI(solution_type, integrator,
                 δin18 = δ18O_INFLI
                 δin2  = δ2H_INFLI
                 inflow  = aux_du_INFLI[1]
-                outflow = aux_du_TRANI[1] + aux_du_VRFLI[1] + aux_du_DSFLI[1]
+                outflow = [aux_du_TRANI[1], aux_du_VRFLI[1], aux_du_DSFLI[1]]
                 E       = aux_du_SLVP
                 # update_δ_with_mixing_and_evaporation(dt, u₀, δ₀, inflow, δin, outflow, E, δₐ, h, α_eq, α_dif, γ, X)
-                _, u_δ18O_SWATI_final[1] = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(dt, u_SWATI[1], u_δ18O_SWATI[1], inflow, δin18, outflow, E, δ¹⁸O_a, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif,  γ, X_SOIL)
-                _, u_δ2H_SWATI_final[1]  = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(dt, u_SWATI[1], u_δ2H_SWATI[1],  inflow, δin2,  outflow, E, δ²H_a,  h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,   γ, X_SOIL)
+                _, u_δ18O_SWATI_final[1] = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(dt, u_SWATI[1], u_δ18O_SWATI[1], inflow, δin18, outflow, LWFBrook90.ISO.R_VSMOW²H,  E, δ¹⁸O_a, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif,  γ, X_SOIL)
+                _, u_δ2H_SWATI_final[1]  = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(dt, u_SWATI[1], u_δ2H_SWATI[1],  inflow, δin2,  outflow, LWFBrook90.ISO.R_VSMOW¹⁸O, E, δ²H_a,  h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,   γ, X_SOIL)
             else
-                δin18 = (δ18O_INFLI*(aux_du_INFLI[i]) + u_δ18O_SWATI_final[i-1]*aux_du_VRFLI[i-1]) / (aux_du_INFLI[i] + aux_du_VRFLI[i-1])
-                δin2  = (δ2H_INFLI *(aux_du_INFLI[i]) + u_δ2H_SWATI_final[i-1] *aux_du_VRFLI[i-1]) / (aux_du_INFLI[i] + aux_du_VRFLI[i-1])
-                inflow  = aux_du_INFLI[i] + aux_du_VRFLI[i-1]
-                outflow = aux_du_TRANI[i] + aux_du_VRFLI[i] + aux_du_DSFLI[i]
+                δin18 = [δ18O_INFLI, u_δ18O_SWATI[i-1]]
+                δin2  = [δ2H_INFLI , u_δ2H_SWATI[i-1] ]
+                inflow  = [aux_du_INFLI[i], aux_du_VRFLI[i-1]]
+                outflow = [aux_du_TRANI[i], aux_du_VRFLI[i], aux_du_DSFLI[i]]
                 E       = 0
                 # update_δ_with_mixing_and_evaporation(dt, u₀, δ₀, inflow, δin, outflow, E, δₐ, h, α_eq, α_dif, γ, X)
-                _, u_δ18O_SWATI_final[i] = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(dt, u_SWATI[i], u_δ18O_SWATI[i], inflow, δin18, outflow, E, δ¹⁸O_a, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif,  γ, X_SOIL)
-                _, u_δ2H_SWATI_final[i]  = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(dt, u_SWATI[i], u_δ2H_SWATI[i],  inflow, δin2,  outflow, E, δ²H_a,  h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,   γ, X_SOIL)
+                _, u_δ18O_SWATI_final[i] = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(dt, u_SWATI[i], u_δ18O_SWATI[i], inflow, δin18, outflow, LWFBrook90.ISO.R_VSMOW²H,  E, δ¹⁸O_a, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif,  γ, X_SOIL)
+                _, u_δ2H_SWATI_final[i]  = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(dt, u_SWATI[i], u_δ2H_SWATI[i],  inflow, δin2,  outflow, LWFBrook90.ISO.R_VSMOW¹⁸O, E, δ²H_a,  h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,   γ, X_SOIL)
             end
             # # update_δ_with_mixing_and_evaporation(dt, u₀, δ₀, inflow, δin, outflow, E, δₐ, h, α_eq, α_dif, γ, X)
             # u_INTS_final, u_δ2H_INTS_final  = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(dt, u_INTS, u_δ2H_INTS,  aux_du_SINT,               p_δ2H_PREC,                0,           aux_du_ISVP, δ²H_a,  h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,  γ, X_INTS)
@@ -1069,14 +1073,14 @@ function compute_isotope_GWAT_SWATI(solution_type, integrator,
             # _,            u_δ18O_SNOW_final = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(dt, u_SNOW, u_δ18O_SNOW, (p_fu_STHR, aux_du_RSNO), (p_δ18O_PREC, p_δ18O_PREC), aux_du_SMLT, aux_du_SNVP, δ¹⁸O_a, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif, γ, X_SNOW)
         end
 
-        δin18 = u_δ18O_SWATI_final[NLAYER]
-        δin2  = u_δ2H_SWATI_final[NLAYER]
+        δin18 = u_δ18O_SWATI[NLAYER]
+        δin2  = u_δ2H_SWATI[NLAYER]
         inflow  = aux_du_VRFLI[NLAYER]
         outflow = [du_GWFL, du_SEEP]
         E       = 0
         # update_δ_with_mixing_and_evaporation(dt, u₀, δ₀, inflow, δin, outflow, E, δₐ, h, α_eq, α_dif, γ, X)
-        _, u_δ18O_GWAT_final = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(dt, u_GWAT, u_δ18O_GWAT, inflow, δin18, outflow, E, δ¹⁸O_a, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif,  γ, X_SOIL)
-        _, u_δ2H_GWAT_final  = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(dt, u_GWAT, u_δ2H_GWAT,  inflow, δin2,  outflow, E, δ²H_a,  h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,   γ, X_SOIL)
+        _, u_δ18O_GWAT_final = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(dt, u_GWAT, u_δ18O_GWAT, inflow, δin18, outflow, LWFBrook90.ISO.R_VSMOW²H,  E, δ¹⁸O_a, h, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif,  γ, X_SOIL)
+        _, u_δ2H_GWAT_final  = LWFBrook90.ISO.update_δ_with_mixing_and_evaporation(dt, u_GWAT, u_δ2H_GWAT,  inflow, δin2,  outflow, LWFBrook90.ISO.R_VSMOW¹⁸O, E, δ²H_a,  h, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,   γ, X_SOIL)
     end
 
 

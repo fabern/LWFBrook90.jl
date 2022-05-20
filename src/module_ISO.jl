@@ -30,6 +30,11 @@ using RecipesBase
 using ..LWFBrook90: RelativeDaysFloat2DateTime
 
 export α¹⁸O_dif, α²H_dif, α¹⁸O_eq, α²H_eq, δ_CraigGordon, update_δ_with_mixing_and_evaporation
+export R_VSMOW¹⁸O, R_VSMOW²H
+
+# Isotopic ratios of standard ocean water VSMOW (reference for definition of δ)
+R_VSMOW¹⁸O = 2005.2e-6 # (source: Baertschi-1976-Earth_Planet_Sci_Lett)
+R_VSMOW²H  = 155.76e-6 # (source: Hagemann-1970-Tellus)
 
 # 1a) Kinetic fractionation (Gonfiantini 2018):
 α¹⁸O_dif = 1.0285 # -, D/D_i i.e. ¹H¹H¹⁶O/¹H¹H¹⁸O: Taken from Gonfiantini 2018, citing Merlivat 1978
@@ -69,13 +74,14 @@ function δ_CraigGordon(δ0, δΑ, f, h, α_eq, α_dif, γ, X)
     return (-1 -A/B*(δΑ + 1) + (δ0 + 1 + A/B*(δΑ+1)) * f^B) # (-)
 end
 
-function update_δ_with_mixing_and_evaporation(dt, u₀, δ₀, inflow, δin, outflow, E, δₐ, h, α_eq, α_dif, γ, X)
+function update_δ_with_mixing_and_evaporation(dt, u₀, δ₀, inflow, δin, outflow, R_std, E, δₐ, h, α_eq, α_dif, γ, X; do_fractionation=false)
     # dt       [day]      , time step
     # u₀       [mm]       , initial amount
     # δ₀       [mUr]      , initial isotopic signature
     # inflow   [mm/day]   , tuple/vector of inflows
     # δin      [mUr]      , tuple/vector of inflow isotopic signatures
     # outflow  [mm/day]   , outflow rates
+    # R_std     [-]       , standard ratio between number of heavy and number of light molecules
     # E        [mm/day]   , evaporation rate
     # δₐ, h, γ, α_eq, α_dif, X (see below...) other evaporation specific parameters
 
@@ -115,67 +121,71 @@ function update_δ_with_mixing_and_evaporation(dt, u₀, δ₀, inflow, δin, ou
     # (2') δ⁺  = -1 + (δ₀ + 1) * W₀/W⁺ + dt/W⁺ (∑ (δin + 1) * Win - ∑ (δ₀ + 1) * Wout)
     # (4') δ⁺⁺ = [δ⁺ + 1 + A/B(δₐ + 1)]*f^B - [1 + A/B*(δₐ + 1)]
 
+
+    # Step 0) make the balance exact by using atom fractions x
+    # x = R/(1+R) = ((δ+1)*R_std) / (1 + ((δ+1)*R_std))
+    x₀ = (δ₀/1000 + 1)*R_std / (1 + (δ₀/1000 + 1)*R_std)
+    xin = (δin./1000 .+ 1).*R_std ./ (1 .+ (δin./1000 .+ 1).*R_std)
+
     #### TODO 16.03: reactivate @assert all(inflow .>= 0) "Inflows should not be negative"
     #########
     # Step 1)
     u⁺ = u₀ + dt * (sum(inflow) - sum(outflow)) # [mm]
-    δ⁺ = -1 + (δ₀ + 1) * u₀/u⁺ + dt/u⁺ * (sum( (δin .+ 1).* inflow) - sum( (δ₀ + 1) * outflow))
+    x⁺ = (x₀ * u₀ + dt * (sum(xin .* inflow) - sum(x₀ .* outflow)) ) / u⁺
+    # old, unused: δ⁺ = -1 + (δ₀ / 1000. + 1) * u₀/u⁺ + dt/u⁺ * (sum( (δin ./ 1000. .+ 1).* inflow) - sum( (δ₀ / 1000. + 1) * outflow))
+
     # Edge cases:
     # a) u₀ = 0, then we had δ₀ = NA, and we want δ⁺ = δin (weighted by inflows...)
-    if u₀ == 0
-        if u⁺ == 0
-            δ⁺ = NaN
-        else
-            #### TODO 16.03: reactivate # @assert sum(outflow) == 0 # No, this is not correct: we can start with u₀ = 0 and have both in and outflows...
-            #### TODO 16.03: reactivate @assert sum(outflow) <= sum(inflow)
-            δ⁺ = dt/u⁺ * (sum( (δin .+ 1).* inflow)) - 1
-            δ⁺ = (sum( (δin .+ 1).* dt .* inflow)) / u⁺ - 1
-            # (δ⁺ + 1) * u⁺ = (sum( (δin .+ 1).* inflow * dt))
-            # in case there is only one inflow this would reduce to:
-                # (δ⁺ + 1) = (δin .+ 1) * (inflow * dt)/(u₀ + inflow * dt - outflow * dt)
-                # (δ⁺ + 1) = (δin .+ 1) * (inflow * dt)/(u⁺)
-                # (δ⁺ + 1) * u⁺ = (δin .+ 1) * (inflow * dt)
-                # and as we have u⁺ = u₀ + dt * sum(inflow) - dt*sum(outflow)
-                # and as we have u⁺ = 0 + dt * inflow - dt*sum(outflow)
-                # (δ⁺ + 1) * dt * (inflow-outflow) = (δin .+ 1) * (inflow * dt)
-                # δ⁺ = δin                                         , iff outflow is zero
-                # (δ⁺ + 1)  = (δin + 1) * inflow/(inflow-outflow)  , otherwise
-        end
+    if u⁺ == 0
+        # δ⁺ = NaN
+        x⁺ = NaN
+    elseif u₀ == 0
+        #### TODO 16.03: reactivate @assert sum(outflow) <= sum(inflow)
+        x⁺ = sum(xin .* inflow) / sum(inflow)
     end
 
     #########
     # Step 2)
     #### TODO 16.03: reactivate @assert dt*E >= 0 "Evaporation rate must be positive"
-
     u⁺⁺ = u⁺ - dt*E
     # u⁺⁺ = max(0, u⁺ - dt*E) # TODO(bernhard): as below assert was triggered, this is a quick workaround
     #### TODO 16.03: reactivate @assert u⁺⁺ >= 0 "End amount must still be positive after evaporation"
 
-    #### TODO(bernhard): reactivation fractionation f     = u⁺⁺ / u⁺
-    #### TODO(bernhard): reactivation fractionation AdivB = h * α_eq/(γ - α_eq * α_dif^X *(γ-h))
-    #### TODO(bernhard): reactivation fractionation B     = γ/(α_eq * α_dif^X *(γ-h)) - 1
-    #### TODO(bernhard): reactivation fractionation δ⁺⁺   = (δ⁺ + 1 + AdivB * (δₐ + 1)) * f^B - [1 + AdivB*(δₐ + 1)]
+    if do_fractionation
+        #### TODO(bernhard): reactivation fractionation f     = u⁺⁺ / u⁺
+        #### TODO(bernhard): reactivation fractionation AdivB = h * α_eq/(γ - α_eq * α_dif^X *(γ-h))
+        #### TODO(bernhard): reactivation fractionation B     = γ/(α_eq * α_dif^X *(γ-h)) - 1
+        #### TODO(bernhard): reactivation fractionation δ⁺⁺   = (δ⁺ + 1 + AdivB * (δₐ / 1000. + 1)) * f^B - [1 + AdivB*(δₐ / 1000. + 1)]
 
-    #### TODO(bernhard): reactivation fractionation # Edge cases:
-    #### TODO(bernhard): reactivation fractionation # b) u⁺ = 0, then we had δ⁺ = NA and thus no evaporation from u⁺ to u⁺⁺ --> δ⁺⁺ = NA
-    #### TODO(bernhard): reactivation fractionation # c) u⁺⁺ = 0, then we have δ⁺⁺ = NA
-    #### TODO(bernhard): reactivation fractionation if u⁺ == 0 | u⁺⁺ == 0
-    #### TODO(bernhard): reactivation fractionation     u⁺⁺ = 0
-    #### TODO(bernhard): reactivation fractionation     δ⁺⁺ = NaN
-    #### TODO(bernhard): reactivation fractionation else
-    #### TODO(bernhard): reactivation fractionation     @assert isnan(δ⁺⁺) # TODO(bernhard) include bang: @assert !isnan(δ⁺⁺)
-    #### TODO(bernhard): reactivation fractionation end
+        #### TODO(bernhard): reactivation fractionation # Edge cases:
+        #### TODO(bernhard): reactivation fractionation # b) u⁺ = 0, then we had δ⁺ = NA and thus no evaporation from u⁺ to u⁺⁺ --> δ⁺⁺ = NA
+        #### TODO(bernhard): reactivation fractionation # c) u⁺⁺ = 0, then we have δ⁺⁺ = NA
+        #### TODO(bernhard): reactivation fractionation if u⁺ == 0 | u⁺⁺ == 0
+        #### TODO(bernhard): reactivation fractionation     u⁺⁺ = 0
+        #### TODO(bernhard): reactivation fractionation     δ⁺⁺ = NaN
+        #### TODO(bernhard): reactivation fractionation else
+        #### TODO(bernhard): reactivation fractionation     @assert isnan(δ⁺⁺) # TODO(bernhard) include bang: @assert !isnan(δ⁺⁺)
+        #### TODO(bernhard): reactivation fractionation end
 
-    #### TODO(bernhard): reactivation fractionation # Step 3)
-    #### TODO(bernhard): reactivation fractionation # consider some edge cases:
-    #### TODO(bernhard): reactivation fractionation # 3a) u₀ = 0, then we had δ₀ = NA
-    #### TODO(bernhard): reactivation fractionation # 3b) u⁺ = 0, then we had δ⁺ = NA and thus no evaporation from u⁺ to u⁺⁺ --> δ⁺⁺ = NA
-    #### TODO(bernhard): reactivation fractionation # 3c) u⁺⁺ = 0, then we have δ⁺⁺ = NA
-    #### TODO(bernhard): reactivation fractionation # 3d) else we have the formulas (3) and (4')
-    #### TODO(bernhard): reactivation fractionation return (u⁺⁺, δ⁺⁺)
+        #### TODO(bernhard): reactivation fractionation # Step 3)
+        #### TODO(bernhard): reactivation fractionation # consider some edge cases:
+        #### TODO(bernhard): reactivation fractionation # 3a) u₀ = 0, then we had δ₀ = NA
+        #### TODO(bernhard): reactivation fractionation # 3b) u⁺ = 0, then we had δ⁺ = NA and thus no evaporation from u⁺ to u⁺⁺ --> δ⁺⁺ = NA
+        #### TODO(bernhard): reactivation fractionation # 3c) u⁺⁺ = 0, then we have δ⁺⁺ = NA
+        #### TODO(bernhard): reactivation fractionation # 3d) else we have the formulas (3) and (4')
+        #### TODO(bernhard): reactivation fractionation return (u⁺⁺, δ⁺⁺)
+    else
+        x⁺⁺ = x⁺
+    end
 
     # TODO(bernhard): for debugging: don't use fractionation effect!
-    return (u⁺⁺, δ⁺)
+
+    # Go back to using δ in mUr
+    # δ = R/R_std - 1 = x/(1-x)/R_std - 1
+    # δ⁺ = 1000 * (x⁺/(1-x⁺)/R_std - 1)
+    δ⁺⁺ = 1000 * (x⁺⁺/(1-x⁺⁺)/R_std - 1)
+
+    return (u⁺⁺, δ⁺⁺)
 end
 
 
