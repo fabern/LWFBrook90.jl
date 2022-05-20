@@ -146,10 +146,10 @@ for Δz_m in (
         # # Variant1: less sophisticated but robust:
         # adaptive = false, dt=1e-3 #dt=5/60/24 # fixed 5 minutes time steps
         # Variant2: more sophisticated but giving errors:
-        adaptive = true, dtmin = 1e-3, dt=1e-3,  # if adaptive dt is just the starting value of the time steps
+        adaptive = true, dtmin = 1e-4, dt=1e-3,  # if adaptive dt is just the starting value of the time steps
         force_dtmin = true,# without this callbacks generate an abort "dt <= dtmin",
                            # e.g. see: https://github.com/SciML/DifferentialEquations.jl/issues/648
-        maxiters = (tspan[2]-tspan[1])/1e-3 # when using force_dtmin also use maxiters
+        maxiters = (tspan[2]-tspan[1])/1e-4 # when using force_dtmin also use maxiters
                         # TODO(bernhard): regarding maxiters it seems to be the callback for δ of SNOW, INTR, INTS that causes the dtmin to be so small to reach large maxiters
         );
 
