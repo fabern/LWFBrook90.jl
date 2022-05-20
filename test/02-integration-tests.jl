@@ -70,17 +70,17 @@ include("fct-helpers-for-integration-tests.jl")
     # depth_to_read_out_mm = [100 500 1000 1500 1900]
     # ## Go for simulation 2
     # pl2_θ = my_plot(sim2.θ;      line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-    # my_plot!(pl2_θ, ref2.θ;      line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
+    # my_plot!(pl2_θ, ref2.θ;      line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
     # my_plot!(pl2_θ, hyd2.θ;      line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
     # # my_plot!(pl2_θ, hyd2.θdense,line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
     # pl2_ψ = my_plot(sim2.ψ; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-    # my_plot!(pl2_ψ, ref2.ψ; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
+    # my_plot!(pl2_ψ, ref2.ψ; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
     # my_plot!(pl2_ψ, hyd2.ψ; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
     # # pl2_δ18O = my_plot(sim2.δ18O; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-    # # my_plot!(pl2_δ18O, ref2.δ18O; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
+    # # my_plot!(pl2_δ18O, ref2.δ18O; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
     # # my_plot!(pl2_δ18O, hyd2.δ18O; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
     # # pl2_δ2H = my_plot(sim2.δ2H; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-    # # my_plot!(pl2_δ2H, ref2.δ2H; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
+    # # my_plot!(pl2_δ2H, ref2.δ2H; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
     # # my_plot!(pl2_δ2H, hyd2.δ2H; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
     # plot(title = "Simulation from Hammel et al. (2001) - Loam",
     #      plot!(pl2_θ,ylabel = "θ (-)"),
@@ -90,17 +90,17 @@ include("fct-helpers-for-integration-tests.jl")
     # savefig("test-assets/Hammel-2001/out_Loam.png")
     # ## Go for simulation 5
     # pl5_θ = my_plot(sim5.θ;      line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-    # my_plot!(pl5_θ, ref5.θ;      line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
+    # my_plot!(pl5_θ, ref5.θ;      line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
     # my_plot!(pl5_θ, hyd5.θ;      line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
     # # my_plot!(pl5_θ, hyd5.θdense,line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
     # pl5_ψ = my_plot(sim5.ψ; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-    # my_plot!(pl5_ψ, ref5.ψ; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
+    # my_plot!(pl5_ψ, ref5.ψ; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
     # my_plot!(pl5_ψ, hyd5.ψ; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
     # # pl5_δ18O = my_plot(sim5.δ18O; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-    # # my_plot!(pl5_δ18O, ref5.δ18O; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
+    # # my_plot!(pl5_δ18O, ref5.δ18O; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
     # # my_plot!(pl5_δ18O, hyd5.δ18O; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
     # # pl5_δ2H = my_plot(sim5.δ2H; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-    # # my_plot!(pl5_δ2H, ref5.δ2H; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
+    # # my_plot!(pl5_δ2H, ref5.δ2H; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
     # # my_plot!(pl5_δ2H, hyd5.δ2H; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
     # plot(title = "Simulation from Hammel et al. (2001) - Sand",
     #      plot!(pl5_θ,ylabel = "θ (-)"),
@@ -119,7 +119,7 @@ include("fct-helpers-for-integration-tests.jl")
     # Compare θ
     # Compare with LWFBrook90R as reference solution
     @test RMS_differences(sim1.θ, ref1.θ) < 0.0015
-    @test RMS_differences(sim2.θ, ref2.θ) < 0.00035
+    @test RMS_differences(sim2.θ, ref2.θ) < 0.00040
     # @test RMS_differences(sim3.θ, ref3.θ) < 0.00045
     @test RMS_differences(sim4.θ, ref4.θ) < 0.00035
     @test RMS_differences(sim5.θ, ref5.θ) < 0.00035
@@ -136,7 +136,7 @@ include("fct-helpers-for-integration-tests.jl")
     # Compare ψ
     # Compare with LWFBrook90R as reference solution
     @test RMS_differences(sim1.ψ, ref1.ψ) < 2.0 # kPa
-    @test RMS_differences(sim2.ψ, ref2.ψ) < 0.2 # kPa
+    @test RMS_differences(sim2.ψ, ref2.ψ) < 0.26 # kPa
     # @test RMS_differences(sim3.ψ, ref3.ψ) < 0.2 # kPa
     @test RMS_differences(sim4.ψ, ref4.ψ) < 0.003 # kPa
     @test RMS_differences(sim5.ψ, ref5.ψ) < 0.004 # kPa
@@ -144,7 +144,7 @@ include("fct-helpers-for-integration-tests.jl")
 
     # Compare with Hydrus1D
     @test RMS_differences(sim1.ψ[Not(end),:], hyd1.ψ[Not(1),:]) < 6 # kPa
-    @test RMS_differences(sim2.ψ[Not(end),:], hyd2.ψ[Not(1),:]) < 2.2 # kPa
+    @test RMS_differences(sim2.ψ[Not(end),:], hyd2.ψ[Not(1),:]) < 2.6 # kPa
     # @test RMS_differences(sim3.ψ[Not(end),:], hyd3.ψ[Not(1),:]) < 1.2 # kPa
     @test RMS_differences(sim4.ψ[Not(end),:], hyd4.ψ[Not(1),:]) < 1.0 # kPa
     @test RMS_differences(sim5.ψ[Not(end),:], hyd5.ψ[Not(1),:]) < 1.5 # kPa
@@ -165,12 +165,14 @@ end
         path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand_ISO2",
         simulate_isotopes   = true);
         # amberMBP-git-8806cd8: 5.731435 seconds (11.12 M allocations: 1.274 GiB, 7.61% gc time, 74.89% compilation time)
+        # amberMBP-git-a3fc1a2: 10.796262 seconds (106.83 M allocations: 8.381 GiB, 16.10% gc time)
     @githash_time sim5, ref5, hyd5 = prepare_θψδ_from_sim_and_reference(;
         path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_sand-NLayer-103-RESET=FALSE",
         path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-103-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
         path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand_ISO2",
         simulate_isotopes   = true);
         # amberMBP-git-8806cd8: 6.073306 seconds (7.10 M allocations: 3.247 GiB, 13.81% gc time, 37.73% compilation time)
+        # amberMBP-git-a3fc1a2: 36.013205 seconds (341.00 M allocations: 29.140 GiB, 16.44% gc time)
     # @githash_time sim6, ref6, hyd6 = prepare_θψδ_from_sim_and_reference(;
     #     path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_sand-NLayer-400-RESET=FALSE",
     #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
@@ -185,6 +187,7 @@ end
         simulate_isotopes   = true);
         # amberMBP-git-9d3342b non-adaptive 1e-3: 5.787269 seconds (23.98 M allocations: 4.513 GiB, 19.17% gc time)
         # amberMBP-git-9d3342b non-adaptive 1e-4: 58.027604 seconds (234.96 M allocations: 45.378 GiB, 18.09% gc time, 2.00% compilation time) -> unusable result containing NaN
+        # amberMBP-git-a3fc1a2 adaptive (min 1e-4): 49.855293 seconds (492.71 M allocations: 38.667 GiB, 15.75% gc time, 0.06% compilation time)
     @githash_time sim2, ref2, hyd2 = prepare_θψδ_from_sim_and_reference(;
         path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_loam-NLayer-103-RESET=FALSE",
         path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_loam-NLayer-103-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
@@ -192,6 +195,7 @@ end
         simulate_isotopes   = true);
         # amberMBP-git-9d3342b non-adaptive 1e-3: 15.853492 seconds (24.28 M allocations: 14.548 GiB, 21.53% gc time)
         # amberMBP-git-9d3342b non-adaptive 1e-4: 162.067400 seconds (233.84 M allocations: 146.493 GiB, 20.15% gc time) -> unusable result containing NaN
+        # amberMBP-git-a3fc1a2 adaptive (min 1e-4): 172.691746 seconds (1.58 G allocations: 134.645 GiB, 16.29% gc time)
     # # @githash_time sim3, ref3, hyd3 = prepare_θψδ_from_sim_and_reference(;
     # #     path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_loam-NLayer-400-RESET=FALSE",
     # #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_loam-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
@@ -211,18 +215,18 @@ end
         end
         depth_to_read_out_mm = [100 500 1000 1500 1900]
         ## Go for simulation 2
-        pl2_θ = my_plot(sim2.θ;      line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-        my_plot!(pl2_θ, ref2.θ;      line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
-        my_plot!(pl2_θ, hyd2.θ;      line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
-        # my_plot!(pl2_θ, hyd2.θdense,line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
-        pl2_ψ = my_plot(sim2.ψ; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-        my_plot!(pl2_ψ, ref2.ψ; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
-        my_plot!(pl2_ψ, hyd2.ψ; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
-        pl2_δ18O = my_plot(sim2.δ18O; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-        # my_plot!(pl2_δ18O, ref2.δ18O; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
-        my_plot!(pl2_δ18O, hyd2.δ18O; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
-        pl2_δ2H = my_plot(sim2.δ2H; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-        # my_plot!(pl2_δ2H, ref2.δ2H; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
+        pl2_θ = my_plot(sim2.θ;      line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm");
+        my_plot!(pl2_θ, ref2.θ;      line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""]);
+        my_plot!(pl2_θ, hyd2.θ;      line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""]);
+        # my_plot!(pl2_θ, hyd2.θdense,line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""]);
+        pl2_ψ = my_plot(sim2.ψ; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm");
+        my_plot!(pl2_ψ, ref2.ψ; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""]);
+        my_plot!(pl2_ψ, hyd2.ψ; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""]);
+        pl2_δ18O = my_plot(sim2.δ18O; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm");
+        # my_plot!(pl2_δ18O, ref2.δ18O; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""]);
+        my_plot!(pl2_δ18O, hyd2.δ18O; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""]);
+        pl2_δ2H = my_plot(sim2.δ2H; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm");
+        # my_plot!(pl2_δ2H, ref2.δ2H; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
         my_plot!(pl2_δ2H, hyd2.δ2H; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
         plot(title = "Simulation from Hammel et al. (2001) - Loam",
             plot!(pl2_θ,ylabel = "θ (-)"),
@@ -232,19 +236,19 @@ end
             size = (1200,1200), layout = (4,1), leftmargin = 8mm)
         savefig("test-assets/Hammel-2001/out_Iso-Loam.png")
         ## Go for simulation 5
-        pl5_θ = my_plot(sim5.θ;      line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-        my_plot!(pl5_θ, ref5.θ;      line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
-        my_plot!(pl5_θ, hyd5.θ;      line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
-        # my_plot!(pl5_θ, hyd5.θdense,line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
-        pl5_ψ = my_plot(sim5.ψ; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-        my_plot!(pl5_ψ, ref5.ψ; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
-        my_plot!(pl5_ψ, hyd5.ψ; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
-        pl5_δ18O = my_plot(sim5.δ18O; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-        # my_plot!(pl5_δ18O, ref5.δ18O; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
-        my_plot!(pl5_δ18O, hyd5.δ18O; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
-        pl5_δ2H = my_plot(sim5.δ2H; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-        # my_plot!(pl5_δ2H, ref5.δ2H; line = :dash, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
-        my_plot!(pl5_δ2H, hyd5.δ2H; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
+        pl5_θ = my_plot(sim5.θ;      line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm");
+        my_plot!(pl5_θ, ref5.θ;      line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""]);
+        my_plot!(pl5_θ, hyd5.θ;      line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""]);
+        # my_plot!(pl5_θ, hyd5.θdense,line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""]);
+        pl5_ψ = my_plot(sim5.ψ; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm");
+        my_plot!(pl5_ψ, ref5.ψ; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""]);
+        my_plot!(pl5_ψ, hyd5.ψ; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""]);
+        pl5_δ18O = my_plot(sim5.δ18O; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm");
+        # my_plot!(pl5_δ18O, ref5.δ18O; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""]);
+        my_plot!(pl5_δ18O, hyd5.δ18O; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""]);
+        pl5_δ2H = my_plot(sim5.δ2H; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm");
+        # my_plot!(pl5_δ2H, ref5.δ2H; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""]);
+        my_plot!(pl5_δ2H, hyd5.δ2H; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""]);
         plot(title = "Simulation from Hammel et al. (2001) - Sand",
             plot!(pl5_θ,ylabel = "θ (-)"),
             plot!(pl5_ψ,ylabel = "ψ (kPa)"),
@@ -263,54 +267,53 @@ end
     # 3) Test RMSE
     # Compare θ
     # θ: Compare with LWFBrook90R as reference solution
-    @test_skip RMS_differences(sim1.θ, ref1.θ) < 0.0015
-    @test_skip RMS_differences(sim2.θ, ref2.θ) < 0.00035
-    # @test_skip RMS_differences(sim3.θ, ref3.θ) < 0.00045
-    @test_skip RMS_differences(sim4.θ, ref4.θ) < 0.00035
-    @test_skip RMS_differences(sim5.θ, ref5.θ) < 0.00035
-    # @test_skip RMS_differences(sim6.θ, ref6.θ) < 0.00035
+    @test RMS_differences(sim1.θ, ref1.θ) < 0.0015
+    @test RMS_differences(sim2.θ, ref2.θ) < 0.00035
+    # @test RMS_differences(sim3.θ, ref3.θ) < 0.00045
+    @test RMS_differences(sim4.θ, ref4.θ) < 0.00035
+    @test RMS_differences(sim5.θ, ref5.θ) < 0.00035
+    # @test RMS_differences(sim6.θ, ref6.θ) < 0.00035
 
     # θ: Compare with Hydrus1D-Iso
-    @test_skip RMS_differences(sim1.θ[Not(end),:], hyd1.θ[Not(1),:]) < 0.005
-    @test_skip RMS_differences(sim2.θ[Not(end),:], hyd2.θ[Not(1),:]) < 0.002
-    # @test_skip RMS_differences(sim3.θ[Not(end),:], hyd3.θ[Not(1),:]) < 0.001
-    @test_skip RMS_differences(sim4.θ[Not(end),:], hyd4.θ[Not(1),:]) < 0.006
-    @test_skip RMS_differences(sim5.θ[Not(end),:], hyd5.θ[Not(1),:]) < 0.007
-    # @test_skip RMS_differences(sim6.θ[Not(end),:], hyd6.θ[Not(1),:]) < 0.005
+    @test RMS_differences(sim1.θ[Not(end),:], hyd1.θ[Not(1),:]) < 0.005
+    @test RMS_differences(sim2.θ[Not(end),:], hyd2.θ[Not(1),:]) < 0.002
+    # @test RMS_differences(sim3.θ[Not(end),:], hyd3.θ[Not(1),:]) < 0.001
+    @test RMS_differences(sim4.θ[Not(end),:], hyd4.θ[Not(1),:]) < 0.006
+    @test RMS_differences(sim5.θ[Not(end),:], hyd5.θ[Not(1),:]) < 0.007
+    # @test RMS_differences(sim6.θ[Not(end),:], hyd6.θ[Not(1),:]) < 0.005
 
     # Compare ψ
     # ψ: Compare with LWFBrook90R as reference solution
-    @test_skip RMS_differences(sim1.ψ, ref1.ψ) < 2.0 # kPa
-    @test_skip RMS_differences(sim2.ψ, ref2.ψ) < 0.2 # kPa
-    # @test_skip RMS_differences(sim3.ψ, ref3.ψ) < 0.2 # kPa
-    @test_skip RMS_differences(sim4.ψ, ref4.ψ) < 0.003 # kPa
-    @test_skip RMS_differences(sim5.ψ, ref5.ψ) < 0.004 # kPa
-    # @test_skip RMS_differences(sim6.ψ, ref6.ψ) < 0.0025 # kPa
+    @test RMS_differences(sim1.ψ, ref1.ψ) < 2.0 # kPa
+    @test RMS_differences(sim2.ψ, ref2.ψ) < 0.2 # kPa
+    # @test RMS_differences(sim3.ψ, ref3.ψ) < 0.2 # kPa
+    @test RMS_differences(sim4.ψ, ref4.ψ) < 0.003 # kPa
+    @test RMS_differences(sim5.ψ, ref5.ψ) < 0.004 # kPa
+    # @test RMS_differences(sim6.ψ, ref6.ψ) < 0.0025 # kPa
 
     # ψ: Compare with Hydrus1D-Iso
-    @test_skip RMS_differences(sim1.ψ[Not(end),:], hyd1.ψ[Not(1),:]) < 6 # kPa
-    @test_skip RMS_differences(sim2.ψ[Not(end),:], hyd2.ψ[Not(1),:]) < 2.2 # kPa
-    # @test_skip RMS_differences(sim3.ψ[Not(end),:], hyd3.ψ[Not(1),:]) < 1.2 # kPa
-    @test_skip RMS_differences(sim4.ψ[Not(end),:], hyd4.ψ[Not(1),:]) < 1.0 # kPa
-    @test_skip RMS_differences(sim5.ψ[Not(end),:], hyd5.ψ[Not(1),:]) < 1.5 # kPa
-    # @test_skip RMS_differences(sim6.ψ[Not(end),:], hyd6.ψ[Not(1),:]) < 1.0 # kPa
+    @test RMS_differences(sim1.ψ[Not(end),:], hyd1.ψ[Not(1),:]) < 6 # kPa
+    @test RMS_differences(sim2.ψ[Not(end),:], hyd2.ψ[Not(1),:]) < 2.2 # kPa
+    # @test RMS_differences(sim3.ψ[Not(end),:], hyd3.ψ[Not(1),:]) < 1.2 # kPa
+    @test RMS_differences(sim4.ψ[Not(end),:], hyd4.ψ[Not(1),:]) < 1.0 # kPa
+    @test RMS_differences(sim5.ψ[Not(end),:], hyd5.ψ[Not(1),:]) < 1.5 # kPa
+    # @test RMS_differences(sim6.ψ[Not(end),:], hyd6.ψ[Not(1),:]) < 1.0 # kPa
 
+    # TODO(bernhard): fix LWFBrook90.jl simulation 1 and 2
     # Compare δ18O with Hydrus1D-Iso
-    @test_skip RMS_differences(sim1.δ18O[Not(end),:], hyd1.δ18O[Not(1),:]) < 5 # unit: ‰
-    @test_skip RMS_differences(sim2.δ18O[Not(end),:], hyd2.δ18O[Not(1),:]) < 2.2 # unit: ‰
-    # @test_skip RMS_differences(sim3.δ18O[Not(end),:], hyd3.δ18O[Not(1),:]) < 1.2 # unit: ‰
-    @test_skip RMS_differences(sim4.δ18O[Not(end),:], hyd4.δ18O[Not(1),:]) < 1.0 # unit: ‰
-    @test_skip RMS_differences(sim5.δ18O[Not(end),:], hyd5.δ18O[Not(1),:]) < 1.5 # unit: ‰
-    # @test_skip RMS_differences(sim6.δ18O[Not(end),:], hyd6.δ18O[Not(1),:]) < 1.0 # unit: ‰
+    @test RMS_differences(sim1.δ18O[Not(end),:], hyd1.δ18O[Not(1),:]) < 5 # unit: ‰
+    @test RMS_differences(sim2.δ18O[Not(end),:], hyd2.δ18O[Not(1),:]) < 2.2 # unit: ‰
+    # @test RMS_differences(sim3.δ18O[Not(end),:], hyd3.δ18O[Not(1),:]) < 1.2 # unit: ‰
+    @test RMS_differences(sim4.δ18O[Not(end),:], hyd4.δ18O[Not(1),:]) < 0.5 # unit: ‰
+    @test RMS_differences(sim5.δ18O[Not(end),:], hyd5.δ18O[Not(1),:]) < 1.0 # unit: ‰
+    # @test RMS_differences(sim6.δ18O[Not(end),:], hyd6.δ18O[Not(1),:]) < 1.0 # unit: ‰
     # Compare δ2H with Hydrus1D-Iso
-    @test_skip RMS_differences(sim1.δ2H[Not(end),:], hyd1.δ2H[Not(1),:]) < 5 # unit: ‰
-    @test_skip RMS_differences(sim2.δ2H[Not(end),:], hyd2.δ2H[Not(1),:]) < 2.2 # unit: ‰
-    # @test_skip RMS_differences(sim3.δ2H[Not(end),:], hyd3.δ2H[Not(1),:]) < 1.2 # unit: ‰
-    @test_skip RMS_differences(sim4.δ2H[Not(end),:], hyd4.δ2H[Not(1),:]) < 1.0 # unit: ‰
-    @test_skip RMS_differences(sim5.δ2H[Not(end),:], hyd5.δ2H[Not(1),:]) < 1.5 # unit: ‰
-    # @test_skip RMS_differences(sim6.δ2H[Not(end),:], hyd6.δ2H[Not(1),:]) < 1.0 # unit: ‰
-
-    # TODO(bernhard): fix Hydrus1D-Iso test for simulations 4 and 5 w.r.t d2Η (hyd4.δ2H and hyd5.δ2H remain unchanged)
+    @test RMS_differences(sim1.δ2H[Not(end),:], hyd1.δ2H[Not(1),:]) < 5 # unit: ‰
+    @test RMS_differences(sim2.δ2H[Not(end),:], hyd2.δ2H[Not(1),:]) < 7 # unit: ‰
+    # @test RMS_differences(sim3.δ2H[Not(end),:], hyd3.δ2H[Not(1),:]) < 1.2 # unit: ‰
+    @test RMS_differences(sim4.δ2H[Not(end),:], hyd4.δ2H[Not(1),:]) < 2.0 # unit: ‰
+    @test RMS_differences(sim5.δ2H[Not(end),:], hyd5.δ2H[Not(1),:]) < 10. # unit: ‰
+    # @test RMS_differences(sim6.δ2H[Not(end),:], hyd6.δ2H[Not(1),:]) < 1.0 # unit: ‰
 
 end
 
@@ -371,27 +374,27 @@ end
     # pl_θ = plot(sim.θ.time,
     #         Matrix(sim.θ[:,Not(:time)]), line = :solid, labels = "LWFBrook90.jl",
     #         ylabel = "θ (-)")
-    # plot!(Matrix(ref_NLAYER7.θ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
-    # # plot!(Matrix(ref_NLAYER14.θ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer14")
-    # # plot!(Matrix(ref_NLAYER21.θ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer21")
-    # # plot!(Matrix(ref_NLAYER70.θ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer70")
+    # plot!(Matrix(ref_NLAYER7.θ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
+    # # plot!(Matrix(ref_NLAYER14.θ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer14")
+    # # plot!(Matrix(ref_NLAYER21.θ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer21")
+    # # plot!(Matrix(ref_NLAYER70.θ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer70")
     # pl_ψ = plot(sim.ψ.time,
     #         Matrix(sim.ψ[:,Not(:time)]), line = :solid, labels = "LWFBrook90.jl",
     #         ylabel = "ψ (kPa)")
-    # plot!(Matrix(ref_NLAYER7.ψ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
-    # # plot!(Matrix(ref_NLAYER14.ψ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer14")
-    # # plot!(Matrix(ref_NLAYER21.ψ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer21")
-    # # plot!(Matrix(ref_NLAYER70.ψ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer70")
+    # plot!(Matrix(ref_NLAYER7.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
+    # # plot!(Matrix(ref_NLAYER14.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer14")
+    # # plot!(Matrix(ref_NLAYER21.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer21")
+    # # plot!(Matrix(ref_NLAYER70.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer70")
     # pl_a = plot(sim.above.time,
     #         Matrix(sim.above[:,Not(:time)]), line = :solid, label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
     # plot!(Matrix(ref_NLAYER7.above[:,[:intr,:ints,:snow,:gwat]]),
-    #         line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
+    #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
     # # plot!(Matrix(ref_NLAYER14.above[:,[:intr,:ints,:snow,:gwat]]),
-    # #         line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
+    # #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
     # # plot!(Matrix(ref_NLAYER21.above[:,[:intr,:ints,:snow,:gwat]]),
-    # #         line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
+    # #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
     # # plot!(Matrix(ref_NLAYER70.above[:,[:intr,:ints,:snow,:gwat]]),
-    # #         line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
+    # #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
     # plot(pl_θ, pl_ψ, pl_a, layout = (3,1), size = (600,800))
     # savefig("test-assets/BEA-2016/out.png")
 

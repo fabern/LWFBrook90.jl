@@ -1,4 +1,7 @@
 param_id,x
+### Isotope tranpsport parameters  -------,NA
+### TODO, 42.000
+### TODO2, 42.000
 ### Meteorologic site parameters -------,NA
 LAT_DEG,46.70052
 ESLOPE_DEG,0

@@ -41,7 +41,7 @@ for (Hammel_select in c("Hammel_loam", "Hammel_sand")) {
 
   #----------- gather information from Selector.in----------------------------------
   rawSelector <- readLines(hydrus_file_Selector)
-  units <- data.frame(transpose(list(
+  units <- data.frame(purrr:::transpose(list(
     rawSelector[grep("LUnit",rawSelector)+(1:3)]))) %>%
     rename("LengthUnit"=1,"TimeUnit"=2,"ConcentrationMassUnit"=3)
   unit2cm <- ifelse(units$LengthUnit=="mm",0.1,1)
@@ -108,7 +108,7 @@ for (Hammel_select in c("Hammel_loam", "Hammel_sand")) {
       readr::read_table(curr_data,
                         col_names = c("node","depth","head","theta", "K", "C",
                                       "Flux", "RWU", "Kappa", "vKsTop", "Temp",
-                                      "Conc18O", "Sorb18O","Conc2H", "Sorb2H")) %>%
+                                      "Conc18O", "Conc2H", "Sorb18O", "Sorb2H")) %>%
       mutate(delta18O = conc2delta18O(Conc18O),
              delta2H  = conc2delta2H(Conc2H),
              timeStep = curr_timeStep)
@@ -117,7 +117,6 @@ for (Hammel_select in c("Hammel_loam", "Hammel_sand")) {
     # bring depth and pressure head to cm
     mutate(depth_cm = depth*unit2cm,
            head_cm  = head*unit2cm)
-
 
   write.csv(x = NOD_INF_DAT,
             file = file.path(dirname(hydrus_file_NodInf),
@@ -150,15 +149,31 @@ for (Hammel_select in c("Hammel_loam", "Hammel_sand")) {
                           xmin = timeStepStart, xmax=timeStepEnd, ymin=0, ymax=prcp)) +
     geom_rect(aes(fill=delta18O_top)) +
     scale_x_continuous(breaks = -100:100) + theme_bw()
+  pl_2H_depths <- ggplot(filter(NOD_INF_DAT, depth_cm %in% c(-10,-100,-150, -190)),
+                          aes(x=timeStep, y=delta2H, color = as.factor(depth_cm), group = depth_cm)) +
+    geom_line() + scale_x_continuous(breaks = -100:100) + theme_bw()
+  
+  pl_BC_2H <- ggplot(tibble(ATMOSPH_DAT),
+                      aes(y=prcp,x=timeStepEnd,
+                          xmin = timeStepStart, xmax=timeStepEnd, ymin=0, ymax=prcp)) +
+    geom_rect(aes(fill=delta2H_top)) +
+    scale_x_continuous(breaks = -100:100) + theme_bw()
 
 
-  pl <- egg::ggarrange(
+  pl_18O <- egg::ggarrange(
     ncol=1,
     pl_BC_18O,
     pl_theta_depths,
     pl_18O_depths,
     pl_18O)
-  ggsave(plot = pl, file.path(dirname(hydrus_file_NodInf), "Nod_inf_processed.png"))
+  ggsave(plot = pl_18O, file.path(dirname(hydrus_file_NodInf), "Nod_inf_processed_18O.png"))
+  pl_2H <- egg::ggarrange(
+    ncol=1,
+    pl_BC_2H,
+    pl_theta_depths,
+    pl_2H_depths,
+    pl_2H)
+  ggsave(plot = pl_2H, file.path(dirname(hydrus_file_NodInf), "Nod_inf_processed_2H.png"))
 }
 
 

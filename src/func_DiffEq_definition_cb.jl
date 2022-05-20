@@ -411,7 +411,7 @@ end
 
 function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
 
-    use_numerical_solution = false
+    use_numerical_solution = true
     simulate_isotopes = integrator.p[1][4][3]
 
     if simulate_isotopes
