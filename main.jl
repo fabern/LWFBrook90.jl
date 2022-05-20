@@ -103,10 +103,21 @@ ode_LWFBrook90, unstable_check_function = define_LWFB90_ODE(u0, tspan, p);
 
 ####################
 ## Solve ODE:
-@time sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
-    unstable_check = unstable_check_function,
-    progress = true,
-    saveat = tspan[1]:tspan[2], dt = 1e-3, adaptive = true); # dt is initial dt, but adaptive
+@time sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5(); progress = true,
+        unstable_check = unstable_check_function, # = (dt,u,p,t) -> false, #any(isnan,u),
+        saveat = tspan[1]:tspan[2],
+        # When adding transport of isotopes adaptive time stepping has difficulties reducing dt below dtmin.
+        # We solve it either by using a constant time step
+        # or by setting force_dtmin to true, which has the drawback that tolerances are ignored.
+        # # Variant1: less sophisticated but robust:
+        # adaptive = false, dt=1e-3 #dt=5/60/24 # fixed 5 minutes time steps
+        # Variant2: more sophisticated but giving errors:
+        adaptive = true, dtmin = 1e-3, dt=1e-3,  # if adaptive dt is just the starting value of the time steps
+        force_dtmin = true,# without this callbacks generate an abort "dt <= dtmin",
+                           # e.g. see: https://github.com/SciML/DifferentialEquations.jl/issues/648
+        maxiters = (tspan[2]-tspan[1])/1e-3 # when using force_dtmin also use maxiters
+                        # TODO(bernhard): regarding maxiters it seems to be the callback for δ of SNOW, INTR, INTS that causes the dtmin to be so small to reach large maxiters
+        );
 ####################
 
 ####################

@@ -140,6 +140,9 @@ for Δz_m in (
     @time sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5(); progress = true,
         unstable_check = unstable_check_function, # = (dt,u,p,t) -> false, #any(isnan,u),
         saveat = tspan[1]:tspan[2],
+        # When adding transport of isotopes adaptive time stepping has difficulties reducing dt below dtmin.
+        # We solve it either by using a constant time step
+        # or by setting force_dtmin to true, which has the drawback that tolerances are ignored.
         # # Variant1: less sophisticated but robust:
         # adaptive = false, dt=1e-3 #dt=5/60/24 # fixed 5 minutes time steps
         # Variant2: more sophisticated but giving errors:
@@ -291,8 +294,6 @@ for Δz_m in (
                 legend = :outerright, labels = aux_names[:, 30:31],
                 ylabel = "Water balance error [mm]")
             savefig(fname*"_plot-water-balance-error.png")
-
-
 
 end
 
