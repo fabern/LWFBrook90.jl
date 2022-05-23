@@ -51,20 +51,24 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
             aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old) = p[3][1]
         aux_du_TRANI = p[3][2]
 
+        # Pre-allocated caches to save memory allocations
+        (u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,p_fu_KK,
+            aux_du_DSFLI,aux_du_VRFLI,aux_du_VRFLI_1st_approx,aux_du_INFLI,aux_du_BYFLI, du_NTFLI,
+            p_fu_BYFRAC) = p[4]
 
         ##################
         # Parse states
         idx_u_vector_amounts       = p[1][4][4]
         idx_u_vector_accumulators  = p[1][4][5]
-        # idx_u_scalar_amounts       = p[1][4][6]
+        # idx_u_scalar_amounts     = p[1][4][6]
 
-        u_GWAT     = u[1]
+        u_GWAT      = u[1]
         #u_INTS     = u[2]
         #u_INTR     = u[3]
         #u_SNOW     = u[4]
         #u_CC       = u[5]
         #u_SNOWLQ   = u[6]
-        u_SWATI     = u[idx_u_vector_amounts] # 0.000002 seconds (1 allocation: 144 bytes)
+        u_SWATI     = @view u[idx_u_vector_amounts] # 0.000002 seconds (1 allocation: 144 bytes)
 
         # simulate_isotopes = p[1][4][3]
         # if simulate_isotopes

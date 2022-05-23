@@ -460,9 +460,24 @@ function define_LWFB90_p(
     #TODO(bernhard): what are the additional 3x NaNs needed for in isotope code???
     #Earlier it was simply: [NaN, NaN, NaN, NaN, NaN, NaN], fill(NaN, NLAYER)
 
+    # Initialize further caches to hold computed quantities without need to allocate memory
+    p_cache = (
+        zeros(NLAYER), # u_aux_WETNES
+        zeros(NLAYER), # u_aux_PSIM
+        zeros(NLAYER), # u_aux_PSITI
+        zeros(NLAYER), # u_aux_θ
+        zeros(NLAYER), # p_fu_KK
+        zeros(NLAYER), # aux_du_DSFLI
+        zeros(NLAYER), # aux_du_VRFLI
+        zeros(NLAYER), # aux_du_VRFLI_1st_approx
+        zeros(NLAYER), # aux_du_INFLI
+        zeros(NLAYER), # aux_du_BYFLI
+        zeros(NLAYER), # du_NTFLI
+        zeros(NLAYER)) # p_fu_BYFRAC
+
     # 3) Return different types of parameters as a single object
     return ((soil_discr["PSIM_init"], soil_discr["d18O_init"],soil_discr["d2H_init"]),
-            (p_cst, p_fT, p_fu))
+            (p_cst, p_fT, p_fu, p_cache))
 end
 
 
