@@ -313,7 +313,7 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
 
         u_INTS     = integrator.u[2]
         u_INTR     = integrator.u[3]
-        # u_SNOW     = integrator.u[4]
+        u_SNOW     = integrator.u[4]
         # u_CC       = integrator.u[5]
         # u_SNOWLQ   = integrator.u[6]
         # u_SWATI    = integrator.u[idx_u_vector_amounts]
@@ -364,24 +364,34 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         # u_δ18O_SWATI = integrator.u[idx_u_vector_isotopes_d18O]
         # u_δ2H_SWATI  = integrator.u[idx_u_vector_isotopes_d2H]
 
-        δ18O_SLFL, δ2H_SLFL,
-        u_INTS,            u_δ18O_INTS, u_δ2H_INTS,
-        u_INTR,            u_δ18O_INTR, u_δ2H_INTR,
-        u_SNOW_iso_update, u_δ18O_SNOW, u_δ2H_SNOW =
-            compute_isotope_U_of_INTS_INTR_SNOW_and_SLFL(
-                p_δ2H_PREC(integrator.t), p_δ18O_PREC(integrator.t), p_fu_TADTM, p_EA(integrator.t),
-                # for INTS (in: SINT; out: ISVP):
-                u_INTS, aux_du_SINT, aux_du_ISVP, p_DTP, u_δ2H_INTS, u_δ18O_INTS,
-                # for INTR (in: RINT; out: IRVP):
-                u_INTR, aux_du_RINT, aux_du_IRVP, u_δ2H_INTR, u_δ18O_INTR,
-                # for SNOW (in: STHR, RSNO (both δ_PREC); out: SMLT, SNVP (δ_SNOW and fractionated)):
-                u_SNOW_old, NaN, p_fu_STHR, aux_du_RSNO, aux_du_SMLT, aux_du_SNVP, u_δ2H_SNOW, u_δ18O_SNOW,
-                # to compute isotopic signature of soil infiltration: SLFL
-                p_fu_RNET)
-        # # NOTE: mixing and fractionation is computed with u_SNOW_old, yielding u_SNOW_iso_update.
-        # #       However, u_SNOW_iso_update is neglected and u_SNOW is used
-        # u_SNOW = u_SNOW_MSBupdate
-
+        # δ18O_SLFL, δ2H_SLFL,
+        # _,            u_δ18O_INTS, u_δ2H_INTS,
+        # _,            u_δ18O_INTR, u_δ2H_INTR,
+        # u_SNOW_iso_update, u_δ18O_SNOW, u_δ2H_SNOW =
+        #     compute_isotope_U_of_INTS_INTR_SNOW_and_SLFL(
+        # (δ18O_SLFL, δ2H_SLFL,
+        # u_δ18O_INTS, u_δ2H_INTS,
+        # u_δ18O_INTR, u_δ2H_INTR,
+        # u_δ18O_SNOW, u_δ2H_SNOW) =
+        #     compute_isotope_U_of_INTS_INTR_SNOW_and_SLFL(
+        #         u_INTS, u_δ18O_INTS, u_δ2H_INTS, u_INTR, u_δ18O_INTR, u_δ2H_INTR, u_SNOW, u_δ18O_SNOW, u_δ2H_SNOW,
+        #         p_δ2H_PREC(integrator.t), p_δ18O_PREC(integrator.t), p_fu_TADTM, p_EA(integrator.t),
+        #         # for INTS (in: SINT; out: ISVP):
+        #         aux_du_SINT, aux_du_ISVP, p_DTP,
+        #         # for INTR (in: RINT; out: IRVP):
+        #         aux_du_RINT, aux_du_IRVP,
+        #         # for SNOW (in: STHR, RSNO (both δ_PREC); out: SMLT, SNVP (δ_SNOW and fractionated)):
+        #         NaN, p_fu_STHR, aux_du_RSNO, aux_du_SMLT, aux_du_SNVP,
+        #         # to compute isotopic signature of soil infiltration: SLFL
+        #         p_fu_RNET)
+        δ2H_SLFL   = p_δ2H_PREC(integrator.t)
+        u_δ2H_INTS = p_δ2H_PREC(integrator.t)
+        u_δ2H_INTR = p_δ2H_PREC(integrator.t)
+        u_δ2H_SNOW = p_δ2H_PREC(integrator.t)
+        δ18O_SLFL   = p_δ18O_PREC(integrator.t)
+        u_δ18O_INTS = p_δ18O_PREC(integrator.t)
+        u_δ18O_INTR = p_δ18O_PREC(integrator.t)
+        u_δ18O_SNOW = p_δ18O_PREC(integrator.t)
         ####################################################################
         # Return results from callback
 
