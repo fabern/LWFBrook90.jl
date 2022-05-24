@@ -364,6 +364,7 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         # u_δ18O_SWATI = integrator.u[idx_u_vector_isotopes_d18O]
         # u_δ2H_SWATI  = integrator.u[idx_u_vector_isotopes_d2H]
 
+        # Variant 1) works but really much slower
         # δ18O_SLFL, δ2H_SLFL,
         # _,            u_δ18O_INTS, u_δ2H_INTS,
         # _,            u_δ18O_INTR, u_δ2H_INTR,
@@ -384,6 +385,9 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         #         NaN, p_fu_STHR, aux_du_RSNO, aux_du_SMLT, aux_du_SNVP,
         #         # to compute isotopic signature of soil infiltration: SLFL
         #         p_fu_RNET)
+        # # END variant 1
+
+        # Variant 2) resulting in no effect (but is fast, so not generating any allocation problems)
         δ2H_SLFL   = p_δ2H_PREC(integrator.t)
         u_δ2H_INTS = p_δ2H_PREC(integrator.t)
         u_δ2H_INTR = p_δ2H_PREC(integrator.t)
@@ -392,6 +396,126 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         u_δ18O_INTS = p_δ18O_PREC(integrator.t)
         u_δ18O_INTR = p_δ18O_PREC(integrator.t)
         u_δ18O_SNOW = p_δ18O_PREC(integrator.t)
+        # # END variant 2
+
+        # # Variant 3) trying to unwrap variant 1) by reducing allocations. Currently not working and also not faster than 1)
+        # R_std_2H  = LWFBrook90.ISO.R_VSMOW²H
+        # R_std_18O = LWFBrook90.ISO.R_VSMOW¹⁸O
+        # # For SNOW ( do this before INTS as it uses u_δ2H_INTS as input)
+        # inflow = [p_fu_STHR; aux_du_RSNO]
+        # outflow = [aux_du_SMLT]
+        # u⁺ = u_SNOW
+        # u₀ = u_INTR - p_DTP * (sum(inflow) - sum(outflow)) # [mm]
+        # E  = aux_du_SNVP
+        # ## δ2H
+        # δ₀ = u_δ2H_SNOW
+        # x₀  = (δ₀/1000 + 1)*R_std_2H / (1 + (δ₀/1000 + 1)*R_std_2H)
+        # δin = [u_δ2H_INTS;  p_δ2H_PREC(integrator.t)]
+        # xin = (δin ./ 1000. .+ fill(1.,(2)))
+        # xin = xin  .* R_std_2H ./ ((δin ./ 1000. .+ 1.) .* R_std_2H .+ 1. )
+        # if u₀ < 0.001 && u⁺ > 0.001 # instead of u₀ == 0
+        #     # Edge cases:
+        #     x⁺ = sum(xin .* inflow) / sum(inflow)
+        #     u_δ2H_SNOW = 1000 * (x⁺/(1-x⁺)/R_std_2H - 1)
+        # elseif u⁺ > 0.001 # mm water = 1 µm water
+        #     x⁺ = (x₀ * u₀ + p_DTP * (sum(xin .* inflow) - sum(x₀ .* outflow)) ) / u⁺
+        #     u_δ2H_SNOW = 1000 * (x⁺/(1-x⁺)/R_std_2H - 1)
+        # else
+        #     x⁺ = NaN
+        #     u_δ2H_SNOW = NaN
+        # end
+        # #TODO(bernhard): include fractionation due to evaporation
+        # ## δ18O
+        # δ₀ = u_δ18O_SNOW
+        # x₀  = (δ₀/1000 + 1)*R_std_18O / (1 + (δ₀/1000 + 1)*R_std_18O)
+        # δin = [u_δ18O_INTS,  p_δ18O_PREC(integrator.t)]
+        # xin = (δin./1000. .+ 1).*R_std_18O ./ (1 .+ (δin./1000. .+ 1).*R_std_18O)
+        # if u₀ < 0.001 && u⁺ > 0.001 # instead of u₀ == 0
+        #     # Edge cases:
+        #     x⁺ = sum(xin .* inflow) / sum(inflow)
+        # elseif u⁺ > 0.001 # mm water = 1 µm water
+        #     x⁺ = (x₀ * u₀ + p_DTP * (sum(xin .* inflow) - sum(x₀ .* outflow)) ) / u⁺
+        # else
+        #     x⁺ = NaN
+        # end
+        # u_δ18O_SNOW = 1000 * (x⁺/(1-x⁺)/R_std_18O - 1)
+        # #TODO(bernhard): include fractionation due to evaporation
+        # # For INTS
+        # inflow = [aux_du_SINT]
+        # outflow = [0]
+        # u⁺ = u_INTS
+        # u₀ = u_INTS - p_DTP * (sum(inflow) - sum(outflow)) # [mm]
+        # E  = aux_du_ISVP
+        # ## δ2H
+        # δ₀ = u_δ2H_INTS
+        # x₀  = (δ₀/1000 + 1)*R_std_2H / (1 + (δ₀/1000 + 1)*R_std_2H)
+        # δin = p_δ2H_PREC(integrator.t)
+        # xin = (δin./1000. .+ 1).*R_std_2H ./ (1 .+ (δin./1000. .+ 1).*R_std_2H)
+        # if u₀ < 0.001 && u⁺ > 0.001 # instead of u₀ == 0
+        #     # Edge cases:
+        #     x⁺ = sum(xin .* inflow) / sum(inflow)
+        # elseif u⁺ > 0.001 # mm water = 1 µm water
+        #     x⁺ = (x₀ * u₀ + p_DTP * (sum(xin .* inflow) - sum(x₀ .* outflow)) ) / u⁺
+        # else
+        #     x⁺ = NaN
+        # end
+        # u_δ2H_INTS = 1000 * (x⁺/(1-x⁺)/R_std_2H - 1)
+        # #TODO(bernhard): include fractionation due to evaporation
+        # ## δ18O
+        # δ₀ = u_δ18O_INTS
+        # x₀  = (δ₀/1000 + 1)*R_std_18O / (1 + (δ₀/1000 + 1)*R_std_18O)
+        # δin = p_δ18O_PREC(integrator.t)
+        # xin = (δin./1000. .+ 1).*R_std_18O ./ (1 .+ (δin./1000. .+ 1).*R_std_18O)
+        # if u₀ < 0.001 && u⁺ > 0.001 # instead of u₀ == 0
+        #     # Edge cases:
+        #     x⁺ = sum(xin .* inflow) / sum(inflow)
+        # elseif u⁺ > 0.001 # mm water = 1 µm water
+        #     x⁺ = (x₀ * u₀ + p_DTP * (sum(xin .* inflow) - sum(x₀ .* outflow)) ) / u⁺
+        # else
+        #     x⁺ = NaN
+        # end
+        # u_δ18O_INTS = 1000 * (x⁺/(1-x⁺)/R_std_18O - 1)
+        # #TODO(bernhard): include fractionation due to evaporation
+        # # For INTR
+        # inflow = [aux_du_RINT]
+        # outflow = [0]
+        # u⁺ = u_INTR
+        # u₀ = u_INTR - p_DTP * (sum(inflow) - sum(outflow)) # [mm]
+        # E  = aux_du_IRVP
+        # ## δ2H
+        # δ₀ = u_δ2H_INTR
+        # x₀  = (δ₀/1000 + 1)*R_std_2H / (1 + (δ₀/1000 + 1)*R_std_2H)
+        # δin = p_δ2H_PREC(integrator.t)
+        # xin = (δin./1000. .+ 1).*R_std_2H ./ (1 .+ (δin./1000. .+ 1).*R_std_2H)
+        # if u₀ < 0.001 && u⁺ > 0.001 # instead of u₀ == 0
+        #     # Edge cases:
+        #     x⁺ = sum(xin .* inflow) / sum(inflow)
+        # elseif u⁺ > 0.001 # mm water = 1 µm water
+        #     x⁺ = (x₀ * u₀ + p_DTP * (sum(xin .* inflow) - sum(x₀ .* outflow)) ) / u⁺
+        # else
+        #     x⁺ = NaN
+        # end
+        # u_δ2H_INTR = 1000 * (x⁺/(1-x⁺)/R_std_2H - 1)
+        # #TODO(bernhard): include fractionation due to evaporation
+        # ## δ18O
+        # δ₀ = u_δ18O_INTR
+        # x₀  = (δ₀/1000 + 1)*R_std_18O / (1 + (δ₀/1000 + 1)*R_std_18O)
+        # δin = p_δ18O_PREC(integrator.t)
+        # xin = (δin./1000. .+ 1).*R_std_18O ./ (1 .+ (δin./1000. .+ 1).*R_std_18O)
+        # if u₀ < 0.001 && u⁺ > 0.001 # instead of u₀ == 0
+        #     # Edge cases:
+        #     x⁺ = sum(xin .* inflow) / sum(inflow)
+        # elseif u⁺ > 0.001 # mm water = 1 µm water
+        #     x⁺ = (x₀ * u₀ + p_DTP * (sum(xin .* inflow) - sum(x₀ .* outflow)) ) / u⁺
+        # else
+        #     x⁺ = NaN
+        # end
+        # u_δ18O_INTR = 1000 * (x⁺/(1-x⁺)/R_std_18O - 1)
+        # #TODO(bernhard): include fractionation due to evaporation
+        # δ2H_SLFL   = p_δ2H_PREC(integrator.t)
+        # δ18O_SLFL   = p_δ18O_PREC(integrator.t)
+        # # END variant 1
+
         ####################################################################
         # Return results from callback
 

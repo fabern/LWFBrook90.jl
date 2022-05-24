@@ -68,7 +68,8 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         #u_SNOW     = u[4]
         #u_CC       = u[5]
         #u_SNOWLQ   = u[6]
-        u_SWATI     = @view u[idx_u_vector_amounts] # 0.000002 seconds (1 allocation: 144 bytes)
+        u_SWATI     = u[idx_u_vector_amounts] # 0.000002 seconds (1 allocation: 144 bytes)
+                    # NOTE: @view u[idx_u_vector_amounts] seems to yield wrong results...
 
         # simulate_isotopes = p[1][4][3]
         # if simulate_isotopes
