@@ -30,11 +30,19 @@ function define_LWFB90_cb()
                                 func_start = false);
 
     cb_set = CallbackSet(
-        # cb_LaiRichardsCorrectorStep,
+        # 1) Belowground:
+        # Check and correct flux (Richards equation)
+        # # not implemented: cb_LaiRichardsCorrectorStep,
         cb_check_balance_errors,
+        # Continuous update of belowground temperature
+        # # not implemented:
+        # Continuous update of belowground concentrations (Adv.-Disp. equation)
+        cb_SWAT_GWAT_deltas,
+
+        # 2) Aboveground
+        # Daily update of aboveground storages and concentrations
         cb_INTS_INTR_SNOW_amounts,
-        cb_INTS_INTR_SNOW_deltas,
-        cb_SWAT_GWAT_deltas
+        cb_INTS_INTR_SNOW_deltas
         )
     return cb_set
 end
