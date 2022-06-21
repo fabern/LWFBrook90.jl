@@ -30,11 +30,22 @@ using RecipesBase
 using ..LWFBrook90: RelativeDaysFloat2DateTime
 
 export α¹⁸O_dif, α²H_dif, α¹⁸O_eq, α²H_eq, δ_CraigGordon, update_δ_with_mixing_and_evaporation
-export R_VSMOW¹⁸O, R_VSMOW²H
+export R_VSMOW¹⁸O, R_VSMOW²H, Mi_¹⁸O, Mi_²H, Mw
+export δ_to_x, x_to_δ, δ_to_C, C_to_δ
 
 # Isotopic ratios of standard ocean water VSMOW (reference for definition of δ)
 R_VSMOW¹⁸O = 2005.2e-6 # (source: Baertschi-1976-Earth_Planet_Sci_Lett)
 R_VSMOW²H  = 155.76e-6 # (source: Hagemann-1970-Tellus)
+Mi_¹⁸O = 0.020 # Molar mass of ¹H¹H¹⁸O in kg
+Mi_²H  = 0.019 # Molar mass of ¹H²H¹⁶O in kg
+Mw     = 0.018 # Molar mass of ¹H¹H¹⁶O in kg
+δ_to_x(δ_permil,R_std) = 1 ./ (1 .+ 1 ./ (R_std .* ( δ_permil./1000 .+ 1 )) )
+x_to_δ(x,R_std) = (1 ./ ( R_std .* (1 ./ x .- 1) ) .- 1) .* 1000 # in permil
+
+δ_to_C(δ_permil,R_std, Mi; ρw_kg_m3 = 1000) = R_std .* (δ_permil./1000 .+ 1) .* ρw_kg_m3 .* Mi./Mw # returns C in kg/m3, source Eq.5 Braud et al. 2005
+C_to_δ(C,R_std, Mi; ρw_kg_m3 = 1000)        = 1000 .* (C ./ (R_std .* ρw_kg_m3 .* Mi./Mw) .- 1 )   # returns δ in permil, source Eq.5 Braud et al. 2005
+
+
 
 # 1a) Kinetic fractionation (Gonfiantini 2018):
 α¹⁸O_dif = 1.0285 # -, D/D_i i.e. ¹H¹H¹⁶O/¹H¹H¹⁸O: Taken from Gonfiantini 2018, citing Merlivat 1978

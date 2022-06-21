@@ -52,7 +52,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         aux_du_TRANI = p[3][2]
 
         # Pre-allocated caches to save memory allocations
-        (u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,p_fu_KK,
+        (u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
             aux_du_DSFLI,aux_du_VRFLI,aux_du_VRFLI_1st_approx,aux_du_INFLI,aux_du_BYFLI, du_NTFLI,
             p_fu_BYFRAC) = p[4]
 
@@ -92,6 +92,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
         LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, t)
 
+        u_aux_θ_tminus1 .= u_aux_θ #TODO(bernhard): this does not seem to be correctly updated
         (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
             LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil) # 0.000007 seconds (7 allocations: 1008 bytes)
 

@@ -25,7 +25,9 @@ function define_LWFB90_cb()
                                initial_affect = true,
                                save_positions=(false,false));
 
-    cb_SWAT_GWAT_deltas = FunctionCallingCallback(LWFBrook90R_updateIsotopes_GWAT_SWAT!;
+    cb_SWAT_GWAT_deltas = FunctionCallingCallback(
+                                LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!;
+                                # LWFBrook90R_updateIsotopes_GWAT_SWAT!;
                                 func_everystep = true,
                                 func_start = false);
 
@@ -242,7 +244,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     #                        p_fu_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
     #                        p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
     #                        aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old]
-    integrator.p[3][1] .= [NaN, NaN,
+    integrator.p[3][1] .= [NaN, NaN,        # NaNs are directly after overwritten by callback for isotopes
                             p_fu_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
                             p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
                             aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old]
@@ -658,6 +660,316 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
             # └ @ SciMLBase ~/.julia/packages/SciMLBase/BoNUy/src/integrator_interface.jl:345
             # TODO(bernhard): we can force the solving by using force_dtmin = true
         end
+    end
+
+    return nothing
+end
+
+
+function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
+    # This callback function gets called after an integration time step:
+    #   +______+
+    #   |      |     the solve() function uses the f function to integrate uᵏ to uᵏ⁺¹
+    #   tᵏ     tᵏ⁺¹
+    #   uᵏ     uᵏ⁺¹
+    #               i.e. states where f returns a du ≂̸ 0 are already updated uᵏ⁺¹ ≂̸ uᵏ
+    #               for  states where f returns a du = 0 are still uᵏ⁺¹ = uᵏ
+    #               in the callback we compute uᵏ⁺¹
+    #
+    #               The order of integration is:
+    #                   a) in each time step f and then cb_SWAT_GWAT_deltas
+    #                   b) whenever a full day is over: finish f, finish cb_SWAT_GWAT_deltas, then the daily callbacks
+
+    # @infiltrate #TODO(bernhard): check the callbacks
+
+    simulate_isotopes = integrator.p[1][4][3]
+    if simulate_isotopes
+
+        p_soil = integrator.p[1][1]
+        idx_u_vector_amounts       = integrator.p[1][4][4]
+        #idx_u_vector_accumulators  = integrator.p[1][4][5]
+        u_SWATIᵏ⁺¹    = integrator.u[idx_u_vector_amounts]
+
+        ##### This update could be done in a separate FunctionCallingCallback `update_auxiliaries`
+        # Unpack pre-allocated caches and update them with the current u
+        (u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
+            aux_du_DSFLI,aux_du_VRFLI,aux_du_VRFLI_1st_approx,aux_du_INFLI,aux_du_BYFLI, du_NTFLI,
+            p_fu_BYFRAC) = integrator.p[4]
+        _,_,_,θᵏ⁺¹,_ = LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATIᵏ⁺¹, p_soil)
+        #TODO(bernhard): check that u_aux_θ_tminus1 and u_aux_θ are indeed different
+        ##### END This update could be done in a separate FunctionCallingCallback
+
+        # unpack other needed quantities
+        ## A) constant parameters:
+        NLAYER = integrator.p[1][2][1]
+        (δ18O_SLFL, δ2H_SLFL, p_fu_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
+                              # p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
+                              # aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old
+            ) = integrator.p[3][1]
+
+        # TODO(bernhard): this might be just the value overwritten by the last call to f.
+        #                 For a multi-stage method (Runge-Kutta) this might not be representative for the entire time step Δt
+        #                 Nevertheless it is a good approximation. Gold standard would be to cumulate the fluxes over time step Δt
+        #                 and save into auxiliary states, but this would grow the state vector by at leas 5*NLAYER
+        aux_du_TRANI = integrator.p[3][2]        # mm/day
+        du_NTFLI     = integrator.p[3][3][:,1]   # mm/day
+        aux_du_VRFLI = integrator.p[3][3][:,2]   # mm/day
+        aux_du_DSFLI = integrator.p[3][3][:,3]   # mm/day
+        aux_du_INFLI = integrator.p[3][3][:,4]   # mm/day
+        # u_aux_WETNES = integrator.p[3][3][:,5] # mm/day
+        du_GWFL      = integrator.p[3][4][1]     # mm/day
+        du_SEEP      = integrator.p[3][4][2]     # mm/day
+
+        idx_u_scalar_isotopes_d18O = integrator.p[1][4][8]
+        idx_u_vector_isotopes_d18O = integrator.p[1][4][9]
+        idx_u_scalar_isotopes_d2H  = integrator.p[1][4][10]
+        idx_u_vector_isotopes_d2H  = integrator.p[1][4][11]
+
+        u_δ18O_GWAT = integrator.u[idx_u_scalar_isotopes_d18O[1]]
+        u_δ2H_GWAT  = integrator.u[idx_u_scalar_isotopes_d2H[1] ]
+        # u_δ18O_INTS = integrator.u[idx_u_scalar_isotopes_d18O[2]]
+        # u_δ2H_INTS  = integrator.u[idx_u_scalar_isotopes_d2H[2] ]
+        # u_δ18O_INTR = integrator.u[idx_u_scalar_isotopes_d18O[3]]
+        # u_δ2H_INTR  = integrator.u[idx_u_scalar_isotopes_d2H[3] ]
+        # u_δ18O_SNOW = integrator.u[idx_u_scalar_isotopes_d18O[4]]
+        # u_δ2H_SNOW  = integrator.u[idx_u_scalar_isotopes_d2H[4] ]
+        u_δ18O_SWATI = integrator.u[idx_u_vector_isotopes_d18O]
+        u_δ2H_SWATI  = integrator.u[idx_u_vector_isotopes_d2H]
+
+        ## B) time dependent parameters
+        p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC,
+            p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE, p_RELDEN,
+            p_δ18O_PREC, p_δ2H_PREC, ref_date = integrator.p[2]
+
+        ## C) state dependent parameters or intermediate results:
+        # These were computed in the callback and are kept constant in between two
+        # callbacks.
+        (δ18O_SLFL, δ2H_SLFL, p_fu_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
+            p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
+            aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old) = integrator.p[3][1]
+
+
+        # Define quantities needed for transport equation (advection dispersion/diffusion equation)
+        δ¹⁸Oᵏ   = integrator.uprev[idx_u_vector_isotopes_d18O]  # of time step before
+        δ²Hᵏ    = integrator.uprev[idx_u_vector_isotopes_d2H]   # of time step before
+        # ## unused: Note: transform the deltas into isotope-amount fraction x, a.k.a. isotopic abundance, a.k.a. atom fraction
+        # Convert to concentrations:
+        C_¹⁸Oᵏ   = LWFBrook90.ISO.δ_to_C(δ¹⁸Oᵏ, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O) # kg/m3
+        C_²Hᵏ    = LWFBrook90.ISO.δ_to_C(δ²Hᵏ,  LWFBrook90.ISO.R_VSMOW²H,  LWFBrook90.ISO.Mi_²H)  # kg/m3
+
+        u_SWATIᵏ = integrator.uprev[idx_u_vector_amounts]                                           # of time step before
+        θᵏ       = u_aux_θ_tminus1                                                                  # of time step before
+        # TODO(bernhard): u_aux_θ_tminus1 is not saved, workaraound below:
+        (_, _, _, θᵏ, p_fu_KK) =
+            LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATIᵏ, p_soil) # 0.000007 seconds (7 allocations: 1008 bytes)
+
+
+
+        q = aux_du_VRFLI ./ 1000 # VRFLI is in mm/day, q is now in m/day
+        # Compute quantities needed for advection diffusion equation
+        # # For each Finite Volume cell:
+            # ∂/∂t ∫θ Cᵢ dz = Dᵢ(z_upper)∂Cᵢ/∂z(z_upper) - Dᵢ(z_lower)∂Cᵢ/∂z(z_lower)
+            #                 - q(z_upper) Cᵢ(z_upper) + q(z_lower) Cᵢ(z_lower)
+            #                 + (INFLI*Cᵢ_{INFLI} - TRANI*Cᵢ_{TRANI} - DSFL*Cᵢ_{DSFL} - SLVP*Cᵢ_{SLVP})
+            #               = r-h-s
+            # with constant θ and Cᵢ over cell:
+            # ∂/∂t θ Cᵢ ∫dz = ∂/∂t θ Cᵢ * (thickness) = thickness * [ θ * ∂/∂t Cᵢ + Cᵢ * ∂/∂t θ ] # where thickness = z_upper - z_lower
+            #                                         = [ SWATI * ∂/∂t Cᵢ + Cᵢ * ∂/∂t SWATI ]
+            #                                         = r-h-s
+            # ==>
+            # ∂/∂t Cᵢ = [- Cᵢ/SWATI * ∂/∂t SWATI] + 1/SWATI * [
+            #                                                  diff(z_upper) - diff(z_lower) - qCᵢ(z_upper) + qCᵢ(z_lower) +
+            #                                                  INFLI*Cᵢ_{INFLI} - TRANI*Cᵢ_{TRANI} - DSFL*Cᵢ_{DSFL} - SLVP*Cᵢ_{SLVP}
+            #                                                 ]
+            #
+            #     from Braud et al. 2005 use the following approximation at cell boundaries
+            #       a) for conc gradient: dC/dz(z_upper) = dC/dz(j-1/2) = (C(j) - C(j-1)) / dz(j-1) # finite differences
+            #       b) for concentration: C(z_upper)     = C(j-1/2)     = (C(j) + C(j-1)) /2        # no specific upwind treatment
+            #       c) for dispersivity:  D(z_upper)     = D(j-1/2)     = (D(j) + D(j-1)) /2        # no specific upwind treatment
+
+            # ##################
+            # ##################
+            # ##################
+            # 0) Define conditions for isotope calculations:
+            Tc = p_fu_TADTM  # °C, average daytime air temperature
+            # h = min(1.0, p_EA) # -, relative humidity of the atmosphere (vappress_atm/1 atm)
+            # γ = 1.0          # -, thermodynamic activity coefficient of evaporating water
+            # # X_INTS = 0.5  # -, turbulence incex of the atmosphere above the evaporating water
+            # # X_INTR = 0.5  # -, turbulence incex of the atmosphere above the evaporating water
+            # # X_SNOW = 1.0  # -, turbulence incex of the atmosphere above the evaporating water
+
+            # # Atmospheric vapor composition assumed to be in equilibrium with precipitation
+            # #     Benettin-2018-Hydrol_Earh_Syst_Sci citing Gibson et al. 2008
+            # δₐ(δ_p, α_eq) = (δ_p - 1000 * (α_eq - 1))/α_eq
+            # δ²H_a  = δₐ(p_δ2H_PREC,  LWFBrook90.ISO.α²H_eq(Tc))
+            # δ¹⁸O_a = δₐ(p_δ18O_PREC, LWFBrook90.ISO.α¹⁸O_eq(Tc))
+
+            # # For soil:
+            # Xa = 0.5 # between molecular and turbulent
+            # Xs = 1.0 # molecular only
+            # X_SOIL = u_aux_WETNES[1] * Xa + (1 - u_aux_WETNES[1]) * Xs
+            # # when fully saturated, WETNES == 1, water vapor leaves quickly to atmosphere
+            # # when hardly saturated, WETNES -> 0, water vapor crosses soil pores until it reaches atmosphere
+            # # Equivalent:
+            # # X_SOIL = ((u_aux_θ[1]-θ_res)*Xa + (θ_sat-u_aux_θ[1])*Xs)/(θ_sat-θ_res)
+            # # Taken from Zhou-2021-Environ_Model_Softw (X is called n_k there)
+            # ##################
+            # ##################
+            # ##################
+
+
+        # Define (constant) soil transport properties
+        N = NLAYER
+        Tsoil_K = (p_fu_TADTM + 273.15) .* ones(N) # °C, TODO: use solution from heat equation instead of approximation of p_fu_TADTM
+        # τw = θᵏ⁺¹ .^ (7/3) ./ (θsat .^ 2)            # TODO: express tortuosity as function of θ, (Millington and Quirk 1961 as shown in Radcliffe et al. 2018, eq 6.6)
+        τw = 1.0 .* ones(N)   # -, tortuosity in liquid phase (w = water), using 1.0 will overestimate diffusion
+        # τg = 1.0 .* ones(N) # -, tortuosity in vapor phase (g = gas), unused as no vapor transport is considered
+        Λ = 0.04 .* ones(N)   # m, dispersivity length (4cm is the average fitted dispersivity to the lysimters of Stumpp et al. 2012)
+        D⁰_¹⁸O = 0.96691 * 10^-9 .* exp.(-535400 ./ Tsoil_K.^2 .+ 1393.3 ./ Tsoil_K .+ 2.1876)  .* 3600 .* 24 # m²/day molecular diffusion constant of ¹⁸O in liquid water (eq. A3, Zhou et al. 2021)
+        D⁰_²H  = 0.98331 * 10^-9 .* exp.(-535400 ./ Tsoil_K.^2 .+ 1393.3 ./ Tsoil_K .+ 2.1876)  .* 3600 .* 24 # m²/day molecular diffusion constant of ²H  in liquid water (eq. A3, Zhou et al. 2021)
+
+        # Effective dispersion coefficient (Eq. 33 Zhou et al. 2021)
+        D_¹⁸O_ᵏ⁺¹ = D⁰_¹⁸O .* τw .* θᵏ⁺¹ .+ Λ .* abs.(q) # m²/day
+        D_²H_ᵏ⁺¹  = D⁰_²H  .* τw .* θᵏ⁺¹ .+ Λ .* abs.(q) # m²/day
+
+        # Make matrix for implicit time stepping (solving Ax = b) (see Braud et al. 2005)
+        # TODO(bernharf): preallocate this matrix A (and vectors...)
+        A1_¹⁸O = ones(N)
+        A2_¹⁸O = ones(N)
+        A3_¹⁸O = ones(N)
+        b_¹⁸O  = ones(N)
+        A1_²H = ones(N)
+        A2_²H = ones(N)
+        A3_²H = ones(N)
+        b_²H  = ones(N)
+        # to concatenate to a Tridiagonal matrix as follows: A = Array(Tridiagonal(A1[2:end],A2,A3[1:end-1]))
+
+        # using qⱼ₋₁₎₂, qⱼ₊₁₎₂, qⱼ₋₃₎₂, qⱼ₊₃₎₂
+        # using Δzⱼ₋₁, Δzⱼ, Δzⱼ₊₁
+        # using dzⱼ₋₁, dzⱼ, dzⱼ₊₁
+        Δt = integrator.t - integrator.tprev # days
+        # TODO(bernhard): below dz and Δz can be computed once only when setting up the simulation
+        Δz = integrator.p[1][1].p_THICK / 1000 # m
+        # z_center = (cumsum(Δz) .+ cumsum([0; Δz[1:NLAYER-1]]))/2 # m
+        dz = diff((cumsum(Δz) .+ cumsum([0; Δz[1:NLAYER-1]]))/2)   # m
+        # Convert to concentrations:
+        C_¹⁸Oᵏ   = LWFBrook90.ISO.δ_to_C(δ¹⁸Oᵏ, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O) # kg/m3
+        C_²Hᵏ    = LWFBrook90.ISO.δ_to_C(δ²Hᵏ,  LWFBrook90.ISO.R_VSMOW²H,  LWFBrook90.ISO.Mi_²H)  # kg/m3
+
+        # Define concentrations of source/sink terms in transport equation (TRANI, DSFLI, INFLI, SLVP)
+        ### Define δ signature of in- and outflows
+        # TODO(bernhard) for debugging:
+        δ18O_INFLI = p_δ18O_PREC(t)#TODO(bernhard): debug remove workaround and set again = δ18O_SLFL
+        δ2H_INFLI  = p_δ2H_PREC(t) #TODO(bernhard): debug remove workaround and set again = δ2H_SLFL
+
+        C_¹⁸O_INFLI = LWFBrook90.ISO.δ_to_C.(δ18O_INFLI, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O) # for debugging use: LWFBrook90.ISO.δ_to_C.(p_δ18O_PREC(integrator.tprev), LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O)
+        # C_¹⁸O_TRANI = C_¹⁸Oᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
+        # C_¹⁸O_DSFL  = C_¹⁸Oᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
+        C_²H_INFLI  = LWFBrook90.ISO.δ_to_C.(δ2H_INFLI,  LWFBrook90.ISO.R_VSMOW²H,  LWFBrook90.ISO.Mi_²H) # for debugging use: LWFBrook90.ISO.δ_to_C.(p_δ2H_PREC(integrator.tprev), LWFBrook90.ISO.R_VSMOW²H,  LWFBrook90.ISO.Mi_²H)
+        # C_²H_TRANI  = C_²Hᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
+        # C_²H_DSFL   = C_²Hᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
+        # TODO(bernhard): for TRANI and DSFL we are instead using Cᵏ⁺¹ (i.e. use the concentrations in the LHS in the implicit scheme...)
+
+        ### Compute δ signature of evaporating flux
+        δ¹⁸O_SLVP = u_δ18O_SWATI[1] # TODO(bernhard) for debugging: disabling evaporation fractionation (TODO: should yield solution similar to Stumpp 2012 model)
+        δ²H_SLVP  = u_δ2H_SWATI[1]  # TODO(bernhard) for debugging: disabling evaporation fractionation (TODO: should yield solution similar to Stumpp 2012 model)
+        # Equation derived based on Gonfiantini (see 60 lines above in comment)
+        # # δ_E = 1000*(1 + 1/((γ - h)*(α_dif)^X) * (γ/α*(1+δ_w/1000) - h*(1+δ_A/1000)))
+        # δ¹⁸O_SLVP = 1000*( 1 + (γ/α¹⁸O_eq*(1 + u_δ18O_SWATI[1] / 1000) - h*(1 + δ¹⁸O_a/1000)) /
+        #                         ((γ - h)*(LWFBrook90.ISO.α¹⁸O_dif)^X_SOIL) )
+        # δ²H_SLVP  = 1000*( 1 + (γ/α²H_eq*(1 + u_δ2H_SWATI[1] / 1000) - h*(1 + δ²H_a/1000)) /
+        #                         ((γ - h)*(LWFBrook90.ISO.α²H_dif)^X_SOIL) )
+        # (Above is an alternative to formulation in Benettin 2018 HESS eq. 1 and Gibson 2016)
+        # Cᵢ_SLVP = ( (Cᵢ - ε¹⁸O_eq)/α¹⁸O_eq - h*δ¹⁸O_a - ε¹⁸O_dif ) /
+        #             (1 - h + ε¹⁸O_dif/1000) # [‰]
+
+        C_¹⁸O_SLVP  = [LWFBrook90.ISO.δ_to_C.(δ¹⁸O_SLVP, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O); fill(0, NLAYER-1)]
+        C_²H_SLVP   = [LWFBrook90.ISO.δ_to_C.(δ²H_SLVP,  LWFBrook90.ISO.R_VSMOW²H,  LWFBrook90.ISO.Mi_²H); fill(0, NLAYER-1)]
+        # E¹⁸O = C_¹⁸O_SLVP * aux_du_SLVP * 0.001 # kg/m3 * mm/day * 0.001 m/mm # (kg/m²/day¹)
+        # E²H  = C_²H_SLVP  * aux_du_SLVP * 0.001 # kg/m3 * mm/day * 0.001 m/mm # (kg/m²/day¹)
+
+
+        # Define boundary conditions
+        ### TOP: surface isotopic flux E = 0 (as evaporation in LWFBrook is implemented as sink term (see above E¹⁸O))
+        BCFlux_top¹⁸O    = 0 # kg/m²/day¹
+        BCFlux_top²H     = 0 # kg/m²/day¹
+        ### BOTTOM:
+        BCFlux_bottom¹⁸O = q[N] * C_¹⁸Oᵏ[N]  # kg/m²/day¹
+        BCFlux_bottom²H  = q[N] * C_²Hᵏ[N]   # kg/m²/day¹
+
+        # Setup linear system (implicit solver) (From Braud et al. 2005)
+        ### Inner nodes:
+        for j = 2:(N-1)
+            # Linear system from Braud et al. 2005:
+            # A1[j] = - Diⱼ₋₁₎₂ / dzⱼ₋₁                    -   qⱼ₋₁₎₂ / 2
+            # A2[j] = - Δzⱼ * θᵏ⁺¹ / Δt    +  qⱼ₊₁₎₂ / 2   -   qⱼ₋₁₎₂ / 2   +    Diⱼ₊₁₎₂ / dzⱼ   +   Diⱼ₋₁₎₂ / dzⱼ₋₁
+            # A3[j] = - Diⱼ₊₁₎₂ / dzⱼ     +   qⱼ₋₁₎₂ / 2
+            # b[j] = Δzⱼ * θᵏ * Ciⱼᵏ / Δt # Note: θᵏ instead of θᵏ⁺¹ (Braud eq. D.15)
+
+            # Library of available expressions:
+            # D_¹⁸O_ᵏ⁺¹[j-1]
+            # D_¹⁸O_ᵏ⁺¹[j]
+            # D_¹⁸O_ᵏ⁺¹[j+1]
+            # q[j-1]
+            # q[j]
+            # q[j+1]
+            # Δt
+            # Δz[j-1], Δz[j], Δz[j+1]
+            # dz[j-1], dz[j], dz[j+1]
+
+            A1_¹⁸O[j] = 0                                                                 - (D_¹⁸O_ᵏ⁺¹[j] - D_¹⁸O_ᵏ⁺¹[j-1]) / 2 / dz[j-1]    -   q[j-1] / 2
+            A3_¹⁸O[j] =                    - (D_¹⁸O_ᵏ⁺¹[j+1] - D_¹⁸O_ᵏ⁺¹[j]) / 2 / dz[j]                                                                     +   q[j] / 2
+            A2_¹⁸O[j] = Δz[j]/Δt * θᵏ⁺¹[j] + (D_¹⁸O_ᵏ⁺¹[j+1] - D_¹⁸O_ᵏ⁺¹[j]) / 2 / dz[j]  + (D_¹⁸O_ᵏ⁺¹[j] - D_¹⁸O_ᵏ⁺¹[j-1]) / 2 / dz[j-1]    -   q[j-1] / 2  +   q[j] / 2 + (aux_du_TRANI[j]/1000 + aux_du_DSFLI[j]/1000) # Factor 1000 to get from mm/day to m/day
+
+            # RHS (using C_¹⁸Oᵏ instead of C_¹⁸Oᵏ⁺¹):
+            b_¹⁸O[j]  = Δz[j]/Δt * θᵏ[j]   * C_¹⁸Oᵏ[j]  + aux_du_INFLI[j]/1000 * C_¹⁸O_INFLI # - aux_du_SLVP[j]/1000 * C_¹⁸O_SLVP[j] # NOTE: SLVP only applies to cell 1
+        end
+        ### Outer nodes (including boundary conditions):
+        for j = 1
+            # # using a Dirchlet boundary condition
+            # A1[j] = 0
+            # A2[j] = 1
+            # A3[j] = 0
+            # b[j] = Ciₜₒₚ
+            # using a Neumann boundary condition (flux = E)
+            # A1[j] = 0
+            # A2[j] = - Δzⱼ * θᵏ / Δt     +   qⱼ₊₁₎₂ / 2                    +    Diⱼ₊₁₎₂ / dzⱼ
+            # A3[j] = - Diⱼ₊₁₎₂ / dzⱼ     +   qⱼ₋₁₎₂ / 2
+            # b[j]  = Δzⱼ * θᵏ / Δt * Cₛ¹⁸O + BCFlux_top¹⁸O
+            A1_¹⁸O[j] = 0
+            A3_¹⁸O[j] =                    - (D_¹⁸O_ᵏ⁺¹[j+1] - D_¹⁸O_ᵏ⁺¹[j]) / 2 / dz[j]                                                                     +   q[j] / 2
+            A2_¹⁸O[j] = Δz[j]/Δt * θᵏ⁺¹[j] + (D_¹⁸O_ᵏ⁺¹[j+1] - D_¹⁸O_ᵏ⁺¹[j]) / 2 / dz[j]                                                                     +   q[j] / 2 + (aux_du_TRANI[j]/1000 + aux_du_DSFLI[j]/1000) # Factor 1000 to get from mm/day to m/day
+            b_¹⁸O[j]  = Δz[j]/Δt * θᵏ[j]   * C_¹⁸Oᵏ[j]  + aux_du_INFLI[j]/1000 * C_¹⁸O_INFLI - aux_du_SLVP[j]/1000 * C_¹⁸O_SLVP[j] + BCFlux_top¹⁸O
+        end
+        for j = N
+            # # using a Neuman boundary condition
+            # A1[j] = - Diⱼ₋₁₎₂ / dzⱼ       -   qⱼ₋₁₎₂ / 2
+            # A2[j] = - 2 * Δzⱼ * θᵏ / Δt   -   qⱼ₋₁₎₂ / 2   +    Diⱼ₋₁₎₂ / dzⱼ₋₁ # TODO(bernhard): where is the factor 2 coming from?
+            # A3[j] = - 0
+            # b[j] = 2*Δzⱼ * θᵏ * Ciⱼᵏ / Δt                                       # TODO(bernhard): where is the factor 2 coming from?
+
+            A1_¹⁸O[j] =                                                                   - (D_¹⁸O_ᵏ⁺¹[j] - D_¹⁸O_ᵏ⁺¹[j-1]) / 2 / dz[j-1]    -   q[j-1] / 2
+            A3_¹⁸O[j] = 0
+            # TODO(bernhard): in Braud2005 there are factors 2 for A2 and b next to Δz[j] -> 2*Δz[j], is that correct or not?
+            A2_¹⁸O[j] = 2*Δz[j]/Δt * θᵏ⁺¹[j]                                                + (D_¹⁸O_ᵏ⁺¹[j] - D_¹⁸O_ᵏ⁺¹[j-1]) / 2 / dz[j-1]    -   q[j-1] / 2              + (aux_du_TRANI[j]/1000 + aux_du_DSFLI[j]/1000) # Factor 1000 to get from mm/day to m/day
+            b_¹⁸O[j]  = 2*Δz[j]/Δt * θᵏ[j]   * C_¹⁸Oᵏ[j]  -  BCFlux_bottom¹⁸O
+        end
+        A_¹⁸O = Array(Tridiagonal(A1_¹⁸O[2:end],A2_¹⁸O,A3_¹⁸O[1:end-1]))
+
+        # Compute the updated concentrations:
+        C_¹⁸Oᵏ⁺¹ = A_¹⁸O \ b_¹⁸O
+        u_δ18O_SWATI = LWFBrook90.ISO.C_to_δ(C_¹⁸Oᵏ⁺¹, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O) # in permil, transform from C to δ
+        # C_²Hᵏ⁺¹ = A_²H \ b_²H
+        # u_δ2H_SWATI  = LWFBrook90.ISO.C_to_δ(C_²Hᵏ⁺¹ , LWFBrook90.ISO.R_VSMOW²H , LWFBrook90.ISO.Mi_²H ) # in permil, transform from C to δ
+
+        # Compute balance for GWAT (for d2H and for d18O)
+        u[idx_u_vector_isotopes_d18O]      = u_δ18O_SWATI
+        # u[idx_u_vector_isotopes_d2H]       = u_δ2H_SWATI
+
+        # Update GWAT:
+        # TODO(bernhard): implement this
+        u[idx_u_scalar_isotopes_d18O[1]]   = u_δ18O_GWAT
+        # u[idx_u_scalar_isotopes_d2H[1] ]   = u_δ2H_GWAT
     end
 
     return nothing

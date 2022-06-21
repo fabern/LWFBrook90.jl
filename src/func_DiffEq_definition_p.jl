@@ -466,6 +466,7 @@ function define_LWFB90_p(
         zeros(NLAYER), # u_aux_PSIM
         zeros(NLAYER), # u_aux_PSITI
         zeros(NLAYER), # u_aux_θ
+        zeros(NLAYER), # u_aux_θ_tminus1
         zeros(NLAYER), # p_fu_KK
         zeros(NLAYER), # aux_du_DSFLI
         zeros(NLAYER), # aux_du_VRFLI

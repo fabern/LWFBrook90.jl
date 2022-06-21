@@ -1101,9 +1101,9 @@ function compute_isotope_GWAT_SWATI(solution_type, integrator,
         diff_upp = 0 #.* similar(aux_du_VRFLI) #TODO(bernhard): change this to include diffusive flux of isotopes, (note it generated an earlier bug when I included it as vector of 0's instead of a scalar of 0)
         diff_low = 0 #.* similar(aux_du_VRFLI) #TODO(bernhard): change this to include diffusive flux of isotopes, (note it generated an earlier bug when I included it as vector of 0's instead of a scalar of 0)
         qCᵢ¹⁸O_upp  = [0; aux_du_VRFLI[1:(NLAYER-1)]] .* [0; δ_to_x.(u_δ18O_SWATI[1:(NLAYER-1)], R_VSMOW¹⁸O)]
-        qCᵢ¹⁸O_low  = aux_du_VRFLI[1:(NLAYER)]        .* δ_to_x.(u_δ18O_SWATI[1:(NLAYER)], R_VSMOW¹⁸O)
+        qCᵢ¹⁸O_low  =     aux_du_VRFLI[1:(NLAYER)]    .*     δ_to_x.(u_δ18O_SWATI[1:(NLAYER)], R_VSMOW¹⁸O)
         qCᵢ²H_upp   = [0; aux_du_VRFLI[1:(NLAYER-1)]] .* [0; δ_to_x.(u_δ2H_SWATI[1:(NLAYER-1)],  R_VSMOW²H )]
-        qCᵢ²H_low   = aux_du_VRFLI[1:(NLAYER)]        .* δ_to_x.(u_δ2H_SWATI[1:(NLAYER)],  R_VSMOW²H )
+        qCᵢ²H_low   =     aux_du_VRFLI[1:(NLAYER)]    .*     δ_to_x.(u_δ2H_SWATI[1:(NLAYER)],  R_VSMOW²H )
 
         Cᵢ¹⁸O_INFLI = δ_to_x.(p_δ18O_PREC, R_VSMOW¹⁸O)  # TODO(bernhard): for debugging, remove this again and replace with δ18O_INFLI
         # Cᵢ¹⁸O_INFLI = δ18O_INFLI
