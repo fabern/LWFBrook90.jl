@@ -608,6 +608,9 @@ function SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, p_fu_RSS, DELTA)
     CCC = 1 / (1 + RC * RA / (RS * (RC + RA)))
     PMS = PM(AA, VPD - DELTA * RAS * (AA - ASUBS) / p_CPRHO, DELTA, RAA + RAS, p_fu_RSS)
     PMC = PM(AA, VPD - DELTA * RAC * ASUBS / p_CPRHO, DELTA, RAA + RAC, RSC)
+    # # above results effectively in:
+    # PMS = ((RAA + RAS) * DELTA * AA + p_CPRHO * VPD - DELTA * RAS * (AA - ASUBS)) / ((DELTA + p_GAMMA) * (RAA + RAS) + p_GAMMA * p_fu_RSS)
+    # PMC = ((RAA + RAC) * DELTA * AA + p_CPRHO * VPD - DELTA * RAC * ASUBS       ) / ((DELTA + p_GAMMA) * (RAA + RAC) + p_GAMMA * RSC)
 
     # LE: total latent heat flux density, W/m2
     LE = (CCC * PMC + CCS * PMS) # λE
@@ -617,6 +620,9 @@ function SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, p_fu_RSS, DELTA)
     PRATE = p_ETOM * p_WTOMJ * PM(AA - ASUBS, D0, DELTA, RAC, RSC)
     # ground evaporation rate, mm/d
     ERATE = p_ETOM * p_WTOMJ * PM(ASUBS, D0, DELTA, RAS, p_fu_RSS)
+    # # above results effectively in:
+    # PRATE = p_ETOM * p_WTOMJ * (RAC * DELTA * (AA - ASUBS) + p_CPRHO * D0) / ((DELTA + p_GAMMA) * RAC + p_GAMMA * RSC)
+    # ERATE = p_ETOM * p_WTOMJ * (RAS * DELTA * ASUBS        + p_CPRHO * D0) / ((DELTA + p_GAMMA) * RAS + p_GAMMA * p_fu_RSS)
 
     return (PRATE, ERATE)
 end

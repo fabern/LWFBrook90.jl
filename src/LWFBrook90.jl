@@ -3,6 +3,7 @@ module LWFBrook90
 using OrdinaryDiffEq  # instead of loading the full DifferentialEquations
 using DiffEqCallbacks # instead of loading the full DifferentialEquations
 using RecipesBase
+using LinearAlgebra
 
 using Dates: now
 # using Infiltrator

@@ -1154,23 +1154,23 @@ function compute_isotope_GWAT_SWATI(solution_type, integrator,
         ###                      [diff(z_upper) - diff(z_lower) - qCᵢ(z_upper) + qCᵢ(z_lower) +
         ###                       INFLI*Cᵢ_{INFLI} - TRANI*Cᵢ_{TRANI} - DSFL*Cᵢ_{DSFL} - SLVP*Cᵢ_{SLVP}]
 
-        # du_δ18O_SWATI = -Cᵢ¹⁸O./u_SWATI .* dVdt .+ 1 ./ u_SWATI .* (
-        #                         diff_upp .- diff_low .- qCᵢ¹⁸O_upp .+ qCᵢ¹⁸O_low .+
-        #                         aux_du_INFLI.*Cᵢ¹⁸O_INFLI .- aux_du_TRANI.*Cᵢ¹⁸O_TRANI .- aux_du_DSFLI.*Cᵢ¹⁸O_DSFL .- aux_du_SLVP.*Cᵢ¹⁸O_SLVP
-        #                     )
-        # du_δ2H_SWATI = -Cᵢ²H./u_SWATI .* dVdt .+ 1 ./ u_SWATI .* (
-        #                         diff_upp .- diff_low .- qCᵢ²H_upp .+ qCᵢ²H_low .+
-        #                         aux_du_INFLI.*Cᵢ²H_INFLI .- aux_du_TRANI.*Cᵢ²H_TRANI .- aux_du_DSFLI.*Cᵢ²H_DSFL .- aux_du_SLVP.*Cᵢ²H_SLVP
-        #                     )
-        # NOTE: below max(0.001,u_SWATI) makes the code more robust
-        du_Cᵢ¹⁸_SWATI = -Cᵢ¹⁸O./max.(0.001,u_SWATI) .* dVdt .+ 1 ./ max.(0.001,u_SWATI) .* (
-                                diff_upp .- diff_low .+ qCᵢ¹⁸O_upp .- qCᵢ¹⁸O_low .+ # TODO(bernhard): check sign for qC
+        du_Cᵢ¹⁸_SWATI = -Cᵢ¹⁸O./u_SWATI .* dVdt .+ 1 ./ u_SWATI .* (
+                                - diff_upp .+ diff_low .+ qCᵢ¹⁸O_upp .- qCᵢ¹⁸O_low .+ # TODO(bernhard): check sign for qC
                                 aux_du_INFLI.*Cᵢ¹⁸O_INFLI .- aux_du_TRANI.*Cᵢ¹⁸O_TRANI .- aux_du_DSFLI.*Cᵢ¹⁸O_DSFL .- aux_du_SLVP.*Cᵢ¹⁸O_SLVP
                             )
-        du_Cᵢ²H_SWATI = -Cᵢ²H./max.(0.001,u_SWATI) .* dVdt .+ 1 ./ max.(0.001,u_SWATI) .* (
-                                diff_upp .- diff_low .+ qCᵢ²H_upp .- qCᵢ²H_low .+ # TODO(bernhard): check sign for qC
+        du_Cᵢ²H_SWATI = -Cᵢ²H./u_SWATI .* dVdt .+ 1 ./ u_SWATI .* (
+                                -diff_upp .+ diff_low .+ qCᵢ²H_upp .- qCᵢ²H_low .+ # TODO(bernhard): check sign for qC
                                 aux_du_INFLI.*Cᵢ²H_INFLI .- aux_du_TRANI.*Cᵢ²H_TRANI .- aux_du_DSFLI.*Cᵢ²H_DSFL .- aux_du_SLVP.*Cᵢ²H_SLVP
                             )
+        # # NOTE: below max(0.001,u_SWATI) makes the code more robust
+        # du_Cᵢ¹⁸_SWATI = -Cᵢ¹⁸O./max.(0.001,u_SWATI) .* dVdt .+ 1 ./ max.(0.001,u_SWATI) .* (
+        #                         diff_upp .- diff_low .+ qCᵢ¹⁸O_upp .- qCᵢ¹⁸O_low .+ # TODO(bernhard): check sign for qC
+        #                         aux_du_INFLI.*Cᵢ¹⁸O_INFLI .- aux_du_TRANI.*Cᵢ¹⁸O_TRANI .- aux_du_DSFLI.*Cᵢ¹⁸O_DSFL .- aux_du_SLVP.*Cᵢ¹⁸O_SLVP
+        #                     )
+        # du_Cᵢ²H_SWATI = -Cᵢ²H./max.(0.001,u_SWATI) .* dVdt .+ 1 ./ max.(0.001,u_SWATI) .* (
+        #                         diff_upp .- diff_low .+ qCᵢ²H_upp .- qCᵢ²H_low .+ # TODO(bernhard): check sign for qC
+        #                         aux_du_INFLI.*Cᵢ²H_INFLI .- aux_du_TRANI.*Cᵢ²H_TRANI .- aux_du_DSFLI.*Cᵢ²H_DSFL .- aux_du_SLVP.*Cᵢ²H_SLVP
+        #                     )
 
         # GROUND WATER (GWAT)
         δ18O_empty = NaN

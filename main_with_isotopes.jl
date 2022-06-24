@@ -39,7 +39,9 @@ unused = discretize_soil(input_path, input_prefix)
 # Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); 0.35; 0.1]          # grid spacing (heterogenous), meter (N=17)
 Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5); 0.1]; # grid spacing (heterogenous), meter (N=21)
 Δz_m = [fill(0.02, 10); fill(0.025, 10); fill(0.03, 10); fill(0.035, 10); 0.1]; # grid spacing (heterogenous), meter (N=41)
-Δz_m = [0.04, 0.04, 0.12, 0.25, 0.3, 0.35, 0.1];                           # grid spacing (heterogenous), meter (N=7)
+# Δz_m = [fill(0.01, 20); fill(0.0125, 20); fill(0.015, 20); fill(0.0175, 20); 0.1]; # grid spacing (heterogenous), meter (N=81)
+# Δz_m = [0.04, 0.04, 0.12, 0.25, 0.3, 0.35, 0.1];                           # grid spacing (heterogenous), meter (N=7)
+# Δz_m = [1.20];# grid spacing (heterogenous), meter (N=1)
 
 
 for Δz_m in (
@@ -68,6 +70,10 @@ for Δz_m in (
         # # E.g:
         # # Soil hydraulic model
         # input_param[1,"NOOUTF"] = true # `true` if outflow from roots prevented, `false` if allowed
+    input_param[1,"NOOUTF"]
+    input_soil_horizons.gravel_volFrac .= 0.00
+    input_param[1,"MXKPL"]  = 0 # TODO(bernhard) for debugging switch off plant transpiration
+
     ####################
 
     ####################
@@ -119,6 +125,8 @@ for Δz_m in (
     # tspan = (LWFBrook90.DateTime2RelativeDaysFloat(DateTime(1980,1,1), reference_date),
     #          LWFBrook90.DateTime2RelativeDaysFloat(DateTime(1985,1,1), reference_date)) # simulates selected period
     # tspan = (0., 700.)
+    # tspan = (0.,  60)
+    # tspan = (0.,  3)
 
     # Define ODE:
     ode_LWFBrook90, unstable_check_function = define_LWFB90_ODE(u0, tspan, p);
@@ -191,6 +199,18 @@ for Δz_m in (
         ifelse(length(read(`git status --porcelain`, String))==0, "+gitclean","+gitdirty")*
         "-iso+"*string(simulate_isotopes)
 
+    if simulate_isotopes
+        optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
+        # pl1 = LWFBrook90.ISO.plotisotopes(sol_LWFBrook90);
+        pl2 = LWFBrook90.ISO.plotisotopes(
+            sol_LWFBrook90, optim_ticks;
+            layout = grid(4, 1, heights=[0.1 ,0.4, 0.1, 0.4]),
+            size=(1000,1400), dpi = 300, leftmargin = 15mm);
+        plot!(pl2, link = :x);
+        savefig(pl2, fname*"_plotRecipe.png")
+    end
+
+
     if input_prefix == "BEA2016-reset-FALSE" || input_prefix == "isoBEA2016-reset-FALSE" || input_prefix == "isoBEAdense2016-reset-FALSE"
         ref_aboveground =
             DataFrame(File(
@@ -212,221 +232,211 @@ for Δz_m in (
         savefig(fname*"_plot-INTS_INTR.png")
     end
 
-    if simulate_isotopes
-        optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
-        # pl1 = LWFBrook90.ISO.plotisotopes(sol_LWFBrook90);
-        pl2 = LWFBrook90.ISO.plotisotopes(
-            sol_LWFBrook90, optim_ticks;
-            layout = grid(4, 1, heights=[0.1 ,0.4, 0.1, 0.4]),
-            size=(1000,1400), dpi = 300, leftmargin = 15mm);
-        plot!(pl2, link = :x);
-        savefig(pl2, fname*"_plotRecipe.png")
-    end
 
-    if true
-        # theme(:default) # theme(:sand)
-        PREC_color = :black
-        depth_to_read_out_mm = [150 500 800 1500]
-        if simulate_isotopes
-            δ_resultsSoil = LWFBrook90.get_δsoil(depth_to_read_out_mm, sol_LWFBrook90)
-            δ_results = get_δ(sol_LWFBrook90)
-        end
+#     if true
+#         # theme(:default) # theme(:sand)
+#         PREC_color = :black
+#         depth_to_read_out_mm = [150 500 800 1500]
+#         if simulate_isotopes
+#             δ_resultsSoil = LWFBrook90.get_δsoil(depth_to_read_out_mm, sol_LWFBrook90)
+#             δ_results = get_δ(sol_LWFBrook90)
+#         end
 
-        pl_θ = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
-            LWFBrook90.get_θ(depth_to_read_out_mm, sol_LWFBrook90),
-            labels = string.(depth_to_read_out_mm) .* "mm",
-            xlabel = "Date",
-            ylabel = "θ\n[-]",
-            legend = :outerright);
-        pl_ψ = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
-            # -LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90) .+ 1, yaxis = :log, yflip = true,
-            LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90),
-            labels = string.(depth_to_read_out_mm) .* "mm",
-            xlabel = "Date",
-            ylabel = "ψ\n[kPa]",
-            legend = :outerright);
-        if simulate_isotopes
-            pl_δ18O = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
-                δ_resultsSoil[1],
-                labels = string.(depth_to_read_out_mm) .* "mm",
-                xlabel = "Date",
-                ylabel = "δ¹⁸O soil\n[‰]",
-                legend = :outerright);
-            pl_δ2H = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
-                δ_resultsSoil[2],
-                labels = string.(depth_to_read_out_mm) .* "mm",
-                xlabel = "Date",
-                ylabel = "δ²H soil\n[‰]",
-                legend = :outerright);
-            # add precipitation to soil δ
-            plot!(pl_δ2H,
-                LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
-                δ_results.PREC.d2H', labels = "PREC", color = PREC_color, linestyle = :dot);
-            plot!(pl_δ18O,
-                LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
-                δ_results.PREC.d18O', labels = "PREC", color = PREC_color, linestyle = :dot);
-        else
-            pl_δ18O = plot();
-            pl_δ2H = plot();
-        end
-        pl_PREC = plot(
-            LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
-            sol_LWFBrook90.prob.p[2][8].(sol_LWFBrook90.t),
-            t = :bar, color=PREC_color,
-            legend = :outerright, labels = "PREC    ", # whitespace for hardcoded alignment of legend
-            ylabel = "PREC\n[mm]");
-        plot(plot(pl_PREC, xlab = "", xticks = :none, topmargin = 5mm, bottommargin = 0mm),
-            plot(pl_θ;     xlab = "", xticks = :none, topmargin = 0mm, bottommargin = 0mm),
-            plot(pl_ψ;     xlab = "", xticks = :none, topmargin = 0mm, bottommargin = 0mm),
-            plot(pl_δ18O;  xlab = "", xticks = :none, topmargin = 0mm, bottommargin = 0mm),
-            plot(pl_δ2H;   xtick_direction=:out     , topmargin = 0mm, bottommargin = 5mm),
-            link = :x,
-            layout = grid(5, 1, heights=[0.1, 0.25 ,0.25, 0.2, 0.2]),
-            size=(600,500), dpi = 300, margin = 5mm);
+#         pl_θ = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+#             LWFBrook90.get_θ(depth_to_read_out_mm, sol_LWFBrook90),
+#             labels = string.(depth_to_read_out_mm) .* "mm",
+#             xlabel = "Date",
+#             ylabel = "θ\n[-]",
+#             legend = :outerright);
+#         pl_ψ = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+#             # -LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90) .+ 1, yaxis = :log, yflip = true,
+#             LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90),
+#             labels = string.(depth_to_read_out_mm) .* "mm",
+#             xlabel = "Date",
+#             ylabel = "ψ\n[kPa]",
+#             legend = :outerright);
+#         if simulate_isotopes
+#             pl_δ18O = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+#                 δ_resultsSoil[1],
+#                 labels = string.(depth_to_read_out_mm) .* "mm",
+#                 xlabel = "Date",
+#                 ylabel = "δ¹⁸O soil\n[‰]",
+#                 legend = :outerright);
+#             pl_δ2H = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+#                 δ_resultsSoil[2],
+#                 labels = string.(depth_to_read_out_mm) .* "mm",
+#                 xlabel = "Date",
+#                 ylabel = "δ²H soil\n[‰]",
+#                 legend = :outerright);
+#             # add precipitation to soil δ
+#             plot!(pl_δ2H,
+#                 LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+#                 δ_results.PREC.d2H', labels = "PREC", color = PREC_color, linestyle = :dot);
+#             plot!(pl_δ18O,
+#                 LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+#                 δ_results.PREC.d18O', labels = "PREC", color = PREC_color, linestyle = :dot);
+#         else
+#             pl_δ18O = plot();
+#             pl_δ2H = plot();
+#         end
+#         pl_PREC = plot(
+#             LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+#             sol_LWFBrook90.prob.p[2][8].(sol_LWFBrook90.t),
+#             t = :bar, color=PREC_color,
+#             legend = :outerright, labels = "PREC    ", # whitespace for hardcoded alignment of legend
+#             ylabel = "PREC\n[mm]");
+#         plot(plot(pl_PREC, xlab = "", xticks = :none, topmargin = 5mm, bottommargin = 0mm),
+#             plot(pl_θ;     xlab = "", xticks = :none, topmargin = 0mm, bottommargin = 0mm),
+#             plot(pl_ψ;     xlab = "", xticks = :none, topmargin = 0mm, bottommargin = 0mm),
+#             plot(pl_δ18O;  xlab = "", xticks = :none, topmargin = 0mm, bottommargin = 0mm),
+#             plot(pl_δ2H;   xtick_direction=:out     , topmargin = 0mm, bottommargin = 5mm),
+#             link = :x,
+#             layout = grid(5, 1, heights=[0.1, 0.25 ,0.25, 0.2, 0.2]),
+#             size=(600,500), dpi = 300, margin = 5mm);
 
-            savefig(fname*"_plot-θ-ψ-δ.png")
-    end
+#             savefig(fname*"_plot-θ-ψ-δ.png")
+#     end
 
-    aux_indices = sol_LWFBrook90.prob.p[1][4][5]
-    aux_names = sol_LWFBrook90.prob.p[1][4][7]
-    plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
-                [sol_LWFBrook90[aux_indices[30],:] sol_LWFBrook90[aux_indices[31],:]],
-                legend = :outerright, labels = aux_names[:, 30:31],
-                ylabel = "Water balance error [mm]")
-            savefig(fname*"_plot-water-balance-error.png")
+#     aux_indices = sol_LWFBrook90.prob.p[1][4][5]
+#     aux_names = sol_LWFBrook90.prob.p[1][4][7]
+#     plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+#                 [sol_LWFBrook90[aux_indices[30],:] sol_LWFBrook90[aux_indices[31],:]],
+#                 legend = :outerright, labels = aux_names[:, 30:31],
+#                 ylabel = "Water balance error [mm]")
+#             savefig(fname*"_plot-water-balance-error.png")
 
-end
+# end
 
-# # 1) very basic
-# using Plots # Install plot package at first use with `]` and then `add Plots`
-# # plot(p[2][15](1:300))
-# # plot(p[2][16](1:300))
+# # # 1) very basic
+# # using Plots # Install plot package at first use with `]` and then `add Plots`
+# # # plot(p[2][15](1:300))
+# # # plot(p[2][16](1:300))
 
-# # # # Plot 1
-# plot(sol_LWFBrook90; vars = [1, 2, 3, 4, 5, 6],
-#      label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
+# # # # # Plot 1
+# # plot(sol_LWFBrook90; vars = [1, 2, 3, 4, 5, 6],
+# #      label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
 
-# idx_u_vector_amounts       = sol_LWFBrook90.prob.p[1][4][4]
-# idx_u_scalar_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][5]
-# idx_u_vector_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][6]
-# idx_u_scalar_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4][7]
-# idx_u_vector_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4][8]
-# idx_u_vector_accumulators  = sol_LWFBrook90.prob.p[1][4][9]
+# # idx_u_vector_amounts       = sol_LWFBrook90.prob.p[1][4][4]
+# # idx_u_scalar_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][5]
+# # idx_u_vector_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][6]
+# # idx_u_scalar_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4][7]
+# # idx_u_vector_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4][8]
+# # idx_u_vector_accumulators  = sol_LWFBrook90.prob.p[1][4][9]
 
 
-# a = plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O,
-#     ylabel = "δ18O [mUr]",
-#     label=["GWAT (mUr)" "INTS (mUr)" "INTR (mUr)" "SNOW (mUr)"])
-# plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (mUr)")
-# # plot!(ylims = (-50,50))
-
-# plot(plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O[2], ylabel = "δ18O [mUr]", label=["INTS (mUr)"]),
-#     plot(sol_LWFBrook90; vars = [2],label=["INTS (mm)"]),
-#     layout=(2,1))
+# # a = plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O,
+# #     ylabel = "δ18O [mUr]",
+# #     label=["GWAT (mUr)" "INTS (mUr)" "INTR (mUr)" "SNOW (mUr)"])
 # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (mUr)")
-# plot(plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O[3], ylabel = "δ18O [mUr]", label=["INTR (mUr)"]),
-#     plot(sol_LWFBrook90; vars = [3],label=["INTR (mm)"]),
-#     layout=(2,1))
-# # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (mUr)")
-# plot(plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O[4], ylabel = "δ18O [mUr]", label=["SNOW (mUr)"]),
-#     plot(sol_LWFBrook90; vars = [4],label=["SNOW (mm)"]),#, ylims = (0,0.01)),
-#     layout=(2,1))
-# # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (mUr)")
-# plot(plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O[1], ylabel = "δ18O [mUr]", label=["GWAT (mUr)"]),
-#     plot(sol_LWFBrook90; vars = [1],label=["GWAT (mm)"]),
-#     layout=(2,1))
-# # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (mUr)")
+# # # plot!(ylims = (-50,50))
+
+# # plot(plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O[2], ylabel = "δ18O [mUr]", label=["INTS (mUr)"]),
+# #     plot(sol_LWFBrook90; vars = [2],label=["INTS (mm)"]),
+# #     layout=(2,1))
+# # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (mUr)")
+# # plot(plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O[3], ylabel = "δ18O [mUr]", label=["INTR (mUr)"]),
+# #     plot(sol_LWFBrook90; vars = [3],label=["INTR (mm)"]),
+# #     layout=(2,1))
+# # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (mUr)")
+# # plot(plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O[4], ylabel = "δ18O [mUr]", label=["SNOW (mUr)"]),
+# #     plot(sol_LWFBrook90; vars = [4],label=["SNOW (mm)"]),#, ylims = (0,0.01)),
+# #     layout=(2,1))
+# # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (mUr)")
+# # plot(plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O[1], ylabel = "δ18O [mUr]", label=["GWAT (mUr)"]),
+# #     plot(sol_LWFBrook90; vars = [1],label=["GWAT (mm)"]),
+# #     layout=(2,1))
+# # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (mUr)")
 
 
-# # sol_LWFBrook90[26,1,1:10]
-# plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d2H,
-#     ylabel = "δ2H [mUr]",
-#     label=["GWAT (mUr)" "INTS (mUr)" "INTR (mUr)" "SNOW (mUr)"])
-# # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][16].(sol_LWFBrook90.t), label = "PREC (mUr)")
-# scatter([
-#         (sol_LWFBrook90[13 + 1,:], sol_LWFBrook90[24 + 1,:]),
-#         (sol_LWFBrook90[13 + 2,:], sol_LWFBrook90[24 + 2,:]),
-#         (sol_LWFBrook90[13 + 3,:], sol_LWFBrook90[24 + 3,:]),
-#         (sol_LWFBrook90[13 + 4,:], sol_LWFBrook90[24 + 4,:])
-#     ];
-#     xlabel = "δ18O [mUr]", ylabel = "δ2H [mUr]",
-#     label = ["GWAT" "INTS" "INTR" "SNOW"])
-# # plot!(ylims = (-100,-60), xlims = (-15, -8))
-# # plot!(sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), sol_LWFBrook90.prob.p[2][16].(sol_LWFBrook90.t), label = "PREC")
+# # # sol_LWFBrook90[26,1,1:10]
+# # plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d2H,
+# #     ylabel = "δ2H [mUr]",
+# #     label=["GWAT (mUr)" "INTS (mUr)" "INTR (mUr)" "SNOW (mUr)"])
+# # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][16].(sol_LWFBrook90.t), label = "PREC (mUr)")
+# # scatter([
+# #         (sol_LWFBrook90[13 + 1,:], sol_LWFBrook90[24 + 1,:]),
+# #         (sol_LWFBrook90[13 + 2,:], sol_LWFBrook90[24 + 2,:]),
+# #         (sol_LWFBrook90[13 + 3,:], sol_LWFBrook90[24 + 3,:]),
+# #         (sol_LWFBrook90[13 + 4,:], sol_LWFBrook90[24 + 4,:])
+# #     ];
+# #     xlabel = "δ18O [mUr]", ylabel = "δ2H [mUr]",
+# #     label = ["GWAT" "INTS" "INTR" "SNOW"])
+# # # plot!(ylims = (-100,-60), xlims = (-15, -8))
+# # # plot!(sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), sol_LWFBrook90.prob.p[2][16].(sol_LWFBrook90.t), label = "PREC")
 
-# # # Plot 2
-# # # http://docs.juliaplots.org/latest/generated/gr/#gr-ref43
-# x = LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date)
-# y = cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK)
-# n = sol_LWFBrook90.prob.p[1][1].NLAYER
-# y_centers = [ 0; cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK)[1:(n-1)] ] +
-#     sol_LWFBrook90.prob.p[1][1].p_THICK / 2
+# # # # Plot 2
+# # # # http://docs.juliaplots.org/latest/generated/gr/#gr-ref43
+# # x = LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date)
+# # y = cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK)
+# # n = sol_LWFBrook90.prob.p[1][1].NLAYER
+# # y_centers = [ 0; cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK)[1:(n-1)] ] +
+# #     sol_LWFBrook90.prob.p[1][1].p_THICK / 2
 
-# z = sol_LWFBrook90[7 .+ (0:sol_LWFBrook90.prob.p[1][1].NLAYER-1),
-#                     1,
-#                     :]./sol_LWFBrook90.prob.p[1][1].p_THICK;
-# z2 = sol_LWFBrook90[idx_u_vector_isotopes_d18O,1,:];
-# z3 = sol_LWFBrook90[idx_u_vector_isotopes_d2H,1,:];
+# # z = sol_LWFBrook90[7 .+ (0:sol_LWFBrook90.prob.p[1][1].NLAYER-1),
+# #                     1,
+# #                     :]./sol_LWFBrook90.prob.p[1][1].p_THICK;
+# # z2 = sol_LWFBrook90[idx_u_vector_isotopes_d18O,1,:];
+# # z3 = sol_LWFBrook90[idx_u_vector_isotopes_d2H,1,:];
 
-# heatmap(x, y_centers, z, yflip = true,
-#         xlabel = "Date",
-#         ylabel = "Depth [mm]",
-#         colorbar_title = "θ [-]")
-# hline!([0; cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK)], yflip = true, xticks = false,
-#     color = :black, linestyle = :dot
-#     #title = "N_layer = "*string(sol_LWFBrook90.prob.[1][1].NLAYER)
-#     )
-# hline!(y_centers, yflip = true, xticks = false,
-#     color = :blue, linestyle = :dot)
-# heatmap(x, y, z2, yflip = true,
-#         xlabel = "Date",
-#         ylabel = "Depth [mm]",
-#         colorbar_title = "δ18O [mUr]")
-# heatmap(x, y, z3, yflip = true,
-#         xlabel = "Date",
-#         ylabel = "Depth [mm]",
-#         colorbar_title = "δ2H [mUr]")
+# # heatmap(x, y_centers, z, yflip = true,
+# #         xlabel = "Date",
+# #         ylabel = "Depth [mm]",
+# #         colorbar_title = "θ [-]")
+# # hline!([0; cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK)], yflip = true, xticks = false,
+# #     color = :black, linestyle = :dot
+# #     #title = "N_layer = "*string(sol_LWFBrook90.prob.[1][1].NLAYER)
+# #     )
+# # hline!(y_centers, yflip = true, xticks = false,
+# #     color = :blue, linestyle = :dot)
+# # heatmap(x, y, z2, yflip = true,
+# #         xlabel = "Date",
+# #         ylabel = "Depth [mm]",
+# #         colorbar_title = "δ18O [mUr]")
+# # heatmap(x, y, z3, yflip = true,
+# #         xlabel = "Date",
+# #         ylabel = "Depth [mm]",
+# #         colorbar_title = "δ2H [mUr]")
 
-# TODO: edges of cells in heatmap are not entirely correct. Find a way to override heatmap()
-#       where we provide cell edges (n+1) instead of cell centers (n)
-# TODO: e.g. plots_heatmap_edges: @recipe function f(::Type{Val{:plots_heatmap_edges}}, xe, ye, z)
-# TODO: e.g. plots_heatmap_edges:     m, n = size(z.surf)
-# TODO: e.g. plots_heatmap_edges:     x_pts, y_pts = fill(NaN, 6 * m * n), fill(NaN, 6 * m * n)
-# TODO: e.g. plots_heatmap_edges:     fz = zeros(m * n)
-# TODO: e.g. plots_heatmap_edges:     for i in 1:m # y
-# TODO: e.g. plots_heatmap_edges:         for j in 1:n # x
-# TODO: e.g. plots_heatmap_edges:             k = (j - 1) * m + i
-# TODO: e.g. plots_heatmap_edges:             inds = (6 * (k - 1) + 1):(6 * k - 1)
-# TODO: e.g. plots_heatmap_edges:             x_pts[inds] .= [xe[j], xe[j + 1], xe[j + 1], xe[j], xe[j]]
-# TODO: e.g. plots_heatmap_edges:             y_pts[inds] .= [ye[i], ye[i], ye[i + 1], ye[i + 1], ye[i]]
-# TODO: e.g. plots_heatmap_edges:             fz[k] = z.surf[i, j]
-# TODO: e.g. plots_heatmap_edges:         end
-# TODO: e.g. plots_heatmap_edges:     end
-# TODO: e.g. plots_heatmap_edges:     ensure_gradient!(plotattributes, :fillcolor, :fillalpha)
-# TODO: e.g. plots_heatmap_edges:     fill_z := fz
-# TODO: e.g. plots_heatmap_edges:     line_z := fz
-# TODO: e.g. plots_heatmap_edges:     x := x_pts
-# TODO: e.g. plots_heatmap_edges:     y := y_pts
-# TODO: e.g. plots_heatmap_edges:     z := nothing
-# TODO: e.g. plots_heatmap_edges:     seriestype := :shape
-# TODO: e.g. plots_heatmap_edges:     label := ""
-# TODO: e.g. plots_heatmap_edges:     widen --> false
-# TODO: e.g. plots_heatmap_edges:     ()
-# TODO: e.g. plots_heatmap_edges: end
-# TODO: e.g. plots_heatmap_edges: @deps plots_heatmap_edges shape
-# TODO: e.g. plots_heatmap_edges: @shorthands plots_heatmap_edges
-# TODO: e.g. plots_heatmap_edges:
-# TODO: e.g. plots_heatmap_edges: Plots.heatmap(x[1:100], y_centers, z[:,1:100])
-# TODO: e.g. plots_heatmap_edges: Plots.heatmap(x[1:100], y_centers, z[:,1:100])
-# TODO: e.g. plots_heatmap_edges: plot(t = :heatmap, x[1:50], y_centers, z[:,1:50]) # works
-# TODO: e.g. plots_heatmap_edges: plot(t = :plots_heatmap, x[1:50], y_centers, z[:,1:50]) # doesn't work
-# TODO: e.g. plots_heatmap_edges: plot(t = :plots_heatmap_edges, x[1:50], y_centers, z[:,1:50]) # doesn't work either
-# # ###################
+# # TODO: edges of cells in heatmap are not entirely correct. Find a way to override heatmap()
+# #       where we provide cell edges (n+1) instead of cell centers (n)
+# # TODO: e.g. plots_heatmap_edges: @recipe function f(::Type{Val{:plots_heatmap_edges}}, xe, ye, z)
+# # TODO: e.g. plots_heatmap_edges:     m, n = size(z.surf)
+# # TODO: e.g. plots_heatmap_edges:     x_pts, y_pts = fill(NaN, 6 * m * n), fill(NaN, 6 * m * n)
+# # TODO: e.g. plots_heatmap_edges:     fz = zeros(m * n)
+# # TODO: e.g. plots_heatmap_edges:     for i in 1:m # y
+# # TODO: e.g. plots_heatmap_edges:         for j in 1:n # x
+# # TODO: e.g. plots_heatmap_edges:             k = (j - 1) * m + i
+# # TODO: e.g. plots_heatmap_edges:             inds = (6 * (k - 1) + 1):(6 * k - 1)
+# # TODO: e.g. plots_heatmap_edges:             x_pts[inds] .= [xe[j], xe[j + 1], xe[j + 1], xe[j], xe[j]]
+# # TODO: e.g. plots_heatmap_edges:             y_pts[inds] .= [ye[i], ye[i], ye[i + 1], ye[i + 1], ye[i]]
+# # TODO: e.g. plots_heatmap_edges:             fz[k] = z.surf[i, j]
+# # TODO: e.g. plots_heatmap_edges:         end
+# # TODO: e.g. plots_heatmap_edges:     end
+# # TODO: e.g. plots_heatmap_edges:     ensure_gradient!(plotattributes, :fillcolor, :fillalpha)
+# # TODO: e.g. plots_heatmap_edges:     fill_z := fz
+# # TODO: e.g. plots_heatmap_edges:     line_z := fz
+# # TODO: e.g. plots_heatmap_edges:     x := x_pts
+# # TODO: e.g. plots_heatmap_edges:     y := y_pts
+# # TODO: e.g. plots_heatmap_edges:     z := nothing
+# # TODO: e.g. plots_heatmap_edges:     seriestype := :shape
+# # TODO: e.g. plots_heatmap_edges:     label := ""
+# # TODO: e.g. plots_heatmap_edges:     widen --> false
+# # TODO: e.g. plots_heatmap_edges:     ()
+# # TODO: e.g. plots_heatmap_edges: end
+# # TODO: e.g. plots_heatmap_edges: @deps plots_heatmap_edges shape
+# # TODO: e.g. plots_heatmap_edges: @shorthands plots_heatmap_edges
+# # TODO: e.g. plots_heatmap_edges:
+# # TODO: e.g. plots_heatmap_edges: Plots.heatmap(x[1:100], y_centers, z[:,1:100])
+# # TODO: e.g. plots_heatmap_edges: Plots.heatmap(x[1:100], y_centers, z[:,1:100])
+# # TODO: e.g. plots_heatmap_edges: plot(t = :heatmap, x[1:50], y_centers, z[:,1:50]) # works
+# # TODO: e.g. plots_heatmap_edges: plot(t = :plots_heatmap, x[1:50], y_centers, z[:,1:50]) # doesn't work
+# # TODO: e.g. plots_heatmap_edges: plot(t = :plots_heatmap_edges, x[1:50], y_centers, z[:,1:50]) # doesn't work either
+# # # ###################
 
-# plot(x,
-#      z[LWFBrook90.find_indices(depth_to_read_out_mm, sol_LWFBrook90), :]',
-#      labels = string.(depth_to_read_out_mm) .* "mm",
-#      xlabel = "Date",
-#      ylabel = "θ [-]",
-#      legend = :bottomright)
-# savefig(input_prefix*"_θ-feinUndSteinErde_depths_NLAYER"*string(sol_LWFBrook90.prob.p[1][1].NLAYER)*".png")
+# # plot(x,
+# #      z[LWFBrook90.find_indices(depth_to_read_out_mm, sol_LWFBrook90), :]',
+# #      labels = string.(depth_to_read_out_mm) .* "mm",
+# #      xlabel = "Date",
+# #      ylabel = "θ [-]",
+# #      legend = :bottomright)
+# # savefig(input_prefix*"_θ-feinUndSteinErde_depths_NLAYER"*string(sol_LWFBrook90.prob.p[1][1].NLAYER)*".png")
