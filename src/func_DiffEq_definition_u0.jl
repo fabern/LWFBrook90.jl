@@ -43,6 +43,8 @@ function define_LWFB90_u0(p, uScalar_initial,
         # u_CC_init_MJ_per_m2_d18O = uScalar_initial[2, "u_CC_init_MJ_per_m2"] # state has no isotopic signature
         # u_SNOWLQ_init_d18O       = uScalar_initial[2, "u_SNOWLQ_init_mm"]    # state has no isotopic signature
         u_SWATIinit_d18O      = uSoil_initial_δ18O_mUr
+        u_RWUinit_d18O        = uSoil_initial_δ18O_mUr[1]  # TODO(bernhard): start out with same concentration as in first soil layer
+        u_XYLEMinit_d18O      = uSoil_initial_δ18O_mUr[1]  # TODO(bernhard): start out with same concentration as in first soil layer
 
         # isotopes d2H
         u_GWAT_init_d2H      = uScalar_initial[3, "u_GWAT_init_mm"]
@@ -52,6 +54,8 @@ function define_LWFB90_u0(p, uScalar_initial,
         # u_CC_init_MJ_per_m2_d2H = uScalar_initial[3, "u_CC_init_MJ_per_m2"] # state has no isotopic signature
         # u_SNOWLQ_init_d2H       = uScalar_initial[3, "u_SNOWLQ_init_mm"]    # state has no isotopic signature
         u_SWATIinit_d2H      = uSoil_initial_δ2H_mUr
+        u_RWUinit_d2H        = uSoil_initial_δ2H_mUr[1]  # TODO(bernhard): start out with same concentration as in first soil layer
+        u_XYLEMinit_d2H      = uSoil_initial_δ2H_mUr[1]  # TODO(bernhard): start out with same concentration as in first soil layer
 
 
         u0 = [u0;
@@ -61,6 +65,8 @@ function define_LWFB90_u0(p, uScalar_initial,
             u_SNOW_init_d18O;
             # u_CC_init_d18O;
             # u_SNOWLQ_init_d18O;
+            u_RWUinit_d18O;
+            u_XYLEMinit_d18O
             u_SWATIinit_d18O;
 
             u_GWAT_init_d2H;
@@ -69,13 +75,16 @@ function define_LWFB90_u0(p, uScalar_initial,
             u_SNOW_init_d2H;
             # u_CC_init_d2H;
             # u_SNOWLQ_init_d2H;
+            u_RWUinit_d2H;
+            u_XYLEMinit_d2H;
             u_SWATIinit_d2H]
 
-            # idx_u_vector_isotopes_d18O = length(idx_u_vector_amounts) .+ (1:(4 + length(u_SWATIinit_d18O)))
-            # idx_u_vector_isotopes_d2H  = length(idx_u_vector_amounts) .+ (1:(4 + length(u_SWATIinit_d2H))) .+ 4 .+ length(u_SWATIinit_d18O)
+            # Nδ = 6
+            # idx_u_vector_isotopes_d18O = length(idx_u_vector_amounts) .+ (1:(Nδ + length(u_SWATIinit_d18O)))
+            # idx_u_vector_isotopes_d2H  = length(idx_u_vector_amounts) .+ (1:(Nδ + length(u_SWATIinit_d2H))) .+ Nδ .+ length(u_SWATIinit_d18O)
 
-            #idx_u_vector_isotopes_d18O = 6+p[1][1].NLAYER     .+ (1:(4+p[1][1].NLAYER))
-            #idx_u_vector_isotopes_d2H  = 6+4+2*p[1][1].NLAYER .+ (1:(4+p[1][1].NLAYER))
+            #idx_u_vector_isotopes_d18O = 6+p[1][1].NLAYER     .+ (1:(Nδ+p[1][1].NLAYER))
+            #idx_u_vector_isotopes_d2H  = 6+Nδ+2*p[1][1].NLAYER .+ (1:(Nδ+p[1][1].NLAYER))
     else
         #TODO(bernhard): In order to set idx_u_vector_isotopes_d18O and idx_u_vector_isotopes_d2H,
         #                we need to solve the follwoing:
@@ -94,7 +103,7 @@ function define_LWFB90_u0(p, uScalar_initial,
         u0 = [u0; fill(0, N_accumulate_variables, 1)]
         # Set idx_u_vector_accumulators
         # idx_u_vector_accumulators = (length(u0)-N_accumulate_variables+1):length(u0)
-        #idx_u_vector_accumulators = 6+4+4+3*p[1][1].NLAYER .+ (1:31)
+        #idx_u_vector_accumulators = 6+Nδ+Nδ+3*p[1][1].NLAYER .+ (1:31)
 
         # initialize terms for balance errors with initial values from u0
         new_SWAT       = sum(u_SWATIinit_mm) # total soil water in all layers, mm

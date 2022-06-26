@@ -379,11 +379,13 @@ function define_LWFB90_p(
     idx_u_scalar_amounts       = 1:6
     idx_u_vector_amounts       = 7:(6+NLAYER)
     if simulate_isotopes
-        # 4 is the number of states except SWAT that have concentrations: i.e. INTS, INTR, SNOW, GWAT
-        idx_u_scalar_isotopes_d18O = 6+NLAYER          .+ (1:4)
-        idx_u_vector_isotopes_d18O = 6+NLAYER          .+ (4 .+ (1:NLAYER))
-        idx_u_scalar_isotopes_d2H  = 6+NLAYER+4+NLAYER .+ (1:4)
-        idx_u_vector_isotopes_d2H  = 6+NLAYER+4+NLAYER .+ (4 .+ (1:NLAYER))
+        # Nδ is the number of states except SWAT that have concentrations: i.e. INTS, INTR, SNOW, GWAT, RWU,Xylem
+        # NLAYER is the number of states/layers for SWAT that all have concentrations.
+        Nδ = 6
+        idx_u_scalar_isotopes_d18O = 6+NLAYER          .+ (1:Nδ)
+        idx_u_vector_isotopes_d18O = 6+NLAYER          .+ (Nδ .+ (1:NLAYER))
+        idx_u_scalar_isotopes_d2H  = 6+NLAYER+Nδ+NLAYER .+ (1:Nδ)
+        idx_u_vector_isotopes_d2H  = 6+NLAYER+Nδ+NLAYER .+ (Nδ .+ (1:NLAYER))
 
     else
         idx_u_scalar_isotopes_d18O = []
@@ -394,7 +396,7 @@ function define_LWFB90_p(
     if compute_intermediate_quantities
         # 31 is the number of currently programmed intermediate quantities
         if simulate_isotopes
-            idx_u_vector_accumulators = 6+NLAYER+4+NLAYER+4+NLAYER .+ (1:31)
+            idx_u_vector_accumulators = 6+NLAYER+Nδ+NLAYER+Nδ+NLAYER .+ (1:31)
         else
             idx_u_vector_accumulators = 6+NLAYER                   .+ (1:31)
         end

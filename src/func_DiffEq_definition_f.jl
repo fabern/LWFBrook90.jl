@@ -86,6 +86,10 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         #     # u_δ2H_INTR  = u[idx_u_scalar_isotopes_d2H[3] ]
         #     # u_δ18O_SNOW = u[idx_u_scalar_isotopes_d18O[4]]
         #     # u_δ2H_SNOW  = u[idx_u_scalar_isotopes_d2H[4] ]
+        #     # u_δ18O_RWU = u[idx_u_scalar_isotopes_d18O[5]]
+        #     # u_δ2H_RWU  = u[idx_u_scalar_isotopes_d2H[5] ]
+        #     # u_δ18O_XYL = u[idx_u_scalar_isotopes_d18O[6]]
+        #     # u_δ2H_XYL  = u[idx_u_scalar_isotopes_d2H[6] ]
         #     u_δ18O_SWATI = u[idx_u_vector_isotopes_d18O]
         #     u_δ2H_SWATI  = u[idx_u_vector_isotopes_d2H]
         # end
@@ -170,21 +174,6 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
         # Update SWATI for each layer:
         du[idx_u_vector_amounts] .= du_NTFLI[:] # 0.000002 seconds (3 allocations: 224 bytes)
-
-        # # update δ values of GWAT and SWATI
-        # # do not update δ values of INTS, INTR, SNOW (is done in cb())
-        # if simulate_isotopes
-        #     du[idx_u_scalar_isotopes_d18O[1]]   = du_δ18O_GWAT     #TODO(bernhard)
-        #     du[idx_u_scalar_isotopes_d2H[1] ]   = du_δ2H_GWAT      #TODO(bernhard)
-        #     # du[idx_u_scalar_isotopes_d18O[2]]   = du_δ18O_INTS   #du_δ18O_INTS, was computed in callback
-        #     # du[idx_u_scalar_isotopes_d2H[2] ]   = du_δ2H_INTS    #du_δ2H_INTS,  was computed in callback
-        #     # du[idx_u_scalar_isotopes_d18O[3]]   = du_δ18O_INTR   #du_δ18O_INTR, was computed in callback
-        #     # du[idx_u_scalar_isotopes_d2H[3] ]   = du_δ2H_INTR    #du_δ2H_INTR,  was computed in callback
-        #     # du[idx_u_scalar_isotopes_d18O[4]]   = du_δ18O_SNOW   #du_δ18O_SNOW, was computed in callback
-        #     # du[idx_u_scalar_isotopes_d2H[4] ]   = du_δ2H_SNOW    #du_δ2H_SNOW,  was computed in callback
-        #     du[idx_u_vector_isotopes_d18O]      = du_δ18O_SWATI    #TODO(bernhard)
-        #     du[idx_u_vector_isotopes_d2H]       = du_δ2H_SWATI     #TODO(bernhard)
-        # end
 
         # save intermediate results from flow calculation into a cache
         # for efficient use in transport calculation (in callbacks)

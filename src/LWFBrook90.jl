@@ -4,6 +4,7 @@ using OrdinaryDiffEq  # instead of loading the full DifferentialEquations
 using DiffEqCallbacks # instead of loading the full DifferentialEquations
 using RecipesBase
 using LinearAlgebra
+using StatsBase: wmean
 
 using Dates: now
 # using Infiltrator

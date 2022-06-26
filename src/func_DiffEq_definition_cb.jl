@@ -373,6 +373,10 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         u_δ2H_SNOW  = integrator.u[idx_u_scalar_isotopes_d2H[4] ]
         # u_δ18O_SWATI = integrator.u[idx_u_vector_isotopes_d18O]
         # u_δ2H_SWATI  = integrator.u[idx_u_vector_isotopes_d2H]
+        # u_δ18O_RWU = integrator.u[idx_u_scalar_isotopes_d18O[5]]
+        # u_δ2H_RWU  = integrator.u[idx_u_scalar_isotopes_d2H[5] ]
+        u_δ18O_Xylem = integrator.u[idx_u_scalar_isotopes_d18O[6]]
+        u_δ2H_Xylem  = integrator.u[idx_u_scalar_isotopes_d2H[6] ]
 
         # Variant 1) works but really much slower
         # δ18O_SLFL, δ2H_SLFL,
@@ -1226,14 +1230,43 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # 5) Apply changes explicitly
         # Since we update this in the callback we can't overwrite `du` and let DiffEq.jl do
         # the work, so we need to update `u` instead of `du`
-        # Using a simple forward euler update:
+        # Using a simple forward Euler update:
         u[idx_u_scalar_isotopes_d18O[1]]   += integrator.dt * du_δ18O_GWAT     #TODO(bernhard)
         u[idx_u_scalar_isotopes_d2H[1] ]   += integrator.dt * du_δ2H_GWAT      #TODO(bernhard)
         u[idx_u_vector_isotopes_d18O]      .+= integrator.dt * du_δ18O_SWATI    #TODO(bernhard)
         u[idx_u_vector_isotopes_d2H]       .+= integrator.dt * du_δ2H_SWATI     #TODO(bernhard)
-
         ###
         ### end method from compute_isotope_GWAT_SWATI()
+
+        # 6) Compute average composition of δRWU (weighted-mean of all uptake depths)
+        # C¹⁸O_RWU = LWFBrook90.ISO.x_to_δ.(sum(aux_du_TRANI.*Cᵢ¹⁸O_TRANI)/sum(aux_du_TRANI),  LWFBrook90.ISO.R_VSMOW¹⁸O)
+        # C²H_RWU  = LWFBrook90.ISO.x_to_δ.(sum(aux_du_TRANI.*Cᵢ²H_TRANI) /sum(aux_du_TRANI),  LWFBrook90.ISO.R_VSMOW²H)
+        # go back from atom fraction to delta values
+        # u_δ18O_RWU = LWFBrook90.ISO.x_to_δ.(C¹⁸O_RWU, LWFBrook90.ISO.R_VSMOW¹⁸O)
+        # u_δ2H_RWU  = LWFBrook90.ISO.x_to_δ.(C²H_RWU, LWFBrook90.ISO.R_VSMOW²H)
+
+        # # Assume δXylem is a reservoir of volume Vxylem (initial conditions ...) and influx is
+        # # sum(aux_du_TRANI) of composition δ_RWU and outflux of same volume but composition δ_Xylem:
+        # # V_xylem * dδ_xylem/dt = sum(aux_du_TRANI) * (δ_RWU - δ_xylem)
+        # # ==> dδ_xylem/dt = sum(aux_du_TRANI)/V_xylem * (δ_RWU - δ_xylem)
+        # # ==>     dx/dt    = A * (B - x) = AB - Ax
+        # # ==>     x = (x0 - B)*e^(-At) + B
+        # # ==>     δ_xylem = δ_RWU + (δ_xylem0 - δ_RWU)*exp(-sum(aux_du_TRANI)/V_xylem * t)
+        # V_xylem = 100 # mm, Volume of well mixed xylem storage per area, TODO(bernhard): make this a parameter
+        # u_δ18O_Xylem = u[idx_u_scalar_isotopes_d18O[6]]
+        # u_δ2H_Xylem  = u[idx_u_scalar_isotopes_d2H[6] ]
+        # u_δ18O_Xylem = u_δ18O_RWU + (u_δ18O_Xylem - u_δ18O_RWU)*exp(-sum(aux_du_TRANI)/V_xylem * integrator.dt) #TODO: this should be using δ_to_x() and back
+        # u_δ2H_Xylem  = u_δ2H_RWU  + (u_δ2H_Xylem  - u_δ2H_RWU )*exp(-sum(aux_du_TRANI)/V_xylem * integrator.dt) #TODO: this should be using δ_to_x() and back
+
+        # u[idx_u_scalar_isotopes_d18O[5]] = sum(Cᵢ¹⁸O_TRANI, aux_du_TRANI) #sum(aux_du_TRANI.*Cᵢ¹⁸O_TRANI)/sum(aux_du_TRANI)
+        # u[idx_u_scalar_isotopes_d2H[5] ] = sum(Cᵢ²H_TRANI, aux_du_TRANI) #sum(aux_du_TRANI.*Cᵢ²H_TRANI) /sum(aux_du_TRANI)
+        u[idx_u_scalar_isotopes_d18O[5]] = LWFBrook90.ISO.x_to_δ(wmean(Cᵢ¹⁸O_TRANI, aux_du_TRANI), LWFBrook90.ISO.R_VSMOW¹⁸O) #sum(aux_du_TRANI.*Cᵢ¹⁸O_TRANI)/sum(aux_du_TRANI)
+        u[idx_u_scalar_isotopes_d2H[5] ] = LWFBrook90.ISO.x_to_δ(wmean(Cᵢ²H_TRANI, aux_du_TRANI), LWFBrook90.ISO.R_VSMOW²H) #sum(aux_du_TRANI.*Cᵢ²H_TRANI) /sum(aux_du_TRANI)
+
+        # u[idx_u_scalar_isotopes_d18O[5]] = u_δ18O_RWU  # TODO(bernhard): why does this triple allocations?
+        # u[idx_u_scalar_isotopes_d2H[5] ] = u_δ2H_RWU   # TODO(bernhard): why does this triple allocations?
+        # u[idx_u_scalar_isotopes_d18O[6]] = u_δ18O_Xylem
+        # u[idx_u_scalar_isotopes_d2H[6] ] = u_δ2H_Xylem
 
     end
 
