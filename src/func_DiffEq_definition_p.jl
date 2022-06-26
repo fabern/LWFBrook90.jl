@@ -461,7 +461,8 @@ function define_LWFB90_p(
     #Earlier it was simply: [NaN, NaN, NaN, NaN, NaN, NaN], fill(NaN, NLAYER)
 
     # Initialize further caches to hold computed quantities without need to allocate memory
-    p_cache = (
+    p_cache = ((
+        # chaches for flow equation
         zeros(NLAYER), # u_aux_WETNES
         zeros(NLAYER), # u_aux_PSIM
         zeros(NLAYER), # u_aux_PSITI
@@ -474,7 +475,18 @@ function define_LWFB90_p(
         zeros(NLAYER), # aux_du_INFLI
         zeros(NLAYER), # aux_du_BYFLI
         zeros(NLAYER), # du_NTFLI
-        zeros(NLAYER)) # p_fu_BYFRAC
+        zeros(NLAYER)), # p_fu_BYFRAC
+        # chaches for advection dispersion equation
+            # for quantities (all NLAYER long):
+            # 7 vectors: θᵏ⁺¹, θᵏ, C_¹⁸Oᵏ⁺¹, C_¹⁸Oᵏ, C_²Hᵏ⁺¹, C_²Hᵏ, q,
+            # 9 vectors: Tsoil_K, τw, Λ, D⁰_¹⁸O, D⁰_²H, D_¹⁸O_ᵏ⁺¹, D_²H_ᵏ⁺¹, C_¹⁸O_SLVP, C_²H_SLVP,
+            # 8 vectors: diff¹⁸O_upp, diff²H_upp, qCᵢ¹⁸O_upp, qCᵢ²H_upp,
+            #            diff¹⁸O_low, diff²H_low, qCᵢ¹⁸O_low, qCᵢ²H_low,
+            # 4 vectors: du_Cᵢ¹⁸_SWATI, du_Cᵢ²H_SWATI, du_δ18O_SWATI, du_δ2H_SWATI
+        Tuple(zeros(NLAYER) for i=1:28)#,
+            # 4 vectors: diff¹⁸O_interfaces, diff²H_interfaces, qCᵢ¹⁸O_interfaces, qCᵢ²H_interfaces,
+        # Tuple(zeros(NLAYER+1) for i=1:4)
+        )
 
     # 3) Return different types of parameters as a single object
     return ((soil_discr["PSIM_init"], soil_discr["d18O_init"],soil_discr["d2H_init"]),

@@ -305,7 +305,7 @@ for Δz_m in (
 #                 ylabel = "Water balance error [mm]")
 #             savefig(fname*"_plot-water-balance-error.png")
 
-# end
+end
 
 # # # 1) very basic
 # # using Plots # Install plot package at first use with `]` and then `add Plots`

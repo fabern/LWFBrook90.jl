@@ -54,7 +54,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # Pre-allocated caches to save memory allocations
         (u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
             aux_du_DSFLI,aux_du_VRFLI,aux_du_VRFLI_1st_approx,aux_du_INFLI,aux_du_BYFLI, du_NTFLI,
-            p_fu_BYFRAC) = p[4]
+            p_fu_BYFRAC) = p[4][1]
 
         ##################
         # Parse states
