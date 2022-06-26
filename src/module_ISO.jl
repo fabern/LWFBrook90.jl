@@ -266,16 +266,20 @@ end
     row_INTR_d18O = reshape(sol[idx_u_scalar_isotopes_d18O[3],1,:], 1, :)
     row_SNOW_d18O = reshape(sol[idx_u_scalar_isotopes_d18O[4],1,:], 1, :)
     row_GWAT_d18O = reshape(sol[idx_u_scalar_isotopes_d18O[1],1,:], 1, :)
+    row_RWU_d18O  = reshape(sol[idx_u_scalar_isotopes_d18O[5],1,:], 1, :)
+    row_XYL_d18O  = reshape(sol[idx_u_scalar_isotopes_d18O[6],1,:], 1, :)
     row_PREC_d2H  = reshape(sol.prob.p[2][16].(sol.t), 1, :)
     row_INTS_d2H  = reshape(sol[idx_u_scalar_isotopes_d2H[2],1,:], 1, :)
     row_INTR_d2H  = reshape(sol[idx_u_scalar_isotopes_d2H[3],1,:], 1, :)
     row_SNOW_d2H  = reshape(sol[idx_u_scalar_isotopes_d2H[4],1,:], 1, :)
     row_GWAT_d2H  = reshape(sol[idx_u_scalar_isotopes_d2H[1],1,:], 1, :)
+    row_RWU_d2H   = reshape(sol[idx_u_scalar_isotopes_d2H[5],1,:], 1, :)
+    row_XYL_d2H   = reshape(sol[idx_u_scalar_isotopes_d2H[6],1,:], 1, :)
 
     # 1b) define some plot arguments based on the extracted data
     # color scheme:
-    all_d18O_values = [rows_SWAT_d18O; row_PREC_d18O; row_INTS_d18O; row_INTR_d18O; row_SNOW_d18O; row_GWAT_d18O][:]
-    all_d2H_values  = [rows_SWAT_d2H ; row_PREC_d2H ; row_INTS_d2H ; row_INTR_d2H ; row_SNOW_d2H ; row_GWAT_d2H ][:]
+    all_d18O_values = [rows_SWAT_d18O; row_PREC_d18O; row_INTS_d18O; row_INTR_d18O; row_SNOW_d18O; row_GWAT_d18O; row_RWU_d18O][:]
+    all_d2H_values  = [rows_SWAT_d2H ; row_PREC_d2H ; row_INTS_d2H ; row_INTR_d2H ; row_SNOW_d2H ; row_GWAT_d2H ; row_RWU_d2H ][:]
     clims_d18O = (-16, -6)
     clims_d2H  = (-125, -40)
     # if clims_d18O == :auto
@@ -351,15 +355,15 @@ end
     end
 
     # 3b) Heatmap (containing SWATI and other compartments)
-    y_extended = [-500; -350; -300; -250; -200; -150; -100;   -50;         y;          (maximum(y) .+ [10, 200])]
+    y_extended = [-500; -350; -300; -250; -200; -150; -100;   -50;         y;          (maximum(y) .+ 50 .+ [50; 100; 150; 250])]
     # y_labels   = ["INTS"; ""; "INTR"; ""; "SNOW"; ""; round.(y); "";             "GWAT"]
     # y_soil_ticks = optimize_ticks(extrema(y)...; k_min = 4)[1]
     # y_soil_ticks = optimize_ticks(0., round(maximum(cumsum(sol.prob.p[1][1].p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
     y_soil_ticks = tick_function(0., round(maximum(cumsum(sol.prob.p[1][1].p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
-    y_ticks    = [-500;       -300;       -200;       -100;     y_soil_ticks;                   (maximum(y) .+ [   200])]
-    y_labels   = ["PREC";   "INTS";     "INTR";     "SNOW";     round.(y_soil_ticks; digits=0); "GWAT"]
-    z2_extended = [row_PREC_d18O; row_NaN; row_INTS_d18O; row_NaN; row_INTR_d18O; row_NaN; row_SNOW_d18O; row_NaN; rows_SWAT_d18O; row_NaN; row_GWAT_d18O]
-    z3_extended = [row_PREC_d2H;  row_NaN; row_INTS_d2H;  row_NaN; row_INTR_d2H;  row_NaN; row_SNOW_d2H;  row_NaN; rows_SWAT_d2H;  row_NaN; row_GWAT_d2H]
+    y_ticks    = [-500;       -300;       -200;       -100;     y_soil_ticks;          (maximum(y) .+ 50 .+ [    100;    250])]
+    y_labels   = ["PREC";   "INTS";     "INTR";     "SNOW";     round.(y_soil_ticks; digits=0); "GWAT"  ; "RWU"]
+    z2_extended = [row_PREC_d18O; row_NaN; row_INTS_d18O; row_NaN; row_INTR_d18O; row_NaN; row_SNOW_d18O; row_NaN; rows_SWAT_d18O; row_NaN; row_GWAT_d18O; row_NaN; row_RWU_d18O]
+    z3_extended = [row_PREC_d2H;  row_NaN; row_INTS_d2H;  row_NaN; row_INTR_d2H;  row_NaN; row_SNOW_d2H;  row_NaN; rows_SWAT_d2H;  row_NaN; row_GWAT_d2H;  row_NaN; row_RWU_d2H]
 
     # We reproduce the following plots:
     # pl_δ18O = heatmap(x, y_extended, z2_extended;

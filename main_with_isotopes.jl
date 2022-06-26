@@ -210,6 +210,13 @@ for Δz_m in (
         savefig(pl2, fname*"_plotRecipe.png")
     end
 
+    idx_u_scalar_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][8]
+    #     idx_u_vector_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][9]
+    #     idx_u_scalar_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4][10]
+    #     idx_u_vector_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4][11]
+    row_RWU_d18O  = reshape(sol_LWFBrook90[idx_u_scalar_isotopes_d18O[5],1,:], 1, :)
+    #     row_XYL_d18O  = reshape(sol_LWFBrook90[idx_u_scalar_isotopes_d18O[6],1,:], 1, :)
+    plot(transpose(row_RWU_d18O))
 
     if input_prefix == "BEA2016-reset-FALSE" || input_prefix == "isoBEA2016-reset-FALSE" || input_prefix == "isoBEAdense2016-reset-FALSE"
         ref_aboveground =
