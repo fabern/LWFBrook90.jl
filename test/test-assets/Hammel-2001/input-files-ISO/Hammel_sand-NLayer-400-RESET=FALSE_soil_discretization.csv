@@ -1,5 +1,5 @@
-Upper_m,Lower_m,Rootden_,uAux_PSIM_init_kPa,u_delta18O_init_mUr,u_delta2H_init_mUr
-m,m,-,kPa,mUr,mUr
+Upper_m,Lower_m,Rootden_,uAux_PSIM_init_kPa,u_delta18O_init_permil,u_delta2H_init_permil
+m,m,-,kPa,‰,‰
 -0.000,-0.005,0.030,-14.000,-10,-70
 -0.005,-0.010,0.030,-14.000,-10,-70
 -0.010,-0.015,0.000,-14.000,-10,-70

@@ -68,7 +68,7 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
     select(#SimulationNode = layer,
            Upper_m = upper, Lower_m = lower,
            Rootden_ = rootden, uAux_PSIM_init_kPa = psiini) %>%
-    mutate(u_delta18O_init_mUr = NA, u_delta2H_init_mUr = NA)
+    mutate(`u_delta18O_init_permil`` = NA, `u_delta2H_init_permil` = NA)
 
   # B2) ii) soil horizon parameters in discrete horizons (different from numerical node discretization)
   # define extent of horizons
@@ -194,7 +194,7 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
   withr::with_options(c(scipen=100), { # temporarily switches off scientific notation
     require(dplyr)
     units_meteoveg            = c("YYYY-MM-DD","MJ/Day/m2","degree C","degree C","kPa","m per s","mm per day","-","m","-","-","years")
-    units_soil_discretization = c("m","m","-","kPa","mUr","mUr")
+    units_soil_discretization = c("m","m","-","kPa","‰","‰")
     units_soil_horizons       = c("-","m","m","volume fraction (-)","volume fraction (-)","perMeter","-","mm per day","-","volume fraction (-)")
 
     out_csv_soil_discretization%>% mutate(across(where(is.double), function(x) sprintf("%0.3f", x))) %>% write.csv_withUnits(units = units_soil_discretization, file = file.path(Julia_target_dir, paste0(Julia_prefix, "_soil_discretization.csv")), row.names=FALSE, quote=FALSE)

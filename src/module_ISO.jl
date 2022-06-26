@@ -98,9 +98,9 @@ end
 function update_δ_with_mixing_and_evaporation(dt, u₀, δ₀, inflow, δin, outflow, R_std, E, δₐ, h, α_eq, α_dif, γ, X; do_fractionation=false)
     # dt       [day]      , time step
     # u₀       [mm]       , initial amount
-    # δ₀       [mUr]      , initial isotopic signature
+    # δ₀       [‰]      , initial isotopic signature
     # inflow   [mm/day]   , tuple/vector of inflows
-    # δin      [mUr]      , tuple/vector of inflow isotopic signatures
+    # δin      [‰]      , tuple/vector of inflow isotopic signatures
     # outflow  [mm/day]   , outflow rates
     # R_std     [-]       , standard ratio between number of heavy and number of light molecules
     # E        [mm/day]   , evaporation rate
@@ -201,7 +201,7 @@ function update_δ_with_mixing_and_evaporation(dt, u₀, δ₀, inflow, δin, ou
 
     # TODO(bernhard): for debugging: don't use fractionation effect!
 
-    # Go back to using δ in mUr
+    # Go back to using δ in ‰
     # δ = R/R_std - 1 = x/(1-x)/R_std - 1
     # δ⁺ = 1000 * (x⁺/(1-x⁺)/R_std - 1)
     δ⁺⁺ = 1000 * (x⁺⁺/(1-x⁺⁺)/R_std - 1)
@@ -324,7 +324,7 @@ end
         line_z := reshape(row_PREC_d18O,1,:)
         fill_z := reshape(row_PREC_d18O,1,:)
         clims := clims_d18O
-        colorbar_title := "δ18O [mUr]"
+        colorbar_title := "δ18O [‰]"
         colorbar := true_to_check_colorbar # TODO: define this once for all plots (except force it for colorbar plot representing common legend)
         yguide := "PREC [mm]"
         legend := false
@@ -340,7 +340,7 @@ end
         line_z := reshape(row_PREC_d2H,1,:)
         fill_z := reshape(row_PREC_d2H,1,:)
         clims := clims_d2H
-        colorbar_title := "δ2H [mUr]"
+        colorbar_title := "δ2H [‰]"
         colorbar := true_to_check_colorbar # TODO: define this once for all plots (except force it for colorbar plot representing common legend)
         yguide := "PREC [mm]"
         legend := false
@@ -366,12 +366,12 @@ end
     #     yflip = true,
     #     yticks = (y_ticks, y_labels), colorbar = true_to_check_colorbar,
     #     ylabel = "Depth [mm]",
-    #     colorbar_title = "δ18O [mUr]");
+    #     colorbar_title = "δ18O [‰]");
     # pl_δ2H = heatmap(x, y_extended, z3_extended;
     #     yflip = true,
     #     yticks = (y_ticks, y_labels), colorbar = true_to_check_colorbar,
     #     ylabel = "Depth [mm]",
-    #     colorbar_title = "δ2H [mUr]");
+    #     colorbar_title = "δ2H [‰]");
 
     @series begin # pl_δ18O
         seriestype := :heatmap
@@ -379,7 +379,7 @@ end
         yticks := (y_ticks, y_labels)
         colorbar := true_to_check_colorbar
         yguide := "Depth [mm]"
-        colorbar_title := "δ18O [mUr]"
+        colorbar_title := "δ18O [‰]"
         clims := clims_d18O
         colorbar := true_to_check_colorbar # TODO: define this once for all plots (except force it for colorbar plot representing common legend)
         subplot := 2
@@ -395,7 +395,7 @@ end
         yticks := (y_ticks, y_labels)
         colorbar := true_to_check_colorbar
         yguide := "Depth [mm]"
-        colorbar_title := "δ2H [mUr]"
+        colorbar_title := "δ2H [‰]"
         clims := clims_d2H
         colorbar := true_to_check_colorbar # TODO: define this once for all plots (except force it for colorbar plot representing common legend)
         subplot := 4
@@ -409,10 +409,10 @@ end
     # ....
     # TODO: this code needs to reproduce below steps:
     # pl_colorbar_δ18O = plot([0,0], [0,1], zcolor=[0,1], t=:scatter, xlims=(1,1.1), # set xlims that no marker is shown
-    #                         clims=clims_d18O, colorbar_title="δ180 [mUr]",
+    #                         clims=clims_d18O, colorbar_title="δ180 [‰]",
     #                         grid=false, showaxis=false, ticks=false, label=false);
     # pl_colorbar_δ2H  = plot([0,0], [0,1], zcolor=[0,1], t=:scatter, xlims=(1,1.1), # set xlims that no marker is shown
-    #                         clims=clims_d18O, colorbar_title="δ2H [mUr]",
+    #                         clims=clims_d18O, colorbar_title="δ2H [‰]",
     #                         grid=false, showaxis=false, ticks=false, label=false);
 
     # l = @layout [grid(2, 1, heights=[0.2, 0.8]) a{0.055w}]

@@ -105,12 +105,12 @@ function prepare_θψδ_from_sim_and_reference(;
 #         yflip = true,
 #         yticks = (y_ticks, y_labels), colorbar = true_to_check_colorbar,
 #         ylabel = "Depth [mm]",
-#         colorbar_title = "δ18O [mUr]")
+#         colorbar_title = "δ18O [‰]")
 #     pl_δ2H = heatmap(x, y_extended, z3_extended;
 #         yflip = true,
 #         yticks = (y_ticks, y_labels), colorbar = true_to_check_colorbar,
 #         ylabel = "Depth [mm]",
-#         colorbar_title = "δ2H [mUr]")
+#         colorbar_title = "δ2H [‰]")
     # Load reference solution
     ## Load LWFbrook90R solution
     # referenceSolution_daily = DataFrame(File(path_R_dailyoutput))

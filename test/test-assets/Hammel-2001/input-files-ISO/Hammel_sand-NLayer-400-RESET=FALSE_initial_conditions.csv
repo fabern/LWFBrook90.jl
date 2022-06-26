@@ -1,4 +1,4 @@
-param_id,amount,u_delta18O_init_mUr,u_delta2H_init_mUr
+param_id,amount,u_delta18O_init_permilermil,u_delta2H_permilnit_permil
 ### Initial conditions (except for depth-dependent u_aux_PSIM) -------,NA,NA,NA
 u_GWAT_init_mm,0,-10,-70
 u_INTS_init_mm,0,-10,-70

@@ -766,8 +766,8 @@ function discretize_soil_params(
     THICK_m   = soil_discretization[!,"Upper_m"] - soil_discretization[!,"Lower_m"] # thickness of soil layer [m]
     THICK     = 1000*(THICK_m)                                    # thickness of soil layer [mm]
     PSIM_init = soil_discretization[!,"uAux_PSIM_init_kPa"]       # initial condition PSIM [kPa]
-    d18O_soil_init = soil_discretization[!,"u_delta18O_init_mUr"] # initial condition soil water δ18O [mUr]
-    d2H_soil_init  = soil_discretization[!,"u_delta2H_init_mUr"]  # initial condition soil water δ2H [mUr]
+    d18O_soil_init = soil_discretization[!,"u_delta18O_init_permil"] # initial condition soil water δ18O [‰]
+    d2H_soil_init  = soil_discretization[!,"u_delta2H_init_permil"]  # initial condition soil water δ2H [‰]
 
     @assert all(PSIM_init .<= 0) "Initial matrix psi must be negative or zero"
 

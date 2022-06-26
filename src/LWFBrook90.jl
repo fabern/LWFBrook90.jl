@@ -431,7 +431,7 @@ end
         label := ["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"]
         # fill_z := reshape(row_PREC_d18O, 1, :)
         # clims := clims_d18O
-        # colorbar_title := "δ18O [mUr]"
+        # colorbar_title := "δ18O [‰]"
         # colorbar := true_to_check_colorbar # TODO: define this once for all plots (except force it for colorbar plot representing common legend)
         # yguide := "PREC [mm]"
         # legend := false
@@ -521,10 +521,10 @@ end
     # ....
     # TODO: this code needs to reproduce below steps:
     # pl_colorbar_δ18O = plot([0,0], [0,1], zcolor=[0,1], t=:scatter, xlims=(1,1.1), # set xlims that no marker is shown
-    #                         clims=clims_d18O, colorbar_title="δ180 [mUr]",
+    #                         clims=clims_d18O, colorbar_title="δ180 [‰]",
     #                         grid=false, showaxis=false, ticks=false, label=false);
     # pl_colorbar_δ2H  = plot([0,0], [0,1], zcolor=[0,1], t=:scatter, xlims=(1,1.1), # set xlims that no marker is shown
-    #                         clims=clims_d18O, colorbar_title="δ2H [mUr]",
+    #                         clims=clims_d18O, colorbar_title="δ2H [‰]",
     #                         grid=false, showaxis=false, ticks=false, label=false);
 
     # l = @layout [grid(2, 1, heights=[0.2, 0.8]) a{0.055w}]

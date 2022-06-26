@@ -471,8 +471,8 @@ function read_path_soil_discretization(path_soil_discretization)
              "Lower_m"      => Float64,
              "Rootden_"      => Float64,
              "uAux_PSIM_init_kPa"   => Float64,
-             "u_delta18O_init_mUr" => Float64,
-             "u_delta2H_init_mUr"  => Float64)
+             "u_delta18O_init_permil" => Float64,
+             "u_delta2H_init_permil"  => Float64)
 
     input_soil_discretization = DataFrame(File(path_soil_discretization;
         skipto=3, missingstring = "NA", types=parsing_types))
@@ -495,7 +495,7 @@ function read_path_soil_discretization(path_soil_discretization)
     assert_unitsHeader_as_expected(path_soil_discretization,
         DataFrame(Upper_m = "m", Lower_m = "m", Rootden_ = "-",
             uAux_PSIM_init_kPa = "kPa",
-            u_delta18O_init_mUr = "mUr", u_delta2H_init_mUr = "mUr"))
+            u_delta18O_init_permil = "‰", u_delta2H_init_permil = "‰"))
 
     return input_soil_discretization
 end

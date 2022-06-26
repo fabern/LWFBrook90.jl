@@ -56,8 +56,8 @@ for Δz_m in (
         Δz_m = Δz_m,
         Rootden_ = f1,
         uAux_PSIM_init_kPa = f2,
-        u_delta18O_init_mUr = ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.),
-        u_delta2H_init_mUr  = ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.))
+        u_delta18O_init_permil = ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.),
+        u_delta2H_init_permil  = ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.))
     ####################
 
     ####################
@@ -325,41 +325,41 @@ end
 
 
 # # a = plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O,
-# #     ylabel = "δ18O [mUr]",
-# #     label=["GWAT (mUr)" "INTS (mUr)" "INTR (mUr)" "SNOW (mUr)"])
-# # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (mUr)")
+# #     ylabel = "δ18O [‰]",
+# #     label=["GWAT (‰)" "INTS (‰)" "INTR (‰)" "SNOW (‰)"])
+# # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (‰)")
 # # # plot!(ylims = (-50,50))
 
-# # plot(plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O[2], ylabel = "δ18O [mUr]", label=["INTS (mUr)"]),
+# # plot(plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O[2], ylabel = "δ18O [‰]", label=["INTS (‰)"]),
 # #     plot(sol_LWFBrook90; vars = [2],label=["INTS (mm)"]),
 # #     layout=(2,1))
-# # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (mUr)")
-# # plot(plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O[3], ylabel = "δ18O [mUr]", label=["INTR (mUr)"]),
+# # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (‰)")
+# # plot(plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O[3], ylabel = "δ18O [‰]", label=["INTR (‰)"]),
 # #     plot(sol_LWFBrook90; vars = [3],label=["INTR (mm)"]),
 # #     layout=(2,1))
-# # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (mUr)")
-# # plot(plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O[4], ylabel = "δ18O [mUr]", label=["SNOW (mUr)"]),
+# # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (‰)")
+# # plot(plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O[4], ylabel = "δ18O [‰]", label=["SNOW (‰)"]),
 # #     plot(sol_LWFBrook90; vars = [4],label=["SNOW (mm)"]),#, ylims = (0,0.01)),
 # #     layout=(2,1))
-# # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (mUr)")
-# # plot(plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O[1], ylabel = "δ18O [mUr]", label=["GWAT (mUr)"]),
+# # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (‰)")
+# # plot(plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O[1], ylabel = "δ18O [‰]", label=["GWAT (‰)"]),
 # #     plot(sol_LWFBrook90; vars = [1],label=["GWAT (mm)"]),
 # #     layout=(2,1))
-# # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (mUr)")
+# # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (‰)")
 
 
 # # # sol_LWFBrook90[26,1,1:10]
 # # plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d2H,
-# #     ylabel = "δ2H [mUr]",
-# #     label=["GWAT (mUr)" "INTS (mUr)" "INTR (mUr)" "SNOW (mUr)"])
-# # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][16].(sol_LWFBrook90.t), label = "PREC (mUr)")
+# #     ylabel = "δ2H [‰]",
+# #     label=["GWAT (‰)" "INTS (‰)" "INTR (‰)" "SNOW (‰)"])
+# # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][16].(sol_LWFBrook90.t), label = "PREC (‰)")
 # # scatter([
 # #         (sol_LWFBrook90[13 + 1,:], sol_LWFBrook90[24 + 1,:]),
 # #         (sol_LWFBrook90[13 + 2,:], sol_LWFBrook90[24 + 2,:]),
 # #         (sol_LWFBrook90[13 + 3,:], sol_LWFBrook90[24 + 3,:]),
 # #         (sol_LWFBrook90[13 + 4,:], sol_LWFBrook90[24 + 4,:])
 # #     ];
-# #     xlabel = "δ18O [mUr]", ylabel = "δ2H [mUr]",
+# #     xlabel = "δ18O [‰]", ylabel = "δ2H [‰]",
 # #     label = ["GWAT" "INTS" "INTR" "SNOW"])
 # # # plot!(ylims = (-100,-60), xlims = (-15, -8))
 # # # plot!(sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), sol_LWFBrook90.prob.p[2][16].(sol_LWFBrook90.t), label = "PREC")
@@ -391,11 +391,11 @@ end
 # # heatmap(x, y, z2, yflip = true,
 # #         xlabel = "Date",
 # #         ylabel = "Depth [mm]",
-# #         colorbar_title = "δ18O [mUr]")
+# #         colorbar_title = "δ18O [‰]")
 # # heatmap(x, y, z3, yflip = true,
 # #         xlabel = "Date",
 # #         ylabel = "Depth [mm]",
-# #         colorbar_title = "δ2H [mUr]")
+# #         colorbar_title = "δ2H [‰]")
 
 # # TODO: edges of cells in heatmap are not entirely correct. Find a way to override heatmap()
 # #       where we provide cell edges (n+1) instead of cell centers (n)

@@ -4,7 +4,7 @@
 Generate vector u0 needed for ODE() problem in DiffEq.jl package.
 """
 function define_LWFB90_u0(p, uScalar_initial,
-    uSoil_initial_ψM_kPa, uSoil_initial_δ18O_mUr, uSoil_initial_δ2H_mUr,
+    uSoil_initial_ψM_kPa, uSoil_initial_δ18O_permil, uSoil_initial_δ2H_permil,
     compute_intermediate_quantities;
     simulate_isotopes::Bool = false)
 
@@ -42,9 +42,9 @@ function define_LWFB90_u0(p, uScalar_initial,
         u_SNOW_init_d18O      = uScalar_initial[2, "u_SNOW_init_mm"]
         # u_CC_init_MJ_per_m2_d18O = uScalar_initial[2, "u_CC_init_MJ_per_m2"] # state has no isotopic signature
         # u_SNOWLQ_init_d18O       = uScalar_initial[2, "u_SNOWLQ_init_mm"]    # state has no isotopic signature
-        u_SWATIinit_d18O      = uSoil_initial_δ18O_mUr
-        u_RWUinit_d18O        = uSoil_initial_δ18O_mUr[1]  # TODO(bernhard): start out with same concentration as in first soil layer
-        u_XYLEMinit_d18O      = uSoil_initial_δ18O_mUr[1]  # TODO(bernhard): start out with same concentration as in first soil layer
+        u_SWATIinit_d18O      = uSoil_initial_δ18O_permil
+        u_RWUinit_d18O        = uSoil_initial_δ18O_permil[1]  # TODO(bernhard): start out with same concentration as in first soil layer
+        u_XYLEMinit_d18O      = uSoil_initial_δ18O_permil[1]  # TODO(bernhard): start out with same concentration as in first soil layer
 
         # isotopes d2H
         u_GWAT_init_d2H      = uScalar_initial[3, "u_GWAT_init_mm"]
@@ -53,9 +53,9 @@ function define_LWFB90_u0(p, uScalar_initial,
         u_SNOW_init_d2H      = uScalar_initial[3, "u_SNOW_init_mm"]
         # u_CC_init_MJ_per_m2_d2H = uScalar_initial[3, "u_CC_init_MJ_per_m2"] # state has no isotopic signature
         # u_SNOWLQ_init_d2H       = uScalar_initial[3, "u_SNOWLQ_init_mm"]    # state has no isotopic signature
-        u_SWATIinit_d2H      = uSoil_initial_δ2H_mUr
-        u_RWUinit_d2H        = uSoil_initial_δ2H_mUr[1]  # TODO(bernhard): start out with same concentration as in first soil layer
-        u_XYLEMinit_d2H      = uSoil_initial_δ2H_mUr[1]  # TODO(bernhard): start out with same concentration as in first soil layer
+        u_SWATIinit_d2H      = uSoil_initial_δ2H_permil
+        u_RWUinit_d2H        = uSoil_initial_δ2H_permil[1]  # TODO(bernhard): start out with same concentration as in first soil layer
+        u_XYLEMinit_d2H      = uSoil_initial_δ2H_permil[1]  # TODO(bernhard): start out with same concentration as in first soil layer
 
 
         u0 = [u0;

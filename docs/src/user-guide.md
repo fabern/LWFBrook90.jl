@@ -120,9 +120,9 @@ In case you're unfamiliar to Julia, there are various ways to run a script such 
 
 `soil_discretization.csv` contains the initial conditions of the soil water status, root density distributions, and the definition of the numerical discretization of the soil domain (nodes with upper and lower limits):
 
-| Upper\_m | Lower\_m | Rootden\_ | uAux\_PSIM\_init\_kPa | u\_delta18O\_init\_mUr | u\_delta2H\_init\_mUr |
+| Upper\_m | Lower\_m | Rootden\_ | uAux\_PSIM\_init\_kPa | u\_delta18O\_init\_permil | u\_delta2H\_init\_permil |
 | ------- | ------- | -------- | ------------------ | ------------------- | ------------------ |
-| m       | m       | -        | kPa                | mUr                 | mUr                |
+| m       | m       | -        | kPa                | permil                 | permil                |
 | 0       | -0.04   | 0.02868  | -6.3               | NA                  | NA                 |
 | -0.04   | -0.08   | 0.02539  | -6.3               | NA                  | NA                 |
 | -0.08   | -0.2    | 0.02     | -6.3               | NA                  | NA                 |
