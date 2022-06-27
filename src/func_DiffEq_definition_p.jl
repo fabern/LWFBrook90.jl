@@ -373,65 +373,18 @@ function define_LWFB90_p(
         p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS,
         p_DURATN, p_MAXLQF, p_GRDMLT)
 
-    # p_cst_4 for both RHS, CallBack as well as u0 in DiffEq.jl
-    # derive indices for state vector `u`
-    # 6 is the number of states except SWAT: i.e. GWAT, INTS, INTR, SNOW, CC, SNOWLQ
-    idx_u_scalar_amounts       = 1:6
-    idx_u_vector_amounts       = 7:(6+NLAYER)
-    if simulate_isotopes
-        # Nδ is the number of states except SWAT that have concentrations: i.e. INTS, INTR, SNOW, GWAT, RWU,Xylem
-        # NLAYER is the number of states/layers for SWAT that all have concentrations.
-        Nδ = 6
-        idx_u_scalar_isotopes_d18O = 6+NLAYER          .+ (1:Nδ)
-        idx_u_vector_isotopes_d18O = 6+NLAYER          .+ (Nδ .+ (1:NLAYER))
-        idx_u_scalar_isotopes_d2H  = 6+NLAYER+Nδ+NLAYER .+ (1:Nδ)
-        idx_u_vector_isotopes_d2H  = 6+NLAYER+Nδ+NLAYER .+ (Nδ .+ (1:NLAYER))
-
-    else
-        idx_u_scalar_isotopes_d18O = []
-        idx_u_vector_isotopes_d18O = []
-        idx_u_scalar_isotopes_d2H  = []
-        idx_u_vector_isotopes_d2H  = []
-    end
-    if compute_intermediate_quantities
-        # 31 is the number of currently programmed intermediate quantities
-        if simulate_isotopes
-            idx_u_vector_accumulators = 6+NLAYER+Nδ+NLAYER+Nδ+NLAYER .+ (1:(31+NLAYER))
-        else
-            idx_u_vector_accumulators = 6+NLAYER                   .+ (1:(31+NLAYER))
-        end
-        names_u_vector_accumulators = reshape([
-                "cum_d_prec";"cum_d_rfal";"cum_d_sfal";"cum_d_rint"; "cum_d_sint";"cum_d_rsno";
-                "cum_d_rnet";"cum_d_smlt";"cum_d_evap";"cum_d_tran";"cum_d_irvp";"cum_d_isvp";
-                "cum_d_slvp";"cum_d_snvp";"cum_d_pint";"cum_d_ptran";"cum_d_pslvp";
-                "flow";"seep";"srfl";"slfl";"byfl";"dsfl";"gwfl";"vrfln";
-                "cum_d_rthr";"cum_d_sthr";
-                "totalSWAT"; "new_totalWATER"; "BALERD_SWAT"; "BALERD_total";
-                # add again NLAYERS for saving of RWU
-                ["RWU_i" for _ in 1:NLAYER]...
-            ],1,:)
-    else
-        idx_u_vector_accumulators = []
-    end
 
     p_cst_4 = (
         FLAG_MualVanGen,
         compute_intermediate_quantities,
         simulate_isotopes,
-        idx_u_vector_amounts,
-        idx_u_vector_accumulators,
-        idx_u_scalar_amounts,
-        names_u_vector_accumulators,
-        idx_u_scalar_isotopes_d18O, idx_u_vector_isotopes_d18O,
-        idx_u_scalar_isotopes_d2H,  idx_u_vector_isotopes_d2H)
-# idx_u_vector_amounts       = sol_LWFBrook90.prob.p[1][4][4]
-# idx_u_vector_accumulators  = sol_LWFBrook90.prob.p[1][4][5]
-# idx_u_scalar_amounts       = sol_LWFBrook90.prob.p[1][4][6]
-# names_u_vector_accumulators = sol_LWFBrook90.prob.p[1][4][7]
-# idx_u_scalar_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][8]
-# idx_u_vector_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][9]
-# idx_u_scalar_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4][10]
-# idx_u_vector_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4][11]
+        row_idx_scalars = [],
+        row_idx_SWATI   = [],
+        row_idx_RWU     = [],
+        row_idx_accum   = [],
+        names_accum     = [],
+        col_idx_d18O    = [],
+        col_idx_d2H     = []) # Placeholders will be overwritten when defining u0
     p_cst = (p_cst_1, p_cst_2, p_cst_3, p_cst_4)
 
     # 2b) Time varying parameters (e.g. meteorological forcings)

@@ -34,11 +34,11 @@ task = ["test", "overwrite"][1]
   # amberMBP-git+61a19ed: 0.039381 seconds (117.87 k allocations: 11.615 MiB)
 
   # extract required data from solution object
-  idx_u_scalar_amounts = example_result["solution"].prob.p[1][4][6]
-  idx_u_vector_amounts = example_result["solution"].prob.p[1][4][4]
-  idx_u = [idx_u_scalar_amounts; idx_u_vector_amounts]
+  idx_u_scalar_amounts = example_result["solution"].prob.p[1][4].row_idx_scalars
+  idx_u_vector_amounts = example_result["solution"].prob.p[1][4].row_idx_SWATI
+  idx_u = [idx_u_scalar_amounts...; idx_u_vector_amounts]
 
-  u_ref = reshape(example_result["solution"][idx_u,:,1:1:end], length(idx_u), :)
+  u_ref = sol_LWFBrook90[idx_u,1,:]
 
   # test or overwrite
   fname = "../examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_u_sol_reference.jld2"

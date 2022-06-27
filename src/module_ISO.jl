@@ -238,43 +238,33 @@ end
     # 1) data to plot
 
     # 1a) extract data from solution object `sol`
-    simulate_isotopes            = sol.prob.p[1][4][3]
+    simulate_isotopes            = sol.prob.p[1][4].simulate_isotopes
     @assert simulate_isotopes "Provided solution did not simulate isotopes"
-    # idx_u_vector_amounts       = sol.prob.p[1][4][4]
-    # idx_u_vector_accumulators  = sol.prob.p[1][4][5]
-    # idx_u_scalar_amounts       = sol.prob.p[1][4][6]
-    # names_u_vector_accumulators= sol.prob.p[1][4][7]
-    idx_u_scalar_isotopes_d18O = sol.prob.p[1][4][8]
-    idx_u_vector_isotopes_d18O = sol.prob.p[1][4][9]
-    idx_u_scalar_isotopes_d2H  = sol.prob.p[1][4][10]
-    idx_u_vector_isotopes_d2H  = sol.prob.p[1][4][11]
 
     t_ref = sol.prob.p[2][17]
     x = RelativeDaysFloat2DateTime.(sol.t, t_ref);
     y = cumsum(sol.prob.p[1][1].p_THICK) - sol.prob.p[1][1].p_THICK/2
 
     row_PREC_amt = sol.prob.p[2][8].(sol.t)
-    rows_SWAT_amt = sol[7 .+ (0:sol.prob.p[1][1].NLAYER-1),
-                                1,
-                                :]./sol.prob.p[1][1].p_THICK;
-    rows_SWAT_d18O = sol[idx_u_vector_isotopes_d18O,1,:];
-    rows_SWAT_d2H  = sol[idx_u_vector_isotopes_d2H, 1,:];
+    rows_SWAT_amt = sol[sol.prob.p[1][4].row_idx_SWATI, 1, :]./sol.prob.p[1][1].p_THICK;
+    rows_SWAT_d18O = sol[sol.prob.p[1][4].row_idx_SWATI, sol.prob.p[1][4].col_idx_d18O, :]
+    rows_SWAT_d2H  = sol[sol.prob.p[1][4].row_idx_SWATI, sol.prob.p[1][4].col_idx_d2H,  :]
 
     row_NaN       = fill(NaN, 1,length(x))
     row_PREC_d18O = reshape(sol.prob.p[2][15].(sol.t), 1, :)
-    row_INTS_d18O = reshape(sol[idx_u_scalar_isotopes_d18O[2],1,:], 1, :)
-    row_INTR_d18O = reshape(sol[idx_u_scalar_isotopes_d18O[3],1,:], 1, :)
-    row_SNOW_d18O = reshape(sol[idx_u_scalar_isotopes_d18O[4],1,:], 1, :)
-    row_GWAT_d18O = reshape(sol[idx_u_scalar_isotopes_d18O[1],1,:], 1, :)
-    row_RWU_d18O  = reshape(sol[idx_u_scalar_isotopes_d18O[5],1,:], 1, :)
-    row_XYL_d18O  = reshape(sol[idx_u_scalar_isotopes_d18O[6],1,:], 1, :)
+    row_INTS_d18O = reshape(sol[sol.prob.p[1][4].row_idx_scalars.INTS, sol.prob.p[1][4].col_idx_d18O, :], 1, :)
+    row_INTR_d18O = reshape(sol[sol.prob.p[1][4].row_idx_scalars.INTR, sol.prob.p[1][4].col_idx_d18O, :], 1, :)
+    row_SNOW_d18O = reshape(sol[sol.prob.p[1][4].row_idx_scalars.SNOW, sol.prob.p[1][4].col_idx_d18O, :], 1, :)
+    row_GWAT_d18O = reshape(sol[sol.prob.p[1][4].row_idx_scalars.GWAT, sol.prob.p[1][4].col_idx_d18O, :], 1, :)
+    row_RWU_d18O  = reshape(sol[sol.prob.p[1][4].row_idx_scalars.totalRWU, sol.prob.p[1][4].col_idx_d18O, :], 1, :)
+    row_XYL_d18O  = reshape(sol[sol.prob.p[1][4].row_idx_scalars.XylemV,   sol.prob.p[1][4].col_idx_d18O, :], 1, :)
     row_PREC_d2H  = reshape(sol.prob.p[2][16].(sol.t), 1, :)
-    row_INTS_d2H  = reshape(sol[idx_u_scalar_isotopes_d2H[2],1,:], 1, :)
-    row_INTR_d2H  = reshape(sol[idx_u_scalar_isotopes_d2H[3],1,:], 1, :)
-    row_SNOW_d2H  = reshape(sol[idx_u_scalar_isotopes_d2H[4],1,:], 1, :)
-    row_GWAT_d2H  = reshape(sol[idx_u_scalar_isotopes_d2H[1],1,:], 1, :)
-    row_RWU_d2H   = reshape(sol[idx_u_scalar_isotopes_d2H[5],1,:], 1, :)
-    row_XYL_d2H   = reshape(sol[idx_u_scalar_isotopes_d2H[6],1,:], 1, :)
+    row_INTS_d2H = reshape(sol[sol.prob.p[1][4].row_idx_scalars.INTS, sol.prob.p[1][4].col_idx_d2H, :], 1, :)
+    row_INTR_d2H = reshape(sol[sol.prob.p[1][4].row_idx_scalars.INTR, sol.prob.p[1][4].col_idx_d2H, :], 1, :)
+    row_SNOW_d2H = reshape(sol[sol.prob.p[1][4].row_idx_scalars.SNOW, sol.prob.p[1][4].col_idx_d2H, :], 1, :)
+    row_GWAT_d2H = reshape(sol[sol.prob.p[1][4].row_idx_scalars.GWAT, sol.prob.p[1][4].col_idx_d2H, :], 1, :)
+    row_RWU_d2H  = reshape(sol[sol.prob.p[1][4].row_idx_scalars.totalRWU, sol.prob.p[1][4].col_idx_d2H, :], 1, :)
+    row_XYL_d2H  = reshape(sol[sol.prob.p[1][4].row_idx_scalars.XylemV,   sol.prob.p[1][4].col_idx_d2H, :], 1, :)
 
     # 1b) define some plot arguments based on the extracted data
     # color scheme:

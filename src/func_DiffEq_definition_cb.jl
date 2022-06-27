@@ -109,15 +109,12 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     #  - fraction of precipitation as snowfall depending on DOY
     #  - snowpack temperature, potential snow evaporation and soil evaporation resistance depending on u_SNOW
 
-    idx_u_vector_amounts       = integrator.p[1][4][4]
-    idx_u_vector_accumulators  = integrator.p[1][4][5]
-
-    u_INTS     = integrator.u[2]
-    u_INTR     = integrator.u[3]
-    u_SNOW     = integrator.u[4]
-    u_CC       = integrator.u[5]
-    u_SNOWLQ   = integrator.u[6]
-    u_SWATI    = integrator.u[idx_u_vector_amounts]
+    u_INTS     = integrator.u[integrator.p[1][4].row_idx_scalars.INTS, 1]
+    u_INTR     = integrator.u[integrator.p[1][4].row_idx_scalars.INTR, 1]
+    u_SNOW     = integrator.u[integrator.p[1][4].row_idx_scalars.SNOW, 1]
+    u_CC       = integrator.u[integrator.p[1][4].row_idx_scalars.CC, 1]
+    u_SNOWLQ   = integrator.u[integrator.p[1][4].row_idx_scalars.SNOWLQ, 1]
+    u_SWATI    = integrator.u[integrator.p[1][4].row_idx_SWATI, 1]
 
     LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, integrator.t)
 
@@ -259,44 +256,44 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
 
         # 1) Either set daily sum if rate is constant throughout precipitation interval: p_DTP*(...)
         # 2) or then set daily sum to zero and use ODE to accumulate flow.
-        integrator.u[idx_u_vector_accumulators[ 1]] = p_DTP * (p_fT_RFAL + p_fT_SFAL)                 # RFALD + SFALD        # cum_d_prec
-        integrator.u[idx_u_vector_accumulators[ 2]] = p_DTP * (p_fT_RFAL)                                                    # cum_d_rfal
-        integrator.u[idx_u_vector_accumulators[ 3]] = p_DTP * (p_fT_SFAL)                                                    # cum_d_sfal
-        integrator.u[idx_u_vector_accumulators[ 4]] = p_DTP * (aux_du_RINT)                                                  # cum_d_rint
-        integrator.u[idx_u_vector_accumulators[ 5]] = p_DTP * (aux_du_SINT)                                                  # cum_d_sint
-        integrator.u[idx_u_vector_accumulators[ 6]] = p_DTP * (aux_du_RSNO)                                                  # cum_d_rsno
-        integrator.u[idx_u_vector_accumulators[ 7]] = p_DTP * (p_fT_RFAL - aux_du_RINT - aux_du_RSNO) # cum_d_RTHR - RSNOD   # cum_d_rnet
-        integrator.u[idx_u_vector_accumulators[ 8]] = p_DTP * (aux_du_SMLT)                                                  # cum_d_smlt
+        integrator.u[integrator.p[1][4].row_idx_accum[ 1], 1] = p_DTP * (p_fT_RFAL + p_fT_SFAL)                 # RFALD + SFALD        # cum_d_prec
+        integrator.u[integrator.p[1][4].row_idx_accum[ 2], 1] = p_DTP * (p_fT_RFAL)                                                    # cum_d_rfal
+        integrator.u[integrator.p[1][4].row_idx_accum[ 3], 1] = p_DTP * (p_fT_SFAL)                                                    # cum_d_sfal
+        integrator.u[integrator.p[1][4].row_idx_accum[ 4], 1] = p_DTP * (aux_du_RINT)                                                  # cum_d_rint
+        integrator.u[integrator.p[1][4].row_idx_accum[ 5], 1] = p_DTP * (aux_du_SINT)                                                  # cum_d_sint
+        integrator.u[integrator.p[1][4].row_idx_accum[ 6], 1] = p_DTP * (aux_du_RSNO)                                                  # cum_d_rsno
+        integrator.u[integrator.p[1][4].row_idx_accum[ 7], 1] = p_DTP * (p_fT_RFAL - aux_du_RINT - aux_du_RSNO) # cum_d_RTHR - RSNOD   # cum_d_rnet
+        integrator.u[integrator.p[1][4].row_idx_accum[ 8], 1] = p_DTP * (aux_du_SMLT)                                                  # cum_d_smlt
 
-        integrator.u[idx_u_vector_accumulators[ 9]] = p_DTP * (aux_du_IRVP + aux_du_ISVP + aux_du_SNVP + aux_du_SLVP + sum(aux_du_TRANI))  # cum_d_evap
-        integrator.u[idx_u_vector_accumulators[10]] = p_DTP * (sum(aux_du_TRANI))                                                          # cum_d_tran
-        integrator.u[idx_u_vector_accumulators[11]] = p_DTP * (aux_du_IRVP)                                                                # cum_d_irvp
-        integrator.u[idx_u_vector_accumulators[12]] = p_DTP * (aux_du_ISVP)                                                                # cum_d_isvp
-        integrator.u[idx_u_vector_accumulators[13]] = p_DTP * (aux_du_SLVP)                                                                # cum_d_slvp
-        integrator.u[idx_u_vector_accumulators[14]] = p_DTP * (aux_du_SNVP)                                                                # cum_d_snvp
-        integrator.u[idx_u_vector_accumulators[15]] = p_DTP * (p_fu_PINT)                                                                  # cum_d_pint
-        integrator.u[idx_u_vector_accumulators[16]] = p_DTP * (p_fu_PTRAN)                                                                 # cum_d_ptran
-        integrator.u[idx_u_vector_accumulators[17]] = p_DTP * (p_fu_PSLVP)                                                                 # cum_d_pslvp
+        integrator.u[integrator.p[1][4].row_idx_accum[ 9], 1] = p_DTP * (aux_du_IRVP + aux_du_ISVP + aux_du_SNVP + aux_du_SLVP + sum(aux_du_TRANI))  # cum_d_evap
+        integrator.u[integrator.p[1][4].row_idx_accum[10], 1] = p_DTP * (sum(aux_du_TRANI))                                                          # cum_d_tran
+        integrator.u[integrator.p[1][4].row_idx_accum[11], 1] = p_DTP * (aux_du_IRVP)                                                                # cum_d_irvp
+        integrator.u[integrator.p[1][4].row_idx_accum[12], 1] = p_DTP * (aux_du_ISVP)                                                                # cum_d_isvp
+        integrator.u[integrator.p[1][4].row_idx_accum[13], 1] = p_DTP * (aux_du_SLVP)                                                                # cum_d_slvp
+        integrator.u[integrator.p[1][4].row_idx_accum[14], 1] = p_DTP * (aux_du_SNVP)                                                                # cum_d_snvp
+        integrator.u[integrator.p[1][4].row_idx_accum[15], 1] = p_DTP * (p_fu_PINT)                                                                  # cum_d_pint
+        integrator.u[integrator.p[1][4].row_idx_accum[16], 1] = p_DTP * (p_fu_PTRAN)                                                                 # cum_d_ptran
+        integrator.u[integrator.p[1][4].row_idx_accum[17], 1] = p_DTP * (p_fu_PSLVP)                                                                 # cum_d_pslvp
 
-        integrator.u[idx_u_vector_accumulators[18]] = 0 # flow,  is computed in ODE
-        integrator.u[idx_u_vector_accumulators[19]] = 0 # seep,  is computed in ODE
-        integrator.u[idx_u_vector_accumulators[20]] = 0 # srfl,  is computed in ODE
-        integrator.u[idx_u_vector_accumulators[21]] = 0 # slfl,  is computed in ODE
-        integrator.u[idx_u_vector_accumulators[22]] = 0 # byfl,  is computed in ODE
-        integrator.u[idx_u_vector_accumulators[23]] = 0 # dsfl,  is computed in ODE
-        integrator.u[idx_u_vector_accumulators[24]] = 0 # gwfl,  is computed in ODE
-        integrator.u[idx_u_vector_accumulators[25]] = 0 # vrfln, is computed in ODE
+        integrator.u[integrator.p[1][4].row_idx_accum[18], 1] = 0 # flow,  is computed in ODE
+        integrator.u[integrator.p[1][4].row_idx_accum[19], 1] = 0 # seep,  is computed in ODE
+        integrator.u[integrator.p[1][4].row_idx_accum[20], 1] = 0 # srfl,  is computed in ODE
+        integrator.u[integrator.p[1][4].row_idx_accum[21], 1] = 0 # slfl,  is computed in ODE
+        integrator.u[integrator.p[1][4].row_idx_accum[22], 1] = 0 # byfl,  is computed in ODE
+        integrator.u[integrator.p[1][4].row_idx_accum[23], 1] = 0 # dsfl,  is computed in ODE
+        integrator.u[integrator.p[1][4].row_idx_accum[24], 1] = 0 # gwfl,  is computed in ODE
+        integrator.u[integrator.p[1][4].row_idx_accum[25], 1] = 0 # vrfln, is computed in ODE
 
-        # integrator.u[idx_u_vector_accumulators[26]] = p_DTP*(p_fT_RFAL - aux_du_RINT) # cum_d_rthr
-        # integrator.u[idx_u_vector_accumulators[27]] = p_DTP*(p_fT_SFAL - aux_du_SINT) # cum_d_sthr
+        # integrator.u[integrator.p[1][4].row_idx_accum[26], 1] = p_DTP*(p_fT_RFAL - aux_du_RINT) # cum_d_rthr
+        # integrator.u[integrator.p[1][4].row_idx_accum[27], 1] = p_DTP*(p_fT_SFAL - aux_du_SINT) # cum_d_sthr
 
         # below are computed in separate callback:
-        # integrator.u[idx_u_vector_accumulators[28]] = new_SWAT
-        # integrator.u[idx_u_vector_accumulators[29]] = new_totalWATER
-        # integrator.u[idx_u_vector_accumulators[30]] = BALERD_SWAT
-        # integrator.u[idx_u_vector_accumulators[31]] = BALERD_total
+        # integrator.u[integrator.p[1][4].row_idx_accum[28], 1] = new_SWAT
+        # integrator.u[integrator.p[1][4].row_idx_accum[29], 1] = new_totalWATER
+        # integrator.u[integrator.p[1][4].row_idx_accum[30], 1] = BALERD_SWAT
+        # integrator.u[integrator.p[1][4].row_idx_accum[31], 1] = BALERD_total
 
-        integrator.u[idx_u_vector_accumulators[31 .+ (1:NLAYER)]] .= aux_du_TRANI
+        integrator.u[integrator.p[1][4].row_idx_RWU, 1] .= aux_du_TRANI
         # TODO(bernhard): use SavingCallback() for all quantities that have u=... and du=0
         #                 only keep du=... for quantities for which we compute cumulative sums
     end
@@ -306,7 +303,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
 end
 
 function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
-    simulate_isotopes = integrator.p[1][4][3]
+    simulate_isotopes = integrator.p[1][4].simulate_isotopes
 
     if simulate_isotopes
         ## C) state dependent parameters:
@@ -319,15 +316,12 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         #  - fraction of precipitation as snowfall depending on DOY
         #  - snowpack temperature, potential snow evaporation and soil evaporation resistance depending on u_SNOW
 
-        # idx_u_vector_amounts       = integrator.p[1][4][4]
-        # idx_u_vector_accumulators  = integrator.p[1][4][5]
-
-        u_INTS     = integrator.u[2]
-        u_INTR     = integrator.u[3]
-        u_SNOW     = integrator.u[4]
-        # u_CC       = integrator.u[5]
-        # u_SNOWLQ   = integrator.u[6]
-        # u_SWATI    = integrator.u[idx_u_vector_amounts]
+        u_INTS     = integrator.u[integrator.p[1][4].row_idx_scalars.INTS, 1]
+        u_INTR     = integrator.u[integrator.p[1][4].row_idx_scalars.INTR, 1]
+        u_SNOW     = integrator.u[integrator.p[1][4].row_idx_scalars.SNOW, 1]
+        # u_CC       = integrator.u[integrator.p[1][4].row_idx_scalars.CC, 1]
+        # u_SNOWLQ   = integrator.u[integrator.p[1][4].row_idx_scalars.SNOWLQ, 1]
+        # u_SWATI    = integrator.u[integrator.p[1][4].row_idx_SWATI, 1]
 
         ####################################################################
         # 2) Update states of isotopic compositions of interception storages and snowpack:
@@ -359,25 +353,20 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
             aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old) = integrator.p[3][1]
         aux_du_TRANI = integrator.p[3][2]
 
-        idx_u_scalar_isotopes_d18O = integrator.p[1][4][8]
-        # idx_u_vector_isotopes_d18O = integrator.p[1][4][9]
-        idx_u_scalar_isotopes_d2H  = integrator.p[1][4][10]
-        # idx_u_vector_isotopes_d2H  = integrator.p[1][4][11]
-
-        # u_δ18O_GWAT = integrator.u[idx_u_scalar_isotopes_d18O[1]]
-        # u_δ2H_GWAT  = integrator.u[idx_u_scalar_isotopes_d2H[1] ]
-        u_δ18O_INTS = integrator.u[idx_u_scalar_isotopes_d18O[2]]
-        u_δ2H_INTS  = integrator.u[idx_u_scalar_isotopes_d2H[2] ]
-        u_δ18O_INTR = integrator.u[idx_u_scalar_isotopes_d18O[3]]
-        u_δ2H_INTR  = integrator.u[idx_u_scalar_isotopes_d2H[3] ]
-        u_δ18O_SNOW = integrator.u[idx_u_scalar_isotopes_d18O[4]]
-        u_δ2H_SNOW  = integrator.u[idx_u_scalar_isotopes_d2H[4] ]
+        # u_δ18O_GWAT = integrator.u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d18O]
+        # u_δ2H_GWAT  = integrator.u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d2H]
+        u_δ18O_INTS = integrator.u[integrator.p[1][4].row_idx_scalars.INTS, integrator.p[1][4].col_idx_d18O]
+        u_δ2H_INTS  = integrator.u[integrator.p[1][4].row_idx_scalars.INTS, integrator.p[1][4].col_idx_d2H]
+        u_δ18O_INTR = integrator.u[integrator.p[1][4].row_idx_scalars.INTR, integrator.p[1][4].col_idx_d18O]
+        u_δ2H_INTR  = integrator.u[integrator.p[1][4].row_idx_scalars.INTR, integrator.p[1][4].col_idx_d2H]
+        u_δ18O_SNOW = integrator.u[integrator.p[1][4].row_idx_scalars.SNOW, integrator.p[1][4].col_idx_d18O]
+        u_δ2H_SNOW  = integrator.u[integrator.p[1][4].row_idx_scalars.SNOW, integrator.p[1][4].col_idx_d2H]
         # u_δ18O_SWATI = integrator.u[idx_u_vector_isotopes_d18O]
         # u_δ2H_SWATI  = integrator.u[idx_u_vector_isotopes_d2H]
-        # u_δ18O_RWU = integrator.u[idx_u_scalar_isotopes_d18O[5]]
-        # u_δ2H_RWU  = integrator.u[idx_u_scalar_isotopes_d2H[5] ]
-        u_δ18O_Xylem = integrator.u[idx_u_scalar_isotopes_d18O[6]]
-        u_δ2H_Xylem  = integrator.u[idx_u_scalar_isotopes_d2H[6] ]
+        # u_δ18O_RWU = integrator.u[integrator.p[1][4].row_idx_scalars.totalRWU, integrator.p[1][4].col_idx_d18O]
+        # u_δ2H_RWU  = integrator.u[integrator.p[1][4].row_idx_scalars.totalRWU, integrator.p[1][4].col_idx_d2H]
+        u_δ18O_Xylem = integrator.u[integrator.p[1][4].row_idx_scalars.XylemV,   integrator.p[1][4].col_idx_d18O]
+        u_δ2H_Xylem  = integrator.u[integrator.p[1][4].row_idx_scalars.XylemV,   integrator.p[1][4].col_idx_d2H]
 
         # Variant 1) works but really much slower
         # δ18O_SLFL, δ2H_SLFL,
@@ -540,14 +529,14 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         # update δ values of INTS, INTR, SNOW
         # do not update δ values of GWAT and SWATI (is done in f())
 
-        # integrator.u[idx_u_scalar_isotopes_d18O[1]] = u_δ18O_GWAT
-        # integrator.u[idx_u_scalar_isotopes_d2H[1] ] = u_δ2H_GWAT
-        integrator.u[idx_u_scalar_isotopes_d18O[2]] = u_δ18O_INTS
-        integrator.u[idx_u_scalar_isotopes_d2H[2] ] = u_δ2H_INTS
-        integrator.u[idx_u_scalar_isotopes_d18O[3]] = u_δ18O_INTR
-        integrator.u[idx_u_scalar_isotopes_d2H[3] ] = u_δ2H_INTR
-        integrator.u[idx_u_scalar_isotopes_d18O[4]] = u_δ18O_SNOW
-        integrator.u[idx_u_scalar_isotopes_d2H[4] ] = u_δ2H_SNOW
+        # integrator.u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d18O] = u_δ18O_GWAT
+        # integrator.u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d2H ] = u_δ2H_GWAT
+        integrator.u[integrator.p[1][4].row_idx_scalars.INTS, integrator.p[1][4].col_idx_d18O] = u_δ18O_INTS
+        integrator.u[integrator.p[1][4].row_idx_scalars.INTS, integrator.p[1][4].col_idx_d2H ] = u_δ2H_INTS
+        integrator.u[integrator.p[1][4].row_idx_scalars.INTR, integrator.p[1][4].col_idx_d18O] = u_δ18O_INTR
+        integrator.u[integrator.p[1][4].row_idx_scalars.INTR, integrator.p[1][4].col_idx_d2H ] = u_δ2H_INTR
+        integrator.u[integrator.p[1][4].row_idx_scalars.SNOW, integrator.p[1][4].col_idx_d18O] = u_δ18O_SNOW
+        integrator.u[integrator.p[1][4].row_idx_scalars.SNOW, integrator.p[1][4].col_idx_d2H ] = u_δ2H_SNOW
         # integrator.u[idx_u_vector_isotopes_d18O]    = u_δ18O_SWATI
         # integrator.u[idx_u_vector_isotopes_d2H]     = u_δ2H_SWATI
     end
@@ -568,19 +557,15 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
     # The code below relating to "numerical_ForwardEuler" is redundant... the code relating
     # to analytical however might still be used.
 
-    simulate_isotopes = integrator.p[1][4][3]
+    simulate_isotopes = integrator.p[1][4].simulate_isotopes
     if simulate_isotopes
-        idx_u_vector_amounts       = integrator.p[1][4][4]
-        idx_u_vector_accumulators  = integrator.p[1][4][5]
-        # idx_u_scalar_amounts     = integrator.p[1][4][6]
-
-        u_GWAT     = integrator.u[1]
-        u_INTS     = integrator.u[2]
-        u_INTR     = integrator.u[3]
-        u_SNOW     = integrator.u[4]
-        u_CC       = integrator.u[5]
-        u_SNOWLQ   = integrator.u[6]
-        u_SWATI    = integrator.u[idx_u_vector_amounts]
+        u_GWAT     = integrator.u[integrator.p[1][4].row_idx_scalars.GWAT, 1]
+        # u_INTS     = integrator.u[integrator.p[1][4].row_idx_scalars.INTS, 1]
+        # u_INTR     = integrator.u[integrator.p[1][4].row_idx_scalars.INTR, 1]
+        # u_SNOW     = integrator.u[integrator.p[1][4].row_idx_scalars.SNOW, 1]
+        # u_CC       = integrator.u[integrator.p[1][4].row_idx_scalars.CC, 1]
+        # u_SNOWLQ   = integrator.u[integrator.p[1][4].row_idx_scalars.SNOWLQ, 1]
+        u_SWATI    = integrator.u[integrator.p[1][4].row_idx_SWATI, 1]
 
         ####################################################################
         # 2) Update states of isotopic compositions of interception storages and snowpack:
@@ -608,21 +593,10 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
         du_GWFL      = integrator.p[3][4][1]
         du_SEEP      = integrator.p[3][4][2]
 
-        idx_u_scalar_isotopes_d18O = integrator.p[1][4][8]
-        idx_u_vector_isotopes_d18O = integrator.p[1][4][9]
-        idx_u_scalar_isotopes_d2H  = integrator.p[1][4][10]
-        idx_u_vector_isotopes_d2H  = integrator.p[1][4][11]
-
-        u_δ18O_GWAT = integrator.u[idx_u_scalar_isotopes_d18O[1]]
-        u_δ2H_GWAT  = integrator.u[idx_u_scalar_isotopes_d2H[1] ]
-        # u_δ18O_INTS = integrator.u[idx_u_scalar_isotopes_d18O[2]]
-        # u_δ2H_INTS  = integrator.u[idx_u_scalar_isotopes_d2H[2] ]
-        # u_δ18O_INTR = integrator.u[idx_u_scalar_isotopes_d18O[3]]
-        # u_δ2H_INTR  = integrator.u[idx_u_scalar_isotopes_d2H[3] ]
-        # u_δ18O_SNOW = integrator.u[idx_u_scalar_isotopes_d18O[4]]
-        # u_δ2H_SNOW  = integrator.u[idx_u_scalar_isotopes_d2H[4] ]
-        u_δ18O_SWATI = integrator.u[idx_u_vector_isotopes_d18O]
-        u_δ2H_SWATI  = integrator.u[idx_u_vector_isotopes_d2H]
+        u_δ18O_GWAT  = integrator.u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d18O]
+        u_δ2H_GWAT   = integrator.u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d2H ]
+        u_δ18O_SWATI = integrator.u[integrator.p[1][4].row_idx_SWATI,        integrator.p[1][4].col_idx_d18O]
+        u_δ2H_SWATI  = integrator.u[integrator.p[1][4].row_idx_SWATI,        integrator.p[1][4].col_idx_d18O]
 
         EffectiveDiffusivity_18O = 0  # TODO(bernhard): compute correct values using eq 33 Zhou-2021-Environ_Model_Softw.pdf
         EffectiveDiffusivity_2H  = 0  # TODO(bernhard): compute correct values using eq 33 Zhou-2021-Environ_Model_Softw.pdf
@@ -640,18 +614,18 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
                     u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, 0, 0) #EffectiveDiffusivity_18O, EffectiveDiffusivity_2H)
 
             # update δ values of GWAT and SWATI
-            # du[idx_u_scalar_isotopes_d18O[1]]   = du_δ18O_GWAT     #TODO(bernhard)
-            # du[idx_u_scalar_isotopes_d2H[1] ]   = du_δ2H_GWAT      #TODO(bernhard)
+            # du[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d18O]   = du_δ18O_GWAT     #TODO(bernhard)
+            # du[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d2H ]   = du_δ2H_GWAT      #TODO(bernhard)
             # du[idx_u_vector_isotopes_d18O]      = du_δ18O_SWATI    #TODO(bernhard)
             # du[idx_u_vector_isotopes_d2H]       = du_δ2H_SWATI     #TODO(bernhard)
 
             # Since we update this in the callback we can't overwrite `du` and let DiffEq.jl do
             # the work, so we need to update `u` instead of `du`
             # Using a simple forward euler update:
-            u[idx_u_scalar_isotopes_d18O[1]]   += integrator.dt * du_δ18O_GWAT     #TODO(bernhard)
-            u[idx_u_scalar_isotopes_d2H[1] ]   += integrator.dt * du_δ2H_GWAT      #TODO(bernhard)
-            u[idx_u_vector_isotopes_d18O]      .+= integrator.dt * du_δ18O_SWATI    #TODO(bernhard)
-            u[idx_u_vector_isotopes_d2H]       .+= integrator.dt * du_δ2H_SWATI     #TODO(bernhard)
+            u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d18O]   += integrator.dt * du_δ18O_GWAT     #TODO(bernhard)
+            u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d2H ]   += integrator.dt * du_δ2H_GWAT      #TODO(bernhard)
+            u[integrator.p[1][4].row_idx_SWATI,        integrator.p[1][4].col_idx_d18O]  .+= integrator.dt * du_δ18O_SWATI    #TODO(bernhard)
+            u[integrator.p[1][4].row_idx_SWATI,        integrator.p[1][4].col_idx_d2H ]  .+= integrator.dt * du_δ2H_SWATI     #TODO(bernhard)
         elseif use_method == "analytical"
             #TODO(bernhard): this update generates an error message with adaptive solvers:
             # Warning: dt <= dtmin. Aborting. There is either an error in your model specification or the true solution is unstable.
@@ -666,10 +640,10 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
                     aux_du_SLVP, p_fu_TADTM, p_EA(t), p_δ2H_PREC(t), p_δ18O_PREC(t), u_aux_WETNES, # (fractionating)
                     u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, 0, 0) #EffectiveDiffusivity_18O, EffectiveDiffusivity_2H)
 
-            u[idx_u_scalar_isotopes_d18O[1]]   = u_δ18O_GWAT
-            u[idx_u_scalar_isotopes_d2H[1] ]   = u_δ2H_GWAT
-            u[idx_u_vector_isotopes_d18O]      = u_δ18O_SWATI
-            u[idx_u_vector_isotopes_d2H]       = u_δ2H_SWATI
+            u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d18O]   = u_δ18O_GWAT
+            u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d2H ]   = u_δ2H_GWAT
+            u[integrator.p[1][4].row_idx_SWATI,        integrator.p[1][4].col_idx_d18O]   = u_δ18O_SWATI
+            u[integrator.p[1][4].row_idx_SWATI,        integrator.p[1][4].col_idx_d2H ]   = u_δ2H_SWATI
         else
             @error "Unknown method for updating Isotopes in GWAT and SWAT specified."
         end
@@ -693,7 +667,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
     #                   a) in each time step f and then cb_SWAT_GWAT_deltas
     #                   b) whenever a full day is over: finish f, finish cb_SWAT_GWAT_deltas, then the daily callbacks
 
-    simulate_isotopes = integrator.p[1][4][3]
+    simulate_isotopes = integrator.p[1][4].simulate_isotopes
     if simulate_isotopes
 
         ##### This update could be done in a separate FunctionCallingCallback `update_auxiliaries`
@@ -731,15 +705,9 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         p_STONEF = p_soil.p_STONEF
         p_THICK  = p_soil.p_THICK
 
-        idx_u_vector_amounts       = integrator.p[1][4][4]
-        idx_u_scalar_isotopes_d18O = integrator.p[1][4][8]
-        idx_u_vector_isotopes_d18O = integrator.p[1][4][9]
-        idx_u_scalar_isotopes_d2H  = integrator.p[1][4][10]
-        idx_u_vector_isotopes_d2H  = integrator.p[1][4][11]
-
         # FLOW state variables (i.e. amounts, already updated from tᵏ to tᵏ⁺¹)
-        u_SWATIᵏ⁺¹ = @view integrator.u[idx_u_vector_amounts]
-        u_SWATIᵏ   = @view integrator.uprev[idx_u_vector_amounts]                 # of time step before
+        u_SWATIᵏ⁺¹ = @view integrator.u[    integrator.p[1][4].row_idx_SWATI, 1]
+        u_SWATIᵏ   = @view integrator.uprev[integrator.p[1][4].row_idx_SWATI, 1]                 # of time step before
         u_GWATᵏ⁺¹  = integrator.u[1]
 
         # θᵏ       = u_aux_θ_tminus1 # # TODO(bernhard): u_aux_θ_tminus1 is not saved, workaraound below:
@@ -747,16 +715,16 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         _,_,_,θᵏ[:],_   = LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATIᵏ, p_soil)  # of time step before
 
         # TRANSPORT state variables (i.e. concentrations, not yet updated from tᵏ to tᵏ⁺¹)
-        u_δ18O_GWAT   = integrator.u[idx_u_scalar_isotopes_d18O[1]]
-        u_δ2H_GWAT    = integrator.u[idx_u_scalar_isotopes_d2H[1] ]
-        # u_δ18O_INTS = integrator.u[idx_u_scalar_isotopes_d18O[2]]
-        # u_δ2H_INTS  = integrator.u[idx_u_scalar_isotopes_d2H[2] ]
-        # u_δ18O_INTR = integrator.u[idx_u_scalar_isotopes_d18O[3]]
-        # u_δ2H_INTR  = integrator.u[idx_u_scalar_isotopes_d2H[3] ]
-        # u_δ18O_SNOW = integrator.u[idx_u_scalar_isotopes_d18O[4]]
-        # u_δ2H_SNOW  = integrator.u[idx_u_scalar_isotopes_d2H[4] ]
-        u_δ18O_SWATI  = @view integrator.u[idx_u_vector_isotopes_d18O]
-        u_δ2H_SWATI   = @view integrator.u[idx_u_vector_isotopes_d2H]
+        u_δ18O_GWAT   = integrator.u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d18O]
+        u_δ2H_GWAT    = integrator.u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d2H ]
+        # u_δ18O_INTS = integrator.u[integrator.p[1][4].row_idx_scalars[2], integrator.p[1][4].col_idx_d18O]
+        # u_δ2H_INTS  = integrator.u[integrator.p[1][4].row_idx_scalars[2], integrator.p[1][4].col_idx_d2H ]
+        # u_δ18O_INTR = integrator.u[integrator.p[1][4].row_idx_scalars[3], integrator.p[1][4].col_idx_d18O]
+        # u_δ2H_INTR  = integrator.u[integrator.p[1][4].row_idx_scalars[3], integrator.p[1][4].col_idx_d2H ]
+        # u_δ18O_SNOW = integrator.u[integrator.p[1][4].row_idx_scalars[4], integrator.p[1][4].col_idx_d18O]
+        # u_δ2H_SNOW  = integrator.u[integrator.p[1][4].row_idx_scalars[4], integrator.p[1][4].col_idx_d2H ]
+        u_δ18O_SWATI  = @view integrator.u[integrator.p[1][4].row_idx_SWATI, integrator.p[1][4].col_idx_d18O]
+        u_δ2H_SWATI   = @view integrator.u[integrator.p[1][4].row_idx_SWATI, integrator.p[1][4].col_idx_d2H]
 
         # unpack other needed quantities
         ## A) constant parameters:
@@ -789,8 +757,8 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
             aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old) = integrator.p[3][1]
 
         # Define quantities needed for transport equation (advection dispersion/diffusion equation)
-        δ¹⁸Oᵏ   = @view integrator.uprev[idx_u_vector_isotopes_d18O]  # of time step before
-        δ²Hᵏ    = @view integrator.uprev[idx_u_vector_isotopes_d2H]   # of time step before
+        δ¹⁸Oᵏ   = @view integrator.uprev[integrator.p[1][4].row_idx_SWATI, integrator.p[1][4].col_idx_d18O]  # of time step before
+        δ²Hᵏ    = @view integrator.uprev[integrator.p[1][4].row_idx_SWATI, integrator.p[1][4].col_idx_d2H]   # of time step before
         # ## unused: Note: transform the deltas into isotope-amount fraction x, a.k.a. isotopic abundance, a.k.a. atom fraction
         # Convert to concentrations:
         C_¹⁸Oᵏ   .= LWFBrook90.ISO.δ_to_C(δ¹⁸Oᵏ, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O) # kg/m3
@@ -1074,8 +1042,8 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
 
         # # Update GWAT:
         # # TODO(bernhard): implement this
-        # u[idx_u_scalar_isotopes_d18O[1]]   = u_δ18O_GWAT
-        # # u[idx_u_scalar_isotopes_d2H[1] ]   = u_δ2H_GWAT
+        # u[p[1][4].row_idx_scalars.GWAT, p[1][4].col_idx_d18O]   = u_δ18O_GWAT
+        # u[p[1][4].row_idx_scalars.GWAT, p[1][4].col_idx_d2H ]   = u_δ2H_GWAT
 
         # END SOLVING VARIANT A (Braud et al. 2005, implicit time stepping) -> has a bug as it seems unstable
         ################
@@ -1193,10 +1161,10 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         elseif ((u_GWATᵏ⁺¹ == 0) & (aux_du_VRFLI[NLAYER] > 0)) # initially no groundwater but some is added
             # If no groundwater initially (u_δ_GWAT were NaN)
             # In that case override u to fixed value and set du to zero
-            #TODO(bernhard): this is not working in f, we'd need to do it in the callback to set u: idx_u_scalar_isotopes_d18O = integrator.p[1][4][8]
-            #TODO(bernhard): this is not working in f, we'd need to do it in the callback to set u: idx_u_scalar_isotopes_d2H  = integrator.p[1][4][10]
-            #TODO(bernhard): this is not working in f, we'd need to do it in the callback to set u: integrator.u[idx_u_scalar_isotopes_d18O[1]] = u_δ18O_SWATI[end] # u_δ18O_GWAT
-            #TODO(bernhard): this is not working in f, we'd need to do it in the callback to set u: integrator.u[idx_u_scalar_isotopes_d2H[1] ] = u_δ2H_SWATI[end]  # u_δ2H_GWAT
+            #TODO(bernhard): this is not working in f, we'd need to do it in the callback to set u: idx_u_scalar_isotopes_d18O = integrator.p[1][4][8   ]
+            #TODO(bernhard): this is not working in f, we'd need to do it in the callback to set u: idx_u_scalar_isotopes_d2H  = integrator.p[1][4][10   ]
+            #TODO(bernhard): this is not working in f, we'd need to do it in the callback to set u: integrator.u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d18O] = u_δ18O_SWATI[end] # u_δ18O_GWAT
+            #TODO(bernhard): this is not working in f, we'd need to do it in the callback to set u: integrator.u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d2H ] = u_δ2H_SWATI[end]  # u_δ2H_GWAT
 
             du_δ18O_GWAT = 0
             du_δ2H_GWAT  = 0
@@ -1232,10 +1200,10 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # Since we update this in the callback we can't overwrite `du` and let DiffEq.jl do
         # the work, so we need to update `u` instead of `du`
         # Using a simple forward Euler update:
-        u[idx_u_scalar_isotopes_d18O[1]]   += integrator.dt * du_δ18O_GWAT     #TODO(bernhard)
-        u[idx_u_scalar_isotopes_d2H[1] ]   += integrator.dt * du_δ2H_GWAT      #TODO(bernhard)
-        u[idx_u_vector_isotopes_d18O]      .+= integrator.dt * du_δ18O_SWATI    #TODO(bernhard)
-        u[idx_u_vector_isotopes_d2H]       .+= integrator.dt * du_δ2H_SWATI     #TODO(bernhard)
+        u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d18O]   += integrator.dt * du_δ18O_GWAT     #TODO(bernhard)
+        u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d2H ]   += integrator.dt * du_δ2H_GWAT      #TODO(bernhard)
+        u[integrator.p[1][4].row_idx_SWATI, integrator.p[1][4].col_idx_d18O]         .+= integrator.dt * du_δ18O_SWATI    #TODO(bernhard)
+        u[integrator.p[1][4].row_idx_SWATI, integrator.p[1][4].col_idx_d2H]          .+= integrator.dt * du_δ2H_SWATI     #TODO(bernhard)
         ###
         ### end method from compute_isotope_GWAT_SWATI()
 
@@ -1254,20 +1222,20 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # # ==>     x = (x0 - B)*e^(-At) + B
         # # ==>     δ_xylem = δ_RWU + (δ_xylem0 - δ_RWU)*exp(-sum(aux_du_TRANI)/V_xylem * t)
         # V_xylem = 100 # mm, Volume of well mixed xylem storage per area, TODO(bernhard): make this a parameter
-        # u_δ18O_Xylem = u[idx_u_scalar_isotopes_d18O[6]]
-        # u_δ2H_Xylem  = u[idx_u_scalar_isotopes_d2H[6] ]
+        # u_δ18O_Xylem = u[integrator.p[1][4].row_idx_scalars.XylemV, integrator.p[1][4].col_idx_d18O]
+        # u_δ2H_Xylem  = u[integrator.p[1][4].row_idx_scalars.XylemV, integrator.p[1][4].col_idx_d2H ]
         # u_δ18O_Xylem = u_δ18O_RWU + (u_δ18O_Xylem - u_δ18O_RWU)*exp(-sum(aux_du_TRANI)/V_xylem * integrator.dt) #TODO: this should be using δ_to_x() and back
         # u_δ2H_Xylem  = u_δ2H_RWU  + (u_δ2H_Xylem  - u_δ2H_RWU )*exp(-sum(aux_du_TRANI)/V_xylem * integrator.dt) #TODO: this should be using δ_to_x() and back
 
-        # u[idx_u_scalar_isotopes_d18O[5]] = sum(Cᵢ¹⁸O_TRANI, aux_du_TRANI) #sum(aux_du_TRANI.*Cᵢ¹⁸O_TRANI)/sum(aux_du_TRANI)
-        # u[idx_u_scalar_isotopes_d2H[5] ] = sum(Cᵢ²H_TRANI, aux_du_TRANI) #sum(aux_du_TRANI.*Cᵢ²H_TRANI) /sum(aux_du_TRANI)
-        u[idx_u_scalar_isotopes_d18O[5]] = LWFBrook90.ISO.x_to_δ(wmean(Cᵢ¹⁸O_TRANI, aux_du_TRANI), LWFBrook90.ISO.R_VSMOW¹⁸O) #sum(aux_du_TRANI.*Cᵢ¹⁸O_TRANI)/sum(aux_du_TRANI)
-        u[idx_u_scalar_isotopes_d2H[5] ] = LWFBrook90.ISO.x_to_δ(wmean(Cᵢ²H_TRANI, aux_du_TRANI), LWFBrook90.ISO.R_VSMOW²H) #sum(aux_du_TRANI.*Cᵢ²H_TRANI) /sum(aux_du_TRANI)
+        # u[integrator.p[1][4].row_idx_scalars.totalRWU, integrator.p[1][4].col_idx_d18O] = sum(Cᵢ¹⁸O_TRANI, aux_du_TRANI) #sum(aux_du_TRANI.*Cᵢ¹⁸O_TRANI)/sum(aux_du_TRANI)
+        # u[integrator.p[1][4].row_idx_scalars.totalRWU, integrator.p[1][4].col_idx_d2H ] = sum(Cᵢ²H_TRANI, aux_du_TRANI) #sum(aux_du_TRANI.*Cᵢ²H_TRANI) /sum(aux_du_TRANI)
+        u[integrator.p[1][4].row_idx_scalars.totalRWU, integrator.p[1][4].col_idx_d18O] = LWFBrook90.ISO.x_to_δ(wmean(Cᵢ¹⁸O_TRANI, aux_du_TRANI), LWFBrook90.ISO.R_VSMOW¹⁸O) #sum(aux_du_TRANI.*Cᵢ¹⁸O_TRANI)/sum(aux_du_TRANI)
+        u[integrator.p[1][4].row_idx_scalars.totalRWU, integrator.p[1][4].col_idx_d2H ] = LWFBrook90.ISO.x_to_δ(wmean(Cᵢ²H_TRANI, aux_du_TRANI), LWFBrook90.ISO.R_VSMOW²H) #sum(aux_du_TRANI.*Cᵢ²H_TRANI) /sum(aux_du_TRANI)
 
-        # u[idx_u_scalar_isotopes_d18O[5]] = u_δ18O_RWU  # TODO(bernhard): why does this triple allocations?
-        # u[idx_u_scalar_isotopes_d2H[5] ] = u_δ2H_RWU   # TODO(bernhard): why does this triple allocations?
-        # u[idx_u_scalar_isotopes_d18O[6]] = u_δ18O_Xylem
-        # u[idx_u_scalar_isotopes_d2H[6] ] = u_δ2H_Xylem
+        # u[integrator.p[1][4].row_idx_scalars.totalRWU, integrator.p[1][4].col_idx_d18O] = u_δ18O_RWU  # TODO(bernhard): why does this triple allocations?
+        # u[integrator.p[1][4].row_idx_scalars.totalRWU, integrator.p[1][4].col_idx_d2H ] = u_δ2H_RWU   # TODO(bernhard): why does this triple allocations?
+        # u[integrator.p[1][4].row_idx_scalars.XylemV, integrator.p[1][4].col_idx_d18O] = u_δ18O_Xylem
+        # u[integrator.p[1][4].row_idx_scalars.XylemV, integrator.p[1][4].col_idx_d2H ] = u_δ2H_Xylem
 
     end
 
@@ -1291,59 +1259,57 @@ function LWFBrook90R_check_balance_errors!(integrator)
 
     _) = integrator.p[1][2]
 
-    idx_u_vector_amounts       = integrator.p[1][4][4]
-    idx_u_vector_accumulators  = integrator.p[1][4][5]
+    u_GWAT     = integrator.u[integrator.p[1][4].row_idx_scalars.GWAT, 1]
+    u_INTS     = integrator.u[integrator.p[1][4].row_idx_scalars.INTS, 1]
+    u_INTR     = integrator.u[integrator.p[1][4].row_idx_scalars.INTR, 1]
+    u_SNOW     = integrator.u[integrator.p[1][4].row_idx_scalars.SNOW, 1]
+    # u_CC       = integrator.u[integrator.p[1][4].row_idx_scalars.CC, 1]
+    # u_SNOWLQ   = integrator.u[integrator.p[1][4].row_idx_scalars.SNOWLQ, 1]
+    u_SWATI    = integrator.u[integrator.p[1][4].row_idx_SWATI, 1]
 
-    u_GWAT     = integrator.u[2]
-    u_INTS     = integrator.u[2]
-    u_INTR     = integrator.u[3]
-    u_SNOW     = integrator.u[4]
-    # u_CC       = integrator.u[5]
-    # u_SNOWLQ   = integrator.u[6]
-    u_SWATI    = integrator.u[idx_u_vector_amounts]
 
     if compute_intermediate_quantities
         # a) Get change in total storages
         # Get old total water volumes and compute new total water volumes
-        old_SWAT       = integrator.uprev[idx_u_vector_accumulators[28]]
-        old_totalWATER = integrator.uprev[idx_u_vector_accumulators[29]]
+        old_SWAT       = integrator.uprev[integrator.p[1][4].row_idx_accum[28], 1]
+        old_totalWATER = integrator.uprev[integrator.p[1][4].row_idx_accum[29], 1]
         new_SWAT       = sum(u_SWATI) # total soil water in all layers, mm
         new_totalWATER = u_INTR + u_INTS + u_SNOW + new_SWAT + u_GWAT # total water in all compartments, mm
 
         # Save current totals into caches to check error for next period
-        integrator.u[idx_u_vector_accumulators[28]] = new_SWAT
-        integrator.u[idx_u_vector_accumulators[29]] = new_totalWATER
+        integrator.u[integrator.p[1][4].row_idx_accum[28], 1] = new_SWAT
+        integrator.u[integrator.p[1][4].row_idx_accum[29], 1] = new_totalWATER
 
         # b) Get fluxes that caused change in total storages
         # Across outer boundaries of above and belowground system:
-        idx_cum_d_prec = idx_u_vector_accumulators[ 1]
-        idx_cum_d_evap = idx_u_vector_accumulators[ 9]
-        idx_cum_flow   = idx_u_vector_accumulators[18]
-        idx_cum_seep   = idx_u_vector_accumulators[19]
+        idx_cum_d_prec = integrator.p[1][4].row_idx_accum[ 1]
+        idx_cum_d_evap = integrator.p[1][4].row_idx_accum[ 9]
+        idx_cum_flow   = integrator.p[1][4].row_idx_accum[18]
+        idx_cum_seep   = integrator.p[1][4].row_idx_accum[19]
 
         # Across outer boundaries of belowground system (SWATI):
-        # SLFL  # idx_u_vector_accumulators[21] # cum_d_slfl
-        # BYFL  # idx_u_vector_accumulators[22] # cum_d_byfl
+        # SLFL  # integrator.p[1][4].row_idx_accum[21] # cum_d_slfl
+        # BYFL  # integrator.p[1][4].row_idx_accum[22] # cum_d_byfl
         # INFLI # as sum(INFLI) =  SLFL - sum(BYFL)
-        idx_cum_slfl = idx_u_vector_accumulators[21]
-        idx_cum_byfl = idx_u_vector_accumulators[22]
-        idx_cum_dsfl  = idx_u_vector_accumulators[23]# cum_d_dsfl
-        idx_cum_vrfln = idx_u_vector_accumulators[25] # cum_d_vrfln
-        idx_cum_tran  = idx_u_vector_accumulators[10] # cum_d_tran
-        idx_cum_slvp  = idx_u_vector_accumulators[13] # cum_d_slvp
+        idx_cum_slfl = integrator.p[1][4].row_idx_accum[21]
+        idx_cum_byfl = integrator.p[1][4].row_idx_accum[22]
+        idx_cum_dsfl  = integrator.p[1][4].row_idx_accum[23]# cum_d_dsfl
+        idx_cum_vrfln = integrator.p[1][4].row_idx_accum[25] # cum_d_vrfln
+        idx_cum_tran  = integrator.p[1][4].row_idx_accum[10] # cum_d_tran
+        idx_cum_slvp  = integrator.p[1][4].row_idx_accum[13] # cum_d_slvp
 
 
         # c) Compute balance error
         # BALERD_SWAT  = old_SWAT - new_SWAT + INFLI - DSFLI - VRFL(NLAYER) - TRANI - SLVP
         BALERD_SWAT  = old_SWAT - new_SWAT +
-            (integrator.u[idx_cum_slfl] - integrator.u[idx_cum_byfl]) - integrator.u[idx_cum_dsfl] - integrator.u[idx_cum_vrfln] - integrator.u[idx_cum_tran] - integrator.u[idx_cum_slvp]
+            (integrator.u[idx_cum_slfl,1] - integrator.u[idx_cum_byfl,1]) - integrator.u[idx_cum_dsfl,1] - integrator.u[idx_cum_vrfln,1] - integrator.u[idx_cum_tran,1] - integrator.u[idx_cum_slvp,1]
         # BALERD_total = old_totalWATER - new_totalWATER + PRECD - EVAPD - FLOWD - SEEPD
         BALERD_total = old_totalWATER - new_totalWATER +
-            integrator.u[idx_cum_d_prec] - integrator.u[idx_cum_d_evap] - integrator.u[idx_cum_flow] - integrator.u[idx_cum_seep]
+            integrator.u[idx_cum_d_prec,1] - integrator.u[idx_cum_d_evap,1] - integrator.u[idx_cum_flow,1] - integrator.u[idx_cum_seep,1]
 
         # d) Store balance errors into state vector
-        integrator.u[idx_u_vector_accumulators[30]] = BALERD_SWAT
-        integrator.u[idx_u_vector_accumulators[31]] = BALERD_total
+        integrator.u[integrator.p[1][4].row_idx_accum[30], 1] = BALERD_SWAT
+        integrator.u[integrator.p[1][4].row_idx_accum[31], 1] = BALERD_total
     end
 
     return nothing

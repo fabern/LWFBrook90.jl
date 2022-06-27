@@ -53,10 +53,10 @@ function prepare_θψδ_from_sim_and_reference(;
 
 #                 sol = sim_sol
 #                 tick_function = optim_ticks
-#                 idx_u_scalar_isotopes_d18O = sol.prob.p[1][4][8]
-#                 idx_u_vector_isotopes_d18O = sol.prob.p[1][4][9]
-#                 idx_u_scalar_isotopes_d2H  = sol.prob.p[1][4][10]
-#                 idx_u_vector_isotopes_d2H  = sol.prob.p[1][4][11]
+#                 idx_u_scalar_isotopes_d18O = sol.prob.p[1][4][8  ]
+#                 idx_u_vector_isotopes_d18O = sol.prob.p[1][4][9  ]
+#                 idx_u_scalar_isotopes_d2H  = sol.prob.p[1][4][10  ]
+#                 idx_u_vector_isotopes_d2H  = sol.prob.p[1][4][11  ]
 
 #                 t_ref = sol.prob.p[2][17]
 #                 x = RelativeDaysFloat2DateTime.(sol.t, t_ref);

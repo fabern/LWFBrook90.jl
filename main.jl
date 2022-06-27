@@ -75,7 +75,7 @@ compute_intermediate_quantities = true # Flag whether ODE containes additional q
 # Define initial states of differential equation
 # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
 # Create u0 for DiffEq.jl
-u0 = define_LWFB90_u0(p, input_initial_conditions,
+u0, p = define_LWFB90_u0(p, input_initial_conditions,
     ψM_initial, _δ18O_initial, _δ2H_initial, # TODO: possibly unused
     compute_intermediate_quantities;
     simulate_isotopes = false)
@@ -141,7 +141,7 @@ using BenchmarkTools # for benchmarking
 # @time LWFBrook90.LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator) # 0.000048 seconds (119 allocations: 9.391 KiB)
 # @enter LWFBrook90.LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     # @time LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil) # 0.000010 seconds (10 allocations: 1.406 KiB)
-# @time LWFBrook90.KPT.derive_auxiliary_SOILVAR(integrator.u[integrator.p[1][4][4]], integrator.p[1][1]) # 0.000013 seconds (11 allocations: 1.547 KiB)
+# @time LWFBrook90.KPT.derive_auxiliary_SOILVAR(integrator.u[integrator.p[1][4].row_idx_SWATI], integrator.p[1][1]) # 0.000013 seconds (11 allocations: 1.547 KiB)
 ####################
 
 
@@ -186,8 +186,8 @@ heatmap(time_to_plot, y_cell_centers, u_aux_PSIM', yflip = true,
         colorbar_title = "ψ [kPa]")
 
 ##### Plot 3
-# aux_indices = sol_LWFBrook90.prob.p[1][4][5]
-# aux_names = sol_LWFBrook90.prob.p[1][4][7]
+# aux_indices = sol_LWFBrook90.prob.p[1][4].row_idx_accum
+# aux_names = sol_LWFBrook90.prob.p[1][4].names_accum
 # plot(sol_LWFBrook90; vars = aux_indices, label = aux_names)
 # plot(sol_LWFBrook90; vars = aux_indices[17:25], label = aux_names[:, 17:25])
 

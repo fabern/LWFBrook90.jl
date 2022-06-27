@@ -58,40 +58,31 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
         ##################
         # Parse states
-        idx_u_vector_amounts       = p[1][4][4]
-        idx_u_vector_accumulators  = p[1][4][5]
-        # idx_u_scalar_amounts     = p[1][4][6]
+        u_GWAT      = u[p[1][4].row_idx_scalars.GWAT, 1]
+        #u_INTS     = u[p[1][4].row_idx_scalars.INTS, 1]
+        #u_INTR     = u[p[1][4].row_idx_scalars.INTR, 1]
+        #u_SNOW     = u[p[1][4].row_idx_scalars.SNOW, 1]
+        #u_CC       = u[p[1][4].row_idx_scalars.CC, 1]
+        #u_SNOWLQ   = u[p[1][4].row_idx_scalars.SNOWLQ, 1]
+        u_SWATI     = u[p[1][4].row_idx_SWATI, 1] # 0.000002 seconds (1 allocation: 144 bytes)
+                    # NOTE: @view u[p[1][4].row_idx_SWATI, 1] seems to yield wrong results...
 
-        u_GWAT      = u[1]
-        #u_INTS     = u[2]
-        #u_INTR     = u[3]
-        #u_SNOW     = u[4]
-        #u_CC       = u[5]
-        #u_SNOWLQ   = u[6]
-        u_SWATI     = u[idx_u_vector_amounts] # 0.000002 seconds (1 allocation: 144 bytes)
-                    # NOTE: @view u[idx_u_vector_amounts] seems to yield wrong results...
-
-        # simulate_isotopes = p[1][4][3]
+        # simulate_isotopes = p[1][4].simulate_isotopes
         # if simulate_isotopes
-        #     idx_u_scalar_isotopes_d18O = p[1][4][8]
-        #     idx_u_vector_isotopes_d18O = p[1][4][9]
-        #     idx_u_scalar_isotopes_d2H  = p[1][4][10]
-        #     idx_u_vector_isotopes_d2H  = p[1][4][11]
-
-        #     u_δ18O_GWAT = u[idx_u_scalar_isotopes_d18O[1]]
-        #     u_δ2H_GWAT  = u[idx_u_scalar_isotopes_d2H[1] ]
-        #     # u_δ18O_INTS = u[idx_u_scalar_isotopes_d18O[2]]
-        #     # u_δ2H_INTS  = u[idx_u_scalar_isotopes_d2H[2] ]
-        #     # u_δ18O_INTR = u[idx_u_scalar_isotopes_d18O[3]]
-        #     # u_δ2H_INTR  = u[idx_u_scalar_isotopes_d2H[3] ]
-        #     # u_δ18O_SNOW = u[idx_u_scalar_isotopes_d18O[4]]
-        #     # u_δ2H_SNOW  = u[idx_u_scalar_isotopes_d2H[4] ]
-        #     # u_δ18O_RWU = u[idx_u_scalar_isotopes_d18O[5]]
-        #     # u_δ2H_RWU  = u[idx_u_scalar_isotopes_d2H[5] ]
-        #     # u_δ18O_XYL = u[idx_u_scalar_isotopes_d18O[6]]
-        #     # u_δ2H_XYL  = u[idx_u_scalar_isotopes_d2H[6] ]
-        #     u_δ18O_SWATI = u[idx_u_vector_isotopes_d18O]
-        #     u_δ2H_SWATI  = u[idx_u_vector_isotopes_d2H]
+        #     u_δ18O_GWAT   = u[p[1][4].row_idx_scalars.GWAT,     p[1][4].col_idx_d18O]
+        #     u_δ2H_GWAT    = u[p[1][4].row_idx_scalars.GWAT,     p[1][4].col_idx_d2H ]
+        #     # u_δ18O_INTS = u[p[1][4].row_idx_scalars.INTS,     p[1][4].col_idx_d18O]
+        #     # u_δ2H_INTS  = u[p[1][4].row_idx_scalars.INTS,     p[1][4].col_idx_d2H ]
+        #     # u_δ18O_INTR = u[p[1][4].row_idx_scalars.INTR,     p[1][4].col_idx_d18O]
+        #     # u_δ2H_INTR  = u[p[1][4].row_idx_scalars.INTR,     p[1][4].col_idx_d2H ]
+        #     # u_δ18O_SNOW = u[p[1][4].row_idx_scalars.SNOW,     p[1][4].col_idx_d18O]
+        #     # u_δ2H_SNOW  = u[p[1][4].row_idx_scalars.SNOW,     p[1][4].col_idx_d2H ]
+        #     # u_δ18O_RWU  = u[p[1][4].row_idx_scalars.totalRWU, p[1][4].col_idx_d18O]
+        #     # u_δ2H_RWU   = u[p[1][4].row_idx_scalars.totalRWU, p[1][4].col_idx_d2H ]
+        #     # u_δ18O_XYL  = u[p[1][4].row_idx_scalars.XylemV,   p[1][4].col_idx_d18O]
+        #     # u_δ2H_XYL   = u[p[1][4].row_idx_scalars.XylemV,   p[1][4].col_idx_d2H ]
+        #     u_δ18O_SWATI  = u[p[1][4].row_idx_SWATI,            p[1][4].col_idx_d18O]
+        #     u_δ2H_SWATI   = u[p[1][4].row_idx_SWATI,            p[1][4].col_idx_d2H ]
         # end
 
         LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, t)
@@ -161,19 +152,19 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # Update solution:
         # u is a state vector with u[1] = S relative saturation (-)
         # Update GWAT:
-        du[1] = aux_du_VRFLI[NLAYER] - du_GWFL - du_SEEP
+        du[p[1][4].row_idx_scalars.GWAT, 1] = aux_du_VRFLI[NLAYER] - du_GWFL - du_SEEP
 
         # Do not modify INTS, INTR, SNOW, CC, SNOWLQ
         # as they are separately modified by the callback.
         # Therfore set their rate of change to 0
-        du[2] = 0
-        du[3] = 0
-        du[4] = 0
-        du[5] = 0
-        du[6] = 0
+        du[p[1][4].row_idx_scalars.INTS, 1]   = 0
+        du[p[1][4].row_idx_scalars.INTR, 1]   = 0
+        du[p[1][4].row_idx_scalars.SNOW, 1]   = 0
+        du[p[1][4].row_idx_scalars.CC, 1]     = 0
+        du[p[1][4].row_idx_scalars.SNOWLQ, 1] = 0
 
         # Update SWATI for each layer:
-        du[idx_u_vector_amounts] .= du_NTFLI[:] # 0.000002 seconds (3 allocations: 224 bytes)
+        du[p[1][4].row_idx_SWATI, 1] .= du_NTFLI # 0.000002 seconds (3 allocations: 224 bytes)
 
         # save intermediate results from flow calculation into a cache
         # for efficient use in transport calculation (in callbacks)
@@ -185,47 +176,47 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # Note that below state variables serve only as accumulator but do not affect
         # the evolution of the system.
         if compute_intermediate_quantities
-            # @assert length(idx_u_vector_accumulators) == 25
+            # @assert length(p[1][4].row_idx_accum) == 25
 
             # 1) Either set daily sum if rate is constant throughout precipitation interval: p_DTP*(...)
             # 2) or then set daily sum to zero and use ODE to accumulate flow.
-            du[idx_u_vector_accumulators[ 1]] = 0 # cum_d_prec, was computed in callback
-            du[idx_u_vector_accumulators[ 2]] = 0 # cum_d_rfal, was computed in callback
-            du[idx_u_vector_accumulators[ 3]] = 0 # cum_d_sfal, was computed in callback
-            du[idx_u_vector_accumulators[ 4]] = 0 # cum_d_rint, was computed in callback
-            du[idx_u_vector_accumulators[ 5]] = 0 # cum_d_sint, was computed in callback
-            du[idx_u_vector_accumulators[ 6]] = 0 # cum_d_rsno, was computed in callback
-            du[idx_u_vector_accumulators[ 7]] = 0 # cum_d_rnet, was computed in callback
-            du[idx_u_vector_accumulators[ 8]] = 0 # cum_d_smlt, was computed in callback
+            du[p[1][4].row_idx_accum[ 1], 1] = 0 # cum_d_prec, was computed in callback
+            du[p[1][4].row_idx_accum[ 2], 1] = 0 # cum_d_rfal, was computed in callback
+            du[p[1][4].row_idx_accum[ 3], 1] = 0 # cum_d_sfal, was computed in callback
+            du[p[1][4].row_idx_accum[ 4], 1] = 0 # cum_d_rint, was computed in callback
+            du[p[1][4].row_idx_accum[ 5], 1] = 0 # cum_d_sint, was computed in callback
+            du[p[1][4].row_idx_accum[ 6], 1] = 0 # cum_d_rsno, was computed in callback
+            du[p[1][4].row_idx_accum[ 7], 1] = 0 # cum_d_rnet, was computed in callback
+            du[p[1][4].row_idx_accum[ 8], 1] = 0 # cum_d_smlt, was computed in callback
 
-            du[idx_u_vector_accumulators[ 9]] = 0 # cum_d_evap,  was computed in callback
-            du[idx_u_vector_accumulators[10]] = 0 # cum_d_tran,  was computed in callback
-            du[idx_u_vector_accumulators[11]] = 0 # cum_d_irvp,  was computed in callback
-            du[idx_u_vector_accumulators[12]] = 0 # cum_d_isvp,  was computed in callback
-            du[idx_u_vector_accumulators[13]] = 0 # cum_d_slvp,  was computed in callback
-            du[idx_u_vector_accumulators[14]] = 0 # cum_d_snvp,  was computed in callback
-            du[idx_u_vector_accumulators[15]] = 0 # cum_d_pint,  was computed in callback
-            du[idx_u_vector_accumulators[16]] = 0 # cum_d_ptran, was computed in callback
-            du[idx_u_vector_accumulators[17]] = 0 # cum_d_pslvp, was computed in callback
+            du[p[1][4].row_idx_accum[ 9], 1] = 0 # cum_d_evap,  was computed in callback
+            du[p[1][4].row_idx_accum[10], 1] = 0 # cum_d_tran,  was computed in callback
+            du[p[1][4].row_idx_accum[11], 1] = 0 # cum_d_irvp,  was computed in callback
+            du[p[1][4].row_idx_accum[12], 1] = 0 # cum_d_isvp,  was computed in callback
+            du[p[1][4].row_idx_accum[13], 1] = 0 # cum_d_slvp,  was computed in callback
+            du[p[1][4].row_idx_accum[14], 1] = 0 # cum_d_snvp,  was computed in callback
+            du[p[1][4].row_idx_accum[15], 1] = 0 # cum_d_pint,  was computed in callback
+            du[p[1][4].row_idx_accum[16], 1] = 0 # cum_d_ptran, was computed in callback
+            du[p[1][4].row_idx_accum[17], 1] = 0 # cum_d_pslvp, was computed in callback
 
-            du[idx_u_vector_accumulators[18]] = p_fu_SRFL +
+            du[p[1][4].row_idx_accum[18], 1] = p_fu_SRFL +
                               sum(aux_du_BYFLI) +
                               sum(aux_du_DSFLI) +
                               du_GWFL # SRFLD + BYFLD + DSFLD + GWFLD # flow
-            du[idx_u_vector_accumulators[19]] = du_SEEP                                 # seep
-            du[idx_u_vector_accumulators[20]] = p_fu_SRFL                               # srfl
-            du[idx_u_vector_accumulators[21]] = p_fu_SLFL                               # slfl
-            du[idx_u_vector_accumulators[22]] = sum(aux_du_BYFLI)                       # byfl
-            du[idx_u_vector_accumulators[23]] = sum(aux_du_DSFLI)                       # dsfl
-            du[idx_u_vector_accumulators[24]] = du_GWFL                                 # gwfl
-            du[idx_u_vector_accumulators[25]] = aux_du_VRFLI[NLAYER]                    # vrfln
+            du[p[1][4].row_idx_accum[19], 1] = du_SEEP                                 # seep
+            du[p[1][4].row_idx_accum[20], 1] = p_fu_SRFL                               # srfl
+            du[p[1][4].row_idx_accum[21], 1] = p_fu_SLFL                               # slfl
+            du[p[1][4].row_idx_accum[22], 1] = sum(aux_du_BYFLI)                       # byfl
+            du[p[1][4].row_idx_accum[23], 1] = sum(aux_du_DSFLI)                       # dsfl
+            du[p[1][4].row_idx_accum[24], 1] = du_GWFL                                 # gwfl
+            du[p[1][4].row_idx_accum[25], 1] = aux_du_VRFLI[NLAYER]                    # vrfln
 
-            # du[idx_u_vector_accumulators[26]]= 0 # cum_d_rthr, was computed in callback
-            # du[idx_u_vector_accumulators[27]]= 0 # cum_d_sthr, was computed in callback
-            du[idx_u_vector_accumulators[28]] = 0 # new_SWAT, is computed in callback
-            du[idx_u_vector_accumulators[29]] = 0 # new_totalWATER, is computed in callback
-            du[idx_u_vector_accumulators[30]] = 0 # BALERD_SWAT, is computed in callback
-            du[idx_u_vector_accumulators[31]] = 0 # BALERD_total, is computed in callback
+            # du[p[1][4].row_idx_accum[26], 1] = 0 # cum_d_rthr, was computed in callback
+            # du[p[1][4].row_idx_accum[27], 1] = 0 # cum_d_sthr, was computed in callback
+            du[p[1][4].row_idx_accum[28], 1] = 0 # new_SWAT, is computed in callback
+            du[p[1][4].row_idx_accum[29], 1] = 0 # new_totalWATER, is computed in callback
+            du[p[1][4].row_idx_accum[30], 1] = 0 # BALERD_SWAT, is computed in callback
+            du[p[1][4].row_idx_accum[31], 1] = 0 # BALERD_total, is computed in callback
 
             # TODO(bernhard): use SavingCallback() for all quantities that have du=0
             #                 only keep du=... for quantities for which we compute cumulative sums

@@ -103,11 +103,13 @@ for Δz_m in (
     # Define initial states of differential equation
     # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
     # Create u0 for DiffEq.jl
-    u0 = define_LWFB90_u0(p, input_initial_conditions,
+
+
+    u0, p = define_LWFB90_u0(p, input_initial_conditions,
         ψM_initial, δ18O_initial, δ2H_initial,
         compute_intermediate_quantities;
-        simulate_isotopes = simulate_isotopes)
-    ####################
+        simulate_isotopes = simulate_isotopes);
+
 
     ####################
     # Define ODE problem which consists of
@@ -211,19 +213,19 @@ for Δz_m in (
     end
 
     # plot RWU time series
-    idx_u_scalar_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][8]
-    #     idx_u_vector_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][9]
-    #     idx_u_scalar_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4][10]
-    #     idx_u_vector_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4][11]
-    row_RWU_d18O  = reshape(sol_LWFBrook90[idx_u_scalar_isotopes_d18O[5],1,:], 1, :)
-    #     row_XYL_d18O  = reshape(sol_LWFBrook90[idx_u_scalar_isotopes_d18O[6],1,:], 1, :)
-    plot(transpose(row_RWU_d18O))
-
+    # idx_u_scalar_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][8     ]
+    #     idx_u_vector_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][9     ]
+    #     idx_u_scalar_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4][10     ]
+    #     idx_u_vector_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4][11     ]
+    if simulate_isotopes
+        row_RWU_d18O  = reshape(sol_LWFBrook90[p[1][4].row_idx_scalars[7], sol_LWFBrook90.prob.p[1][4].col_idx_d18O, :, 1], 1, :)
+        #     row_XYL_d18O  = reshape(sol_LWFBrook90[idx_u_scalar_isotopes_d18O[6],1,:], 1, :) #TODO(bernhard): fix plotting
+        plot(transpose(row_RWU_d18O))
+    end
 
                 # 3b) Heatmap of RWU
-                idx_u_vector_accumulators  = sol_LWFBrook90.prob.p[1][4][5]
                 NLAYER = sol_LWFBrook90.prob.p[1][1].NLAYER
-                rows_RWU      = sol_LWFBrook90[idx_u_vector_accumulators[31 .+ (1:NLAYER)],1,:];
+                rows_RWU      = sol_LWFBrook90[sol_LWFBrook90.prob.p[1][4].row_idx_RWU, 1, :]
                 # # y_extended = [-500; -350; -300; -250; -200; -150; -100;   -50;         y;          (maximum(y) .+ 50 .+ [50; 100; 150; 250])]
                 # # y_labels   = ["INTS"; ""; "INTR"; ""; "SNOW"; ""; round.(y); "";             "GWAT"]
                 # # y_soil_ticks = optimize_ticks(extrema(y)...; k_min = 4)[1]
@@ -362,8 +364,8 @@ for Δz_m in (
 #             savefig(fname*"_plot-θ-ψ-δ.png")
 #     end
 
-#     aux_indices = sol_LWFBrook90.prob.p[1][4][5]
-#     aux_names = sol_LWFBrook90.prob.p[1][4][7]
+#     aux_indices = sol_LWFBrook90.prob.p[1][4].row_idx_accum
+#     aux_names = sol_LWFBrook90.prob.p[1][4].names_accum
 #     plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
 #                 [sol_LWFBrook90[aux_indices[30],:] sol_LWFBrook90[aux_indices[31],:]],
 #                 legend = :outerright, labels = aux_names[:, 30:31],
@@ -381,12 +383,12 @@ end
 # # plot(sol_LWFBrook90; vars = [1, 2, 3, 4, 5, 6],
 # #      label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
 
-# # idx_u_vector_amounts       = sol_LWFBrook90.prob.p[1][4][4]
-# # idx_u_scalar_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][5]
-# # idx_u_vector_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][6]
-# # idx_u_scalar_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4][7]
-# # idx_u_vector_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4][8]
-# # idx_u_vector_accumulators  = sol_LWFBrook90.prob.p[1][4][9]
+# # idx_u_vector_amounts       = sol_LWFBrook90.prob.p[1][4].row_idx_SWATI
+# # idx_u_scalar_isotopes_d18O = sol_LWFBrook90.prob.p[1][4].row_idx_accum
+# # idx_u_vector_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][6  ]
+# # idx_u_scalar_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4].names_accum
+# # idx_u_vector_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4][8  ]
+# # idx_u_vector_accumulators  = sol_LWFBrook90.prob.p[1][4][9  ]
 
 
 # # a = plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O,

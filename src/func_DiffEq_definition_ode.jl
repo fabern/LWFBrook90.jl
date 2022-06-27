@@ -38,14 +38,11 @@ function define_LWFB90_ODE(u0, tspan, p)
     # concentrations (e.g. when a compartment such as SNOW is empty its concentration
     # is undefined)
     # unstable_check_function = (dt,u,p,t) -> false
-    # TODO(bernhard) : use below to constrain unstable check to idx_u_vector_amounts
-    simulate_isotopes = p[1][4][3]
+    simulate_isotopes = p[1][4].simulate_isotopes
     if simulate_isotopes
         # only check certain states that are not containing NaNs (δ values might be set to NaN)
-        idx_u_vector_amounts       = p[1][4][4]
-        # idx_u_vector_accumulators  = p[1][4][5] # Not neeeded to check, as these are only auxiliary quantities
-        idx_u_scalar_amounts       = p[1][4][6]
-        unstable_check_function = (dt,u,p,t) -> any(isnan,u[ [idx_u_vector_amounts; idx_u_scalar_amounts] ])
+        unstable_check_function = (dt,u,p,t) -> any(isnan, u[[p[1][4].row_idx_SWATI; p[1][4].row_idx_scalars...], 1])         # select only amts
+        # unstable_check_function = (dt,u,p,t) -> any(isnan, u[[p[1][4].row_idx_SWATI; p[1][4].row_idx_scalars...], [2,3]] ]) # select amts, d18O, d2H
     else
         # check all states
         unstable_check_function = (dt,u,p,t) -> any(isnan,u)

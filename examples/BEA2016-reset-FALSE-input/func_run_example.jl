@@ -143,7 +143,7 @@ function run_example()
     # Define initial states of differential equation
     # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
     # Create u0 for DiffEq.jl
-    u0 = define_LWFB90_u0(p, input_initial_conditions,
+    u0, p = define_LWFB90_u0(p, input_initial_conditions,
         ψM_initial, _δ18O_initial, _δ2H_initial, # TODO: possibly unused
         compute_intermediate_quantities;
         simulate_isotopes = false)

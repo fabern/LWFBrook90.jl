@@ -1183,8 +1183,8 @@ function compute_isotope_GWAT_SWATI(solution_type, integrator,
         elseif ((u_GWAT == 0) & (aux_du_VRFLI[NLAYER] > 0)) # initially no groundwater but some is added
             # If no groundwater initially (u_δ_GWAT were NaN)
             # In that case override u to fixed value and set du to zero
-            #TODO(bernhard): this is not working in f, we'd need to do it in the callback to set u: idx_u_scalar_isotopes_d18O = integrator.p[1][4][8]
-            #TODO(bernhard): this is not working in f, we'd need to do it in the callback to set u: idx_u_scalar_isotopes_d2H  = integrator.p[1][4][10]
+            #TODO(bernhard): this is not working in f, we'd need to do it in the callback to set u: idx_u_scalar_isotopes_d18O = integrator.p[1][4][8  ]
+            #TODO(bernhard): this is not working in f, we'd need to do it in the callback to set u: idx_u_scalar_isotopes_d2H  = integrator.p[1][4][10  ]
             #TODO(bernhard): this is not working in f, we'd need to do it in the callback to set u: integrator.u[idx_u_scalar_isotopes_d18O[1]] = u_δ18O_SWATI[end] # u_δ18O_GWAT
             #TODO(bernhard): this is not working in f, we'd need to do it in the callback to set u: integrator.u[idx_u_scalar_isotopes_d2H[1] ] = u_δ2H_SWATI[end]  # u_δ2H_GWAT
 

@@ -104,7 +104,7 @@ function run_simulation(args)
         compute_intermediate_quantities = compute_intermediate_quantities,
         simulate_isotopes = simulate_isotopes)
 
-    u0 = define_LWFB90_u0(p, input_initial_conditions,
+    u0, p = define_LWFB90_u0(p, input_initial_conditions,
         ψM_initial, _δ18O_initial, _δ2H_initial, # NOTE: _ indicates that it is possibly unused (depends on simulate_isotopes)
         compute_intermediate_quantities;
         simulate_isotopes = simulate_isotopes)
@@ -218,8 +218,7 @@ end
 function get_auxiliary_variables(solution)
     p_soil = solution.prob.p[1][1]
     NLAYER = p_soil.NLAYER
-    idx_u_vector_amounts = solution.prob.p[1][4][4]
-    u_SWATI = [solution.u[i][idx_u_vector_amounts] for i = 1:length(solution.u)]
+    u_SWATI = [solution.u[i][solution.prob.p[1][4].row_idx_SWATI, 1] for i = 1:length(solution.u)]
     # (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
     #         LWFBrook90.KPT.derive_auxiliary_SOILVAR.(u_SWATI, Ref(p_soil)) # Ref fixes scalar argument for broadcasting "."
     u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK =
@@ -250,27 +249,29 @@ function get_ψ(depths_to_read_out_mm, solution)
 end
 
 function get_δ(solution)
-    idx_u_scalar_isotopes_d18O = solution.prob.p[1][4][8]
-    idx_u_vector_isotopes_d18O = solution.prob.p[1][4][9]
-    idx_u_scalar_isotopes_d2H  = solution.prob.p[1][4][10]
-    idx_u_vector_isotopes_d2H  = solution.prob.p[1][4][11]
+    @assert solution.prob.p[1][4].simulate_isotopes "Provided solution did not simulate isotopes"
 
     # row_NaN       = fill(NaN, 1,length(x))
     # input quantities δ-values:
     row_PREC_d18O = reshape(solution.prob.p[2][15].(solution.t), 1, :)
     row_PREC_d2H  = reshape(solution.prob.p[2][16].(solution.t), 1, :)
     # scalar quantities δ-values:
-    row_INTS_d18O = reshape(solution[idx_u_scalar_isotopes_d18O[2],1,:], 1, :)
-    row_INTR_d18O = reshape(solution[idx_u_scalar_isotopes_d18O[3],1,:], 1, :)
-    row_SNOW_d18O = reshape(solution[idx_u_scalar_isotopes_d18O[4],1,:], 1, :)
-    row_GWAT_d18O = reshape(solution[idx_u_scalar_isotopes_d18O[1],1,:], 1, :)
-    row_INTS_d2H  = reshape(solution[idx_u_scalar_isotopes_d2H[2],1,:], 1, :)
-    row_INTR_d2H  = reshape(solution[idx_u_scalar_isotopes_d2H[3],1,:], 1, :)
-    row_SNOW_d2H  = reshape(solution[idx_u_scalar_isotopes_d2H[4],1,:], 1, :)
-    row_GWAT_d2H  = reshape(solution[idx_u_scalar_isotopes_d2H[1],1,:], 1, :)
+    row_INTS_d18O = reshape(solution[solution.prob.p[1][4].row_idx_scalars.INTS, solution.prob.p[1][4].col_idx_d18O, :], 1, :)
+    row_INTR_d18O = reshape(solution[solution.prob.p[1][4].row_idx_scalars.INTR, solution.prob.p[1][4].col_idx_d18O, :], 1, :)
+    row_SNOW_d18O = reshape(solution[solution.prob.p[1][4].row_idx_scalars.SNOW, solution.prob.p[1][4].col_idx_d18O, :], 1, :)
+    row_GWAT_d18O = reshape(solution[solution.prob.p[1][4].row_idx_scalars.GWAT, solution.prob.p[1][4].col_idx_d18O, :], 1, :)
+    row_RWU_d18O  = reshape(solution[solution.prob.p[1][4].row_idx_scalars.totalRWU, solution.prob.p[1][4].col_idx_d18O, :], 1, :)
+    row_XYL_d18O  = reshape(solution[solution.prob.p[1][4].row_idx_scalars.XylemV,   solution.prob.p[1][4].col_idx_d18O, :], 1, :)
+    row_INTS_d2H  = reshape(solution[solution.prob.p[1][4].row_idx_scalars.INTS, solution.prob.p[1][4].col_idx_d2H, :], 1, :)
+    row_INTR_d2H  = reshape(solution[solution.prob.p[1][4].row_idx_scalars.INTR, solution.prob.p[1][4].col_idx_d2H, :], 1, :)
+    row_SNOW_d2H  = reshape(solution[solution.prob.p[1][4].row_idx_scalars.SNOW, solution.prob.p[1][4].col_idx_d2H, :], 1, :)
+    row_GWAT_d2H  = reshape(solution[solution.prob.p[1][4].row_idx_scalars.GWAT, solution.prob.p[1][4].col_idx_d2H, :], 1, :)
+    row_RWU_d2H   = reshape(solution[solution.prob.p[1][4].row_idx_scalars.totalRWU, solution.prob.p[1][4].col_idx_d2H, :], 1, :)
+    row_XYL_d2H   = reshape(solution[solution.prob.p[1][4].row_idx_scalars.XylemV,   solution.prob.p[1][4].col_idx_d2H, :], 1, :)
     # vector quantities δ-values:
-    rows_SWAT_d18O = solution[idx_u_vector_isotopes_d18O,1,:];
-    rows_SWAT_d2H  = solution[idx_u_vector_isotopes_d2H, 1,:];
+    rows_SWAT_d18O = solution[solution.prob.p[1][4].row_idx_SWATI, solution.prob.p[1][4].col_idx_d18O, :]
+    rows_SWAT_d2H  = solution[solution.prob.p[1][4].row_idx_SWATI, solution.prob.p[1][4].col_idx_d2H,  :]
+
 
     return (SWAT = (d18O = rows_SWAT_d18O, d2H = rows_SWAT_d2H),
             PREC = (d18O = row_PREC_d18O,  d2H = row_PREC_d2H),
@@ -328,15 +329,6 @@ end
     # 1) data to plot
 
     # 1a) extract data from solution object `sol`
-    # idx_u_vector_amounts       = sol.prob.p[1][4][4]
-    # idx_u_vector_accumulators  = sol.prob.p[1][4][5]
-    # idx_u_scalar_amounts       = sol.prob.p[1][4][6]
-    # names_u_vector_accumulators= sol.prob.p[1][4][7]
-    # idx_u_scalar_isotopes_d18O = sol.prob.p[1][4][8]
-    # idx_u_vector_isotopes_d18O = sol.prob.p[1][4][9]
-    # idx_u_scalar_isotopes_d2H  = sol.prob.p[1][4][10]
-    # idx_u_vector_isotopes_d2H  = sol.prob.p[1][4][11]
-
     t_ref = sol.prob.p[2][17]
     x = RelativeDaysFloat2DateTime.(sol.t, t_ref)
     # y = cumsum(sol.prob.p[1][1].p_THICK) - sol.prob.p[1][1].p_THICK / 2
