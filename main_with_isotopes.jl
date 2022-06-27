@@ -210,6 +210,7 @@ for Δz_m in (
         savefig(pl2, fname*"_plotRecipe.png")
     end
 
+    # plot RWU time series
     idx_u_scalar_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][8]
     #     idx_u_vector_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][9]
     #     idx_u_scalar_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4][10]
@@ -217,6 +218,63 @@ for Δz_m in (
     row_RWU_d18O  = reshape(sol_LWFBrook90[idx_u_scalar_isotopes_d18O[5],1,:], 1, :)
     #     row_XYL_d18O  = reshape(sol_LWFBrook90[idx_u_scalar_isotopes_d18O[6],1,:], 1, :)
     plot(transpose(row_RWU_d18O))
+
+
+                # 3b) Heatmap of RWU
+                idx_u_vector_accumulators  = sol_LWFBrook90.prob.p[1][4][5]
+                NLAYER = sol_LWFBrook90.prob.p[1][1].NLAYER
+                rows_RWU      = sol_LWFBrook90[idx_u_vector_accumulators[31 .+ (1:NLAYER)],1,:];
+                # # y_extended = [-500; -350; -300; -250; -200; -150; -100;   -50;         y;          (maximum(y) .+ 50 .+ [50; 100; 150; 250])]
+                # # y_labels   = ["INTS"; ""; "INTR"; ""; "SNOW"; ""; round.(y); "";             "GWAT"]
+                # # y_soil_ticks = optimize_ticks(extrema(y)...; k_min = 4)[1]
+                # # y_soil_ticks = optimize_ticks(0., round(maximum(cumsum(sol.prob.p[1][1].p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
+                # y_soil_ticks = tick_function(0., round(maximum(cumsum(sol.prob.p[1][1].p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
+                # y_ticks    = [-500;       -300;       -200;       -100;     y_soil_ticks;          (maximum(y) .+ 50 .+ [    100;    250])]
+                # y_labels   = ["PREC";   "INTS";     "INTR";     "SNOW";     round.(y_soil_ticks; digits=0); "GWAT"  ; "RWU"]
+                # z2_extended = [row_PREC_d18O; row_NaN; row_INTS_d18O; row_NaN; row_INTR_d18O; row_NaN; row_SNOW_d18O; row_NaN; rows_SWAT_d18O; row_NaN; row_GWAT_d18O; row_NaN; row_RWU_d18O]
+                # z3_extended = [row_PREC_d2H;  row_NaN; row_INTS_d2H;  row_NaN; row_INTR_d2H;  row_NaN; row_SNOW_d2H;  row_NaN; rows_SWAT_d2H;  row_NaN; row_GWAT_d2H;  row_NaN; row_RWU_d2H]
+                (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+                    LWFBrook90.get_auxiliary_variables(sol_LWFBrook90)
+                # z = sol_LWFBrook90[7 .+ (0:sol_LWFBrook90.prob.p[1][1].NLAYER-1), 1, :]./sol_LWFBrook90.prob.p[1][1].p_THICK
+
+                t_ref = sol_LWFBrook90.prob.p[2][17]
+                x = RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, t_ref);
+                y = cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK) - sol_LWFBrook90.prob.p[1][1].p_THICK/2
+                y_soil_ticks = optim_ticks(0., round(maximum(cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
+                y_ticks= y_soil_ticks
+                y_labels=round.(y_soil_ticks; digits=0)
+                heatmap(x, y, u_aux_θ', yflip = true,
+                        xlabel = "Date",
+                        ylabel = "Depth [mm]",
+                        colorbar_title = "θ [-]")
+                heatmap(x, y, u_aux_PSIM', yflip = true,
+                        xlabel = "Date",
+                        ylabel = "Depth [mm]",
+                        colorbar_title = "ψ [kPa]")
+                z=rows_RWU
+                pl_RWU = heatmap(x,y,z; yticks = (y_ticks, y_labels),
+                        yflip = true,
+                        c = :diverging_bwr_20_95_c54_n256, clim = maximum(abs.(z)) .* (-1, 1),
+                        ylabel = "Depth [mm]",
+                        colorbar_title = "RWU [mm/day]",
+                        size=(1400,800), dpi = 300, leftmargin = 15mm);
+                # savefig(pl_RWU, fname*"_RWU.png")
+                plot_avgRWU = plot(sum(z,dims=2), y,
+                    yflip = true, ylabel = "Depth [mm]", xlabel = "Total RWU over\nsimulation period [mm]")
+                # Plot root distribution
+                p_RELDEN = sol_LWFBrook90.prob.p[2].p_RELDEN
+                root_data_start_end = [p_RELDEN.(t, 1:NLAYER) for t in extrema(sol_LWFBrook90.prob.tspan)]
+                pl_roots = plot(root_data_start_end, y,
+                    labels = ("t=" .* string.(permutedims(collect(extrema(sol_LWFBrook90.prob.tspan))))),  linestyle = [:solid :dash],
+                    yflip = true, ylabel = "Depth [mm]", xlabel = "Relative root\ndensity [-]");
+                pl_RWU2 = plot(
+                    plot(pl_roots;                 yticks = (y_ticks, y_labels)),
+                    plot(plot_avgRWU, ylabel = ""; yticks = []),
+                    plot(pl_RWU;      ylabel = "", yticks = [], title = "RWU [mm/day]"),
+                    layout=grid(1,3, widths = [0.1,0.1,0.8]), link = :y,
+                    size=(1400,800), dpi = 300, leftmargin = 15mm, bottommargin = 10mm)
+                savefig(pl_RWU2, fname*"_RWU2.png")
+
 
     if input_prefix == "BEA2016-reset-FALSE" || input_prefix == "isoBEA2016-reset-FALSE" || input_prefix == "isoBEAdense2016-reset-FALSE"
         ref_aboveground =

@@ -99,7 +99,9 @@ function define_LWFB90_u0(p, uScalar_initial,
 
     if compute_intermediate_quantities
         # accumulation variables:
-        N_accumulate_variables = 31
+        N_accumulate_variables = 31 +
+            length(u_SWATIinit_d18O) # add again NLAYER to save RWU per layer (in mm/day)
+
         u0 = [u0; fill(0, N_accumulate_variables, 1)]
         # Set idx_u_vector_accumulators
         # idx_u_vector_accumulators = (length(u0)-N_accumulate_variables+1):length(u0)

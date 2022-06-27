@@ -296,6 +296,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         # integrator.u[idx_u_vector_accumulators[30]] = BALERD_SWAT
         # integrator.u[idx_u_vector_accumulators[31]] = BALERD_total
 
+        integrator.u[idx_u_vector_accumulators[31 .+ (1:NLAYER)]] .= aux_du_TRANI
         # TODO(bernhard): use SavingCallback() for all quantities that have u=... and du=0
         #                 only keep du=... for quantities for which we compute cumulative sums
     end

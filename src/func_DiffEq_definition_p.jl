@@ -396,13 +396,20 @@ function define_LWFB90_p(
     if compute_intermediate_quantities
         # 31 is the number of currently programmed intermediate quantities
         if simulate_isotopes
-            idx_u_vector_accumulators = 6+NLAYER+Nδ+NLAYER+Nδ+NLAYER .+ (1:31)
+            idx_u_vector_accumulators = 6+NLAYER+Nδ+NLAYER+Nδ+NLAYER .+ (1:(31+NLAYER))
         else
-            idx_u_vector_accumulators = 6+NLAYER                   .+ (1:31)
+            idx_u_vector_accumulators = 6+NLAYER                   .+ (1:(31+NLAYER))
         end
-        names_u_vector_accumulators = [
-                "cum_d_prec"  "cum_d_rfal"  "cum_d_sfal"  "cum_d_rint" "cum_d_sint"  "cum_d_rsno"  "cum_d_rnet"  "cum_d_smlt"  "cum_d_evap"  "cum_d_tran"  "cum_d_irvp"  "cum_d_isvp"  "cum_d_slvp"  "cum_d_snvp"  "cum_d_pint"  "cum_d_ptran"  "cum_d_pslvp" "flow"  "seep"  "srfl"  "slfl"  "byfl"  "dsfl"  "gwfl"  "vrfln" "cum_d_rthr" "cum_d_sthr" "totalSWAT" "new_totalWATER" "BALERD_SWAT" "BALERD_total"
-            ]
+        names_u_vector_accumulators = reshape([
+                "cum_d_prec";"cum_d_rfal";"cum_d_sfal";"cum_d_rint"; "cum_d_sint";"cum_d_rsno";
+                "cum_d_rnet";"cum_d_smlt";"cum_d_evap";"cum_d_tran";"cum_d_irvp";"cum_d_isvp";
+                "cum_d_slvp";"cum_d_snvp";"cum_d_pint";"cum_d_ptran";"cum_d_pslvp";
+                "flow";"seep";"srfl";"slfl";"byfl";"dsfl";"gwfl";"vrfln";
+                "cum_d_rthr";"cum_d_sthr";
+                "totalSWAT"; "new_totalWATER"; "BALERD_SWAT"; "BALERD_total";
+                # add again NLAYERS for saving of RWU
+                ["RWU_i" for _ in 1:NLAYER]...
+            ],1,:)
     else
         idx_u_vector_accumulators = []
     end
@@ -428,23 +435,23 @@ function define_LWFB90_p(
     p_cst = (p_cst_1, p_cst_2, p_cst_3, p_cst_4)
 
     # 2b) Time varying parameters (e.g. meteorological forcings)
-    p_fT = ((t) -> LWFBrook90.p_DOY(t,    interpolated_meteoveg["REFERENCE_DATE"]),
-            (t) -> LWFBrook90.p_MONTHN(t, interpolated_meteoveg["REFERENCE_DATE"]),
-            interpolated_meteoveg["p_GLOBRAD"],
-            interpolated_meteoveg["p_TMAX"],
-            interpolated_meteoveg["p_TMIN"],
-            interpolated_meteoveg["p_VAPPRES"],
-            interpolated_meteoveg["p_WIND"],
-            interpolated_meteoveg["p_PREC"],
-            interpolated_meteoveg["p_DENSEF"], # canopy density multiplier between 0.05 and 1, dimensionless
-            interpolated_meteoveg["p_HEIGHT"],
-            interpolated_meteoveg["p_LAI"],
-            interpolated_meteoveg["p_SAI"],
-            interpolated_meteoveg["p_AGE"],
-            interpolated_meteoveg["p_RELDEN"],
-            interpolated_meteoveg["p_d18OPREC"],
-            interpolated_meteoveg["p_d2HPREC"],
-            interpolated_meteoveg["REFERENCE_DATE"])
+    p_fT = (p_DOY          = (t) -> LWFBrook90.p_DOY(t,    interpolated_meteoveg.REFERENCE_DATE),
+            p_MONTHN       = (t) -> LWFBrook90.p_MONTHN(t, interpolated_meteoveg.REFERENCE_DATE),
+            p_GLOBRAD      = interpolated_meteoveg.p_GLOBRAD,
+            p_TMAX         = interpolated_meteoveg.p_TMAX,
+            p_TMIN         = interpolated_meteoveg.p_TMIN,
+            p_VAPPRES      = interpolated_meteoveg.p_VAPPRES,
+            p_WIND         = interpolated_meteoveg.p_WIND,
+            p_PREC         = interpolated_meteoveg.p_PREC,
+            p_DENSEF       = interpolated_meteoveg.p_DENSEF, # canopy density multiplier between 0.05 and 1, dimensionless
+            p_HEIGHT       = interpolated_meteoveg.p_HEIGHT,
+            p_LAI          = interpolated_meteoveg.p_LAI,
+            p_SAI          = interpolated_meteoveg.p_SAI,
+            p_AGE          = interpolated_meteoveg.p_AGE,
+            p_RELDEN       = interpolated_meteoveg.p_RELDEN,
+            p_d18OPREC     = interpolated_meteoveg.p_d18OPREC,
+            p_d2HPREC      = interpolated_meteoveg.p_d2HPREC,
+            REFERENCE_DATE = interpolated_meteoveg.REFERENCE_DATE)
     # Documentation from ecoshift:
     # DENSEF (Fixed parameter) - canopy density multiplier between 0.05 and 1, dimensionless. DENSEF is normally 1; it should be reduced below this ONLY to simulate thinning of the existing canopy by cutting. It multiplies MAXLAI, CS, MXRTLN, and MXKPL and thus proportionally reduces LAI, SAI, and RTLEN, and increases RPLANT. However it does NOT reduce canopy HEIGHT and thus will give erroneous aerodynamic resistances if it is less than about 0.05. It should NOT be set to 0 to simulate a clearcut. [see PET-CANOPY]
 
@@ -570,21 +577,21 @@ function interpolate_meteoveg(
                             time_range, 1:size(p_RELDEN_2Darray,2)),
                     0) # extrapolate with fillvalue = 0
 
-    return Dict([("p_GLOBRAD",p_GLOBRAD),
-                 ("p_TMAX",p_TMAX),
-                 ("p_TMIN",p_TMIN),
-                 ("p_VAPPRES",p_VAPPRES),
-                 ("p_WIND",p_WIND),
-                 ("p_PREC",p_PREC),
-                 ("p_d18OPREC",p_d18OPREC),
-                 ("p_d2HPREC",p_d2HPREC),
-                 ("p_DENSEF",p_DENSEF),
-                 ("p_HEIGHT",p_HEIGHT),
-                 ("p_LAI",p_LAI),
-                 ("p_SAI",p_SAI),
-                 ("p_AGE",p_AGE),
-                 ("p_RELDEN",p_RELDEN),
-                 ("REFERENCE_DATE", input_meteoveg_reference_date)])
+    return (p_GLOBRAD      = p_GLOBRAD,
+            p_TMAX         = p_TMAX,
+            p_TMIN         = p_TMIN,
+            p_VAPPRES      = p_VAPPRES,
+            p_WIND         = p_WIND,
+            p_PREC         = p_PREC,
+            p_d18OPREC     = p_d18OPREC,
+            p_d2HPREC      = p_d2HPREC,
+            p_DENSEF       = p_DENSEF,
+            p_HEIGHT       = p_HEIGHT,
+            p_LAI          = p_LAI,
+            p_SAI          = p_SAI,
+            p_AGE          = p_AGE,
+            p_RELDEN       = p_RELDEN,
+            REFERENCE_DATE = input_meteoveg_reference_date)
 end
 
 """
