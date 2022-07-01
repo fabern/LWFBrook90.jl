@@ -514,8 +514,8 @@ function interpolate_meteoveg(
         end
     else
         time_range_iso = range(minimum(input_meteoiso.days), maximum(input_meteoiso.days), length=length(input_meteoiso.days))
-        p_d18OPREC= extrapolate(scale(interpolate(input_meteoiso.d18O,    (BSpline(Constant{Previous}()))), time_range_iso) ,0)
-        p_d2HPREC = extrapolate(scale(interpolate(input_meteoiso.d2H,     (BSpline(Constant{Previous}()))), time_range_iso) ,0)
+        p_d18OPREC= extrapolate(scale(interpolate(input_meteoiso.delta18O_permil,    (BSpline(Constant{Previous}()))), time_range_iso) ,0)
+        p_d2HPREC = extrapolate(scale(interpolate(input_meteoiso.delta2H_permil,     (BSpline(Constant{Previous}()))), time_range_iso) ,0)
         # using Plots; plot(1:300, p_d18OPREC.(1:300))
         # using Plots; plot(1:300, p_d2HPREC.(1:300))
     end

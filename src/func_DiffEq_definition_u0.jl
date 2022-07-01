@@ -8,7 +8,7 @@ function define_LWFB90_u0(p, uScalar_initial,
     compute_intermediate_quantities;
     simulate_isotopes::Bool = false)
 
-    numericNaN = -9999 # instead of NaN in the u-vector set them to this value
+    numericNaN = -9999.99 # instead of NaN in the u-vector set them to this value
 
     # A) Define initial conditions
 

@@ -243,7 +243,7 @@ for (Hammel_select in c("Hammel_loam", "Hammel_sand")) {
 
     source("~/switchdrive/Documents/Job/Anstellung_2019_WSL/Doktorat/Projects/Soil-water-model/Brook/LWFBrook90.jl/src/generate_LWFBrook90jl_Input.R")
     R_output_dir <- "output_LWFBrook90R"
-    result <- generate_LWFBrook90Julia_Input(Julia_target_dir = "input_LWFBrook90.jl/",
+    result <- generate_LWFBrook90jl_Input(Julia_target_dir = "input_LWFBrook90.jl/",
                                              Julia_prefix = fname,
                                              R_output_dir = R_output_dir,
                                              run_LWFBrook90R = run_R_simulations, run_LWFBrook90.jl = run_julia_simulations,
@@ -468,12 +468,12 @@ for (Hammel_select in c("Hammel_loam", "Hammel_sand")) {
 
 # Output Hydrus data
 for (Hammel_select in c("Hammel_loam", "Hammel_sand")) {
-  
+
   ## Load Hydrus output
   hydrus_file <- if_else(Hammel_select == "Hammel_loam",
                          "../Hammel-IntegrationTests-Hydrus/Hammel_Test_Loam/Obs_Node.out",
                          "../Hammel-IntegrationTests-Hydrus/Hammel_Test_Sand/Obs_Node.out")
-  
+
   dat_Hammel_Hydrus <- readr::read_table(hydrus_file,
                                          comment = "end", # ignores final line
                                          skip = 10) %>%
@@ -484,7 +484,7 @@ for (Hammel_select in c("Hammel_loam", "Hammel_sand")) {
                              name == "theta_2"~1.0,
                              name == "theta_3"~1.5,
                              name == "theta_4"~1.9))
-  write.csv(x = dat_Hammel_Hydrus, 
+  write.csv(x = dat_Hammel_Hydrus,
             file = file.path(dirname(hydrus_file),
                              "Obs_Node_processed.csv"))
 }

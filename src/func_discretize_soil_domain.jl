@@ -9,7 +9,7 @@ using DataFramesMeta#: @linq, transform, DataFramesMeta
 Load input file `soil_discretization.csv` for LWFBrook90:
 
 The file `soil_discretization.csv` was created with an R script
-`generate_LWFBrook90Julia_Input.R` that takes the same arguements as the R function
+`generate_LWFBrook90jl_Input.R` that takes the same arguements as the R function
 `LWFBrook90R::run_LWFB90()` and generates the corresponding input files for
     LWFBrook90.jl.
 """

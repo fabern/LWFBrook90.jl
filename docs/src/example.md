@@ -14,7 +14,7 @@ using OrdinaryDiffEq: solve, Tsit5
  Define and read in input data
  ```Julia
 # Read in input data
-input_prefix = "BEA2016-reset-FALSE"
+input_prefix = "isoBEA2016-reset-FALSE"
 input_path = "examples/"*input_prefix*"-input/"
 
 ####################

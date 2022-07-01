@@ -14,7 +14,7 @@ Load different input files for LWFBrook90:
 - soil_horizons.csv
 - soil_discretization.csv
 
-These files were created with an R script `generate_LWFBrook90Julia_Input.R` that
+These files were created with an R script `generate_LWFBrook90jl_Input.R` that
 takes the same arguements as the R function `LWFBrook90R::run_LWFB90()` and generates
 the corresponding input files for LWFBrook90.jl.
 """
@@ -212,45 +212,102 @@ function read_path_meteoiso(path_meteoiso,
         input_meteoveg,
         input_meteoveg_reference_date)
 
-    parsing_types =
-            Dict(:Site           => Char,
-                :Date            => DateTime,
-                :Latitude        => Float64,
-                :Longitude       => Float64,
-                :Elevation       => Float64,
-                Symbol("d18O.Piso.AI")     => Float64,
-                Symbol("d2H.Piso.AI")      => Float64)
+    #####
+    # If Data contains as first line: "^#Data produced with Piso.AI"
+    # then apply special treatment of input file, assuming it comes directly as a download from:
+    # https://isotope.bot.unibas.ch/PisoAI/ or https://isotope.bot.unibas.ch/PisoAI-eur1900-v1-2020/
 
-    input_meteoiso = @linq DataFrame(File(path_meteoiso; header = 4,
-                skipto=5, delim=',', ignorerepeated=true, types=parsing_types))
-    select!(input_meteoiso, Not([:Column1]))
+    # Special treatment of Piso.AI data:
+    # Piso.AI (or GNIP) attributes data to the 15th of each month but is
+    # representative for the monthly data.
+    # In that case: shift dates to the end of the month (and repeat the very first
+    # measurement) in order to interpolate piecewise constant backward in time.
 
+    # Otherwise assume dates reported are the end dates of the collection period.
+    # In that case, extend the first measurement period to the beginning of the simulation
+    # and interpolate constant backward in time.
+
+    is_from_PisoAI = occursin(r"^#Data produced with Piso.AI",readlines(path_meteoiso)[1])
+
+    if is_from_PisoAI
+        parsing_types =
+                Dict(#:Column1        => Int64, # is directly removed afterwards
+                    :Site            => Char,
+                    :Date            => DateTime,
+                    :Latitude        => Float64,
+                    :Longitude       => Float64,
+                    :Elevation       => Float64,
+                    Symbol("d18O.Piso.AI")     => Float64,
+                    Symbol("d2H.Piso.AI")      => Float64)
+
+        input_meteoiso = @linq DataFrame(File(path_meteoiso; header = 4,
+                    skipto=5, delim=',', ignorerepeated=true, types=parsing_types,
+                    missingstring = ["","NA"]))
+        select!(input_meteoiso, Not([:Column1]))
+    else
+        # else the dataframe should be of the following structure:
+            # dates,delta18O_permil,delta2H_permil
+            # YYYY-MM-DD,permil,permil
+            # 2021-01-01,NA,NA
+            # 2021-01-15,-10.1,-70.1
+            # 2021-01-29,-10.1,-70.1
+            # ...
+        # where the first line
+        parsing_types =
+                Dict(:dates          => DateTime,
+                    :delta18O_permil => Float64,
+                    :delta2H_permil  => Float64)
+
+        input_meteoiso = DataFrame(File(path_meteoiso;
+                skipto=3, delim=',', ignorerepeated=true, types=parsing_types,
+                    missingstring = ["","NA"]))
+    end
+
+    # Assert column names as expected
     expected_names = [String(k) for k in keys(parsing_types)]
     assert_colnames_as_expected(input_meteoiso, path_meteoiso, expected_names)
 
-    #####
-    # Special treatment of Piso.AI data: contains data on 15th of each month
-    # -> a) only keep needed columns and rename them
-    select!(input_meteoiso, Not([:Site, :Latitude, :Longitude, :Elevation]))
-    rename!(input_meteoiso,
-                Symbol("d18O.Piso.AI") => :d18O,
-                Symbol("d2H.Piso.AI") => :d2H)
-    # -> b) Shift all measured dates to end of month to be able to constnat interpolate backwards.
-    #       Further repeat the very line concerning the first month in the timeseries to be
-    #       able to interpolate between the first and last day of the first month.
-    input_meteoiso_first = deepcopy(input_meteoiso[1,:])
-    input_meteoiso_first.Date = floor(input_meteoiso_first.Date, Month)
-    input_meteoiso = @linq input_meteoiso |>
-            transform(:Date = ceil.(:Date, Month))
-    push!(input_meteoiso, input_meteoiso_first) # repeat the first
-    sort!(input_meteoiso, [:Date])
-    input_meteoiso[end,:].Date = input_meteoiso[end,:].Date - Day(1) # Modify last to remain within year (31.12. instead of 01.01)
+    if is_from_PisoAI
+        # -> a) only keep needed columns and rename them
+        rename!(input_meteoiso,
+                :Date                  => :dates,
+                Symbol("d18O.Piso.AI") => :delta18O_permil,
+                Symbol("d2H.Piso.AI")  => :delta2H_permil)
+        select!(input_meteoiso, [:dates, :delta18O_permil, :delta2H_permil])
+        # select!(input_meteoiso, Not([:Site, :Latitude, :Longitude, :Elevation]))
+
+        # -> b) Shift all measured dates to end of month to be able to constant interpolate backwards.
+        #       Further repeat the very line concerning the first month in the timeseries to be
+        #       able to interpolate between the first and last day of the first month.
+        input_meteoiso_first = deepcopy(input_meteoiso[1,:])
+        input_meteoiso_first.dates = floor(input_meteoiso_first.dates, Month)
+        input_meteoiso = @linq input_meteoiso |>
+                transform(:dates = ceil.(:dates, Month))
+        push!(input_meteoiso, input_meteoiso_first) # repeat the first
+        sort!(input_meteoiso, [:dates])
+
+        # Modify last to remain within year (31.12. instead of 01.01)
+        input_meteoiso[end,:].dates = input_meteoiso[end,:].dates - Day(1)
+    else
+        # Assert units as expected
+        assert_unitsHeader_as_expected(path_meteoiso,
+            DataFrame(dates="YYYY-MM-DD",delta18O_permil="permil",delta2H_permil="permil"))
+
+        # Repeat the value of the second row to the first row
+        # (Note, that the first row represents the start date of the period reported in the
+        # second row)
+        input_meteoiso[1,:delta18O_permil] = input_meteoiso[2,:delta18O_permil]
+        input_meteoiso[1,:delta2H_permil]  = input_meteoiso[2,:delta2H_permil]
+    end
+
+    # Impose type of Float64 instead of Float64?
+    disallowmissing!(input_meteoiso, [:dates, :delta18O_permil, :delta2H_permil])
     #####
 
     # Transform times from DateTimes to simulation time (Float of Days)
     input_meteoiso = @linq input_meteoiso |>
-        transform(:Date = DateTime2RelativeDaysFloat.(:Date, input_meteoveg_reference_date)) |>
-        rename(Dict(:Date => :days))
+        transform(:dates = DateTime2RelativeDaysFloat.(:dates, input_meteoveg_reference_date)) |>
+        rename(Dict(:dates => :days))
 
     # Check period
     # Check if overlap with meteoveg exists
@@ -260,7 +317,6 @@ function read_path_meteoiso(path_meteoiso,
     stopday_veg  = maximum(input_meteoveg[:,"days"])
     startday = max(startday_iso, startday_veg)
     endday   = min(stopday_iso, stopday_veg)
-
 
     if ((stopday_iso > stopday_veg) | (startday_iso < startday_veg))
         @warn """
@@ -293,7 +349,7 @@ end
 # path_initial_conditions = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_initial_conditions.csv"
 function read_path_initial_conditions(path_initial_conditions)
     parsing_types =
-        Dict(# Initial conditions (except for depth-dependent u_aux_PSIM) -------
+        Dict(# Initial conditions (of vector states) -------
             "u_GWAT_init_mm" => Float64,       "u_INTS_init_mm" => Float64,
             "u_INTR_init_mm" => Float64,       "u_SNOW_init_mm" => Float64,
             "u_CC_init_MJ_per_m2"   => Float64,       "u_SNOWLQ_init_mm" => Float64)
@@ -317,8 +373,9 @@ end
 # path_param = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_param.csv"
 function read_path_param(path_param; simulate_isotopes::Bool = false)
     parsing_types =
-        Dict(### Isotope tranpsport parameters  -------,NA
+        Dict(### Isotope transport parameters  -------,NA
             # "TODO" => Float64, "TODO2" => Float64,
+            # TODO(bernhard): this needs to be extended with the currently hardcoded isotope transport parameters
             # Meteorologic site parameters -------
             "LAT_DEG" => Float64,
             "ESLOPE_DEG" => Float64,       "ASPECT_DEG" => Float64,
@@ -502,7 +559,7 @@ function read_path_soil_discretization(path_soil_discretization)
     assert_unitsHeader_as_expected(path_soil_discretization,
         DataFrame(Upper_m = "m", Lower_m = "m", Rootden_ = "-",
             uAux_PSIM_init_kPa = "kPa",
-            u_delta18O_init_permil = "‰", u_delta2H_init_permil = "‰"))
+            u_delta18O_init_permil = "permil", u_delta2H_init_permil = "permil"))
 
     return input_soil_discretization
 end

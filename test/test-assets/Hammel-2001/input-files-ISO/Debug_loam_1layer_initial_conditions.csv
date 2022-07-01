@@ -1,5 +1,5 @@
 param_id,amount,u_delta18O_init_permil,u_delta2H_init_permil
-### Initial conditions (except for depth-dependent u_aux_PSIM) -------,NA,NA,NA
+### Initial conditions (of vector states) -------,NA,NA,NA
 u_GWAT_init_mm,0,-10,-70
 u_INTS_init_mm,0,-10,-70
 u_INTR_init_mm,0,-10,-70
