@@ -878,6 +878,20 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         ################
         ################
         # SOLVING VARIANT A (Braud et al. 2005, implicit time stepping) -> has a bug as it seems unstable
+            # # #TODO(bernhard): for debugging of my adaptation of Braud et al. 2005 try
+            # #                  to make a mistake and see if the solution becomes more
+            # #                  stable if we do (mistake on purpose!)
+            # # Variant 1:
+            # θᵏ = θᵏ⁺¹
+            # Δt = integrator.t - integrator.tprev # days
+            # # θᵏ⁺¹ = (u_SWATIᵏ⁺¹ + (du_NTFLI)*integrator.dt) ./ p_THICK ./ (1.0 .- p_STONEF)
+            # θᵏ⁺¹ = (max.(0.001, u_SWATIᵏ⁺¹) + (du_NTFLI)*Δt) ./ p_THICK ./ (1.0 .- p_STONEF)
+            # # Variant 2:
+            # θᵏ⁺¹ = u_SWATIᵏ⁺¹ ./ p_THICK ./ (1.0 .- p_STONEF)
+            # Δt = integrator.t - integrator.tprev # days
+            # θᵏ = (u_SWATIᵏ⁺¹ -  (du_NTFLI)*Δt)./ p_THICK ./ (1.0 .- p_STONEF)
+            # # #TODO(bernhard): end debugging
+
         # # Setup linear system (implicit solver) (From Braud et al. 2005)
 
         # Define boundary conditions

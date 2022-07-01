@@ -1,5 +1,5 @@
 using LWFBrook90
-using OrdinaryDiffEq: solve, Tsit5, init
+using OrdinaryDiffEq: solve, Tsit5, init#, step!
 # example = LWFBrook90.run_example()
 
 # Read in input data
@@ -37,8 +37,9 @@ unused = discretize_soil(input_path, input_prefix)
 # Δz_m = [0.04, 0.04, 0.04, 0.04, 0.04, 0.25, 0.3, 0.35, 0.1]              # grid spacing (heterogenous), meter (N=9)
 # Δz_m = [fill(0.04, 5); fill(0.05, 5); 0.3; 0.35; 0.1]                    # grid spacing (heterogenous), meter (N=13)
 # Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); 0.35; 0.1]          # grid spacing (heterogenous), meter (N=17)
-Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5); 0.1]; # grid spacing (heterogenous), meter (N=21)
+# Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5); 0.1]; # grid spacing (heterogenous), meter (N=21)
 Δz_m = [fill(0.02, 10); fill(0.025, 10); fill(0.03, 10); fill(0.035, 10); 0.1]; # grid spacing (heterogenous), meter (N=41)
+Δz_m = [fill(0.02, 60)... ]; # grid spacing (homgenous), meter (N=60)
 # Δz_m = [fill(0.01, 20); fill(0.0125, 20); fill(0.015, 20); fill(0.0175, 20); 0.1]; # grid spacing (heterogenous), meter (N=81)
 # Δz_m = [0.04, 0.04, 0.12, 0.25, 0.3, 0.35, 0.1];                           # grid spacing (heterogenous), meter (N=7)
 # Δz_m = [1.20];# grid spacing (heterogenous), meter (N=1)
@@ -48,6 +49,7 @@ for Δz_m in (
     [0.04, 0.04, 0.12, 0.25, 0.3, 0.35, 0.1],
     [fill(0.04, 5); fill(0.05, 5); 0.3;            0.35;         0.1], # N=13
     [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5); 0.1], # N=21
+    [fill(0.02, 60)... ], # N=60, 2cm similar to Pollacco et al. 2022 suggestions
     )
 
     f1 = (Δz_m) -> LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)  # function for root density as f(Δz)
@@ -72,7 +74,6 @@ for Δz_m in (
         # input_param[1,"NOOUTF"] = true # `true` if outflow from roots prevented, `false` if allowed
     input_param[1,"NOOUTF"]
     input_soil_horizons.gravel_volFrac .= 0.00
-    input_param[1,"MXKPL"]  = 0 # TODO(bernhard) for debugging switch off plant transpiration
 
     ####################
 
@@ -110,6 +111,7 @@ for Δz_m in (
         compute_intermediate_quantities;
         simulate_isotopes = simulate_isotopes);
 
+    ####################
 
     ####################
     # Define ODE problem which consists of
@@ -147,6 +149,14 @@ for Δz_m in (
     # @time sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5(); progress = true,
     #     unstable_check = unstable_check_function, # = (dt,u,p,t) -> false, #any(isnan,u),
     #     saveat = tspan[1]:tspan[2], dt=1e-6, dtmax=1e-3, adaptive = true);
+                    # integrator =  init(ode_LWFBrook90, Tsit5(); progress = true,
+                    #             unstable_check = unstable_check_function) # = (dt,u,p,t) -> false, #any(isnan,u))
+
+                    # du = copy(integrator.u)
+                    # du .= 0
+                    # LWFBrook90.f_LWFBrook90R(du, integrator.u, p, 0);
+                    # du
+                    # step!(integrator)
     @time sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5(); progress = true,
         unstable_check = unstable_check_function, # = (dt,u,p,t) -> false, #any(isnan,u),
         saveat = tspan[1]:tspan[2],
@@ -159,9 +169,88 @@ for Δz_m in (
         adaptive = true, dtmin = 1e-4, dt=1e-4,  # if adaptive dt is just the starting value of the time steps
         force_dtmin = true,# without this callbacks generate an abort "dt <= dtmin",
                            # e.g. see: https://github.com/SciML/DifferentialEquations.jl/issues/648
-        maxiters = (tspan[2]-tspan[1])/1e-3 # when using force_dtmin also use maxiters
+        maxiters = (tspan[2]-tspan[1])/1e-4 # when using force_dtmin also use maxiters
                         # TODO(bernhard): regarding maxiters it seems to be the callback for δ of SNOW, INTR, INTS that causes the dtmin to be so small to reach large maxiters
         );
+                using Plots, Measures
+                t_ref = sol_LWFBrook90.prob.p[2][17]
+                x = RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, t_ref);
+                y = cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK) - sol_LWFBrook90.prob.p[1][1].p_THICK/2
+                optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
+                y_soil_ticks = optim_ticks(0., round(maximum(cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
+                y_ticks= y_soil_ticks
+                y_labels=round.(y_soil_ticks; digits=0)
+                (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+                                LWFBrook90.get_auxiliary_variables(sol_LWFBrook90)
+                # heatmap(#x[140:150], y, u_aux_θ'[:,140:150], yflip = true,
+                #         x[142:145], y, u_aux_θ'[:,142:145], yflip = true,
+                #         xlabel = "Date",
+                #         ylabel = "Depth [mm]",
+                #         colorbar_title = "θ [-]")
+                t_to_plot = 1:length(x)
+                plot(
+                    heatmap(x[t_to_plot], y, u_aux_θ'[:, t_to_plot], yflip = true,
+                            xlabel = "Date",
+                            ylabel = "Depth [mm]",
+                            colorbar_title = "θ [-]"),
+                    heatmap(x[t_to_plot], y, u_aux_PSIM'[:, t_to_plot], yflip = true,
+                            xlabel = "Date",
+                            ylabel = "Depth [mm]",
+                            colorbar_title = "ψ_m [kPa]"),
+                    layout = (2,1))
+                # du = similar(sol_LWFBrook90.u[142])
+                # LWFBrook90.f_LWFBrook90R(du, sol_LWFBrook90.u[142],p,142)
+                # integrator = init(ode_LWFBrook90, Tsit5(), unstable_check = unstable_check_function,
+                #                 saveat = 0:145, adaptive = true, dtmin = 1e-5, dt=1e-4)
+                # step!(integrator)
+                # function plot_θ!(pl, integrator)
+                #     p_soil = integrator.p[1][1]
+                #     idx_u_vector_amounts = integrator.p[1][4].row_idx_SWATI
+                #     t_ref = integrator.p[2][17]
+                #     # u_SWATI = [solution.u[i][idx_u_vector_amounts] for i = 1:size(integrator.u,2)]
+                #     u_SWATI = [integrator.u[idx_u_vector_amounts]]
+                #     (_, _, _, u_aux_θ, _) = LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI[1], p_soil)
+                #     heatmap!(pl, RelativeDaysFloat2DateTime.(integrator.t .+ [0; 1], t_ref),
+                #             cumsum(integrator.p[1][1].p_THICK) - integrator.p[1][1].p_THICK/2,
+                #             [u_aux_θ u_aux_θ], yflip = true)
+                #     return pl
+                # end
+                # for i in 1:140 step!(integrator) end
+                # pl = plot()
+                # plot_θ!(pl, integrator)
+                # begin
+                #     step!(integrator)
+                #     plot_θ!(pl, integrator)
+                # end
+                # du
+
+                # # investigate what happens on 2010-05-22 in BEA (artifact in θ simulation)?
+                # ode_LWFBrook90_2, unstable_check_function_2 = define_LWFB90_ODE(sol_LWFBrook90.u[130], (130,140), p);
+                # @time sol_LWFBrook90_2 = solve(ode_LWFBrook90_2, Tsit5(); progress = true,
+                #     unstable_check = unstable_check_function_2, # = (dt,u,p,t) -> false, #any(isnan,u),
+                #     saveat = 130:140,
+                #     # When adding transport of isotopes adaptive time stepping has difficulties reducing dt below dtmin.
+                #     # We solve it either by using a constant time step
+                #     # or by setting force_dtmin to true, which has the drawback that tolerances are ignored.
+                #     # # Variant1: less sophisticated but robust:
+                #     # adaptive = false, dt=1e-3 #dt=5/60/24 # fixed 5 minutes time steps
+                #     # Variant2: more sophisticated but giving errors:
+                #     adaptive = true, dtmin = 1e-5, dt=1e-4,  # if adaptive dt is just the starting value of the time steps
+                #     force_dtmin = true,# without this callbacks generate an abort "dt <= dtmin",
+                #                     # e.g. see: https://github.com/SciML/DifferentialEquations.jl/issues/648
+                #     maxiters = (tspan[2]-tspan[1])/1e-4 # when using force_dtmin also use maxiters
+                #                     # TODO(bernhard): regarding maxiters it seems to be the callback for δ of SNOW, INTR, INTS that causes the dtmin to be so small to reach large maxiters
+                #     );
+                # (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+                #                 LWFBrook90.get_auxiliary_variables(sol_LWFBrook90_2)
+                # heatmap(RelativeDaysFloat2DateTime.(sol_LWFBrook90_2.t, t_ref),
+                #         cumsum(sol_LWFBrook90_2.prob.p[1][1].p_THICK) - sol_LWFBrook90_2.prob.p[1][1].p_THICK/2,
+                #         u_aux_θ, yflip = true)
+    # heatmap(x, y, u_aux_PSIM', yflip = true,
+    #         xlabel = "Date",
+    #         ylabel = "Depth [mm]",
+    #         colorbar_title = "ψ [kPa]")
+
 
         # 700 days in: 40 seconds dt=1e-3, adaptive = false (isoBea default spacing: NLAYER = 7)
         # 700 days in: 90 seconds dt=1e-3, adaptive = false (isoBea dense spacing (0.05m): NLAYER = 26)
@@ -171,6 +260,24 @@ for Δz_m in (
         #  git+61a19ed+gitclean: NLAYER=7:  22.871329 seconds (175.84 M allocations: 16.795 GiB, 16.08% gc time)
         #  git+61a19ed+gitclean: NLAYER=13: 31.875148 seconds (176.05 M allocations: 24.064 GiB, 17.32% gc time)
         #  git+61a19ed+gitclean: NLAYER=21: 45.809290 seconds (176.38 M allocations: 33.797 GiB, 16.53% gc time)
+        #  git+a3fc1a2+gitclean: NLAYER=7:  31.444282 seconds (289.68 M allocations: 18.872 GiB, 14.39% gc time, 27.43% compilation time)
+        #  git+a3fc1a2+gitclean: NLAYER=13: 37.432710 seconds (379.27 M allocations: 27.501 GiB, 17.63% gc time)
+        #  git+a3fc1a2+gitclean: NLAYER=21: 53.301924 seconds (527.72 M allocations: 40.511 GiB, 16.98% gc time)
+        #  git+0fc6e1b+gitclean: NLAYER=7:  20.076741 seconds (164.78 M allocations: 15.548 GiB, 16.56% gc time)
+        #  git+0fc6e1b+gitclean: NLAYER=13: 27.925882 seconds (164.96 M allocations: 22.139 GiB, 16.92% gc time)
+        #  git+0fc6e1b+gitclean: NLAYER=21: 40.381837 seconds (165.29 M allocations: 30.971 GiB, 16.54% gc time)
+        #  git+d7a34b5+gitclean: NLAYER=7: 206.039105 seconds (1.66 G allocations: 155.787 GiB, 16.17% gc time, 4.00% compilation time)
+        #  git+d7a34b5+gitclean: NLAYER=13: 285.350438 seconds (1.65 G allocations: 221.057 GiB, 17.95% gc time)
+        #  git+d7a34b5+gitclean: NLAYER=21: 401.913824 seconds (1.65 G allocations: 309.421 GiB, 17.12% gc time)
+        #  git+25e3bd0+gitclean: NLAYER=7 : 34.753962 seconds (289.67 M allocations: 18.871 GiB, 14.32% gc time, 27.87% compilation time)
+        #  git+25e3bd0+gitclean: NLAYER=13: 35.102646 seconds (379.27 M allocations: 27.501 GiB, 18.29% gc time)
+        #  git+25e3bd0+gitclean: NLAYER=21: 52.302226 seconds (527.72 M allocations: 40.511 GiB, 17.46% gc time)
+        #  git+9fe5a08+gitclean: NLAYER= 7: 0.583609 seconds (5.93 M allocations: 453.802 MiB, 14.74% gc time)
+        #  git+9fe5a08+gitclean: NLAYER=13: 0.947032 seconds (8.42 M allocations: 730.844 MiB, 18.08% gc time)
+        #  git+9fe5a08+gitclean: NLAYER=21: 1.828127 seconds (7.66 M allocations: 726.068 MiB, 50.04% gc time)
+        #  git+d1eb2f8+gitclean: NLAYER=21: 1.126634 seconds (4.22 M allocations: 683.778 MiB, 14.38% gc time)
+        #  git+eea6abd+gitdirty: NLAYER=21: 4.136514 seconds (16.66 M allocations: 2.509 GiB, 13.65% gc time)
+        #  git+40de77b+gitdirty: NLAYER=21: 4.030769 seconds (14.84 M allocations: 2.162 GiB, 12.15% gc time)
 
     # @time sol_LWFBrook90 = solve(ode_LWFBrook90, progress = true, Euler(); # Note: Euler sometimes hangs
     #     saveat = tspan[1]:tspan[2], dt=1e-1, adaptive = false);
@@ -218,9 +325,9 @@ for Δz_m in (
     #     idx_u_scalar_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4][10     ]
     #     idx_u_vector_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4][11     ]
     if simulate_isotopes
-        row_RWU_d18O  = reshape(sol_LWFBrook90[p[1][4].row_idx_scalars[7], sol_LWFBrook90.prob.p[1][4].col_idx_d18O, :, 1], 1, :)
-        #     row_XYL_d18O  = reshape(sol_LWFBrook90[idx_u_scalar_isotopes_d18O[6],1,:], 1, :) #TODO(bernhard): fix plotting
-        plot(transpose(row_RWU_d18O))
+        row_RWU_d18O  = reshape(sol_LWFBrook90[p[1][4].row_idx_scalars.totalRWU, sol_LWFBrook90.prob.p[1][4].col_idx_d18O, :, 1], 1, :)
+        row_XYL_d18O  = reshape(sol_LWFBrook90[p[1][4].row_idx_scalars.XylemV,   sol_LWFBrook90.prob.p[1][4].col_idx_d18O, :, 1], 1, :)
+        plot([transpose(row_RWU_d18O) transpose(row_XYL_d18O)], labels = ["δ_RWU" "δ_XylemV"])
     end
 
                 # 3b) Heatmap of RWU
@@ -300,78 +407,82 @@ for Δz_m in (
     end
 
 
-#     if true
-#         # theme(:default) # theme(:sand)
-#         PREC_color = :black
-#         depth_to_read_out_mm = [150 500 800 1500]
-#         if simulate_isotopes
-#             δ_resultsSoil = LWFBrook90.get_δsoil(depth_to_read_out_mm, sol_LWFBrook90)
-#             δ_results = get_δ(sol_LWFBrook90)
-#         end
+    if true
+        # theme(:default) # theme(:sand)
+        PREC_color = :black
+        depth_to_read_out_mm = [150 500 800 1500]
+        if simulate_isotopes
+            δ_resultsSoil = LWFBrook90.get_δsoil(depth_to_read_out_mm, sol_LWFBrook90)
+            δ_results = get_δ(sol_LWFBrook90)
+        end
 
-#         pl_θ = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
-#             LWFBrook90.get_θ(depth_to_read_out_mm, sol_LWFBrook90),
-#             labels = string.(depth_to_read_out_mm) .* "mm",
-#             xlabel = "Date",
-#             ylabel = "θ\n[-]",
-#             legend = :outerright);
-#         pl_ψ = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
-#             # -LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90) .+ 1, yaxis = :log, yflip = true,
-#             LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90),
-#             labels = string.(depth_to_read_out_mm) .* "mm",
-#             xlabel = "Date",
-#             ylabel = "ψ\n[kPa]",
-#             legend = :outerright);
-#         if simulate_isotopes
-#             pl_δ18O = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
-#                 δ_resultsSoil[1],
-#                 labels = string.(depth_to_read_out_mm) .* "mm",
-#                 xlabel = "Date",
-#                 ylabel = "δ¹⁸O soil\n[‰]",
-#                 legend = :outerright);
-#             pl_δ2H = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
-#                 δ_resultsSoil[2],
-#                 labels = string.(depth_to_read_out_mm) .* "mm",
-#                 xlabel = "Date",
-#                 ylabel = "δ²H soil\n[‰]",
-#                 legend = :outerright);
-#             # add precipitation to soil δ
-#             plot!(pl_δ2H,
-#                 LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
-#                 δ_results.PREC.d2H', labels = "PREC", color = PREC_color, linestyle = :dot);
-#             plot!(pl_δ18O,
-#                 LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
-#                 δ_results.PREC.d18O', labels = "PREC", color = PREC_color, linestyle = :dot);
-#         else
-#             pl_δ18O = plot();
-#             pl_δ2H = plot();
-#         end
-#         pl_PREC = plot(
-#             LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
-#             sol_LWFBrook90.prob.p[2][8].(sol_LWFBrook90.t),
-#             t = :bar, color=PREC_color,
-#             legend = :outerright, labels = "PREC    ", # whitespace for hardcoded alignment of legend
-#             ylabel = "PREC\n[mm]");
-#         plot(plot(pl_PREC, xlab = "", xticks = :none, topmargin = 5mm, bottommargin = 0mm),
-#             plot(pl_θ;     xlab = "", xticks = :none, topmargin = 0mm, bottommargin = 0mm),
-#             plot(pl_ψ;     xlab = "", xticks = :none, topmargin = 0mm, bottommargin = 0mm),
-#             plot(pl_δ18O;  xlab = "", xticks = :none, topmargin = 0mm, bottommargin = 0mm),
-#             plot(pl_δ2H;   xtick_direction=:out     , topmargin = 0mm, bottommargin = 5mm),
-#             link = :x,
-#             layout = grid(5, 1, heights=[0.1, 0.25 ,0.25, 0.2, 0.2]),
-#             size=(600,500), dpi = 300, margin = 5mm);
+        pl_θ = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+            LWFBrook90.get_θ(depth_to_read_out_mm, sol_LWFBrook90),
+            labels = string.(depth_to_read_out_mm) .* "mm",
+            xlabel = "Date",
+            ylabel = "θ\n[-]",
+            legend = :outerright);
+        pl_ψ = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+            # -LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90) .+ 1, yaxis = :log, yflip = true,
+            LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90),
+            labels = string.(depth_to_read_out_mm) .* "mm",
+            xlabel = "Date",
+            ylabel = "ψ\n[kPa]",
+            legend = :outerright);
+        if simulate_isotopes
+            pl_δ18O = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+                δ_resultsSoil[1],
+                labels = string.(depth_to_read_out_mm) .* "mm",
+                xlabel = "Date",
+                ylabel = "δ¹⁸O soil\n[‰]",
+                legend = :outerright);
+            pl_δ2H = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+                δ_resultsSoil[2],
+                labels = string.(depth_to_read_out_mm) .* "mm",
+                xlabel = "Date",
+                ylabel = "δ²H soil\n[‰]",
+                legend = :outerright);
+            # add precipitation to soil δ
+            plot!(pl_δ2H,
+                LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+                δ_results.PREC.d2H', labels = "PREC", color = PREC_color, linestyle = :dot);
+            plot!(pl_δ18O,
+                LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+                δ_results.PREC.d18O', labels = "PREC", color = PREC_color, linestyle = :dot);
+            row_RWU_d18O  = reshape(sol_LWFBrook90[p[1][4].row_idx_scalars.totalRWU, sol_LWFBrook90.prob.p[1][4].col_idx_d18O, :, 1], 1, :)
+            row_XYL_d18O  = reshape(sol_LWFBrook90[p[1][4].row_idx_scalars.XylemV,   sol_LWFBrook90.prob.p[1][4].col_idx_d18O, :, 1], 1, :)
+            plot!(pl_δ18O, linestyle = :dash,
+                 LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+                 [transpose(row_RWU_d18O) transpose(row_XYL_d18O)], labels = ["δ_RWU" "δ_XylemV"])
+        else
+            pl_δ18O = plot();
+            pl_δ2H = plot();
+        end
+        pl_PREC = plot(
+            LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+            sol_LWFBrook90.prob.p[2][8].(sol_LWFBrook90.t),
+            t = :bar, color=PREC_color,
+            legend = :outerright, labels = "PREC    ", # whitespace for hardcoded alignment of legend
+            ylabel = "PREC\n[mm]");
+        plot(plot(pl_PREC, xlab = "", xticks = :none, topmargin = 5mm, bottommargin = 0mm),
+            plot(pl_θ;     xlab = "", xticks = :none, topmargin = 0mm, bottommargin = 0mm),
+            plot(pl_ψ;     xlab = "", xticks = :none, topmargin = 0mm, bottommargin = 0mm),
+            plot(pl_δ18O;  xlab = "", xticks = :none, topmargin = 0mm, bottommargin = 0mm),
+            plot(pl_δ2H;   xtick_direction=:out     , topmargin = 0mm, bottommargin = 5mm),
+            link = :x,
+            layout = grid(5, 1, heights=[0.1, 0.25 ,0.25, 0.2, 0.2]),
+            size=(600,500), dpi = 300, margin = 5mm);
 
-#             savefig(fname*"_plot-θ-ψ-δ.png")
-#     end
+            savefig(fname*"_plot-θ-ψ-δ.png")
+    end
 
-#     aux_indices = sol_LWFBrook90.prob.p[1][4].row_idx_accum
-#     aux_names = sol_LWFBrook90.prob.p[1][4].names_accum
-#     plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
-#                 [sol_LWFBrook90[aux_indices[30],:] sol_LWFBrook90[aux_indices[31],:]],
-#                 legend = :outerright, labels = aux_names[:, 30:31],
-#                 ylabel = "Water balance error [mm]")
-#             savefig(fname*"_plot-water-balance-error.png")
-
+    aux_indices = sol_LWFBrook90.prob.p[1][4].row_idx_accum
+    aux_names = sol_LWFBrook90.prob.p[1][4].names_accum
+    plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+                [sol_LWFBrook90[aux_indices[30],:] sol_LWFBrook90[aux_indices[31],:]],
+                legend = :outerright, labels = aux_names[:, 30:31],
+                ylabel = "Water balance error [mm]")
+            savefig(fname*"_plot-water-balance-error.png")
 end
 
 # # # 1) very basic
