@@ -81,6 +81,15 @@ function read_inputData(folder::String, prefix::String;
     # unused:           skipto=2, header=["year","month","day","interval_number","prec"], delim=',',
     # unused:           ignorerepeated=true)
 
+    # Assert that no missing
+    # Impose type of Float64 instead of Float64?
+    disallowmissing!(input_meteoveg)
+    disallowmissing!(input_meteoiso, [:days, :delta18O_permil, :delta2H_permil])
+    disallowmissing!(input_param)
+    disallowmissing!(input_storm_durations, [:month, :storm_durations_h])
+    disallowmissing!(input_initial_conditions)
+    disallowmissing!(input_soil_horizons)
+
     return (input_meteoveg,
         input_meteoiso,
         input_meteoveg_reference_date,
@@ -163,7 +172,9 @@ function read_path_meteoveg(path_meteoveg)
             :age_yrs         => Float64)
 
     input_meteoveg = @linq DataFrame(File(path_meteoveg;
-        skipto=3, delim=',', ignorerepeated=true, types=parsing_types))  |>
+        skipto=3, delim=',', ignorerepeated=false,
+        # Be strict about loading NA's -> error if NA present
+        types=parsing_types, missingstring = nothing, strict=true))  |>
         transform(:dates = DateTime.(:dates))
 
     expected_names = [String(k) for k in keys(parsing_types)]
@@ -241,8 +252,9 @@ function read_path_meteoiso(path_meteoiso,
                     Symbol("d2H.Piso.AI")      => Float64)
 
         input_meteoiso = @linq DataFrame(File(path_meteoiso; header = 4,
-                    skipto=5, delim=',', ignorerepeated=true, types=parsing_types,
-                    missingstring = ["","NA"]))
+                    skipto=5, delim=',', ignorerepeated=true,
+                    # Don't be strict, allow for NA as missing. Treat this later with disallowmissing!.
+                    types=parsing_types, missingstring = ["","NA"]))
         select!(input_meteoiso, Not([:Column1]))
     else
         # else the dataframe should be of the following structure:
@@ -259,8 +271,9 @@ function read_path_meteoiso(path_meteoiso,
                     :delta2H_permil  => Float64)
 
         input_meteoiso = DataFrame(File(path_meteoiso;
-                skipto=3, delim=',', ignorerepeated=true, types=parsing_types,
-                    missingstring = ["","NA"]))
+                skipto=3, delim=',', ignorerepeated=true,
+                # Don't be strict, allow for NA as missing. Treat this later with disallowmissing!.
+                types=parsing_types, missingstring = ["","NA"]))
     end
 
     # Assert column names as expected
@@ -355,7 +368,8 @@ function read_path_initial_conditions(path_initial_conditions)
             "u_CC_init_MJ_per_m2"   => Float64,       "u_SNOWLQ_init_mm" => Float64)
     input_initial_conditions = DataFrame(File(path_initial_conditions;
         transpose=true, drop=[1], comment = "###",
-        types=parsing_types))
+        # Don't be strict, allow for NA as missing. Treat this later with disallowmissing!.
+        types=parsing_types, missingstring = "NA"))
 
     expected_names = [String(k) for k in keys(parsing_types)]
     assert_colnames_as_expected(input_initial_conditions, path_initial_conditions, expected_names)
@@ -422,7 +436,8 @@ function read_path_param(path_param; simulate_isotopes::Bool = false)
 
     input_param = DataFrame(File(path_param;
         transpose=true, drop=[1], comment = "###",
-        types = parsing_types))
+        # Be strict about loading NA's -> error if NA present
+        types = parsing_types, missingstring = nothing, strict=true))
 
     expected_names = [String(k) for k in keys(parsing_types)]
     assert_colnames_as_expected(input_param, path_param, expected_names)
@@ -441,8 +456,9 @@ function read_path_storm_durations(path_storm_durations)
     parsing_types =
         Dict("month" => String, "average_storm_duration_h" => Float64)
     input_storm_durations = DataFrame(File(path_storm_durations;
-        strict=true, comment = "###",
-        types=parsing_types))
+        comment = "###",
+        # Be strict about loading NA's -> error if NA present
+        types = parsing_types, missingstring = nothing, strict = true))
 
     expected_names = [String(k) for k in keys(parsing_types)]
     assert_colnames_as_expected(input_storm_durations, path_storm_durations, expected_names)
@@ -498,8 +514,11 @@ function read_path_soil_horizons(path_soil_horizons)
         # Load file
         input_soil_horizons = DataFrame(File(path_soil_horizons;
             skipto=3, header=MualVanGen_expected_column_names,
+            delim=',',
+            # Be strict about loading NA's -> error if NA present
             types=[Int64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64],
-            delim=','))
+            missingstring = nothing, strict = true))
+
     else # FLAG_MualVanGen = 0 (Clapp-Hornberger)
         # Assert units:
         assert_unitsHeader_as_expected(path_soil_horizons,
@@ -510,8 +529,10 @@ function read_path_soil_horizons(path_soil_horizons)
         # Load file
         input_soil_horizons = DataFrame(File(path_soil_horizons;
             skipto=3, header=ClappHornberger_expected_column_names,
+            delim=',', # ignorerepeated=true
+            # Be strict about loading NA's -> error if NA present
             types=[Int64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64],
-            delim=','))# ignorerepeated=true
+            missingstring = nothing, strict = true))
     end
 
     # Check that defined horizons do not overlap
