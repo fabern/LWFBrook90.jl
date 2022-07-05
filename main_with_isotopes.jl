@@ -9,6 +9,8 @@ using OrdinaryDiffEq: solve, Tsit5, init#, step!
 # input_path = "examples/isoBEA2010-18-reset-FALSE-input/";
 input_prefix = "isoBEAdense2010-18-reset-FALSE";
 input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
+# input_prefix = "BEA2010-2021";
+# input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/BEA2010-2021/";
 
 ####################
 simulate_isotopes = true
@@ -37,9 +39,9 @@ unused = discretize_soil(input_path, input_prefix)
 # Δz_m = [0.04, 0.04, 0.04, 0.04, 0.04, 0.25, 0.3, 0.35, 0.1]              # grid spacing (heterogenous), meter (N=9)
 # Δz_m = [fill(0.04, 5); fill(0.05, 5); 0.3; 0.35; 0.1]                    # grid spacing (heterogenous), meter (N=13)
 # Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); 0.35; 0.1]          # grid spacing (heterogenous), meter (N=17)
-# Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5); 0.1]; # grid spacing (heterogenous), meter (N=21)
+Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5); 0.1]; # grid spacing (heterogenous), meter (N=21)
 Δz_m = [fill(0.02, 10); fill(0.025, 10); fill(0.03, 10); fill(0.035, 10); 0.1]; # grid spacing (heterogenous), meter (N=41)
-Δz_m = [fill(0.02, 60)... ]; # grid spacing (homgenous), meter (N=60)
+# Δz_m = [fill(0.02, 60)... ]; # grid spacing (homgenous), meter (N=60)
 # Δz_m = [fill(0.01, 20); fill(0.0125, 20); fill(0.015, 20); fill(0.0175, 20); 0.1]; # grid spacing (heterogenous), meter (N=81)
 # Δz_m = [0.04, 0.04, 0.12, 0.25, 0.3, 0.35, 0.1];                           # grid spacing (heterogenous), meter (N=7)
 # Δz_m = [1.20];# grid spacing (heterogenous), meter (N=1)
@@ -49,6 +51,7 @@ for Δz_m in (
     [0.04, 0.04, 0.12, 0.25, 0.3, 0.35, 0.1],
     [fill(0.04, 5); fill(0.05, 5); 0.3;            0.35;         0.1], # N=13
     [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5); 0.1], # N=21
+    [fill(0.02, 10); fill(0.025, 10); fill(0.03, 10); fill(0.035, 10); 0.1], # N=41
     [fill(0.02, 60)... ], # N=60, 2cm similar to Pollacco et al. 2022 suggestions
     )
 
@@ -104,13 +107,10 @@ for Δz_m in (
     # Define initial states of differential equation
     # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
     # Create u0 for DiffEq.jl
-
-
     u0, p = define_LWFB90_u0(p, input_initial_conditions,
         ψM_initial, δ18O_initial, δ2H_initial,
         compute_intermediate_quantities;
         simulate_isotopes = simulate_isotopes);
-
     ####################
 
     ####################
@@ -278,6 +278,14 @@ for Δz_m in (
         #  git+d1eb2f8+gitclean: NLAYER=21: 1.126634 seconds (4.22 M allocations: 683.778 MiB, 14.38% gc time)
         #  git+eea6abd+gitdirty: NLAYER=21: 4.136514 seconds (16.66 M allocations: 2.509 GiB, 13.65% gc time)
         #  git+40de77b+gitdirty: NLAYER=21: 4.030769 seconds (14.84 M allocations: 2.162 GiB, 12.15% gc time)
+        #  git+3851514+gitdirty-iso+false NLAYER= 7: 0.540389 seconds (2.63 M allocations: 292.582 MiB, 13.41% gc time, 0.42% compilation time)
+        #  git+3851514+gitdirty-iso+false NLAYER=13: 0.677501 seconds (2.78 M allocations: 438.114 MiB, 22.44% gc time)
+        #  git+3851514+gitdirty-iso+false NLAYER=21: 4.009734 seconds (10.14 M allocations: 2.174 GiB, 14.54% gc time)
+        #  git+3851514+gitdirty-iso+true  NLAYER= 7:  5.625118 seconds (26.38 M allocations: 2.188 GiB, 10.43% gc time)
+        #  git+3851514+gitdirty-iso+true  NLAYER=13:  5.301599 seconds (26.90 M allocations: 2.967 GiB, 13.61% gc time)
+        #  git+3851514+gitdirty-iso+true  NLAYER=21: 15.839506 seconds (56.62 M allocations: 8.301 GiB, 12.66% gc time)
+        #  git+3851514+gitdirty-iso+true  NLAYER=41: 35.529361 seconds (84.29 M allocations: 20.755 GiB, 14.10% gc time)
+        #  git+3851514+gitdirty-iso+true  NLAYER=60: XXXXX seconds
 
     # @time sol_LWFBrook90 = solve(ode_LWFBrook90, progress = true, Euler(); # Note: Euler sometimes hangs
     #     saveat = tspan[1]:tspan[2], dt=1e-1, adaptive = false);
@@ -304,9 +312,9 @@ for Δz_m in (
     fname = joinpath(
         "out",
         input_prefix*"_NLAYER+" * string(sol_LWFBrook90.prob.p[1][1].NLAYER)*
-        "-git+"*chomp(read(`git rev-parse --short HEAD`, String)))*
+        "-git+"*chomp(read(`git rev-parse --short HEAD`, String))*
         ifelse(length(read(`git status --porcelain`, String))==0, "+gitclean","+gitdirty")*
-        "-iso+"*string(simulate_isotopes)
+        "-iso+"*string(simulate_isotopes))
 
     if simulate_isotopes
         optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
@@ -333,6 +341,7 @@ for Δz_m in (
                 # 3b) Heatmap of RWU
                 NLAYER = sol_LWFBrook90.prob.p[1][1].NLAYER
                 rows_RWU      = sol_LWFBrook90[sol_LWFBrook90.prob.p[1][4].row_idx_RWU, 1, :]
+                # NOTE: sol_LWFBrook90[:, :, 1] == u0# is true
                 # # y_extended = [-500; -350; -300; -250; -200; -150; -100;   -50;         y;          (maximum(y) .+ 50 .+ [50; 100; 150; 250])]
                 # # y_labels   = ["INTS"; ""; "INTR"; ""; "SNOW"; ""; round.(y); "";             "GWAT"]
                 # # y_soil_ticks = optimize_ticks(extrema(y)...; k_min = 4)[1]

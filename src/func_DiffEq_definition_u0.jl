@@ -73,10 +73,11 @@ function define_LWFB90_u0(p, uScalar_initial,
           u_SNOW_init_mm          ;
           u_CC_init_MJ_per_m2     ;
           u_SNOWLQ_init_mm        ;
-          u_SWATIinit_mm...       ;
-          u_totalRWUinit_mmday... ; # TODO(bernhard): if species-specific uptakes add here a totalRWU *PER SPECIES*
-          u_Xyleminit_mm...       ; # TODO(bernhard): if species-specific uptakes add here a Xylem value *PER SPECIES*
-          u_TRANIinit_mmday...    ] # TODO(bernhard): if species-specific uptakes add here an uptake vector *PER SPECIES*
+          u_SWATIinit_mm          ;
+          u_totalRWUinit_mmday    ; # TODO(bernhard): if species-specific uptakes add here a totalRWU *PER SPECIES*
+          u_Xyleminit_mm          ; # TODO(bernhard): if species-specific uptakes add here a Xylem value *PER SPECIES*
+          u_TRANIinit_mmday      ;;]# TODO(bernhard): if species-specific uptakes add here an uptake vector *PER SPECIES*
+                                    # ;; to create 2-dim array similar to the simulate_isotopes case
 
     # B2) isotopic concentrations:
     if simulate_isotopes
@@ -120,11 +121,11 @@ function define_LWFB90_u0(p, uScalar_initial,
                   u_SNOW_init_mm          ;
                   u_CC_init_MJ_per_m2     ;
                   u_SNOWLQ_init_mm        ;
-                  u_SWATIinit_mm...       ;
-                  u_totalRWUinit_mmday... ; # TODO(bernhard): if species-specific uptakes add here a totalRWU *PER SPECIES*
-                  u_Xyleminit_mm...       ; # TODO(bernhard): if species-specific uptakes add here a Xylem value *PER SPECIES*
-                  u_TRANIinit_mmday...    ; # TODO(bernhard): if species-specific uptakes add here an uptake vector *PER SPECIES*
-                  u_accum_init]
+                  u_SWATIinit_mm          ;
+                  u_totalRWUinit_mmday    ; # TODO(bernhard): if species-specific uptakes add here a totalRWU *PER SPECIES*
+                  u_Xyleminit_mm          ; # TODO(bernhard): if species-specific uptakes add here a Xylem value *PER SPECIES*
+                  u_TRANIinit_mmday       ; # TODO(bernhard): if species-specific uptakes add here an uptake vector *PER SPECIES*
+                  u_accum_init ;;]          # ;; to create 2-dim array similar to the simulate_isotopes case
         end
     end
 

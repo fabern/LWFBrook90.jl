@@ -84,7 +84,9 @@ function read_inputData(folder::String, prefix::String;
     # Assert that no missing
     # Impose type of Float64 instead of Float64?
     disallowmissing!(input_meteoveg)
-    disallowmissing!(input_meteoiso, [:days, :delta18O_permil, :delta2H_permil])
+    if (simulate_isotopes)
+        disallowmissing!(input_meteoiso, [:days, :delta18O_permil, :delta2H_permil])
+    end
     disallowmissing!(input_param)
     disallowmissing!(input_storm_durations, [:month, :storm_durations_h])
     disallowmissing!(input_initial_conditions)
