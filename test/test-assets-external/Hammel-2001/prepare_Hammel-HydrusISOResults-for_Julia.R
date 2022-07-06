@@ -166,14 +166,14 @@ for (Hammel_select in c("Hammel_loam", "Hammel_sand")) {
     pl_theta_depths,
     pl_18O_depths,
     pl_18O)
-  ggsave(plot = pl_18O, file.path(dirname(hydrus_file_NodInf), "Nod_inf_processed_18O.png"))
+  ggsave(plot = pl_18O, file.path(dirname(hydrus_file_NodInf), "Nod_inf_processed_18O.png"), width = 3216, height=2558, units="px", dpi=300)
   pl_2H <- egg::ggarrange(
     ncol=1,
     pl_BC_2H,
     pl_theta_depths,
     pl_2H_depths,
     pl_2H)
-  ggsave(plot = pl_2H, file.path(dirname(hydrus_file_NodInf), "Nod_inf_processed_2H.png"))
+  ggsave(plot = pl_2H, file.path(dirname(hydrus_file_NodInf), "Nod_inf_processed_2H.png"), width = 3216, height=2558, units="px", dpi=300)
 }
 
 

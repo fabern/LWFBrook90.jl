@@ -270,10 +270,13 @@ function prepare_sim_and_ref_for_BEA_2016(
 
     # Run  simulation
     sim_sol, _, _ = run_simulation(
-    [joinpath(folder_with_sim_input_and_ref_output, "input-files/"),
-    input_prefix]
-    )
-
+        [joinpath(folder_with_sim_input_and_ref_output, "input-files/"),
+        input_prefix]
+        );
+    # sim_sol, _, _ = run_simulation(
+    #     [joinpath(folder_with_sim_input_and_ref_output, "input-files/"),
+    #     input_prefix, "false", "70"] # refines resolution
+    #     );
     # Postprocess simulation
     ## Aboveground
 

@@ -1,4 +1,4 @@
-param_id,x
+param_id,amount
 ### Initial conditions (of vector states) -------,NA
 u_GWAT_init_mm,0
 u_INTS_init_mm,0
