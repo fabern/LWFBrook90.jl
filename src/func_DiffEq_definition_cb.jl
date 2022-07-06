@@ -31,9 +31,13 @@ function define_LWFB90_cb()
                                 func_everystep = true,
                                 func_start = false);
 
+    #TODO(bernhard) Implement swchek from LWFBrook90 as ContinuousCallback
+    # swcheck_cb = ContinuousCallback()
+
     cb_set = CallbackSet(
         # 1) Belowground:
         # Check and correct flux (Richards equation)
+        # # not implemented swcheck_cb,
         # # not implemented: cb_LaiRichardsCorrectorStep,
         cb_check_balance_errors,
         # Continuous update of belowground temperature

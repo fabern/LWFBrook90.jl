@@ -11,7 +11,7 @@ using Dates: now
 
 export read_inputData
 export discretize_soil, Rootden_beta_
-export define_LWFB90_p, define_LWFB90_u0, define_LWFB90_ODE
+export define_LWFB90_p, define_LWFB90_u0, solve_LWFB90
 export KPT_SOILPAR_Mvg1d, KPT_SOILPAR_Ch1d
 export RelativeDaysFloat2DateTime, plot_LWFBrook90
 
@@ -60,6 +60,9 @@ function run_simulation(args)
     # args = ("test-assets/Hammel-2001/input-files", "Hammel_loam-NLayer-27-RESET=TRUE")
     # args = ["examples/isoBEAdense2010-18-reset-FALSE-input/" "isoBEAdense2010-18-reset-FALSE" "true"]
     # args = ["test-assets/Hammel-2001/input-files-ISO" "Hammel_sand-NLayer-27-RESET=FALSE" "true"]
+    # args = ["test-assets/Hammel-2001/input-files-ISO" "Hammel_loam-NLayer-27-RESET=FALSE" "true"]
+    # args = ["test/test-assets/Hammel-2001/input-files-ISO" "Hammel_loam-NLayer-27-RESET=FALSE" "false"]
+    # args = ["test/test-assets/Hammel-2001/input-files-ISO" "Hammel_loam-NLayer-27-RESET=FALSE" "true"]
     @show now()
     @show args
 
@@ -82,9 +85,9 @@ function run_simulation(args)
     input_initial_conditions,
     input_soil_horizons,
     simOption_FLAG_MualVanGen) = read_inputData(input_path, input_prefix;
-                                                simulate_isotopes = simulate_isotopes)
+                                                simulate_isotopes = simulate_isotopes);
 
-    input_soil_discretization = discretize_soil(input_path, input_prefix)
+    input_soil_discretization = discretize_soil(input_path, input_prefix);
 
     Reset = false                          # currently only Reset = 0 implemented
     compute_intermediate_quantities = true # Flag whether ODE containes additional quantities than only states
@@ -102,32 +105,18 @@ function run_simulation(args)
         # soil_output_depths = collect(-0.05:-0.05:-1.1),
         # soil_output_depths = [-0.1, -0.5, -1.0, -1.5, -1.9],
         compute_intermediate_quantities = compute_intermediate_quantities,
-        simulate_isotopes = simulate_isotopes)
+        simulate_isotopes = simulate_isotopes);
 
     u0, p = define_LWFB90_u0(p, input_initial_conditions,
         ψM_initial, _δ18O_initial, _δ2H_initial, # NOTE: _ indicates that it is possibly unused (depends on simulate_isotopes)
         compute_intermediate_quantities;
-        simulate_isotopes = simulate_isotopes)
+        simulate_isotopes = simulate_isotopes);
 
     tspan = (minimum(input_meteoveg[:, "days"]), maximum(input_meteoveg[:, "days"])) # simulate all available days
 
-    ode_LWFBrook90, unstable_check_function = define_LWFB90_ODE(u0, tspan, p)
-
-    sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5(); progress = true,
-        unstable_check = unstable_check_function, # = (dt,u,p,t) -> false, #any(isnan,u),
-        saveat = tspan[1]:tspan[2],
-        # When adding transport of isotopes adaptive time stepping has difficulties reducing dt below dtmin.
-        # We solve it either by using a constant time step
-        # or by setting force_dtmin to true, which has the drawback that tolerances are ignored.
-        # # Variant1: less sophisticated but robust:
-        # adaptive = false, dt=1e-3 #dt=5/60/24 # fixed 5 minutes time steps
-        # Variant2: more sophisticated but giving errors:
-        adaptive = true, dtmin = 1e-3, dt=1e-3,  # if adaptive dt is just the starting value of the time steps
-        force_dtmin = true,# without this callbacks generate an abort "dt <= dtmin",
-                           # e.g. see: https://github.com/SciML/DifferentialEquations.jl/issues/648
-        maxiters = (tspan[2]-tspan[1])/1e-3  # when using force_dtmin also use maxiters
-                        # TODO(bernhard): regarding maxiters it seems to be the callback for δ of SNOW, INTR, INTS that causes the dtmin to be so small to reach large maxiters
-        );
+    @time sol_LWFBrook90 = solve_LWFB90(u0, tspan, p)
+    @info sol_LWFBrook90.destats
+    @info "Time steps for solving: $(sol_LWFBrook90.destats.naccept) ($(sol_LWFBrook90.destats.naccept) accepted out of $(sol_LWFBrook90.destats.nreject + sol_LWFBrook90.destats.naccept) total)"
     # using Plots, Measures
     # optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
     # pl2 = LWFBrook90.ISO.plotisotopes(

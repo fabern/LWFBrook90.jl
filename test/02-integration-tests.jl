@@ -166,6 +166,7 @@ end
         simulate_isotopes   = true);
         # amberMBP-git-8806cd8: 5.731435 seconds (11.12 M allocations: 1.274 GiB, 7.61% gc time, 74.89% compilation time)
         # amberMBP-git-a3fc1a2: 10.796262 seconds (106.83 M allocations: 8.381 GiB, 16.10% gc time)
+        # amberMBP-git-TODO:    1.956504 seconds (7.55 M allocations: 909.316 MiB, 15.30% gc time)
     @githash_time sim5, ref5, hyd5 = prepare_θψδ_from_sim_and_reference(;
         path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_sand-NLayer-103-RESET=FALSE",
         path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-103-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
@@ -173,6 +174,7 @@ end
         simulate_isotopes   = true);
         # amberMBP-git-8806cd8: 6.073306 seconds (7.10 M allocations: 3.247 GiB, 13.81% gc time, 37.73% compilation time)
         # amberMBP-git-a3fc1a2: 36.013205 seconds (341.00 M allocations: 29.140 GiB, 16.44% gc time)
+        # amberMBP-git-TODO:    4.430388 seconds (14.26 M allocations: 2.638 GiB, 15.92% gc time)
     # @githash_time sim6, ref6, hyd6 = prepare_θψδ_from_sim_and_reference(;
     #     path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_sand-NLayer-400-RESET=FALSE",
     #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
@@ -188,6 +190,7 @@ end
         # amberMBP-git-9d3342b non-adaptive 1e-3: 5.787269 seconds (23.98 M allocations: 4.513 GiB, 19.17% gc time)
         # amberMBP-git-9d3342b non-adaptive 1e-4: 58.027604 seconds (234.96 M allocations: 45.378 GiB, 18.09% gc time, 2.00% compilation time) -> unusable result containing NaN
         # amberMBP-git-a3fc1a2 adaptive (min 1e-4): 49.855293 seconds (492.71 M allocations: 38.667 GiB, 15.75% gc time, 0.06% compilation time)
+        # amberMBP-git-TODO:   adaptive_internalnorm: 7.167678 seconds (32.53 M allocations: 4.054 GiB, 13.37% gc time)
     @githash_time sim2, ref2, hyd2 = prepare_θψδ_from_sim_and_reference(;
         path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_loam-NLayer-103-RESET=FALSE",
         path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_loam-NLayer-103-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
@@ -196,16 +199,21 @@ end
         # amberMBP-git-9d3342b non-adaptive 1e-3: 15.853492 seconds (24.28 M allocations: 14.548 GiB, 21.53% gc time)
         # amberMBP-git-9d3342b non-adaptive 1e-4: 162.067400 seconds (233.84 M allocations: 146.493 GiB, 20.15% gc time) -> unusable result containing NaN
         # amberMBP-git-a3fc1a2 adaptive (min 1e-4): 172.691746 seconds (1.58 G allocations: 134.645 GiB, 16.29% gc time)
-    # # @githash_time sim3, ref3, hyd3 = prepare_θψδ_from_sim_and_reference(;
-    # #     path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_loam-NLayer-400-RESET=FALSE",
-    # #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_loam-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
-    # #     path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Loam_ISO2",
-    # #     simulate_isotopes   = true);
+        # amberMBP-git-TODO:   adaptive_internalnorm: 19.682619 seconds (64.91 M allocations: 12.537 GiB, 15.37% gc time)
+    # @githash_time sim3, ref3, hyd3 = prepare_θψδ_from_sim_and_reference(;
+    #     path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_loam-NLayer-400-RESET=FALSE",
+    #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_loam-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
+    #     path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Loam_ISO2",
+    #     simulate_isotopes   = true);
     #     # not run
+    #     # amberMBP-git-TODO:   adaptive_internalnorm: 107.662740 seconds (266.02 M allocations: 63.342 GiB, 17.37% gc time)
 
     # 2) Plot (optional, not done when testing in CI)
     # Illustrate with a plot what will be compared in the tests below
     if (false) # Do these manually outside of automatic testing in order not to require Plots pkg
+        git_string = "git+"*chomp(read(`git rev-parse --short HEAD`, String))*
+        ifelse(length(read(`git status --porcelain`, String))==0, "+clean","+dirty")
+
         using Plots, Measures
         function my_plot(df; args...)
             plot(df[:,:time], Matrix(df[:,Not(:time)]); args...)
@@ -218,23 +226,23 @@ end
         pl2_θ = my_plot(sim2.θ;      line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm");
         my_plot!(pl2_θ, ref2.θ;      line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""]);
         my_plot!(pl2_θ, hyd2.θ;      line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""]);
-        # my_plot!(pl2_θ, hyd2.θdense,line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""]);
+        #my_plot!(pl2_θ,hyd2.θdense,line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""]);
         pl2_ψ = my_plot(sim2.ψ; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm");
         my_plot!(pl2_ψ, ref2.ψ; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""]);
         my_plot!(pl2_ψ, hyd2.ψ; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""]);
         pl2_δ18O = my_plot(sim2.δ18O; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm");
-        # my_plot!(pl2_δ18O, ref2.δ18O; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""]);
+        #my_plot!(pl2_δ18O,ref2.δ18O; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""]);
         my_plot!(pl2_δ18O, hyd2.δ18O; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""]);
-        pl2_δ2H = my_plot(sim2.δ2H; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm");
-        # my_plot!(pl2_δ2H, ref2.δ2H; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
-        my_plot!(pl2_δ2H, hyd2.δ2H; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
+        pl2_δ2H = my_plot( sim2.δ2H; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm");
+        #my_plot!(pl2_δ2H, ref2.δ2H; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""])
+        my_plot!(pl2_δ2H,  hyd2.δ2H; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""])
         plot(title = "Simulation from Hammel et al. (2001) - Loam",
             plot!(pl2_θ,ylabel = "θ (-)"),
             plot!(pl2_ψ,ylabel = "ψ (kPa)"),
             plot!(pl2_δ18O,ylabel = "δ18O (‰)"),
             plot!(pl2_δ2H,ylabel = "δ2H (‰)"),
             size = (1200,1200), layout = (4,1), leftmargin = 8mm)
-        savefig("test-assets/Hammel-2001/out_Iso-Loam.png")
+        savefig("test-assets/Hammel-2001/out_Iso-Loam_"*git_string*".png")
         ## Go for simulation 5
         pl5_θ = my_plot(sim5.θ;      line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm");
         my_plot!(pl5_θ, ref5.θ;      line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""]);
@@ -244,10 +252,10 @@ end
         my_plot!(pl5_ψ, ref5.ψ; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""]);
         my_plot!(pl5_ψ, hyd5.ψ; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""]);
         pl5_δ18O = my_plot(sim5.δ18O; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm");
-        # my_plot!(pl5_δ18O, ref5.δ18O; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""]);
+        #my_plot!(pl5_δ18O,ref5.δ18O; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""]);
         my_plot!(pl5_δ18O, hyd5.δ18O; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""]);
         pl5_δ2H = my_plot(sim5.δ2H; line = :solid,                labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm");
-        # my_plot!(pl5_δ2H, ref5.δ2H; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""]);
+        #my_plot!(pl5_δ2H,ref5.δ2H; line = :dot, color = :black, labels = ["LWFBrook90R" "" "" "" ""]);
         my_plot!(pl5_δ2H, hyd5.δ2H; line = :dash, color = :green, labels = ["Hydrus" "" "" "" ""]);
         plot(title = "Simulation from Hammel et al. (2001) - Sand",
             plot!(pl5_θ,ylabel = "θ (-)"),
@@ -255,7 +263,7 @@ end
             plot!(pl5_δ18O,ylabel = "δ18O (‰)"),
             plot!(pl5_δ2H,ylabel = "δ2H (‰)"),
             size = (1200,1200), layout = (4,1), leftmargin = 8mm)
-        savefig("test-assets/Hammel-2001/out_Iso-Sand.png")
+        savefig("test-assets/Hammel-2001/out_Iso-Sand_"*git_string*".png")
     end
 
     # Use sensible accuracy values to compare the two solutions (e.g. θ of 0.02, and ψ of 1 kPa)

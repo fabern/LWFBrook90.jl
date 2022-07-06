@@ -62,7 +62,8 @@ function read_inputData(folder::String, prefix::String;
     input_param = read_path_param(path_param; simulate_isotopes = simulate_isotopes)
 
     # Load initial conditions of scalar state variables
-    input_initial_conditions = read_path_initial_conditions(path_initial_conditions)
+    input_initial_conditions = read_path_initial_conditions(path_initial_conditions;
+                                    simulate_isotopes = simulate_isotopes)
 
     # Load soil data
     input_soil_horizons, simOption_FLAG_MualVanGen = read_path_soil_horizons(path_soil_horizons)
@@ -362,7 +363,7 @@ function read_path_meteoiso(path_meteoiso,
 end
 
 # path_initial_conditions = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_initial_conditions.csv"
-function read_path_initial_conditions(path_initial_conditions)
+function read_path_initial_conditions(path_initial_conditions; simulate_isotopes::Bool = false)
     parsing_types =
         Dict(# Initial conditions (of vector states) -------
             "u_GWAT_init_mm" => Float64,       "u_INTS_init_mm" => Float64,
@@ -376,11 +377,13 @@ function read_path_initial_conditions(path_initial_conditions)
     expected_names = [String(k) for k in keys(parsing_types)]
     assert_colnames_as_expected(input_initial_conditions, path_initial_conditions, expected_names)
 
-    # Impose type of Float64 instead of Float64?, by defining unused variables as -9999.99
-    input_initial_conditions[2, "u_CC_init_MJ_per_m2"] = -9999.99
-    input_initial_conditions[2, "u_SNOWLQ_init_mm"]    = -9999.99
-    input_initial_conditions[3, "u_CC_init_MJ_per_m2"] = -9999.99
-    input_initial_conditions[3, "u_SNOWLQ_init_mm"]    = -9999.99
+    if simulate_isotopes
+        # Impose type of Float64 instead of Float64?, by defining unused variables as -9999.99
+        input_initial_conditions[2, "u_CC_init_MJ_per_m2"] = -9999.99
+        input_initial_conditions[2, "u_SNOWLQ_init_mm"]    = -9999.99
+        input_initial_conditions[3, "u_CC_init_MJ_per_m2"] = -9999.99
+        input_initial_conditions[3, "u_SNOWLQ_init_mm"]    = -9999.99
+    end
     disallowmissing!(input_initial_conditions)
 
     return input_initial_conditions

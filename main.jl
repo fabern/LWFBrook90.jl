@@ -96,39 +96,18 @@ tspan = (minimum(input_meteoveg[:, "days"]),
          maximum(input_meteoveg[:, "days"])) # simulate all available days
 # tspan = (LWFBrook90.DateTime2RelativeDaysFloat(DateTime(1980,1,1), reference_date),
 #          LWFBrook90.DateTime2RelativeDaysFloat(DateTime(1985,1,1), reference_date)) # simulates selected period
-
-# Define ODE:
-ode_LWFBrook90, unstable_check_function = define_LWFB90_ODE(u0, tspan, p);
 ####################
 
 ####################
 ## Solve ODE:
-@time sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5(); progress = true,
-        unstable_check = unstable_check_function, # = (dt,u,p,t) -> false, #any(isnan,u),
-        saveat = tspan[1]:tspan[2],
-        # When adding transport of isotopes adaptive time stepping has difficulties reducing dt below dtmin.
-        # We solve it either by using a constant time step
-        # or by setting force_dtmin to true, which has the drawback that tolerances are ignored.
-        # # Variant1: less sophisticated but robust:
-        # adaptive = false, dt=1e-3 #dt=5/60/24 # fixed 5 minutes time steps
-        # Variant2: more sophisticated but giving errors:
-        adaptive = true, dtmin = 1e-3, dt=1e-3,  # if adaptive dt is just the starting value of the time steps
-        force_dtmin = true,# without this callbacks generate an abort "dt <= dtmin",
-                           # e.g. see: https://github.com/SciML/DifferentialEquations.jl/issues/648
-        maxiters = (tspan[2]-tspan[1])/1e-3 # when using force_dtmin also use maxiters
-                        # TODO(bernhard): regarding maxiters it seems to be the callback for δ of SNOW, INTR, INTS that causes the dtmin to be so small to reach large maxiters
-        );
+sol_LWFBrook90 = solve_LWFB90(u0, tspan, p);
 ####################
 
 ####################
 ## Benchmarking
-# @time sol_LWFBrook90 = solve(ode_LWFBrook90, progress = true;
-#     saveat = tspan[1]:tspan[2], dt=1e-1, adaptive = false);
-# @time sol_LWFBrook90 = solve(ode_LWFBrook90, progress = true, Euler(); # Note: Euler sometimes hangs
-#     saveat = tspan[1]:tspan[2], dt=1e-1, adaptive = false);
+# @time sol_LWFBrook90 = solve_LWFB90(u0, tspan, p);
 using BenchmarkTools # for benchmarking
-# sol_LWFBrook90 = @btime solve(ode_LWFBrook90; dt=1.0e-1, adaptive = false); # dt will be overwritten, adaptive deacives DiffEq.jl adaptivity
-# sol_LWFBrook90 = @btime solve(ode_LWFBrook90; saveat = tspan[1]:tspan[2], dt=1.0e-1, adaptive = false); # dt will be overwritten, adaptive deacives DiffEq.jl adaptivity
+sol_LWFBrook90 = @btime sol_LWFBrook90 = solve_LWFB90(u0, tspan, p);
 
 ## Performance optimizing
 @time LWFBrook90.f_LWFBrook90R(copy(u0), u0, p, 1.0) # 0.000039 seconds (59 allocations: 5.047 KiB)

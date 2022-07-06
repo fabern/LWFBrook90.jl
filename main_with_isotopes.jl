@@ -77,7 +77,6 @@ for Δz_m in (
         # input_param[1,"NOOUTF"] = true # `true` if outflow from roots prevented, `false` if allowed
     input_param[1,"NOOUTF"]
     input_soil_horizons.gravel_volFrac .= 0.00
-
     ####################
 
     ####################
@@ -131,127 +130,16 @@ for Δz_m in (
     # tspan = (0., 700.)
     # tspan = (0.,  60)
     # tspan = (0.,  3)
-
-    # Define ODE:
-    ode_LWFBrook90, unstable_check_function = define_LWFB90_ODE(u0, tspan, p);
     ####################
 
     ####################
     ## Solve ODE:
-    # @run sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
-    #     unstable_check = (dt,u,p,t) -> false,#any(isnan,u),
-    #     progress = true,
-    #     saveat = tspan[1]:tspan[2], dt=1e-6, adaptive = true); # dt is initial dt, but adaptive
+    # sol_LWFBrook90 = solve_LWFB90(u0, tspan, p);
     ####################
 
     ####################
     ## Benchmarking
-    # @time sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5(); progress = true,
-    #     unstable_check = unstable_check_function, # = (dt,u,p,t) -> false, #any(isnan,u),
-    #     saveat = tspan[1]:tspan[2], dt=1e-6, dtmax=1e-3, adaptive = true);
-                    # integrator =  init(ode_LWFBrook90, Tsit5(); progress = true,
-                    #             unstable_check = unstable_check_function) # = (dt,u,p,t) -> false, #any(isnan,u))
-
-                    # du = copy(integrator.u)
-                    # du .= 0
-                    # LWFBrook90.f_LWFBrook90R(du, integrator.u, p, 0);
-                    # du
-                    # step!(integrator)
-    @time sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5(); progress = true,
-        unstable_check = unstable_check_function, # = (dt,u,p,t) -> false, #any(isnan,u),
-        saveat = tspan[1]:tspan[2],
-        # When adding transport of isotopes adaptive time stepping has difficulties reducing dt below dtmin.
-        # We solve it either by using a constant time step
-        # or by setting force_dtmin to true, which has the drawback that tolerances are ignored.
-        # # Variant1: less sophisticated but robust:
-        # adaptive = false, dt=1e-3 #dt=5/60/24 # fixed 5 minutes time steps
-        # Variant2: more sophisticated but giving errors:
-        adaptive = true, dtmin = 1e-4, dt=1e-4,  # if adaptive dt is just the starting value of the time steps
-        force_dtmin = true,# without this callbacks generate an abort "dt <= dtmin",
-                           # e.g. see: https://github.com/SciML/DifferentialEquations.jl/issues/648
-        maxiters = (tspan[2]-tspan[1])/1e-4 # when using force_dtmin also use maxiters
-                        # TODO(bernhard): regarding maxiters it seems to be the callback for δ of SNOW, INTR, INTS that causes the dtmin to be so small to reach large maxiters
-        );
-                using Plots, Measures
-                t_ref = sol_LWFBrook90.prob.p[2][17]
-                x = RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, t_ref);
-                y = cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK) - sol_LWFBrook90.prob.p[1][1].p_THICK/2
-                optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
-                y_soil_ticks = optim_ticks(0., round(maximum(cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
-                y_ticks= y_soil_ticks
-                y_labels=round.(y_soil_ticks; digits=0)
-                (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-                                LWFBrook90.get_auxiliary_variables(sol_LWFBrook90)
-                # heatmap(#x[140:150], y, u_aux_θ'[:,140:150], yflip = true,
-                #         x[142:145], y, u_aux_θ'[:,142:145], yflip = true,
-                #         xlabel = "Date",
-                #         ylabel = "Depth [mm]",
-                #         colorbar_title = "θ [-]")
-                t_to_plot = 1:length(x)
-                plot(
-                    heatmap(x[t_to_plot], y, u_aux_θ'[:, t_to_plot], yflip = true,
-                            xlabel = "Date",
-                            ylabel = "Depth [mm]",
-                            colorbar_title = "θ [-]"),
-                    heatmap(x[t_to_plot], y, u_aux_PSIM'[:, t_to_plot], yflip = true,
-                            xlabel = "Date",
-                            ylabel = "Depth [mm]",
-                            colorbar_title = "ψ_m [kPa]"),
-                    layout = (2,1))
-                # du = similar(sol_LWFBrook90.u[142])
-                # LWFBrook90.f_LWFBrook90R(du, sol_LWFBrook90.u[142],p,142)
-                # integrator = init(ode_LWFBrook90, Tsit5(), unstable_check = unstable_check_function,
-                #                 saveat = 0:145, adaptive = true, dtmin = 1e-5, dt=1e-4)
-                # step!(integrator)
-                # function plot_θ!(pl, integrator)
-                #     p_soil = integrator.p[1][1]
-                #     idx_u_vector_amounts = integrator.p[1][4].row_idx_SWATI
-                #     t_ref = integrator.p[2][17]
-                #     # u_SWATI = [solution.u[i][idx_u_vector_amounts] for i = 1:size(integrator.u,2)]
-                #     u_SWATI = [integrator.u[idx_u_vector_amounts]]
-                #     (_, _, _, u_aux_θ, _) = LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI[1], p_soil)
-                #     heatmap!(pl, RelativeDaysFloat2DateTime.(integrator.t .+ [0; 1], t_ref),
-                #             cumsum(integrator.p[1][1].p_THICK) - integrator.p[1][1].p_THICK/2,
-                #             [u_aux_θ u_aux_θ], yflip = true)
-                #     return pl
-                # end
-                # for i in 1:140 step!(integrator) end
-                # pl = plot()
-                # plot_θ!(pl, integrator)
-                # begin
-                #     step!(integrator)
-                #     plot_θ!(pl, integrator)
-                # end
-                # du
-
-                # # investigate what happens on 2010-05-22 in BEA (artifact in θ simulation)?
-                # ode_LWFBrook90_2, unstable_check_function_2 = define_LWFB90_ODE(sol_LWFBrook90.u[130], (130,140), p);
-                # @time sol_LWFBrook90_2 = solve(ode_LWFBrook90_2, Tsit5(); progress = true,
-                #     unstable_check = unstable_check_function_2, # = (dt,u,p,t) -> false, #any(isnan,u),
-                #     saveat = 130:140,
-                #     # When adding transport of isotopes adaptive time stepping has difficulties reducing dt below dtmin.
-                #     # We solve it either by using a constant time step
-                #     # or by setting force_dtmin to true, which has the drawback that tolerances are ignored.
-                #     # # Variant1: less sophisticated but robust:
-                #     # adaptive = false, dt=1e-3 #dt=5/60/24 # fixed 5 minutes time steps
-                #     # Variant2: more sophisticated but giving errors:
-                #     adaptive = true, dtmin = 1e-5, dt=1e-4,  # if adaptive dt is just the starting value of the time steps
-                #     force_dtmin = true,# without this callbacks generate an abort "dt <= dtmin",
-                #                     # e.g. see: https://github.com/SciML/DifferentialEquations.jl/issues/648
-                #     maxiters = (tspan[2]-tspan[1])/1e-4 # when using force_dtmin also use maxiters
-                #                     # TODO(bernhard): regarding maxiters it seems to be the callback for δ of SNOW, INTR, INTS that causes the dtmin to be so small to reach large maxiters
-                #     );
-                # (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-                #                 LWFBrook90.get_auxiliary_variables(sol_LWFBrook90_2)
-                # heatmap(RelativeDaysFloat2DateTime.(sol_LWFBrook90_2.t, t_ref),
-                #         cumsum(sol_LWFBrook90_2.prob.p[1][1].p_THICK) - sol_LWFBrook90_2.prob.p[1][1].p_THICK/2,
-                #         u_aux_θ, yflip = true)
-    # heatmap(x, y, u_aux_PSIM', yflip = true,
-    #         xlabel = "Date",
-    #         ylabel = "Depth [mm]",
-    #         colorbar_title = "ψ [kPa]")
-
-
+    @time sol_LWFBrook90 = solve_LWFB90(u0, tspan, p);
         # 700 days in: 40 seconds dt=1e-3, adaptive = false (isoBea default spacing: NLAYER = 7)
         # 700 days in: 90 seconds dt=1e-3, adaptive = false (isoBea dense spacing (0.05m): NLAYER = 26)
         #  git+c4d37eb+gitdirty: NLAYER=7:  25.944645 seconds (196.27 M allocations: 16.947 GiB, 15.09% gc time)
@@ -286,9 +174,21 @@ for Δz_m in (
         #  git+3851514+gitdirty-iso+true  NLAYER=21: 15.839506 seconds (56.62 M allocations: 8.301 GiB, 12.66% gc time)
         #  git+3851514+gitdirty-iso+true  NLAYER=41: 35.529361 seconds (84.29 M allocations: 20.755 GiB, 14.10% gc time)
         #  git+3851514+gitdirty-iso+true  NLAYER=60: XXXXX seconds
+        #  git+e6ad7ad+gitdirty-iso+true  NLAYER= 7: 0.231580 seconds (1.07 M allocations: 104.647 MiB, 29.50% gc time) 2203 Δt's
+        #  git+e6ad7ad+gitdirty-iso+true  NLAYER=13: 0.312734 seconds (1.26 M allocations: 165.862 MiB) 2555 Δt's
+        #  git+e6ad7ad+gitdirty-iso+true  NLAYER=21: 0.857902 seconds (3.19 M allocations: 548.413 MiB, 10.90% gc time) 7020 Δt's
+        #  git+e6ad7ad+gitdirty-iso+true  NLAYER=41: 2.700105 seconds (6.28 M allocations: 1.763 GiB, 15.09% gc time) 14469 Δt's
+        #  git+e6ad7ad+gitdirty-iso+true  NLAYER=60: 3.271614 seconds (4.72 M allocations: 1.875 GiB, 13.70% gc time) 10619 Δt's
+                # TODO(bernhard): there is a bug in NLAYER=60...
 
-    # @time sol_LWFBrook90 = solve(ode_LWFBrook90, progress = true, Euler(); # Note: Euler sometimes hangs
-    #     saveat = tspan[1]:tspan[2], dt=1e-1, adaptive = false);
+                    # integrator =  init(ode_LWFBrook90, Tsit5(); progress = true,
+                    #             unstable_check = unstable_check_function) # = (dt,u,p,t) -> false, #any(isnan,u))
+                    # du = copy(integrator.u)
+                    # du .= 0
+                    # LWFBrook90.f_LWFBrook90R(du, integrator.u, p, 0);
+                    # du
+                    # step!(integrator)
+
     # using BenchmarkTools # for benchmarking
     # sol_LWFBrook90 = @btime solve(ode_LWFBrook90; dt=1.0e-1, adaptive = false); # dt will be overwritten, adaptive deacives DiffEq.jl adaptivity
     # sol_LWFBrook90 = @btime solve(ode_LWFBrook90; saveat = tspan[1]:tspan[2], dt=1.0e-1, adaptive = false); # dt will be overwritten, adaptive deacives DiffEq.jl adaptivity
@@ -298,14 +198,7 @@ for Δz_m in (
     ## Plotting
     # 0) defined in module_ISO.jl
     # using Plots, Measures
-    # include("module_ISOplots.jl")
-    # pl_final_δ18O, pl_final_δ2H =
-    # plot_LWFBrook90_isotopes(sol_LWFBrook90; clims_d18O = (-16, -6), clims_d2H  = (-125, -40));
-    # plot(pl_final_δ18O, pl_final_δ2H,
-    #     layout = (2,1), size=(1000,1400), leftmargin = 15mm);
-    # savefig(input_prefix*".png")
     mkpath("out")
-
     using DataFrames
     using CSV: File
     using Plots, Measures
@@ -338,61 +231,6 @@ for Δz_m in (
         plot([transpose(row_RWU_d18O) transpose(row_XYL_d18O)], labels = ["δ_RWU" "δ_XylemV"])
     end
 
-                # 3b) Heatmap of RWU
-                NLAYER = sol_LWFBrook90.prob.p[1][1].NLAYER
-                rows_RWU      = sol_LWFBrook90[sol_LWFBrook90.prob.p[1][4].row_idx_RWU, 1, :]
-                # NOTE: sol_LWFBrook90[:, :, 1] == u0# is true
-                # # y_extended = [-500; -350; -300; -250; -200; -150; -100;   -50;         y;          (maximum(y) .+ 50 .+ [50; 100; 150; 250])]
-                # # y_labels   = ["INTS"; ""; "INTR"; ""; "SNOW"; ""; round.(y); "";             "GWAT"]
-                # # y_soil_ticks = optimize_ticks(extrema(y)...; k_min = 4)[1]
-                # # y_soil_ticks = optimize_ticks(0., round(maximum(cumsum(sol.prob.p[1][1].p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
-                # y_soil_ticks = tick_function(0., round(maximum(cumsum(sol.prob.p[1][1].p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
-                # y_ticks    = [-500;       -300;       -200;       -100;     y_soil_ticks;          (maximum(y) .+ 50 .+ [    100;    250])]
-                # y_labels   = ["PREC";   "INTS";     "INTR";     "SNOW";     round.(y_soil_ticks; digits=0); "GWAT"  ; "RWU"]
-                # z2_extended = [row_PREC_d18O; row_NaN; row_INTS_d18O; row_NaN; row_INTR_d18O; row_NaN; row_SNOW_d18O; row_NaN; rows_SWAT_d18O; row_NaN; row_GWAT_d18O; row_NaN; row_RWU_d18O]
-                # z3_extended = [row_PREC_d2H;  row_NaN; row_INTS_d2H;  row_NaN; row_INTR_d2H;  row_NaN; row_SNOW_d2H;  row_NaN; rows_SWAT_d2H;  row_NaN; row_GWAT_d2H;  row_NaN; row_RWU_d2H]
-                (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-                    LWFBrook90.get_auxiliary_variables(sol_LWFBrook90)
-                # z = sol_LWFBrook90[7 .+ (0:sol_LWFBrook90.prob.p[1][1].NLAYER-1), 1, :]./sol_LWFBrook90.prob.p[1][1].p_THICK
-
-                t_ref = sol_LWFBrook90.prob.p[2][17]
-                x = RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, t_ref);
-                y = cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK) - sol_LWFBrook90.prob.p[1][1].p_THICK/2
-                y_soil_ticks = optim_ticks(0., round(maximum(cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
-                y_ticks= y_soil_ticks
-                y_labels=round.(y_soil_ticks; digits=0)
-                heatmap(x, y, u_aux_θ', yflip = true,
-                        xlabel = "Date",
-                        ylabel = "Depth [mm]",
-                        colorbar_title = "θ [-]")
-                heatmap(x, y, u_aux_PSIM', yflip = true,
-                        xlabel = "Date",
-                        ylabel = "Depth [mm]",
-                        colorbar_title = "ψ [kPa]")
-                z=rows_RWU
-                pl_RWU = heatmap(x,y,z; yticks = (y_ticks, y_labels),
-                        yflip = true,
-                        c = :diverging_bwr_20_95_c54_n256, clim = maximum(abs.(z)) .* (-1, 1),
-                        ylabel = "Depth [mm]",
-                        colorbar_title = "RWU [mm/day]",
-                        size=(1400,800), dpi = 300, leftmargin = 15mm);
-                # savefig(pl_RWU, fname*"_RWU.png")
-                plot_avgRWU = plot(sum(z,dims=2), y,
-                    yflip = true, ylabel = "Depth [mm]", xlabel = "Total RWU over\nsimulation period [mm]")
-                # Plot root distribution
-                p_RELDEN = sol_LWFBrook90.prob.p[2].p_RELDEN
-                root_data_start_end = [p_RELDEN.(t, 1:NLAYER) for t in extrema(sol_LWFBrook90.prob.tspan)]
-                pl_roots = plot(root_data_start_end, y,
-                    labels = ("t=" .* string.(permutedims(collect(extrema(sol_LWFBrook90.prob.tspan))))),  linestyle = [:solid :dash],
-                    yflip = true, ylabel = "Depth [mm]", xlabel = "Relative root\ndensity [-]");
-                pl_RWU2 = plot(
-                    plot(pl_roots;                 yticks = (y_ticks, y_labels)),
-                    plot(plot_avgRWU, ylabel = ""; yticks = []),
-                    plot(pl_RWU;      ylabel = "", yticks = [], title = "RWU [mm/day]"),
-                    layout=grid(1,3, widths = [0.1,0.1,0.8]), link = :y,
-                    size=(1400,800), dpi = 300, leftmargin = 15mm, bottommargin = 10mm)
-                savefig(pl_RWU2, fname*"_RWU2.png")
-
 
     if input_prefix == "BEA2016-reset-FALSE" || input_prefix == "isoBEA2016-reset-FALSE" || input_prefix == "isoBEAdense2016-reset-FALSE"
         ref_aboveground =
@@ -416,7 +254,7 @@ for Δz_m in (
     end
 
 
-    if true
+    # if true
         # theme(:default) # theme(:sand)
         PREC_color = :black
         depth_to_read_out_mm = [150 500 800 1500]
@@ -482,7 +320,7 @@ for Δz_m in (
             layout = grid(5, 1, heights=[0.1, 0.25 ,0.25, 0.2, 0.2]),
             size=(600,500), dpi = 300, margin = 5mm);
 
-            savefig(fname*"_plot-θ-ψ-δ.png")
+        savefig(fname*"_plot-θ-ψ-δ.png")
     end
 
     aux_indices = sol_LWFBrook90.prob.p[1][4].row_idx_accum
@@ -491,7 +329,101 @@ for Δz_m in (
                 [sol_LWFBrook90[aux_indices[30],:] sol_LWFBrook90[aux_indices[31],:]],
                 legend = :outerright, labels = aux_names[:, 30:31],
                 ylabel = "Water balance error [mm]")
-            savefig(fname*"_plot-water-balance-error.png")
+    savefig(fname*"_plot-water-balance-error.png")
+
+    if true
+        # Depth-vs-time heatmap plots of θ, ψ, RWU
+        # For all heatmaps
+        t_ref = sol_LWFBrook90.prob.p[2][17]
+        x = RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, t_ref);
+        y = cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK) - sol_LWFBrook90.prob.p[1][1].p_THICK/2
+        optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
+        y_soil_ticks = optim_ticks(0., round(maximum(cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
+        y_ticks= y_soil_ticks
+        y_labels=round.(y_soil_ticks; digits=0)
+        # a) for θ and ψ:
+        (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+                        LWFBrook90.get_auxiliary_variables(sol_LWFBrook90)
+        t_to_plot = 1:length(x)
+        pl_θ = heatmap(x, y, u_aux_θ', yflip = true,
+                    xlabel = "",#"Date",
+                    ylabel = "Depth [mm]",
+                    colorbar_title = "θ [-]");
+        pl_ψ = heatmap(x, y, u_aux_PSIM', yflip = true,
+                    xlabel = "",#"Date",
+                    ylabel = "Depth [mm]",
+                    colorbar_title = "ψ_m [kPa]");
+        # plot(pl_θ,pl_ψ,layout = (2,1))
+        # b) for RWU
+        # b1) RWU heatmap (depths vs time)
+        rows_RWU      = sol_LWFBrook90[sol_LWFBrook90.prob.p[1][4].row_idx_RWU, 1, :]
+        pl_RWU = heatmap(x,y,rows_RWU; yticks = (y_ticks, y_labels),
+                yflip = true,
+                c = :diverging_bwr_20_95_c54_n256, clim = maximum(abs.(z)) .* (-1, 1),
+                ylabel = "Depth [mm]",
+                colorbar_title = "RWU [mm/day]",
+                size=(1400,800), dpi = 300, leftmargin = 15mm);
+        # b2) distribution of RWU and roots
+        plot_avgRWU = plot(sum(rows_RWU,dims=2), y,
+            yflip = true, ylabel = "Depth [mm]", #xlabel = "Total RWU over\nsimulation period [mm]")
+            #xlabel = "RWU (mm)"
+        )
+        root_data_start_end = [sol_LWFBrook90.prob.p[2].p_RELDEN.(t, 1:sol_LWFBrook90.prob.p[1][1].NLAYER)
+                                for t in extrema(sol_LWFBrook90.prob.tspan)]
+        pl_roots = plot(root_data_start_end, y,
+            labels = ("t=" .* string.(permutedims(collect(extrema(sol_LWFBrook90.prob.tspan))))),  linestyle = [:solid :dash],
+            yflip = true, ylabel = "Depth [mm]", xlabel = "Relative root\ndensity [-]");
+        empty_plot = plot(legend=false,grid=false,foreground_color_subplot=:white)
+        # pl_RWU2 = plot(pl_θ, pl_ψ, pl_RWU,
+        #         empty_plot, plot(pl_roots, ylabel = ""), plot(plot_avgRWU, ylabel = ""),
+        #         # layout = @layout [[a{0.333h};b;c{0.333h}] grid(3,1){0.2w}]
+        #         title = permutedims(["a) θ (m3/m3):", "b) ψ (kPa):", "c) RWU (mm/day):",
+        #                              " ",
+        #                              "d) Root density distribution:",
+        #                              "e) Total RWU (mm) averaged over time:"]),
+        #         titleloc = :left, titlefont = font(8),
+        #         size=(1400,800), dpi = 300, leftmargin = 15mm, bottommargin = 10mm,
+        #         # layout = @layout [[a{0.333h};b;c{0.333h}] [f;d{0.333h};e{0.333h}] # does not work with {0.2w}
+        #         layout = @layout [[a{0.333h};b;c{0.333h}] grid(3,1){0.2w}]
+        # )
+        pl_RWU2 = plot(
+                pl_θ, empty_plot,
+                pl_ψ, plot(pl_roots,xlabel=""),
+                pl_RWU, plot(plot_avgRWU,xlabel=""),
+                title = permutedims(["a) θ (m3/m3):",      " ",
+                                    "b) ψ (kPa):",         "d) Root density (-) distribution:",
+                                    "c) RWU (mm/day):",    "e) Total RWU (mm) averaged over time:"]),
+                titleloc = :left, titlefont = font(8),
+                size=(1400,800), dpi = 300, leftmargin = 15mm, bottommargin = 10mm,
+                link = :y,
+                layout = @layout [a{0.333h} d{0.2w}; b e; c{0.333h} f]
+        )
+        savefig(pl_RWU2, fname*"_RWU2.png")
+        # savefig(plot(pl_θ, pl_ψ, pl_RWU, layout = (3,1)),
+        #         fname*"_RWU.png")
+        # investigate what happens on 2010-05-22 in BEA (artifact in θ simulation)?
+        # ode_LWFBrook90_2, unstable_check_function_2 = define_LWFB90_ODE(sol_LWFBrook90.u[130], (130,140), p);
+        # @time sol_LWFBrook90_2 = solve(ode_LWFBrook90_2, Tsit5(); progress = true,
+        #     unstable_check = unstable_check_function_2, # = (dt,u,p,t) -> false, #any(isnan,u),
+        #     saveat = 130:140,
+        #     # When adding transport of isotopes adaptive time stepping has difficulties reducing dt below dtmin.
+        #     # We solve it either by using a constant time step
+        #     # or by setting force_dtmin to true, which has the drawback that tolerances are ignored.
+        #     # # Variant1: less sophisticated but robust:
+        #     # adaptive = false, dt=1e-3 #dt=5/60/24 # fixed 5 minutes time steps
+        #     # Variant2: more sophisticated but giving errors:
+        #     adaptive = true, dtmin = 1e-5, dt=1e-4,  # if adaptive dt is just the starting value of the time steps
+        #     force_dtmin = true,# without this callbacks generate an abort "dt <= dtmin",
+        #                     # e.g. see: https://github.com/SciML/DifferentialEquations.jl/issues/648
+        #     maxiters = (tspan[2]-tspan[1])/1e-4 # when using force_dtmin also use maxiters
+        #                     # TODO(bernhard): regarding maxiters it seems to be the callback for δ of SNOW, INTR, INTS that causes the dtmin to be so small to reach large maxiters
+        #     );
+        # (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+        #                 LWFBrook90.get_auxiliary_variables(sol_LWFBrook90_2)
+        # heatmap(RelativeDaysFloat2DateTime.(sol_LWFBrook90_2.t, t_ref),
+        #         cumsum(sol_LWFBrook90_2.prob.p[1][1].p_THICK) - sol_LWFBrook90_2.prob.p[1][1].p_THICK/2,
+        #         u_aux_θ, yflip = true)
+    end
 end
 
 # # # 1) very basic
