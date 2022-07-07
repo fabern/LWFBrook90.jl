@@ -18,18 +18,14 @@ using JLD2
 
 # this script either writes out or tests against reference test cases
 task = ["test", "overwrite"][1]
-ENV["GITHBU_ACTION"]
 
-ENV["HOME"]
-`echo HOME`
-`echo \$GITHUB_ACTION`
 # TODO(bernhard): while below testset works consistently on MacBook Pro,
 #                 in the GithubActions the values are slightly different.
 #                 TODO: investigate why. (DiffEq.jl, integration testing, set some seed?)
-
 # current workaround, do not run these tests on CI (GithubActions)
 is_a_CI_system = issubset(["GITHUB_ACTION"], collect(keys(ENV))) # checks if ENV["GITHUB_ACTION"] exists
 @show is_a_CI_system
+
 if !is_a_CI_system
     @testset "regression-nodelta-run_example" begin
 
