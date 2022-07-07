@@ -15,8 +15,8 @@ input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
 # input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/LAU2010-2021/";
 # input_prefix = "LAE2010-2021";
 # input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/LAE2010-2021/";
-input_prefix = "DAV2010-2021";
-input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/DAV2010-2021/";
+# input_prefix = "DAV2010-2021";
+# input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/DAV2010-2021/";
 
 ####################
 simulate_isotopes = true
