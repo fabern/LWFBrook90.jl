@@ -354,7 +354,7 @@ end
     # θ:
     @test RMS_differences(sim.θ, ref_NLAYER7.θ) < 0.007
     # ψ:
-    @test RMS_differences(sim.ψ, ref_NLAYER7.ψ) < 0.07
+    @test RMS_differences(sim.ψ, ref_NLAYER7.ψ) < 0.08
     # "GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)", (not done for: "CC (MJ/m2)" "SNOWLQ (mm)"]):
     @test RMS_differences(sim.above[Not(1),[:time,:GWAT, :INTS, :INTR, :SNOW]],
                             ref_NLAYER7.above[Not(end),[:time, :gwat,:ints,:intr,:snow]]) < 0.0005
@@ -387,7 +387,7 @@ end
         # θ:
         @test RMS_differences(sim.θ, ref_NLAYER7.θ) < 0.007
         # ψ:
-        @test RMS_differences(sim.ψ, ref_NLAYER7.ψ) < 0.07
+        @test RMS_differences(sim.ψ, ref_NLAYER7.ψ) < 0.08
         # "GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)", (not done for: "CC (MJ/m2)" "SNOWLQ (mm)"]):
         @test RMS_differences(sim.above[Not(1),[:time,:GWAT, :INTS, :INTR, :SNOW]],
                                 ref_NLAYER7.above[Not(end),[:time, :gwat,:ints,:intr,:snow]]) < 0.0005
