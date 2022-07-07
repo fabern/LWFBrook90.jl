@@ -11,6 +11,12 @@ input_prefix = "isoBEAdense2010-18-reset-FALSE";
 input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
 # input_prefix = "BEA2010-2021";
 # input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/BEA2010-2021/";
+# input_prefix = "LAU2010-2021";
+# input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/LAU2010-2021/";
+# input_prefix = "LAE2010-2021";
+# input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/LAE2010-2021/";
+input_prefix = "DAV2010-2021";
+input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/DAV2010-2021/";
 
 ####################
 simulate_isotopes = true
@@ -254,7 +260,7 @@ for Δz_m in (
     end
 
 
-    # if true
+    if true
         # theme(:default) # theme(:sand)
         PREC_color = :black
         depth_to_read_out_mm = [150 500 800 1500]
@@ -271,10 +277,10 @@ for Δz_m in (
             legend = :outerright);
         pl_ψ = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
             # -LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90) .+ 1, yaxis = :log, yflip = true,
-            LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90),
+            # LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90),  ylabel = "ψ\n[kPa]",
+            log.(-10 .* LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
             labels = string.(depth_to_read_out_mm) .* "mm",
             xlabel = "Date",
-            ylabel = "ψ\n[kPa]",
             legend = :outerright);
         if simulate_isotopes
             pl_δ18O = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
@@ -359,7 +365,7 @@ for Δz_m in (
         rows_RWU      = sol_LWFBrook90[sol_LWFBrook90.prob.p[1][4].row_idx_RWU, 1, :]
         pl_RWU = heatmap(x,y,rows_RWU; yticks = (y_ticks, y_labels),
                 yflip = true,
-                c = :diverging_bwr_20_95_c54_n256, clim = maximum(abs.(z)) .* (-1, 1),
+                c = :diverging_bwr_20_95_c54_n256, clim = maximum(abs.(rows_RWU)) .* (-1, 1),
                 ylabel = "Depth [mm]",
                 colorbar_title = "RWU [mm/day]",
                 size=(1400,800), dpi = 300, leftmargin = 15mm);
