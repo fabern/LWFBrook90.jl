@@ -1,5 +1,5 @@
 param_id,x
-### Initial conditions (except for depth-dependent u_aux_PSIM) -------,NA
+### Initial conditions (of vector states) -------,NA
 u_GWAT_init_mm,0
 u_INTS_init_mm,0
 u_INTR_init_mm,0

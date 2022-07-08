@@ -1,0 +1,6 @@
+#Data produced with Piso.AI v.1.01 and downloaded on 2021-10-16.
+#Please cite Nelson/Basler/Kahmen (PNAS 2021 Vol. 118 No. 26 e2024107118) when using these data.
+#Prediction errors: d18O +/- 1.7  d2H +/- 13
+"","Site","Date","Latitude","Longitude","Elevation","d18O.Piso.AI","d2H.Piso.AI"
+"1","unknownSite",2010-01-15,99.99999,9.99999,9999,0,0
+"1","unknownSite",2010-02-15,99.99999,9.99999,9999,0,0

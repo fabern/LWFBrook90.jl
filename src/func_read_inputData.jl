@@ -1,7 +1,7 @@
 using CSV: read, File
-using DataFrames: DataFrame, rename# ,select
+using DataFrames: DataFrame, rename, sort!# ,select
 using DataFramesMeta#: @linq, transform, DataFramesMeta
-using Dates: DateTime, Millisecond, Second, Day, month, value, dayofyear
+using Dates: DateTime, Millisecond, Second, Day, Month, month, value, dayofyear
 
 """
     read_inputData(folder::String, prefix::String)
@@ -14,11 +14,16 @@ Load different input files for LWFBrook90:
 - soil_horizons.csv
 - soil_discretization.csv
 
-These files were created with an R script `generate_LWFBrook90Julia_Input.R` that
+These files were created with an R script `generate_LWFBrook90jl_Input.R` that
 takes the same arguements as the R function `LWFBrook90R::run_LWFB90()` and generates
 the corresponding input files for LWFBrook90.jl.
 """
-function read_inputData(folder::String, prefix::String; suffix::String = "")
+# folder = input_path
+# prefix = input_prefix
+# suffix = ""
+function read_inputData(folder::String, prefix::String;
+    suffix::String = "",
+    simulate_isotopes::Bool = false)
     # https://towardsdatascience.com/read-csv-to-data-frame-in-julia-programming-lang-77f3d0081c14
     ## A) Define paths of all input files
     path_meteoveg           = joinpath(folder, prefix*"_meteoveg"*suffix*".csv")
@@ -28,16 +33,37 @@ function read_inputData(folder::String, prefix::String; suffix::String = "")
     path_initial_conditions = joinpath(folder, prefix*"_initial_conditions"*suffix*".csv")
     path_soil_horizons      = joinpath(folder, prefix*"_soil_horizons"*suffix*".csv")
 
+    if (simulate_isotopes)
+        path_meteoiso = joinpath(folder, prefix*"_meteoiso"*suffix*".csv")
+    end
+    if (simulate_isotopes && prefix == "2021-09-23-DAV")
+        # TODO(bernhard): hardcoded overriding of Davos example data
+        path_meteoiso = joinpath("2021-09-23_onlyDavos2020/2021-09-23-DAV-isoInput", "2021-10-04-DAV_meteoIso"*suffix*".csv")
+            path_initial_conditions = joinpath("2021-09-23_onlyDavos2020/2021-09-23-DAV-isoInput",
+                                                "2021-09-23-DAV_initial_conditions_tracers.csv")
+            path_param              = joinpath("2021-09-23_onlyDavos2020/2021-09-23-DAV-isoInput",
+                                                "2021-09-23-DAV_paramIso.csv")
+    end
+
     ## B) Load input data (time- and/or space-varying parameters)
     input_meteoveg, input_meteoveg_reference_date = read_path_meteoveg(path_meteoveg)
+
+    if (simulate_isotopes)
+        input_meteoiso, input_meteoveg = read_path_meteoiso(path_meteoiso,
+            input_meteoveg,
+            input_meteoveg_reference_date)
+    else
+        input_meteoiso = nothing
+    end
 
     ## C) Load other parameters
     # Load model input parameters
     #' @param param A numeric vector of model input parameters. Order:
-    input_param = read_path_param(path_param)
+    input_param = read_path_param(path_param; simulate_isotopes = simulate_isotopes)
 
     # Load initial conditions of scalar state variables
-    input_initial_conditions = read_path_initial_conditions(path_initial_conditions)
+    input_initial_conditions = read_path_initial_conditions(path_initial_conditions;
+                                    simulate_isotopes = simulate_isotopes)
 
     # Load soil data
     input_soil_horizons, simOption_FLAG_MualVanGen = read_path_soil_horizons(path_soil_horizons)
@@ -53,10 +79,22 @@ function read_inputData(folder::String, prefix::String; suffix::String = "")
     #                 PRECDAT would allow to have smaller resolution (would require changes).
     # unused: input_precdat = read(path_precdat, DataFrame;
     # unused:           missingstring = "-999",
-    # unused:           datarow=2, header=["year","month","day","interval_number","prec"], delim=',',
+    # unused:           skipto=2, header=["year","month","day","interval_number","prec"], delim=',',
     # unused:           ignorerepeated=true)
 
+    # Assert that no missing
+    # Impose type of Float64 instead of Float64?
+    disallowmissing!(input_meteoveg)
+    if (simulate_isotopes)
+        disallowmissing!(input_meteoiso, [:days, :delta18O_permil, :delta2H_permil])
+    end
+    disallowmissing!(input_param)
+    disallowmissing!(input_storm_durations, [:month, :storm_durations_h])
+    disallowmissing!(input_initial_conditions)
+    disallowmissing!(input_soil_horizons)
+
     return (input_meteoveg,
+        input_meteoiso,
         input_meteoveg_reference_date,
         input_param,
         input_storm_durations,
@@ -115,7 +153,7 @@ end
 #     # Subset
 #     where(:dates .>= start, :dates .<= stop) |>
 #     # Compute time relative to reference date
-#     transform(dates = DateTime2RelativeDaysFloat.(:dates, reference)) |>
+#     transform(:dates = DateTime2RelativeDaysFloat.(:dates, reference)) |>
 #     # Rename colum
 #     rename(Dict(:dates => :days))
 # end
@@ -137,8 +175,10 @@ function read_path_meteoveg(path_meteoveg)
             :age_yrs         => Float64)
 
     input_meteoveg = @linq DataFrame(File(path_meteoveg;
-        datarow=3, delim=',', ignorerepeated=true, types=parsing_types))  |>
-        transform(dates = DateTime.(:dates))
+        skipto=3, delim=',', ignorerepeated=false,
+        # Be strict about loading NA's -> error if NA present
+        types=parsing_types, missingstring = nothing, strict=true))  |>
+        transform(:dates = DateTime.(:dates))
 
     expected_names = [String(k) for k in keys(parsing_types)]
     assert_colnames_as_expected(input_meteoveg, path_meteoveg, expected_names)
@@ -176,33 +216,186 @@ function read_path_meteoveg(path_meteoveg)
     reference_date = starting_date
 
     input_meteoveg = @linq input_meteoveg |>
-        transform(dates = DateTime2RelativeDaysFloat.(:dates, reference_date)) |>
+        transform(:dates = DateTime2RelativeDaysFloat.(:dates, reference_date)) |>
         rename(Dict(:dates => :days))
 
     return input_meteoveg, reference_date
 end
 
+function read_path_meteoiso(path_meteoiso,
+        input_meteoveg,
+        input_meteoveg_reference_date)
+
+    #####
+    # If Data contains as first line: "^#Data produced with Piso.AI"
+    # then apply special treatment of input file, assuming it comes directly as a download from:
+    # https://isotope.bot.unibas.ch/PisoAI/ or https://isotope.bot.unibas.ch/PisoAI-eur1900-v1-2020/
+
+    # Special treatment of Piso.AI data:
+    # Piso.AI (or GNIP) attributes data to the 15th of each month but is
+    # representative for the monthly data.
+    # In that case: shift dates to the end of the month (and repeat the very first
+    # measurement) in order to interpolate piecewise constant backward in time.
+
+    # Otherwise assume dates reported are the end dates of the collection period.
+    # In that case, extend the first measurement period to the beginning of the simulation
+    # and interpolate constant backward in time.
+
+    is_from_PisoAI = occursin(r"^#Data produced with Piso.AI",readlines(path_meteoiso)[1])
+
+    if is_from_PisoAI
+        parsing_types =
+                Dict(#:Column1        => Int64, # is directly removed afterwards
+                    :Site            => Char,
+                    :Date            => DateTime,
+                    :Latitude        => Float64,
+                    :Longitude       => Float64,
+                    :Elevation       => Float64,
+                    Symbol("d18O.Piso.AI")     => Float64,
+                    Symbol("d2H.Piso.AI")      => Float64)
+
+        input_meteoiso = @linq DataFrame(File(path_meteoiso; header = 4,
+                    skipto=5, delim=',', ignorerepeated=true,
+                    # Don't be strict, allow for NA as missing. Treat this later with disallowmissing!.
+                    types=parsing_types, missingstring = ["","NA"]))
+        select!(input_meteoiso, Not([:Column1]))
+    else
+        # else the dataframe should be of the following structure:
+            # dates,delta18O_permil,delta2H_permil
+            # YYYY-MM-DD,permil,permil
+            # 2021-01-01,NA,NA
+            # 2021-01-15,-10.1,-70.1
+            # 2021-01-29,-10.1,-70.1
+            # ...
+        # where the first line
+        parsing_types =
+                Dict(:dates          => DateTime,
+                    :delta18O_permil => Float64,
+                    :delta2H_permil  => Float64)
+
+        input_meteoiso = DataFrame(File(path_meteoiso;
+                skipto=3, delim=',', ignorerepeated=true,
+                # Don't be strict, allow for NA as missing. Treat this later with disallowmissing!.
+                types=parsing_types, missingstring = ["","NA"]))
+    end
+
+    # Assert column names as expected
+    expected_names = [String(k) for k in keys(parsing_types)]
+    assert_colnames_as_expected(input_meteoiso, path_meteoiso, expected_names)
+
+    if is_from_PisoAI
+        # -> a) only keep needed columns and rename them
+        rename!(input_meteoiso,
+                :Date                  => :dates,
+                Symbol("d18O.Piso.AI") => :delta18O_permil,
+                Symbol("d2H.Piso.AI")  => :delta2H_permil)
+        select!(input_meteoiso, [:dates, :delta18O_permil, :delta2H_permil])
+        # select!(input_meteoiso, Not([:Site, :Latitude, :Longitude, :Elevation]))
+
+        # -> b) Shift all measured dates to end of month to be able to constant interpolate backwards.
+        #       Further repeat the very line concerning the first month in the timeseries to be
+        #       able to interpolate between the first and last day of the first month.
+        input_meteoiso_first = deepcopy(input_meteoiso[1,:])
+        input_meteoiso_first.dates = floor(input_meteoiso_first.dates, Month)
+        input_meteoiso = @linq input_meteoiso |>
+                transform(:dates = ceil.(:dates, Month))
+        push!(input_meteoiso, input_meteoiso_first) # repeat the first
+        sort!(input_meteoiso, [:dates])
+
+        # Modify last to remain within year (31.12. instead of 01.01)
+        input_meteoiso[end,:].dates = input_meteoiso[end,:].dates - Day(1)
+    else
+        # Assert units as expected
+        assert_unitsHeader_as_expected(path_meteoiso,
+            DataFrame(dates="YYYY-MM-DD",delta18O_permil="permil",delta2H_permil="permil"))
+
+        # Repeat the value of the second row to the first row
+        # (Note, that the first row represents the start date of the period reported in the
+        # second row)
+        input_meteoiso[1,:delta18O_permil] = input_meteoiso[2,:delta18O_permil]
+        input_meteoiso[1,:delta2H_permil]  = input_meteoiso[2,:delta2H_permil]
+    end
+
+    # Impose type of Float64 instead of Float64?
+    disallowmissing!(input_meteoiso, [:dates, :delta18O_permil, :delta2H_permil])
+    #####
+
+    # Transform times from DateTimes to simulation time (Float of Days)
+    input_meteoiso = @linq input_meteoiso |>
+        transform(:dates = DateTime2RelativeDaysFloat.(:dates, input_meteoveg_reference_date)) |>
+        rename(Dict(:dates => :days))
+
+    # Check period
+    # Check if overlap with meteoveg exists
+    startday_iso = minimum(input_meteoiso[:,"days"])
+    startday_veg = minimum(input_meteoveg[:,"days"])
+    stopday_iso  = maximum(input_meteoiso[:,"days"])
+    stopday_veg  = maximum(input_meteoveg[:,"days"])
+    startday = max(startday_iso, startday_veg)
+    endday   = min(stopday_iso, stopday_veg)
+
+    if ((stopday_iso > stopday_veg) | (startday_iso < startday_veg))
+        @warn """
+        Isotopic signature of precipitation data covers the period from
+        $(input_meteoveg_reference_date + Day(startday_iso)) to $(input_meteoveg_reference_date + Day(stopday_iso))
+        it will be cropped to the period determined by the other meteorologic inputs going from
+        $(input_meteoveg_reference_date + Day(startday_veg)) to $(input_meteoveg_reference_date + Day(stopday_veg)).
+        """
+        # input_meteoiso = @linq input_meteoiso |>
+        #    where(:days .>= startday, :days .<= endday) # Acutally not needed to crop
+        input_meteoveg_mod = input_meteoveg #Not needed to crop
+    elseif ((stopday_iso < stopday_veg) | (startday_iso > startday_veg))
+        @warn """
+        Isotopic signature of precipitation data covers the period from
+            $(input_meteoveg_reference_date + Day(startday_iso)) to $(input_meteoveg_reference_date + Day(stopday_iso))
+        It does therefore not cover the entire period of other meteorologic inputs going from
+            $(input_meteoveg_reference_date + Day(startday_veg)) to $(input_meteoveg_reference_date + Day(stopday_veg)).
+        Simulation period will be limited to the period when isotopic signatures are available.
+        Note that the initial conditions will be applied to the beginning of the new simulation period.
+        """
+        input_meteoveg_mod = @linq input_meteoveg |>
+            where(:days .>= startday, :days .<= endday)
+    else
+        input_meteoveg_mod = input_meteoveg #Not needed to crop
+    end
+
+    return input_meteoiso, input_meteoveg_mod
+end
+
 # path_initial_conditions = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_initial_conditions.csv"
-function read_path_initial_conditions(path_initial_conditions)
+function read_path_initial_conditions(path_initial_conditions; simulate_isotopes::Bool = false)
     parsing_types =
-        Dict(# Initial conditions (except for depth-dependent u_aux_PSIM) -------
+        Dict(# Initial conditions (of vector states) -------
             "u_GWAT_init_mm" => Float64,       "u_INTS_init_mm" => Float64,
             "u_INTR_init_mm" => Float64,       "u_SNOW_init_mm" => Float64,
             "u_CC_init_MJ_per_m2"   => Float64,       "u_SNOWLQ_init_mm" => Float64)
     input_initial_conditions = DataFrame(File(path_initial_conditions;
         transpose=true, drop=[1], comment = "###",
-        types=parsing_types))
+        # Don't be strict, allow for NA as missing. Treat this later with disallowmissing!.
+        types=parsing_types, missingstring = "NA"))
 
     expected_names = [String(k) for k in keys(parsing_types)]
     assert_colnames_as_expected(input_initial_conditions, path_initial_conditions, expected_names)
+
+    if simulate_isotopes
+        # Impose type of Float64 instead of Float64?, by defining unused variables as -9999.99
+        input_initial_conditions[2, "u_CC_init_MJ_per_m2"] = -9999.99
+        input_initial_conditions[2, "u_SNOWLQ_init_mm"]    = -9999.99
+        input_initial_conditions[3, "u_CC_init_MJ_per_m2"] = -9999.99
+        input_initial_conditions[3, "u_SNOWLQ_init_mm"]    = -9999.99
+    end
+    disallowmissing!(input_initial_conditions)
 
     return input_initial_conditions
 end
 
 # path_param = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_param.csv"
-function read_path_param(path_param)
+function read_path_param(path_param; simulate_isotopes::Bool = false)
     parsing_types =
-        Dict(# Meteorologic site parameters -------
+        Dict(### Isotope transport parameters  -------,NA
+            # "TODO" => Float64, "TODO2" => Float64,
+            # TODO(bernhard): this needs to be extended with the currently hardcoded isotope transport parameters
+            # Meteorologic site parameters -------
             "LAT_DEG" => Float64,
             "ESLOPE_DEG" => Float64,       "ASPECT_DEG" => Float64,
             "ALB" => Float64,              "ALBSN" => Float64,
@@ -241,10 +434,15 @@ function read_path_param(path_param)
             "DRAIN" => Float64,            "GSC" => Float64,              "GSP" => Float64,
             # Numerical solver parameters -------
             "DTIMAX" => Float64,           "DSWMAX" => Float64,           "DPSIMAX" => Float64)
+    # if (!simulate_isotopes)
+    #     delete!(parsing_types, "TODO")
+    #     delete!(parsing_types, "TODO2")
+    # end
 
     input_param = DataFrame(File(path_param;
         transpose=true, drop=[1], comment = "###",
-        types = parsing_types))
+        # Be strict about loading NA's -> error if NA present
+        types = parsing_types, missingstring = nothing, strict=true))
 
     expected_names = [String(k) for k in keys(parsing_types)]
     assert_colnames_as_expected(input_param, path_param, expected_names)
@@ -263,8 +461,9 @@ function read_path_storm_durations(path_storm_durations)
     parsing_types =
         Dict("month" => String, "average_storm_duration_h" => Float64)
     input_storm_durations = DataFrame(File(path_storm_durations;
-        strict=true, comment = "###",
-        types=parsing_types))
+        comment = "###",
+        # Be strict about loading NA's -> error if NA present
+        types = parsing_types, missingstring = nothing, strict = true))
 
     expected_names = [String(k) for k in keys(parsing_types)]
     assert_colnames_as_expected(input_storm_durations, path_storm_durations, expected_names)
@@ -319,9 +518,12 @@ function read_path_soil_horizons(path_soil_horizons)
 
         # Load file
         input_soil_horizons = DataFrame(File(path_soil_horizons;
-            datarow=3, header=MualVanGen_expected_column_names,
+            skipto=3, header=MualVanGen_expected_column_names,
+            delim=',',
+            # Be strict about loading NA's -> error if NA present
             types=[Int64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64],
-            delim=','))
+            missingstring = nothing, strict = true))
+
     else # FLAG_MualVanGen = 0 (Clapp-Hornberger)
         # Assert units:
         assert_unitsHeader_as_expected(path_soil_horizons,
@@ -331,9 +533,11 @@ function read_path_soil_horizons(path_soil_horizons)
 
         # Load file
         input_soil_horizons = DataFrame(File(path_soil_horizons;
-            datarow=3, header=ClappHornberger_expected_column_names,
+            skipto=3, header=ClappHornberger_expected_column_names,
+            delim=',', # ignorerepeated=true
+            # Be strict about loading NA's -> error if NA present
             types=[Int64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64],
-            delim=','))# ignorerepeated=true
+            missingstring = nothing, strict = true))
     end
 
     # Check that defined horizons do not overlap
@@ -357,11 +561,11 @@ function read_path_soil_discretization(path_soil_discretization)
              "Lower_m"      => Float64,
              "Rootden_"      => Float64,
              "uAux_PSIM_init_kPa"   => Float64,
-             "u_delta18O_init_mUr" => Float64,
-             "u_delta2H_init_mUr"  => Float64)
+             "u_delta18O_init_permil" => Float64,
+             "u_delta2H_init_permil"  => Float64)
 
     input_soil_discretization = DataFrame(File(path_soil_discretization;
-        datarow=3, missingstring = "NA", types=parsing_types))
+        skipto=3, missingstring = "NA", types=parsing_types))
 
     # Assert colnames
     expected_names = [String(k) for k in keys(parsing_types)]
@@ -381,7 +585,7 @@ function read_path_soil_discretization(path_soil_discretization)
     assert_unitsHeader_as_expected(path_soil_discretization,
         DataFrame(Upper_m = "m", Lower_m = "m", Rootden_ = "-",
             uAux_PSIM_init_kPa = "kPa",
-            u_delta18O_init_mUr = "mUr", u_delta2H_init_mUr = "mUr"))
+            u_delta18O_init_permil = "permil", u_delta2H_init_permil = "permil"))
 
     return input_soil_discretization
 end
@@ -403,14 +607,14 @@ function assert_colnames_as_expected(input_df, input_path, expected_names)
 end
 
 function assert_unitsHeader_as_expected(path, expected_units)
-    @assert DataFrame(File(path;datarow=2,limit=1)) == expected_units """
+    @assert DataFrame(File(path;skipto=2,limit=1)) == expected_units """
     Unexpected units in input file $path. Expected units:
     $expected_units"""
 end
 
 function assert_unitsColumn_as_expected(path, expected_units)
     # TODO(bernhard): define units in and implement this check.
-    # @assert DataFrame(File(path;datarow=2,limit=1)) == expected_units """
+    # @assert DataFrame(File(path;skipto=2,limit=1)) == expected_units """
     # Unexpected units in input file $path. Expected units:
     # $expected_units"""
 end

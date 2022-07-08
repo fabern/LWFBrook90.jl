@@ -10,6 +10,7 @@ input_path = "examples/" * input_prefix * "-input/"
 
 ####################
 (input_meteoveg,
+    _input_meteoiso, # TODO possibly unused
     input_meteoveg_reference_date,
     input_param,
     input_storm_durations,
@@ -54,8 +55,9 @@ compute_intermediate_quantities = true # Flag whether ODE containes additional q
 
 ####################
 # Define parameters for differential equation
-ψM_initial, p = define_LWFB90_p(
+(ψM_initial, _δ18O_initial, _δ2H_initial), p = define_LWFB90_p(
     input_meteoveg,
+    _input_meteoiso, # TODO: possibly unused
     input_meteoveg_reference_date,
     input_param,
     input_storm_durations,
@@ -65,16 +67,18 @@ compute_intermediate_quantities = true # Flag whether ODE containes additional q
     Reset = Reset,
     # soil_output_depths = collect(-0.05:-0.05:-1.1),
     # soil_output_depths = [-0.1, -0.5, -1.0, -1.5, -1.9],
-    compute_intermediate_quantities = compute_intermediate_quantities)
+    compute_intermediate_quantities = compute_intermediate_quantities,
+    simulate_isotopes = false)
 ####################
 
 ####################
 # Define initial states of differential equation
 # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
 # Create u0 for DiffEq.jl
-u0 = define_LWFB90_u0(p, input_initial_conditions,
-    ψM_initial,
-    compute_intermediate_quantities)
+u0, p = define_LWFB90_u0(p, input_initial_conditions,
+    ψM_initial, _δ18O_initial, _δ2H_initial, # TODO: possibly unused
+    compute_intermediate_quantities;
+    simulate_isotopes = false)
 ####################
 
 ####################
@@ -92,27 +96,18 @@ tspan = (minimum(input_meteoveg[:, "days"]),
          maximum(input_meteoveg[:, "days"])) # simulate all available days
 # tspan = (LWFBrook90.DateTime2RelativeDaysFloat(DateTime(1980,1,1), reference_date),
 #          LWFBrook90.DateTime2RelativeDaysFloat(DateTime(1985,1,1), reference_date)) # simulates selected period
-
-# Define ODE:
-ode_LWFBrook90 = define_LWFB90_ODE(u0, tspan, p)
 ####################
 
 ####################
 ## Solve ODE:
-sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
-    progress = true,
-    saveat = tspan[1]:tspan[2], dt = 1e-3, adaptive = true); # dt is initial dt, but adaptive
+sol_LWFBrook90 = solve_LWFB90(u0, tspan, p);
 ####################
 
 ####################
 ## Benchmarking
-# @time sol_LWFBrook90 = solve(ode_LWFBrook90, progress = true;
-#     saveat = tspan[1]:tspan[2], dt=1e-1, adaptive = false);
-# @time sol_LWFBrook90 = solve(ode_LWFBrook90, progress = true, Euler(); # Note: Euler sometimes hangs
-#     saveat = tspan[1]:tspan[2], dt=1e-1, adaptive = false);
+# @time sol_LWFBrook90 = solve_LWFB90(u0, tspan, p);
 using BenchmarkTools # for benchmarking
-# sol_LWFBrook90 = @btime solve(ode_LWFBrook90; dt=1.0e-1, adaptive = false); # dt will be overwritten, adaptive deacives DiffEq.jl adaptivity
-# sol_LWFBrook90 = @btime solve(ode_LWFBrook90; saveat = tspan[1]:tspan[2], dt=1.0e-1, adaptive = false); # dt will be overwritten, adaptive deacives DiffEq.jl adaptivity
+sol_LWFBrook90 = @btime sol_LWFBrook90 = solve_LWFB90(u0, tspan, p);
 
 ## Performance optimizing
 @time LWFBrook90.f_LWFBrook90R(copy(u0), u0, p, 1.0) # 0.000039 seconds (59 allocations: 5.047 KiB)
@@ -122,10 +117,10 @@ using BenchmarkTools # for benchmarking
 # integrator = init(ode_LWFBrook90, Tsit5();
 #     progress = true,
 #     saveat = tspan[1]:tspan[2], dt = 1e-3, adaptive = true)
-# @time LWFBrook90.LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator) # 0.000048 seconds (119 allocations: 9.391 KiB)
-# @enter LWFBrook90.LWFBrook90R_update_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
+# @time LWFBrook90.LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator) # 0.000048 seconds (119 allocations: 9.391 KiB)
+# @enter LWFBrook90.LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     # @time LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil) # 0.000010 seconds (10 allocations: 1.406 KiB)
-# @time LWFBrook90.KPT.derive_auxiliary_SOILVAR(integrator.u[integrator.p[1][4][4]], integrator.p[1][1]) # 0.000013 seconds (11 allocations: 1.547 KiB)
+# @time LWFBrook90.KPT.derive_auxiliary_SOILVAR(integrator.u[integrator.p[1][4].row_idx_SWATI], integrator.p[1][1]) # 0.000013 seconds (11 allocations: 1.547 KiB)
 ####################
 
 
@@ -170,8 +165,8 @@ heatmap(time_to_plot, y_cell_centers, u_aux_PSIM', yflip = true,
         colorbar_title = "ψ [kPa]")
 
 ##### Plot 3
-# aux_indices = sol_LWFBrook90.prob.p[1][4][5]
-# aux_names = sol_LWFBrook90.prob.p[1][4][7]
+# aux_indices = sol_LWFBrook90.prob.p[1][4].row_idx_accum
+# aux_names = sol_LWFBrook90.prob.p[1][4].names_accum
 # plot(sol_LWFBrook90; vars = aux_indices, label = aux_names)
 # plot(sol_LWFBrook90; vars = aux_indices[17:25], label = aux_names[:, 17:25])
 

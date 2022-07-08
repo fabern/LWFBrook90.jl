@@ -238,7 +238,13 @@ end
     u_SNOWLQ, p_DTP, p_fu_TA, p_MAXLQF, p_GRDMLT,
     p_CVICE, p_LF, p_CVLQ)
 
-Update status of snowpack.
+Update status of snowpack. Generally it computes in terms of mass balance:
+    u_SNOW_new = u_SNOW + p_DTP * (p_fu_STHR + aux_du_RSNO - aux_du_SMLT - aux_du_SNVP)
+
+However, there are numerous checks involved regarding availability of snow and energy that modify
+the above mentioned mass fluxes. The subroutine returns the magnitude of these fluxes in [mm/day]
+enabling the separate use of them for the isotope mass balance.
+
 
 # Ecoshift
 "
@@ -314,6 +320,7 @@ function SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN, u_CC, u_SNOW,
     # Update u_SNOW, u_CC
     u_SNOW = u_SNOW + du_SNOW_step1 * p_DTP
     u_CC   = u_CC   + du_CC_step1   * p_DTP
+    u_SNOWLQ = u_SNOWLQ # added by FB
 
     ####
     # Operator splitting: step 2: update u_SNOWLQ and u_CC using cold content:
@@ -359,8 +366,6 @@ function SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN, u_CC, u_SNOW,
         u_SNOWLQ    = 0.
         u_CC        = 0.
     end
-    # variant2: deleted
-
 
     ####
     # Operator splitting: step 4: update u_SNOWLQ, and u_CC by considering
@@ -484,7 +489,7 @@ function SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN, u_CC, u_SNOW,
             end
         end
     end
-    return (u_CC, u_SNOW, u_SNOWLQ, aux_du_RSNO, aux_du_SNVP, aux_du_SMLT)
+    return (u_SNOW, u_CC, u_SNOWLQ, aux_du_RSNO, aux_du_SNVP, aux_du_SMLT)
 end
 
 

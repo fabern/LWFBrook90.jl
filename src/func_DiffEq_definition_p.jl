@@ -19,6 +19,7 @@ Generate vector p needed for ODE() problem in DiffEq.jl package.
 """
 function define_LWFB90_p(
     input_meteoveg,
+    input_meteoiso,
     input_meteoveg_reference_date,
     input_param,
     input_storm_durations,
@@ -27,6 +28,7 @@ function define_LWFB90_p(
     simOption_FLAG_MualVanGen;
     Reset = false,
     compute_intermediate_quantities = false,
+    simulate_isotopes::Bool = false,
     soil_output_depths = zeros(Float64, 0), # = [],
     constant_dt_solver = 1)
 
@@ -47,6 +49,7 @@ function define_LWFB90_p(
         LWFBrook90.interpolate_meteoveg(
             input_meteoveg,
             input_meteoveg_reference_date,
+            input_meteoiso,
             soil_discr["NLAYER"],
             input_param[1,"INITRDEP"],
             input_param[1,"INITRLEN"],
@@ -370,52 +373,38 @@ function define_LWFB90_p(
         p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS,
         p_DURATN, p_MAXLQF, p_GRDMLT)
 
-    # p_cst_4 for both RHS, CallBack as well as u0 in DiffEq.jl
-    # derive indices for state vector `u`
-    # 6 is the number of states except SWAT: i.e. GWAT, INTS, INTR, SNOW, CC, SNOWLQ
-    idx_u_scalar_amounts       = 1:6
-    idx_u_vector_amounts       = 7:(6+NLAYER)
-    if compute_intermediate_quantities
-        # 25 is the number of currently programmed intermediate quantities
-        # if simulate_isotopes
-        #     idx_u_vector_accumulators = 6+4+4+3*NLAYER .+ (1:25)
-        # else
-        idx_u_vector_accumulators = 6 + 0 + 0 + 1 * NLAYER .+ (1:25)
-        names_u_vector_accumulators = [
-            "cum_d_prec"  "cum_d_rfal"  "cum_d_sfal"  "cum_d_rint" "cum_d_sint"  "cum_d_rsno"  "cum_d_rnet"  "cum_d_smlt"  "cum_d_evap"  "cum_d_tran"  "cum_d_irvp"  "cum_d_isvp"  "cum_d_slvp"  "cum_d_snvp"  "cum_d_pint"  "cum_d_ptran"  "cum_d_pslvp" "flow"  "seep"  "srfl"  "slfl"  "byfl"  "dsfl"  "gwfl"  "vrfln"
-            #"cum_d_rthr", "cum_d_sthr"
-        ]
-        # end
-    else
-        idx_u_vector_accumulators = []
-    end
 
-    p_cst_4 = (NLAYER, FLAG_MualVanGen, compute_intermediate_quantities,
-        idx_u_vector_amounts,
-        idx_u_vector_accumulators,
-        idx_u_scalar_amounts,
-        names_u_vector_accumulators)
-
+    p_cst_4 = (
+        FLAG_MualVanGen,
+        compute_intermediate_quantities,
+        simulate_isotopes,
+        row_idx_scalars = [],
+        row_idx_SWATI   = [],
+        row_idx_RWU     = [],
+        row_idx_accum   = [],
+        names_accum     = [],
+        col_idx_d18O    = [],
+        col_idx_d2H     = []) # Placeholders will be overwritten when defining u0
     p_cst = (p_cst_1, p_cst_2, p_cst_3, p_cst_4)
 
     # 2b) Time varying parameters (e.g. meteorological forcings)
-    p_DOY_REF    = (t) -> LWFBrook90.p_DOY(t,    interpolated_meteoveg["REFERENCE_DATE"])
-    p_MONTHN_REF = (t) -> LWFBrook90.p_MONTHN(t, interpolated_meteoveg["REFERENCE_DATE"])
-    p_fT = (p_DOY_REF,
-            p_MONTHN_REF,
-            interpolated_meteoveg["p_GLOBRAD"],
-            interpolated_meteoveg["p_TMAX"],
-            interpolated_meteoveg["p_TMIN"],
-            interpolated_meteoveg["p_VAPPRES"],
-            interpolated_meteoveg["p_WIND"],
-            interpolated_meteoveg["p_PREC"],
-            interpolated_meteoveg["p_DENSEF"], # canopy density multiplier between 0.05 and 1, dimensionless
-            interpolated_meteoveg["p_HEIGHT"],
-            interpolated_meteoveg["p_LAI"],
-            interpolated_meteoveg["p_SAI"],
-            interpolated_meteoveg["p_AGE"],
-            interpolated_meteoveg["p_RELDEN"],
-            interpolated_meteoveg["REFERENCE_DATE"])
+    p_fT = (p_DOY          = (t) -> LWFBrook90.p_DOY(t,    interpolated_meteoveg.REFERENCE_DATE),
+            p_MONTHN       = (t) -> LWFBrook90.p_MONTHN(t, interpolated_meteoveg.REFERENCE_DATE),
+            p_GLOBRAD      = interpolated_meteoveg.p_GLOBRAD,
+            p_TMAX         = interpolated_meteoveg.p_TMAX,
+            p_TMIN         = interpolated_meteoveg.p_TMIN,
+            p_VAPPRES      = interpolated_meteoveg.p_VAPPRES,
+            p_WIND         = interpolated_meteoveg.p_WIND,
+            p_PREC         = interpolated_meteoveg.p_PREC,
+            p_DENSEF       = interpolated_meteoveg.p_DENSEF, # canopy density multiplier between 0.05 and 1, dimensionless
+            p_HEIGHT       = interpolated_meteoveg.p_HEIGHT,
+            p_LAI          = interpolated_meteoveg.p_LAI,
+            p_SAI          = interpolated_meteoveg.p_SAI,
+            p_AGE          = interpolated_meteoveg.p_AGE,
+            p_RELDEN       = interpolated_meteoveg.p_RELDEN,
+            p_d18OPREC     = interpolated_meteoveg.p_d18OPREC,
+            p_d2HPREC      = interpolated_meteoveg.p_d2HPREC,
+            REFERENCE_DATE = interpolated_meteoveg.REFERENCE_DATE)
     # Documentation from ecoshift:
     # DENSEF (Fixed parameter) - canopy density multiplier between 0.05 and 1, dimensionless. DENSEF is normally 1; it should be reduced below this ONLY to simulate thinning of the existing canopy by cutting. It multiplies MAXLAI, CS, MXRTLN, and MXKPL and thus proportionally reduces LAI, SAI, and RTLEN, and increases RPLANT. However it does NOT reduce canopy HEIGHT and thus will give erroneous aerodynamic resistances if it is less than about 0.05. It should NOT be set to 0 to simulate a clearcut. [see PET-CANOPY]
 
@@ -425,11 +414,45 @@ function define_LWFB90_p(
     #     can temporarily be saved in the parameter vector to avoid computing them twice
 
     # Initialize placeholder for parameters that depend on solution and are computed
-    p_fu = ([NaN, NaN, NaN],
-            fill(NaN, NLAYER)) # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto
+    p_fu = ([NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN],
+            fill(NaN, NLAYER),     # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto
+            fill(NaN, (NLAYER,5)), # for du_NTFLI, aux_du_VRFLI, aux_du_DSFLI, aux_du_INFLI, u_aux_WETNES)
+            # TODO(bernhard): should we combine these caches to a matrix of (NLAYER,6)?
+            fill(NaN, 2))          # for du_GWFL du_SEEP
+    #TODO(bernhard): what are the additional 3x NaNs needed for in isotope code???
+    #Earlier it was simply: [NaN, NaN, NaN, NaN, NaN, NaN], fill(NaN, NLAYER)
+
+    # Initialize further caches to hold computed quantities without need to allocate memory
+    p_cache = ((
+        # chaches for flow equation
+        zeros(NLAYER), # u_aux_WETNES
+        zeros(NLAYER), # u_aux_PSIM
+        zeros(NLAYER), # u_aux_PSITI
+        zeros(NLAYER), # u_aux_θ
+        zeros(NLAYER), # u_aux_θ_tminus1
+        zeros(NLAYER), # p_fu_KK
+        zeros(NLAYER), # aux_du_DSFLI
+        zeros(NLAYER), # aux_du_VRFLI
+        zeros(NLAYER), # aux_du_VRFLI_1st_approx
+        zeros(NLAYER), # aux_du_INFLI
+        zeros(NLAYER), # aux_du_BYFLI
+        zeros(NLAYER), # du_NTFLI
+        zeros(NLAYER)), # p_fu_BYFRAC
+        # chaches for advection dispersion equation
+            # for quantities (all NLAYER long):
+            # 7 vectors: θᵏ⁺¹, θᵏ, C_¹⁸Oᵏ⁺¹, C_¹⁸Oᵏ, C_²Hᵏ⁺¹, C_²Hᵏ, q,
+            # 9 vectors: Tsoil_K, τw, Λ, D⁰_¹⁸O, D⁰_²H, D_¹⁸O_ᵏ⁺¹, D_²H_ᵏ⁺¹, C_¹⁸O_SLVP, C_²H_SLVP,
+            # 8 vectors: diff¹⁸O_upp, diff²H_upp, qCᵢ¹⁸O_upp, qCᵢ²H_upp,
+            #            diff¹⁸O_low, diff²H_low, qCᵢ¹⁸O_low, qCᵢ²H_low,
+            # 4 vectors: du_Cᵢ¹⁸_SWATI, du_Cᵢ²H_SWATI, du_δ18O_SWATI, du_δ2H_SWATI
+        Tuple(zeros(NLAYER) for i=1:28)#,
+            # 4 vectors: diff¹⁸O_interfaces, diff²H_interfaces, qCᵢ¹⁸O_interfaces, qCᵢ²H_interfaces,
+        # Tuple(zeros(NLAYER+1) for i=1:4)
+        )
 
     # 3) Return different types of parameters as a single object
-    return (soil_discr["PSIM_init"], (p_cst, p_fT, p_fu))
+    return ((soil_discr["PSIM_init"], soil_discr["d18O_init"],soil_discr["d2H_init"]),
+            (p_cst, p_fT, p_fu, p_cache))
 end
 
 
@@ -438,13 +461,17 @@ end
 
 
 """
-    interpolate_meteoveg(input_meteoveg::DataFrame, input_meteoveg_reference_date::DateTime)
+    interpolate_meteoveg(
+        input_meteoveg::DataFrame,
+        input_meteoveg_reference_date::DateTime,
+        input_meteoiso::DataFrame, )
 
-Take climate and vegetation parameters in `input_meteoveg` and generates continuous parameters.
+Take climate and vegetation parameters in `input_meteoveg` and `input_meteoiso` and generates continuous parameters.
 """
 function interpolate_meteoveg(
     input_meteoveg::DataFrame,
     input_meteoveg_reference_date::DateTime,
+    input_meteoiso::Union{DataFrame,Nothing},
     # root density parameters
     NLAYER,
     p_INITRDEP,
@@ -478,6 +505,21 @@ function interpolate_meteoveg(
     p_PREC    = extrapolate(scale(interpolate(input_meteoveg.PRECIN,  (BSpline(Constant{Previous}()))), time_range) ,0)
     # NOTE: PRECIN is already in mm/day from the input data set. No transformation is needed for p_PREC.
 
+    if (isnothing(input_meteoiso))
+        function p_d18OPREC(t)
+            return nothing
+        end
+        function p_d2HPREC(t)
+            return nothing
+        end
+    else
+        time_range_iso = range(minimum(input_meteoiso.days), maximum(input_meteoiso.days), length=length(input_meteoiso.days))
+        p_d18OPREC= extrapolate(scale(interpolate(input_meteoiso.delta18O_permil,    (BSpline(Constant{Previous}()))), time_range_iso) ,0)
+        p_d2HPREC = extrapolate(scale(interpolate(input_meteoiso.delta2H_permil,     (BSpline(Constant{Previous}()))), time_range_iso) ,0)
+        # using Plots; plot(1:300, p_d18OPREC.(1:300))
+        # using Plots; plot(1:300, p_d2HPREC.(1:300))
+    end
+
     # 2a Compute time dependent root density parameters
     # Which is a vector quantity that is dependent on time:
     p_RELDEN_2Darray = fill(NaN, nrow(input_meteoveg), NLAYER)
@@ -488,19 +530,21 @@ function interpolate_meteoveg(
                             time_range, 1:size(p_RELDEN_2Darray,2)),
                     0) # extrapolate with fillvalue = 0
 
-    return Dict([("p_GLOBRAD",p_GLOBRAD),
-                 ("p_TMAX",p_TMAX),
-                 ("p_TMIN",p_TMIN),
-                 ("p_VAPPRES",p_VAPPRES),
-                 ("p_WIND",p_WIND),
-                 ("p_PREC",p_PREC),
-                 ("p_DENSEF",p_DENSEF),
-                 ("p_HEIGHT",p_HEIGHT),
-                 ("p_LAI",p_LAI),
-                 ("p_SAI",p_SAI),
-                 ("p_AGE",p_AGE),
-                 ("p_RELDEN",p_RELDEN),
-                 ("REFERENCE_DATE", input_meteoveg_reference_date)])
+    return (p_GLOBRAD      = p_GLOBRAD,
+            p_TMAX         = p_TMAX,
+            p_TMIN         = p_TMIN,
+            p_VAPPRES      = p_VAPPRES,
+            p_WIND         = p_WIND,
+            p_PREC         = p_PREC,
+            p_d18OPREC     = p_d18OPREC,
+            p_d2HPREC      = p_d2HPREC,
+            p_DENSEF       = p_DENSEF,
+            p_HEIGHT       = p_HEIGHT,
+            p_LAI          = p_LAI,
+            p_SAI          = p_SAI,
+            p_AGE          = p_AGE,
+            p_RELDEN       = p_RELDEN,
+            REFERENCE_DATE = input_meteoveg_reference_date)
 end
 
 """
@@ -681,9 +725,9 @@ function discretize_soil_params(
 
     THICK_m   = soil_discretization[!,"Upper_m"] - soil_discretization[!,"Lower_m"] # thickness of soil layer [m]
     THICK     = 1000*(THICK_m)                                    # thickness of soil layer [mm]
-    PSIM_init = soil_discretization[!,"uAux_PSIM_init_kPa"]         # initial condition PSIM [kPa]
-    # d18O_soil_init = soil_discretization[!,"u_delta18O_init_mUr"]  # initial condition soil water δ18O [mUr]
-    # d2H_soil_init  = soil_discretization[!,"u_delta2H_init_mUr"]   # initial condition soil water δ2H [mUr]
+    PSIM_init = soil_discretization[!,"uAux_PSIM_init_kPa"]       # initial condition PSIM [kPa]
+    d18O_soil_init = soil_discretization[!,"u_delta18O_init_permil"] # initial condition soil water δ18O [‰]
+    d2H_soil_init  = soil_discretization[!,"u_delta2H_init_permil"]  # initial condition soil water δ2H [‰]
 
     @assert all(PSIM_init .<= 0) "Initial matrix psi must be negative or zero"
 
@@ -820,6 +864,8 @@ function discretize_soil_params(
                 ("QLAYER",QLAYER),
                 ("THICK",THICK),
                 ("PSIM_init",PSIM_init),
+                ("d18O_init",d18O_soil_init),
+                ("d2H_init",d2H_soil_init),
                 ("frelden",frelden),
                 ("PAR",PAR),
                 ("STONEF",STONEF),

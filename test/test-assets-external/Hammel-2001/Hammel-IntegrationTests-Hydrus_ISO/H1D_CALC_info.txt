@@ -1,0 +1,64 @@
+#==========================================
+All binaries within this directory should be able to run with the same set of Hydrus 1D input files.
+Details to the specific binaries can be found below.
+#==========================================
+
+H1D_CALC_iso.EXE (renamed from H1D_calc.exe)
+----------------------------------------------
+Description:
+- "Isotope enabled" modification of the standard Hydrus1D computational module
+- no enrichment of solute (-> isotope) during evaporation
+- only applicable, when evaporative fractionation can be neglected
+- do not use with the actual concentrations of 18O or 2H, instead use offsets for the delta values to avoid negative values
+----------------------------------------------
+
+Date of retrieval: 2020-02-28
+Download source link:
+https://www.pc-progress.com/Downloads/Public_Lib_H1D/H1D_Calc_Isotope.zip
+
+References:
+Stumpp, C., W. Stichler, M. Kandolf, and J. Šimůnek
+Effects of land cover and fertilization method on water flow and solute transport in five lysimeters: A long-term study using stable water isotopes
+Vadose Zone Journal, 11(1), doi:10.2136/vzj2011.0075, 14 pp., 2012.
+
+#===========================================
+
+H1D_CALC_orig.EXE (renamed from H1D_CALC.EXE)
+---------------------------------------------
+Description:
+- standard version of the Hydrus1D computational module
+- enrichment of solute (-> isotope) during evaporation
+- only applicable, when there is no evaporation at all
+- do not use with the actual concentrations of 18O or 2H, instead use offsets for the delta values to avoid negative values
+----------------------------------------------
+Date of retrieval: 2020-02-26
+Download source link:
+https://www.pc-progress.com//Downloads/Pgm_Hydrus1D/Hydrus1D_4.17.0140.exe
+
+References:
+Šimůnek, J., M. Th. van Genuchten, and M. Šejna
+Recent developments and applications of the HYDRUS computer software packages
+Vadose Zone Journal, 15(7), pp. 25, doi: 10.2136/vzj2016.04.0033, 2016.
+
+Šimůnek, J., D. Jacques, G. Langergraber, S. A. Bradford, miroslav-sejna M. Šejna, and M. Th. van Genuchten
+Numerical modeling of contaminant transport with HYDRUS and its specialized modules
+Invited paper for the Special Issue "Water Management in Changing Environment"
+Editor M. S. Mohan Kumar, Journal of the Indian Institute of Science, 93(2) 265-284, ISSN: 0970-4140 Coden-JIISAD, 2013.
+
+Šimůnek, J., M. Th. van Genuchten, and M. Šejna
+HYDRUS: Model use, calibration and validation
+Special issue on Standard/Engineering Procedures for Model Calibration and Validation
+Transactions of the ASABE, 55(4), 1261-1274, 2012.
+
+Šimůnek, J., M. Th. van Genuchten, and M. Šejna
+Development and applications of the HYDRUS and STANMOD software packages, and related codes
+Vadose Zone Journal, doi:10.2136/VZJ2007.0077, Special Issue ”Vadose Zone Modeling”, 7(2), 587-600, 2008.
+
+Šimůnek, J. and M. Th. van Genuchten
+Modeling nonequilibrium flow and transport with HYDRUS
+Vadose Zone Journal, doi:10.2136/VZJ2007.0074
+Special Issue ”Vadose Zone Modeling”, 7(2), 782-797, 2008.
+
+Jacques, D., J. Šimůnek, D. Mallants, and M. Th. van Genuchten
+Modeling coupled hydrological and chemical processes: Long-term uranium transport following mineral phosphorus fertilization
+Vadose Zone Journal, doi:10.2136/VZJ2007.0084, Special Issue ”Vadose Zone Modeling”, 7(2), 698-711, 2008.

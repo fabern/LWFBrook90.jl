@@ -3,17 +3,25 @@ module LWFBrook90
 using OrdinaryDiffEq  # instead of loading the full DifferentialEquations
 using DiffEqCallbacks # instead of loading the full DifferentialEquations
 using RecipesBase
+using LinearAlgebra
+using StatsBase: mean, weights
 
 using Dates: now
+# using Infiltrator
 
 export read_inputData
 export discretize_soil, Rootden_beta_
-export define_LWFB90_p, define_LWFB90_u0, define_LWFB90_ODE
+export define_LWFB90_p, define_LWFB90_u0, solve_LWFB90
 export KPT_SOILPAR_Mvg1d, KPT_SOILPAR_Ch1d
 export RelativeDaysFloat2DateTime, plot_LWFBrook90
 
-export run_simulation, plot_and_save_results, find_indices, get_auxiliary_variables, get_θ
+export run_simulation, plot_and_save_results, find_indices
+export get_auxiliary_variables, get_θ, get_δ, get_δsoil
 
+# Include code before defining modules
+include("func_read_inputData.jl") # defines RelativeDaysFloat2DateTime which is used in module ISO
+
+# Define modules
 # on modules: https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
 include("module_CONSTANTS.jl");  # to bring into scope: using .CONSTANTS
 include("module_KPT.jl");        using .KPT # using to bring exports into scope
@@ -22,8 +30,8 @@ include("module_SUN.jl");        # to bring into scope: using .SUN
 include("module_PET.jl");        # to bring into scope: using .PET
 include("module_SNO.jl");        # to bring into scope: using .SNO
 include("module_EVP.jl");        # to bring into scope: using .SNO
+include("module_ISO.jl");        # to bring into scope: using .ISO
 
-include("func_read_inputData.jl")
 include("func_discretize_soil_domain.jl")
 include("func_DiffEq_definition_u0.jl")
 include("func_DiffEq_definition_p.jl")
@@ -43,32 +51,50 @@ include("../examples/BEA2016-reset-FALSE-input/func_run_example.jl") # defines R
 
 Runs a simulation defined by input files within a folder and returns solution object.
 
-The function run_simulation() takes as single argument a vector of two strings defining
-the input_path and input_prefix of a series of input definition files.
+The function run_simulation() takes as single argument a vector of two or three strings defining
+the input_path and input_prefix of a series of input definition files (and "true"/"false" whether
+to simulate isotopes).
 The function loads these files, runs the simulation and returns the solution object and input arguments
 """
 function run_simulation(args)
+    # args = ("test-assets/Hammel-2001/input-files", "Hammel_loam-NLayer-27-RESET=TRUE")
+    # args = ["examples/isoBEAdense2010-18-reset-FALSE-input/" "isoBEAdense2010-18-reset-FALSE" "true"]
+    # args = ["test-assets/Hammel-2001/input-files-ISO" "Hammel_sand-NLayer-27-RESET=FALSE" "true"]
+    # args = ["test-assets/Hammel-2001/input-files-ISO" "Hammel_loam-NLayer-27-RESET=FALSE" "true"]
+    # args = ["test/test-assets/Hammel-2001/input-files-ISO" "Hammel_loam-NLayer-27-RESET=FALSE" "false"]
+    # args = ["test/test-assets/Hammel-2001/input-files-ISO" "Hammel_loam-NLayer-27-RESET=FALSE" "true"]
     @show now()
     @show args
 
+    @assert length(args) >= 2
+
     input_path = args[1]
     input_prefix = args[2]
+    if (length(args) == 3)
+        simulate_isotopes = args[3] == "true"
+    else
+        simulate_isotopes = false
+    end
+    @show simulate_isotopes
 
     (input_meteoveg,
+    _input_meteoiso, # NOTE: _ indicates that it is possibly unused (depends on simulate_isotopes)
     input_meteoveg_reference_date,
     input_param,
     input_storm_durations,
     input_initial_conditions,
     input_soil_horizons,
-    simOption_FLAG_MualVanGen) = read_inputData(input_path, input_prefix)
+    simOption_FLAG_MualVanGen) = read_inputData(input_path, input_prefix;
+                                                simulate_isotopes = simulate_isotopes);
 
-    input_soil_discretization = discretize_soil(input_path, input_prefix)
+    input_soil_discretization = discretize_soil(input_path, input_prefix);
 
     Reset = false                          # currently only Reset = 0 implemented
     compute_intermediate_quantities = true # Flag whether ODE containes additional quantities than only states
 
-    ψM_initial, p = define_LWFB90_p(
+    (ψM_initial, _δ18O_initial, _δ2H_initial), p = define_LWFB90_p(
         input_meteoveg,
+        _input_meteoiso, # NOTE: _ indicates that it is possibly unused (depends on simulate_isotopes)
         input_meteoveg_reference_date,
         input_param,
         input_storm_durations,
@@ -78,24 +104,31 @@ function run_simulation(args)
         Reset = Reset,
         # soil_output_depths = collect(-0.05:-0.05:-1.1),
         # soil_output_depths = [-0.1, -0.5, -1.0, -1.5, -1.9],
-        compute_intermediate_quantities = compute_intermediate_quantities)
+        compute_intermediate_quantities = compute_intermediate_quantities,
+        simulate_isotopes = simulate_isotopes);
 
-    u0 = define_LWFB90_u0(p, input_initial_conditions,
-        ψM_initial,
-        compute_intermediate_quantities)
+    u0, p = define_LWFB90_u0(p, input_initial_conditions,
+        ψM_initial, _δ18O_initial, _δ2H_initial, # NOTE: _ indicates that it is possibly unused (depends on simulate_isotopes)
+        compute_intermediate_quantities;
+        simulate_isotopes = simulate_isotopes);
 
     tspan = (minimum(input_meteoveg[:, "days"]), maximum(input_meteoveg[:, "days"])) # simulate all available days
 
-    ode_LWFBrook90 = define_LWFB90_ODE(u0, tspan, p)
-
-    sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
-        progress = true,
-        saveat = tspan[1]:tspan[2], dt = 1e-3, adaptive = true); # dt is initial dt, but adaptive
-
+    @time sol_LWFBrook90 = solve_LWFB90(u0, tspan, p)
+    @info sol_LWFBrook90.destats
+    @info "Time steps for solving: $(sol_LWFBrook90.destats.naccept) ($(sol_LWFBrook90.destats.naccept) accepted out of $(sol_LWFBrook90.destats.nreject + sol_LWFBrook90.destats.naccept) total)"
+    # using Plots, Measures
+    # optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
+    # pl2 = LWFBrook90.ISO.plotisotopes(
+    #     sol_LWFBrook90, optim_ticks;
+    #     layout = grid(4, 1, heights=[0.1 ,0.4, 0.1, 0.4]),
+    #     size=(1000,1400), dpi = 300, leftmargin = 15mm);
+    # plot!(pl2, link = :x)
     @show now()
 
     return (sol_LWFBrook90, input_prefix, input_path)
 end
+
 
 @doc raw"""
     plot_and_save_results(sol, input_prefix, input_path)
@@ -141,7 +174,7 @@ function plot_and_save_results(sol, input_prefix, input_path)
     df_out3 = DataFrame(u_aux_θ,    "zLower=".*string.(z_to_plot))
 
     ## append time metadata
-    input_meteoveg_reference_date = sol.prob.p[2][15]
+    input_meteoveg_reference_date = sol.prob.p[2][17]
     time_to_plot = LWFBrook90.RelativeDaysFloat2DateTime.(sol.t, input_meteoveg_reference_date)
     df_out1.Date = time_to_plot
     df_out2.Date = time_to_plot
@@ -174,8 +207,7 @@ end
 function get_auxiliary_variables(solution)
     p_soil = solution.prob.p[1][1]
     NLAYER = p_soil.NLAYER
-    idx_u_vector_amounts = solution.prob.p[1][4][4]
-    u_SWATI = [solution.u[i][idx_u_vector_amounts] for i = 1:length(solution.u)]
+    u_SWATI = [solution.u[i][solution.prob.p[1][4].row_idx_SWATI, 1] for i = 1:length(solution.u)]
     # (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
     #         LWFBrook90.KPT.derive_auxiliary_SOILVAR.(u_SWATI, Ref(p_soil)) # Ref fixes scalar argument for broadcasting "."
     u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK =
@@ -196,7 +228,63 @@ function get_θ(depths_to_read_out_mm, solution)
 
     return u_aux_θ[:, idx]
 end
+function get_ψ(depths_to_read_out_mm, solution)
+    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+        get_auxiliary_variables(solution)
 
+    idx = find_indices(depths_to_read_out_mm, solution)
+
+    return u_aux_PSIM[:, idx]
+end
+
+function get_δ(solution)
+    @assert solution.prob.p[1][4].simulate_isotopes "Provided solution did not simulate isotopes"
+
+    # row_NaN       = fill(NaN, 1,length(x))
+    # input quantities δ-values:
+    row_PREC_d18O = reshape(solution.prob.p[2][15].(solution.t), 1, :)
+    row_PREC_d2H  = reshape(solution.prob.p[2][16].(solution.t), 1, :)
+    # scalar quantities δ-values:
+    row_INTS_d18O = reshape(solution[solution.prob.p[1][4].row_idx_scalars.INTS, solution.prob.p[1][4].col_idx_d18O, :], 1, :)
+    row_INTR_d18O = reshape(solution[solution.prob.p[1][4].row_idx_scalars.INTR, solution.prob.p[1][4].col_idx_d18O, :], 1, :)
+    row_SNOW_d18O = reshape(solution[solution.prob.p[1][4].row_idx_scalars.SNOW, solution.prob.p[1][4].col_idx_d18O, :], 1, :)
+    row_GWAT_d18O = reshape(solution[solution.prob.p[1][4].row_idx_scalars.GWAT, solution.prob.p[1][4].col_idx_d18O, :], 1, :)
+    row_RWU_d18O  = reshape(solution[solution.prob.p[1][4].row_idx_scalars.totalRWU, solution.prob.p[1][4].col_idx_d18O, :], 1, :)
+    row_XYL_d18O  = reshape(solution[solution.prob.p[1][4].row_idx_scalars.XylemV,   solution.prob.p[1][4].col_idx_d18O, :], 1, :)
+    row_INTS_d2H  = reshape(solution[solution.prob.p[1][4].row_idx_scalars.INTS, solution.prob.p[1][4].col_idx_d2H, :], 1, :)
+    row_INTR_d2H  = reshape(solution[solution.prob.p[1][4].row_idx_scalars.INTR, solution.prob.p[1][4].col_idx_d2H, :], 1, :)
+    row_SNOW_d2H  = reshape(solution[solution.prob.p[1][4].row_idx_scalars.SNOW, solution.prob.p[1][4].col_idx_d2H, :], 1, :)
+    row_GWAT_d2H  = reshape(solution[solution.prob.p[1][4].row_idx_scalars.GWAT, solution.prob.p[1][4].col_idx_d2H, :], 1, :)
+    row_RWU_d2H   = reshape(solution[solution.prob.p[1][4].row_idx_scalars.totalRWU, solution.prob.p[1][4].col_idx_d2H, :], 1, :)
+    row_XYL_d2H   = reshape(solution[solution.prob.p[1][4].row_idx_scalars.XylemV,   solution.prob.p[1][4].col_idx_d2H, :], 1, :)
+    # vector quantities δ-values:
+    rows_SWAT_d18O = solution[solution.prob.p[1][4].row_idx_SWATI, solution.prob.p[1][4].col_idx_d18O, :]
+    rows_SWAT_d2H  = solution[solution.prob.p[1][4].row_idx_SWATI, solution.prob.p[1][4].col_idx_d2H,  :]
+
+
+    return (SWAT = (d18O = rows_SWAT_d18O, d2H = rows_SWAT_d2H),
+            PREC = (d18O = row_PREC_d18O,  d2H = row_PREC_d2H),
+            INTS = (d18O = row_INTS_d18O,  d2H = row_INTS_d2H),
+            INTR = (d18O = row_INTR_d18O,  d2H = row_INTR_d2H),
+            SNOW = (d18O = row_SNOW_d18O,  d2H = row_SNOW_d2H),
+            GWAT = (d18O = row_GWAT_d18O,  d2H = row_GWAT_d2H))
+end
+
+function get_δsoil(solution)
+    u_δ = get_δ(solution)
+
+    return (d18O = transpose(u_δ.SWAT.d18O),
+            d2H  = transpose(u_δ.SWAT.d2H))
+end
+
+function get_δsoil(depths_to_read_out_mm, solution)
+    u_d18O, u_d2H = LWFBrook90.get_δsoil(solution)
+
+    idx = find_indices(depths_to_read_out_mm, solution)
+
+    return (d18O = u_d18O[:, idx],
+            d2H  = u_d2H[:, idx])
+end
 ############################################################################################
 ############################################################################################
 ############################################################################################
@@ -230,12 +318,9 @@ end
     # 1) data to plot
 
     # 1a) extract data from solution object `sol`
-    # idx_u_vector_amounts       = sol.prob.p[1][4][4]
-    # idx_u_vector_accumulators  = sol.prob.p[1][4][5]
-
-    t_ref = sol.prob.p[2][15]
+    t_ref = sol.prob.p[2][17]
     x = RelativeDaysFloat2DateTime.(sol.t, t_ref)
-    y = cumsum(sol.prob.p[1][1].p_THICK) - sol.prob.p[1][1].p_THICK / 2
+    # y = cumsum(sol.prob.p[1][1].p_THICK) - sol.prob.p[1][1].p_THICK / 2
     n = sol.prob.p[1][1].NLAYER
     y_centers = [0; cumsum(sol.prob.p[1][1].p_THICK)[1:(n-1)]] +
                 sol.prob.p[1][1].p_THICK / 2
@@ -244,9 +329,13 @@ end
     # y_labels   = [round.(y_soil_ticks; digits=0)]
 
     # row_PREC_amt = sol.prob.p[2][8].(sol.t)
-    rows_SWAT_amt = sol[7 .+ (0:sol.prob.p[1][1].NLAYER-1),
-        1,
-        :] ./ sol.prob.p[1][1].p_THICK
+    # rows_SWAT_amt_old = sol[7 .+ (0:sol.prob.p[1][1].NLAYER-1),
+    #     1,
+    #     :] ./ sol.prob.p[1][1].p_THICK
+    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+        LWFBrook90.get_auxiliary_variables(sol)
+    rows_SWAT_amt = u_aux_θ'
+    rows_ψₘ = u_aux_PSIM'
 
     # row_NaN = fill(NaN, 1, length(x))
 
@@ -304,7 +393,7 @@ end
     # NOTE: --> sets attributes only when they don't already exist
     # NOTE: :=  sets attributes even when they already exist
     # link := :x #TODO(bernhard): link doesn't seem to work...
-    layout --> (2, 1)
+    layout --> (3, 1)
     # using layout because @layout is unsupported: https://github.com/JuliaPlots/RecipesBase.jl/issues/15
     # TODO(bernhard): find an easy way to do: l = @layout [grid(2, 1, heights=[0.2, 0.8]) a{0.055w}]
     # Possibly it needs to be provided when calling `plot_LWFBrook90_isotopes(... ; layout = ...)`
@@ -323,7 +412,7 @@ end
         label := ["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"]
         # fill_z := reshape(row_PREC_d18O, 1, :)
         # clims := clims_d18O
-        # colorbar_title := "δ18O [mUr]"
+        # colorbar_title := "δ18O [‰]"
         # colorbar := true_to_check_colorbar # TODO: define this once for all plots (except force it for colorbar plot representing common legend)
         # yguide := "PREC [mm]"
         # legend := false
@@ -332,7 +421,7 @@ end
         # and other arguments:
         x, transpose(sol[1:6, 1, :]) #transpose(sol[1:6, 1, :])
     end
-    # # 3b) Heatmap (containing SWATI)
+    # # 3b) Heatmap (containing θ)
     @series begin # pl2
         title := "Soil (distributed state)"
         seriestype := :heatmap
@@ -349,6 +438,29 @@ end
         # x, y, rows_SWAT_amt
         x, y_centers, rows_SWAT_amt
     end
+    # display(plot(t = :heatmap, x, y_centers, rows_SWAT_amt_old; yflip = true))
+    # display(plot(t = :heatmap, x, y_centers[1:20], rows_SWAT_amt_old[1:20,:]; yflip = true))
+    # display(plot(t = :heatmap, x, y_centers, u_aux_θ'; yflip = true))
+    # display(plot(t = :plots_heatmap, x, y_centers, u_aux_θ'; yflip = true)) # doesn't work
+    # display(plot(t = :plots_heatmap_edges, x, y_centers, u_aux_θ'; yflip = true)) # works
+    # # 3b) Heatmap (containing ψₘ)
+    @series begin # pl3
+        title := "Soil (distributed state)"
+        seriestype := :heatmap
+        yflip := true
+        yticks := y_soil_ticks #(y_ticks, y_labels)
+        colorbar := true #true_to_check_colorbar
+        yguide := "Depth [mm]"
+        colorbar_title := "ψₘ [kPa]"
+        # clims := clims_d18O
+        subplot := 3
+
+        # and other arguments:
+        x, y_centers, rows_ψₘ
+    end
+    # display(plot(t = :heatmap, x, y_centers, rows_ψₘ; yflip = true))
+    # display(plot(t = :plots_heatmap, x, y_centers, rows_ψₘ; yflip = true)) # doesn't work
+    # display(plot(t = :plots_heatmap_edges, x, y_centers, rows_ψₘ; yflip = true)) # works
 
     # TODO: edges of cells in heatmap are not entirely correct. Find a way to override heatmap()
     #       where we provide cell edges (n+1) instead of cell centers (n)
@@ -390,10 +502,10 @@ end
     # ....
     # TODO: this code needs to reproduce below steps:
     # pl_colorbar_δ18O = plot([0,0], [0,1], zcolor=[0,1], t=:scatter, xlims=(1,1.1), # set xlims that no marker is shown
-    #                         clims=clims_d18O, colorbar_title="δ180 [mUr]",
+    #                         clims=clims_d18O, colorbar_title="δ180 [‰]",
     #                         grid=false, showaxis=false, ticks=false, label=false);
     # pl_colorbar_δ2H  = plot([0,0], [0,1], zcolor=[0,1], t=:scatter, xlims=(1,1.1), # set xlims that no marker is shown
-    #                         clims=clims_d18O, colorbar_title="δ2H [mUr]",
+    #                         clims=clims_d18O, colorbar_title="δ2H [‰]",
     #                         grid=false, showaxis=false, ticks=false, label=false);
 
     # l = @layout [grid(2, 1, heights=[0.2, 0.8]) a{0.055w}]

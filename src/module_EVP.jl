@@ -609,7 +609,7 @@ Apparently a default DURATN of 4 hours is appropriate for all months anywhere in
 """
 function INTER24(p_fT_RFAL, p_fu_PINT, p_fu_LAI, p_fu_SAI, p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS, p_DURATN, u_INTR, MONTHN)
     # p_fT_RFAL  24-hour average rainfall rate, mm/d
-    # p_fu_PINT  potential interception rate, mm/d
+    # p_fu_PINT  potential evaporation rate of interception storage, mm/d
     # p_fu_LAI projected leaf area index, m2/m2
     # p_fu_SAI projected stem area index, m2/m2
     # p_FRINTL  intercepted fraction of p_fT_RFAL per unit p_fu_LAI

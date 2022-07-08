@@ -14,7 +14,7 @@
 
 
 ####### Define function
-generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
+generate_LWFBrook90jl_Input <- function(Julia_target_dir = NA,
                                            Julia_prefix = NA,
                                            R_output_dir = NA,
                                            run_LWFBrook90R = FALSE,
@@ -68,7 +68,7 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
     select(#SimulationNode = layer,
            Upper_m = upper, Lower_m = lower,
            Rootden_ = rootden, uAux_PSIM_init_kPa = psiini) %>%
-    mutate(u_delta18O_init_mUr = NA, u_delta2H_init_mUr = NA)
+    mutate(`u_delta18O_init_permil`` = NA, `u_delta2H_init_permil` = NA)
 
   # B2) ii) soil horizon parameters in discrete horizons (different from numerical node discretization)
   # define extent of horizons
@@ -99,7 +99,7 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
 
   # B3) initial conditions of scalar state variables
   out_initial_conditions <- with(input_Data$param_b90,c(
-    "### Initial conditions (except for depth-dependent u_aux_PSIM) -------" = NA,
+    "### Initial conditions (of vector states) -------" = NA,
     "u_GWAT_init_mm"=gwatini,
     "u_INTS_init_mm"=intsnowini,
     "u_INTR_init_mm"=intrainini,
@@ -194,7 +194,7 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
   withr::with_options(c(scipen=100), { # temporarily switches off scientific notation
     require(dplyr)
     units_meteoveg            = c("YYYY-MM-DD","MJ/Day/m2","degree C","degree C","kPa","m per s","mm per day","-","m","-","-","years")
-    units_soil_discretization = c("m","m","-","kPa","mUr","mUr")
+    units_soil_discretization = c("m","m","-","kPa","permil","permil")
     units_soil_horizons       = c("-","m","m","volume fraction (-)","volume fraction (-)","perMeter","-","mm per day","-","volume fraction (-)")
 
     out_csv_soil_discretization%>% mutate(across(where(is.double), function(x) sprintf("%0.3f", x))) %>% write.csv_withUnits(units = units_soil_discretization, file = file.path(Julia_target_dir, paste0(Julia_prefix, "_soil_discretization.csv")), row.names=FALSE, quote=FALSE)
@@ -264,7 +264,7 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
 # # BEA
 # # 1) run first "LWFBrook90R-LWFSite-BEA-testdata.R" to prepare arguments
 # # 2) then run following:
-# generate_LWFBrook90Julia_Input(Julia_target_dir = ".", Julia_prefix = paste0("BEA2016-reset-", Reset),
+# generate_LWFBrook90jl_Input(Julia_target_dir = ".", Julia_prefix = paste0("BEA2016-reset-", Reset),
 #                                run_LWFBrook90R = TRUE,
 #
 #                                options_b90 = options,
@@ -277,7 +277,7 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
 # # ALV8101
 # # 1) run first "LWFBrook90R-TestScript-for-LWFSites_based_on_ALV8101_sen2.R" to prepare arguments
 # # 2) then run following:
-# generate_LWFBrook90Julia_Input(Julia_target_dir = ".", Julia_prefix = paste0("ALV8101_sen2-reset-", Reset),
+# generate_LWFBrook90jl_Input(Julia_target_dir = ".", Julia_prefix = paste0("ALV8101_sen2-reset-", Reset),
 #                                run_LWFBrook90R = TRUE,
 #
 #                     options_b90 = options,
@@ -291,7 +291,7 @@ generate_LWFBrook90Julia_Input <- function(Julia_target_dir = NA,
 # # 1) run first "Schmidt-Walter-2020-Agric_For_Meteorol_results_fig_1.R" to prepare arguments
 # # 2) then run following:
 #
-# generate_LWFBrook90Julia_Input(Julia_target_dir = ".", Julia_prefix = paste0("SW-2020_fig_1_evergreen-reset-", Reset),
+# generate_LWFBrook90jl_Input(Julia_target_dir = ".", Julia_prefix = paste0("SW-2020_fig_1_evergreen-reset-", Reset),
 #                                run_LWFBrook90R = TRUE,
 #
 #                                project.dir = "evergreen/",

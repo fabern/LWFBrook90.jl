@@ -14,11 +14,12 @@ using OrdinaryDiffEq: solve, Tsit5
  Define and read in input data
  ```Julia
 # Read in input data
-input_prefix = "BEA2016-reset-FALSE"
+input_prefix = "isoBEA2016-reset-FALSE"
 input_path = "examples/"*input_prefix*"-input/"
 
 ####################
 (input_meteoveg,
+    _input_meteoiso, # TODO possibly unused
     input_meteoveg_reference_date,
     input_param,
     input_storm_durations,
@@ -53,8 +54,9 @@ Then functions from the package are used to define the problem that will be hand
 ```Julia
 ####################
 # Define parameters for differential equation
-p = define_LWFB90_p(
+(ψM_initial, _δ18O_initial, _δ2H_initial), p = define_LWFB90_p(
     input_meteoveg,
+    _input_meteoiso, # TODO: possibly unused
     input_meteoveg_reference_date,
     input_param,
     input_storm_durations,
@@ -80,9 +82,10 @@ end
 ######
 
 # Create u0 for DiffEq.jl
-u0 = define_LWFB90_u0(p, input_initial_conditions,
-                      uSoil_initial,
-                      compute_intermediate_quantities)
+u0, p = define_LWFB90_u0(p, input_initial_conditions,
+    ψM_initial, _δ18O_initial, _δ2H_initial, # TODO: possibly unused
+    compute_intermediate_quantities;
+    simulate_isotopes = false)
 ####################
 ```
 
@@ -99,10 +102,6 @@ u0 = define_LWFB90_u0(p, input_initial_conditions,
 # Define simulation time span:
 tspan = (minimum(input_meteoveg[:,"days"]),
          maximum(input_meteoveg[:,"days"])) # simulate all available days
-
-# Define ODE:
-ode_LWFBrook90 = define_LWFB90_ODE(u0, tspan, p)
-
 # Alternative definitions of tspan:
 # tspan = (0.,  5.) # simulate days 0 to 5 (in the reference frame of the input data)
 # Simulation specific period (provided it is within the input data):
@@ -116,21 +115,31 @@ Then the ODE problem can be solved:
 ```Julia
 ####################
 ## Solve ODE:
-sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
-    progress = true,
-    saveat = tspan[1]:tspan[2], dt=1e-6, adaptive = true); # dt is initial dt, but adaptive
+sol_LWFBrook90 = solve_LWFB90(u0, tspan, p);
 ####################
 ```
 
 
 Note to use a progress bar indicating advancement of the solving is possible. It is sufficient to load the package `using ProgressLogging`.
 
-The generated solution can be plotted using the plotting recipes of DifferntialEquations.jl for Plots.jl ([see instructions](https://diffeq.sciml.ai/stable/basics/plot/)). An example is provided below:
+The generated solution can be plotted using the in-built function `LWFBrook90.ISO.plotisotopes()`. Alternatively plots can be constructed using the plotting recipes of DifferentialEquations.jl for Plots.jl ([see instructions](https://diffeq.sciml.ai/stable/basics/plot/)). Examples of both approaches are provided below:
 
 ```Julia
 ####################
 ## Plotting
-using Plots
+using Plots, Measures
+
+###
+# A) Use in-built plotting function
+optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
+pl_inbuilt = LWFBrook90.ISO.plotisotopes(
+    sol_LWFBrook90, optim_ticks;
+    layout = grid(4, 1, heights=[0.1 ,0.4, 0.1, 0.4]),
+    size=(1000,1400), dpi = 300, leftmargin = 15mm);
+savefig(pl_inbuilt, "Isotopeplots_pl_inbuilt.png")
+
+###
+# B) Construct plots yourself using the solution object
 sol_LWFBrook90_Dates =
     LWFBrook90.jl.RelativeDaysFloat2DateTime.(
         sol_LWFBrook90.t,
