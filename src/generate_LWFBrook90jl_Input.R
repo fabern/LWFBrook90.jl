@@ -68,7 +68,7 @@ generate_LWFBrook90jl_Input <- function(Julia_target_dir = NA,
     select(#SimulationNode = layer,
            Upper_m = upper, Lower_m = lower,
            Rootden_ = rootden, uAux_PSIM_init_kPa = psiini) %>%
-    mutate(`u_delta18O_init_permil`` = NA, `u_delta2H_init_permil` = NA)
+    mutate(`u_delta18O_init_permil` = NA, `u_delta2H_init_permil` = NA)
 
   # B2) ii) soil horizon parameters in discrete horizons (different from numerical node discretization)
   # define extent of horizons
@@ -108,16 +108,16 @@ generate_LWFBrook90jl_Input <- function(Julia_target_dir = NA,
     "u_SNOWLQ_init_mm"=0
   ))
   out_csv_initial_conditions <- data.frame(param_id = names(out_initial_conditions),
-                                           x        = unname(out_initial_conditions))
+                                           amount   = unname(out_initial_conditions))
 
 
   # B4) other model parameters
   # Define idepth and qdepth
-  idepth = -1*out_csv_soil_discretization[input_Data$param_b90$ilayer,"Lower_m"] # in m (positive depth)
+  idepth = -1*out_csv_soil_discretization[[input_Data$param_b90$ilayer,"Lower_m"]] # in m (positive depth)
   if (input_Data$param_b90$qlayer==0) {
     qdepth = 0
   } else {
-    qdepth = -1*out_csv_soil_discretization[input_Data$param_b90$qlayer,"Lower_m"] # in m (positive depth)
+    qdepth = -1*out_csv_soil_discretization[[input_Data$param_b90$qlayer,"Lower_m"]] # in m (positive depth)
   }
   # Save all parameters
   out_param <- with(input_Data$param_b90,
@@ -160,8 +160,9 @@ generate_LWFBrook90jl_Input <- function(Julia_target_dir = NA,
                           "DRAIN"=drain,   "GSC"=gsc,       "GSP"=gsp,
                           "### Numerical solver parameters -------" = NA,
                           "DTIMAX"=dtimax, "DSWMAX"=dswmax, "DPSIMAX"=dpsimax))
+  browser()
   out_csv_param <- data.frame(param_id = names(out_param),
-                              x        = unname(out_param))
+                              x        = unlist(unname(out_param)))
 
   # Setup writing out of CSVs:
   write.csv_withUnits <- function(x, units=c(), file, row.names = FALSE, ...) {

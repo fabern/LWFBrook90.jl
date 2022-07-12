@@ -52,20 +52,21 @@ In case you're unfamiliar to Julia, there are various ways to run a script such 
 
 ### Structure of input data
 
-`soil_horizons.csv`: (when using Mualem-VanGenuchtn parametrization of the soil retention curve)
-| HorizonNr | Upper_m | Lower_m | ths_volFrac         | thr_volFrac         | alpha_perMeter | npar_   | ksat_mmDay | tort_   | gravel_volFrac     |
-| --------- | ------- | ------- | ------------------- | ------------------- | -------------- | ------- | ---------- | ------- | ------------------ |
-| -         | m       | m       | volume fraction (-) | volume fraction (-) | perMeter       | -       | mm per day | -       | volume fraction (-)|
-| 1         | 0       | -0.04   | 0.7149              | 0.069               | 1147.88919     | 1.05123 | 24864.6784 | 4.67037 | 0.01               |
-| 2         | -0.04   | -0.08   | 0.66873             | 0.069               | 1274.88602     | 1.05105 | 12881.4864 | 4.47828 | 0.175              |
-| 3         | -0.08   | -0.2    | 0.6561              | 0.069               | 1215.92721     | 1.05106 | 10516.6166 | 4.50162 | 0.175              |
-| 4         | -0.2    | -0.45   | 0.60159             | 0.069               | 795.20401      | 1.05099 | 3438.06275 | 4.34489 | 0.175              |
-| 5         | -0.45   | -0.75   | 0.52331             | 0.069               | 352.36825      | 1.05097 | 450.35802  | 4.29122 | 0.01               |
-| 6         | -0.75   | -1.1    | 0.56472             | 0.069               | 570.68168      | 1.05111 | 1488.20958 | 5.14818 | 0.01               |
-| 7         | -1.1    | -1.2    | 0.46743             | 0.069               | 164.564        | 1.05103 | 67.97846   | 0.01    | 0.95               |
+`soil_horizons.csv`: (when using Mualem-VanGenuchten parametrization of the soil retention curve):
+
+| HorizonNr | Upper_m | Lower_m | ths_volFrac         | thr_volFrac         | alpha_perMeter | npar_   | ksat_mmDay | tort_   | gravel_volFrac      |
+| --------- | ------- | ------- | ------------------- | ------------------- | -------------- | ------- | ---------- | ------- | ------------------  |
+| -         | m       | m       | volume fraction (-) | volume fraction (-) | perMeter       | -       | mm per day | -       | volume fraction (-) |
+| 1         | 0       | -0.04   | 0.7149              | 0.069               | 1147.88919     | 1.05123 | 24864.6784 | 4.67037 | 0.01                |
+| 2         | -0.04   | -0.08   | 0.66873             | 0.069               | 1274.88602     | 1.05105 | 12881.4864 | 4.47828 | 0.175               |
+| 3         | -0.08   | -0.2    | 0.6561              | 0.069               | 1215.92721     | 1.05106 | 10516.6166 | 4.50162 | 0.175               |
+| 4         | -0.2    | -0.45   | 0.60159             | 0.069               | 795.20401      | 1.05099 | 3438.06275 | 4.34489 | 0.175               |
+| 5         | -0.45   | -0.75   | 0.52331             | 0.069               | 352.36825      | 1.05097 | 450.35802  | 4.29122 | 0.01                |
+| 6         | -0.75   | -1.1    | 0.56472             | 0.069               | 570.68168      | 1.05111 | 1488.20958 | 5.14818 | 0.01                |
+| 7         | -1.1    | -1.2    | 0.46743             | 0.069               | 164.564        | 1.05103 | 67.97846   | 0.01    | 0.95                |
 
 
-`soil_horizons.csv`: (when using Clapp-Hornberger parametrization of the soil retention curve, is currently not implemented)
+`soil_horizons.csv`: (when using Clapp-Hornberger parametrization of the soil retention curve, is currently not implemented):
 
 | HorizonNr  | Upper_m | Lower_m | thsat_volFrac       | thetaf_volFrac      | psif_kPa    | bexp_  | kf_mmDay     | wtinf_ | gravel_volFrac      |
 | ---------- | ------- | ------- | ------------------- | ------------------- | ----------- | ------ | ------------ | ------ | ------------------- |
@@ -90,7 +91,7 @@ In case you're unfamiliar to Julia, there are various ways to run a script such 
 `meteoveg.csv`: contains time dependent isotopic signatures of precipiation.
 (Note that the `dates` contain the end dates of the collection interval of cumulative
 isotope samples. The values are backward interpolated with piecewise constants. The first
-row containng the `NA` is assumed to be the start date of the first collection interval.)
+row containng the `NA` is assumed to be the start date of the first collection interval.):
 
 | dates      | delta18O_permil | delta2H_permil |
 | ---------- | --------------- | -------------- |
@@ -129,6 +130,7 @@ row containng the `NA` is assumed to be the start date of the first collection i
 | December                                                                     | 4                          |
 
 `initial_conditions.csv`:
+
 | param\_id                                          | amount | u\_delta18O\_init\_permil | u\_delta2H\_init\_permil |
 | -------------------------------------------------- | ------ | ------------------------- | ------------------------ |
 | ### Initial conditions (of vector states) -------- | NA     | NA                        | NA                       |
@@ -138,7 +140,6 @@ row containng the `NA` is assumed to be the start date of the first collection i
 | u\_SNOW\_init\_mm                                  | 0      | -13                       | -95                      |
 | u\_CC\_init\_MJ\_per\_m2                           | 0      | NA                        | NA                       |
 | u\_SNOWLQ\_init\_mm                                | 0      | NA                        | NA                       |
-|                                                    |        |                           |                          |
 
 `soil_discretization.csv` contains the initial conditions of the soil water status, root density distributions, and the definition of the numerical discretization of the soil domain (nodes with upper and lower limits):
 
@@ -249,7 +250,48 @@ row containng the `NA` is assumed to be the start date of the first collection i
 | DPSIMAX                                                      | 0.0005   |
 
 ## Calibration data (calibration not yet implemented)
-Roadmap to include calibration data intends to allow inclusion of:
+Roadmap to include calibration data intends include of:
 - Throughfall amounts (for parametrisation of interception)
 - Soil moisture (volumetric water content, θ)
 - Soil matric potential (ψ)
+
+as well as
+
+- isotopic composition of soil water (δ_soil)
+- isotopic composition of xylem water (δ_xylem)
+
+Below the example structure of data sets for
+`psi.csv` contains the soil matric potential (ψ):
+
+| dates      | depth_m | psi_kPa |
+| ---------- | ------- | ------- |
+| YYYY-MM-DD | m       | kPa     |
+| 2019-12-23 | 0.00    | -0.1    |
+| 2019-12-23 | 0.20    | -0.93   |
+| 2019-12-23 | 0.40    | -0.1    |
+| 2019-12-23 | 0.80    | -0.27   |
+| 2019-12-23 | 1.60    | -0.1    |
+| 2019-12-24 | 0.00    | -0.1    |
+| ...        | ...     | ...     |
+|            |         |         |
+
+`theta.csv` contains the soil moisture (volumetric water content, θ):
+
+| dates      | depth_m | theta_m3m3 |
+| ---------- | ------- | ---------- |
+| YYYY-MM-DD | m       | m3/m3      |
+| 2020-12-23 | 0.15    | 0.24       |
+| 2020-12-23 | 0.50    | 0.32       |
+| 2020-12-23 | 0.80    | 0.30       |
+| 2020-12-24 | 0.15    | 0.24       |
+| 2020-12-24 | 0.50    | 0.32       |
+| ...        | ...     | ...        |
+
+
+`delta_soil.csv` contains the isotopic signature of soil water:
+
+TODO...
+
+`delta_xylem.csv` contains the isotopic signature of xylem water:
+
+TODO...

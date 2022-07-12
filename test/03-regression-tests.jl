@@ -22,7 +22,19 @@ task = ["test", "overwrite"][1]
 # TODO(bernhard): while below testset works consistently on MacBook Pro,
 #                 in the GithubActions the values are slightly different.
 #                 TODO: investigate why. (DiffEq.jl, integration testing, set some seed?)
-# current workaround, do not run these tests on CI (GithubActions)
+# Note, in order to have the regression testset work consistently on MacBook Pro and on the
+# CI machine (through GithubActions), make sure to test always with the same PRNG (random
+# number generator). According to
+# https://discourse.julialang.org/t/tests-failing-on-linux-in-travis-ci/19602/2
+# the @testset macro does this for us.
+#
+# It turns out, we need also locally to run it always through `]`, `test`. The workflow is:
+#     julia --project=test
+#     ]
+#     activate .
+#     test
+# TODO(bernhard): however, above `test` still yields different results in CI and fails, therefore:
+# Current workaround, do not run these tests on CI (GithubActions)
 is_a_CI_system = issubset(["GITHUB_ACTION"], collect(keys(ENV))) # checks if ENV["GITHUB_ACTION"] exists
 @show is_a_CI_system
 
@@ -60,7 +72,7 @@ if !is_a_CI_system
         # using Plots, Measures
         # optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
         # pl_final = LWFBrook90.plotlwfbrook90(example_result["solution"], optim_ticks)
-        # git_status_string = "__git+"*chomp(read(`git rev-parse --short HEAD`, String))*
+        # git_status_string = "__git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
         #   ifelse(length(read(`git status --porcelain`, String))==0, "+gitclean","+gitdirty")*
         #   "__"
         # savefig(pl_final, replace(fname, ".jld2"=>git_status_string*".png"))
