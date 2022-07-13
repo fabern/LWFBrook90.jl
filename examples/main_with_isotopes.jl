@@ -131,7 +131,7 @@ using Plots, Measures
 ## fname = joinpath(
 ##     "out",
 ##     input_prefix*"_NLAYER+" * string(sol_LWFBrook90.prob.p[1][1].NLAYER)*
-##     "-git+"*chomp(read(`git rev-parse --short HEAD`, String)))*
+##     "-git+"*chomp(Base.read(`git rev-parse --short HEAD`, String)))*
 ##     ifelse(length(read(`git status --porcelain`, String))==0, "+gitclean","+gitdirty")*
 ##     "-iso+"*string(simulate_isotopes)
 
