@@ -277,7 +277,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         integrator.u[integrator.p[1][4].row_idx_accum[14], 1] = p_DTP * (aux_du_SNVP)                                                                # cum_d_snvp
         integrator.u[integrator.p[1][4].row_idx_accum[15], 1] = p_DTP * (p_fu_PINT)                                                                  # cum_d_pint
         integrator.u[integrator.p[1][4].row_idx_accum[16], 1] = p_DTP * (p_fu_PTRAN)                                                                 # cum_d_ptran
-        integrator.u[integrator.p[1][4].row_idx_accum[17], 1] = p_DTP * (p_fu_PSLVP)                                                                 # cum_d_pslvp
+        integrator.u[integrator.p[1][4].row_idx_accum[17], 1] = 0 # p_DTP * (p_fu_PSLVP)                                                             # cum_d_pslvp # Deactivated as p_fu_PSLVP is never used
 
         integrator.u[integrator.p[1][4].row_idx_accum[18], 1] = 0 # flow,  is computed in ODE
         integrator.u[integrator.p[1][4].row_idx_accum[19], 1] = 0 # seep,  is computed in ODE

@@ -160,7 +160,7 @@ generate_LWFBrook90jl_Input <- function(Julia_target_dir = NA,
                           "DRAIN"=drain,   "GSC"=gsc,       "GSP"=gsp,
                           "### Numerical solver parameters -------" = NA,
                           "DTIMAX"=dtimax, "DSWMAX"=dswmax, "DPSIMAX"=dpsimax))
-  browser()
+
   out_csv_param <- data.frame(param_id = names(out_param),
                               x        = unlist(unname(out_param)))
 

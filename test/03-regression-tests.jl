@@ -139,7 +139,7 @@ if !is_a_CI_system
                     sol[1], optim_ticks;
                     layout = grid(4, 1, heights=[0.1 ,0.4, 0.1, 0.4]),
                     size=(1000,1400), dpi = 300, leftmargin = 15mm);
-                git_status_string = "__git+"*chomp(read(`git rev-parse --short HEAD`, String))*
+                git_status_string = "__git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
                     ifelse(length(read(`git status --porcelain`, String))==0, "+gitclean","+gitdirty")*
                     "__"
                 savefig(plot(pl1, size=(1000,700), dpi=300, link=:x),

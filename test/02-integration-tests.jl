@@ -66,7 +66,7 @@ if basename(pwd()) != "test"; cd("test"); end
     # 2) Plot (optional, not done when testing in CI)
     # Illustrate with a plot what will be compared in the tests below
     if (false) # Do these manually outside of automatic testing in order not to require Plots pkg
-        git_string = "git+"*chomp(read(`git rev-parse --short HEAD`, String))*
+        git_string = "git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
             ifelse(length(read(`git status --porcelain`, String))==0, "+clean","+dirty")
         using Plots, Measures
         function my_plot(df; args...)
@@ -220,7 +220,7 @@ end
     # 2) Plot (optional, not done when testing in CI)
     # Illustrate with a plot what will be compared in the tests below
     if (false) # Do these manually outside of automatic testing in order not to require Plots pkg
-        git_string = "git+"*chomp(read(`git rev-parse --short HEAD`, String))*
+        git_string = "git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
         ifelse(length(read(`git status --porcelain`, String))==0, "+clean","+dirty")
 
         using Plots, Measures
@@ -378,7 +378,7 @@ end
     # finest LWFBrook90R simulation only.
 
     if (false)
-        git_string = "git+"*chomp(read(`git rev-parse --short HEAD`, String))*
+        git_string = "git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
         ifelse(length(read(`git status --porcelain`, String))==0, "+clean","+dirty")
 
         # if some error appears, the following code can be used to plot the solutions

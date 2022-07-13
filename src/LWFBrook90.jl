@@ -267,7 +267,9 @@ function get_δ(solution)
             INTS = (d18O = row_INTS_d18O,  d2H = row_INTS_d2H),
             INTR = (d18O = row_INTR_d18O,  d2H = row_INTR_d2H),
             SNOW = (d18O = row_SNOW_d18O,  d2H = row_SNOW_d2H),
-            GWAT = (d18O = row_GWAT_d18O,  d2H = row_GWAT_d2H))
+            GWAT = (d18O = row_GWAT_d18O,  d2H = row_GWAT_d2H),
+            RWU  = (d18O = row_RWU_d18O,   d2H = row_RWU_d2H),
+            XYL  = (d18O = row_XYL_d18O,   d2H = row_XYL_d2H))
 end
 
 function get_δsoil(solution)

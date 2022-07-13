@@ -6,9 +6,9 @@ using CSV: File
 # A macro for timing that also prints out the git commit hash:
 macro githash_time(variable)
     quote
-        #model = replace(chomp(read(`sysctl hw.model`, String)), "hw.model: " => "")
+        #model = replace(chomp(Base.read(`sysctl hw.model`, String)), "hw.model: " => "")
         model = "amberMBP"
-        hash = chomp(read(`git rev-parse --short HEAD`, String))
+        hash = chomp(Base.read(`git rev-parse --short HEAD`, String))
         print(model*"-git-"*hash*":")
         @time $(esc(variable))
     end
