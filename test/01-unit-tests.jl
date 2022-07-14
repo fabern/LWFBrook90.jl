@@ -177,7 +177,63 @@ end
         p_WETINF = [1])
 end
 
+@testset "pointers-to-elements-of-u0" begin
+    simulate_isotopes = true
+    compute_intermediate_quantities = true; # Flag whether ODE containes additional quantities than only states
 
+    (input_meteoveg,
+        input_meteoiso,
+        input_meteoveg_reference_date,
+        input_param,
+        input_storm_durations,
+        input_initial_conditions,
+        input_soil_horizons,
+        simOption_FLAG_MualVanGen) = read_inputData("test/test-assets/Hammel-2001/input-files-ISO/",
+                                                    "Hammel_loam-NLayer-103-RESET=FALSE";
+                                                    simulate_isotopes = simulate_isotopes);
+    f1 = (Δz_m) -> LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)  # function for root density as f(Δz)
+    f2 = (Δz_m) -> fill(-6.3, length(Δz_m))          # function for initial conditions as f(Δz)
+    input_soil_discretization = discretize_soil(;
+        Δz_m = Δz_m,
+        Rootden_ = f1,
+        uAux_PSIM_init_kPa = f2,
+        u_delta18O_init_permil = ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.),
+        u_delta2H_init_permil  = ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.))
+
+    # Define parameters for differential equation
+    (ψM_initial,δ18O_initial,δ2H_initial), p = define_LWFB90_p(
+        input_meteoveg,
+        input_meteoiso,
+        input_meteoveg_reference_date,
+        input_param,
+        input_storm_durations,
+        input_soil_horizons,
+        input_soil_discretization,
+        simOption_FLAG_MualVanGen;
+        compute_intermediate_quantities = compute_intermediate_quantities,
+        simulate_isotopes = simulate_isotopes);
+    # Create u0 for DiffEq.jl
+    u0, p = define_LWFB90_u0(p, input_initial_conditions,
+        ψM_initial, δ18O_initial, δ2H_initial,
+        compute_intermediate_quantities;
+        simulate_isotopes = simulate_isotopes);
+
+    # Assert that the pointers to the rows of u are correct and unique:
+    all_rows_defined = [collect(p[1][4].row_idx_scalars)
+        p[1][4].row_idx_SWATI
+        p[1][4].row_idx_RWU
+        p[1][4].row_idx_accum]
+    @test (length(unique(all_rows_defined)) == length(all_rows_defined)) # """
+    # There is a problem with the definition of the row indices.
+    # Multiple references to the same row exist.
+    # Please contact the developer.
+    # """
+    @test (size(u0,1) == length(all_rows_defined)) #"""
+    # There is a problem with the definition of the row indices.
+    # Their length is not equal to the rows in u0.
+    # Please contact the developer, unless you modified u0 yourself and know what you are doing.
+    # """
+end
 
 # TODO(bernhard): include unit tests of specific functions, e.g. during development of the Hammel-2001 infiltration test
 #                 it was noticed, that ISVP (snow evaporation rate could become negative, therby generating intercepted snow out of nowwhere...)

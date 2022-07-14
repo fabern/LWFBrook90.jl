@@ -183,5 +183,22 @@ function define_LWFB90_u0(p, uScalar_initial,
     p_cache = p[4]
     p = (p_cst, p_fT, p_fu, p_cache)
 
+    # Assert that the pointers to the rows of u are correct and unique:
+    # NOTE: this was outsourced to the test suite so that the user doesn't see any error...
+    all_rows_defined = [collect(p[1][4].row_idx_scalars)
+        p[1][4].row_idx_SWATI
+        p[1][4].row_idx_RWU
+        p[1][4].row_idx_accum]
+    @assert (length(unique(all_rows_defined)) == length(all_rows_defined)) """
+    There is a problem with the definition of the row indices.
+    Multiple references to the same row exist.
+    Please contact the developer.
+    """
+    @assert (size(u0,1) == length(all_rows_defined)) """
+    There is a problem with the definition of the row indices.
+    Their length is not equal to the rows in u0.
+    Please contact the developer, unless you modified u0 yourself and know what you are doing.
+    """
+
     return u0, p
 end
