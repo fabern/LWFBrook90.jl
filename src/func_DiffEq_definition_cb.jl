@@ -369,8 +369,8 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         # u_δ2H_SWATI  = integrator.u[idx_u_vector_isotopes_d2H]
         # u_δ18O_RWU = integrator.u[integrator.p[1][4].row_idx_scalars.totalRWU, integrator.p[1][4].col_idx_d18O]
         # u_δ2H_RWU  = integrator.u[integrator.p[1][4].row_idx_scalars.totalRWU, integrator.p[1][4].col_idx_d2H]
-        u_δ18O_Xylem = integrator.u[integrator.p[1][4].row_idx_scalars.XylemV,   integrator.p[1][4].col_idx_d18O]
-        u_δ2H_Xylem  = integrator.u[integrator.p[1][4].row_idx_scalars.XylemV,   integrator.p[1][4].col_idx_d2H]
+        # u_δ¹⁸O_Xylem = integrator.u[integrator.p[1][4].row_idx_scalars.XylemV,   integrator.p[1][4].col_idx_d18O]
+        # u_δ²H_Xylem  = integrator.u[integrator.p[1][4].row_idx_scalars.XylemV,   integrator.p[1][4].col_idx_d2H]
 
         # Variant 1) works but really much slower
         # δ18O_SLFL, δ2H_SLFL,
@@ -614,7 +614,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
                     u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT,
                     # for SWATI:
                     du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI,  # (non-fractionating)
-                    aux_du_SLVP, p_fu_TADTM, p_EA(t), p_δ2H_PREC(t), p_δ18O_PREC(t), u_aux_WETNES, # (fractionating)
+                    aux_du_SLVP, p_fu_TADTM, p_EA(integrator.t), p_δ2H_PREC(integrator.t), p_δ18O_PREC(integrator.t), u_aux_WETNES, # (fractionating)
                     u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, 0, 0) #EffectiveDiffusivity_18O, EffectiveDiffusivity_2H)
 
             # update δ values of GWAT and SWATI
@@ -626,10 +626,10 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
             # Since we update this in the callback we can't overwrite `du` and let DiffEq.jl do
             # the work, so we need to update `u` instead of `du`
             # Using a simple forward euler update:
-            u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d18O]   += integrator.dt * du_δ18O_GWAT     #TODO(bernhard)
-            u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d2H ]   += integrator.dt * du_δ2H_GWAT      #TODO(bernhard)
-            u[integrator.p[1][4].row_idx_SWATI,        integrator.p[1][4].col_idx_d18O]  .+= integrator.dt * du_δ18O_SWATI    #TODO(bernhard)
-            u[integrator.p[1][4].row_idx_SWATI,        integrator.p[1][4].col_idx_d2H ]  .+= integrator.dt * du_δ2H_SWATI     #TODO(bernhard)
+            integrator.u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d18O]   += integrator.dt * du_δ18O_GWAT     #TODO(bernhard)
+            integrator.u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d2H ]   += integrator.dt * du_δ2H_GWAT      #TODO(bernhard)
+            integrator.u[integrator.p[1][4].row_idx_SWATI,        integrator.p[1][4].col_idx_d18O]  .+= integrator.dt * du_δ18O_SWATI    #TODO(bernhard)
+            integrator.u[integrator.p[1][4].row_idx_SWATI,        integrator.p[1][4].col_idx_d2H ]  .+= integrator.dt * du_δ2H_SWATI     #TODO(bernhard)
         elseif use_method == "analytical"
             #TODO(bernhard): this update generates an error message with adaptive solvers:
             # Warning: dt <= dtmin. Aborting. There is either an error in your model specification or the true solution is unstable.
@@ -641,13 +641,13 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
                     u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT, du_GWFL, du_SEEP,
                     # for SWATI:
                     du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI,  # (non-fractionating)
-                    aux_du_SLVP, p_fu_TADTM, p_EA(t), p_δ2H_PREC(t), p_δ18O_PREC(t), u_aux_WETNES, # (fractionating)
+                    aux_du_SLVP, p_fu_TADTM, p_EA(integrator.t), p_δ2H_PREC(integrator.t), p_δ18O_PREC(integrator.t), u_aux_WETNES, # (fractionating)
                     u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, 0, 0) #EffectiveDiffusivity_18O, EffectiveDiffusivity_2H)
 
-            u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d18O]   = u_δ18O_GWAT
-            u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d2H ]   = u_δ2H_GWAT
-            u[integrator.p[1][4].row_idx_SWATI,        integrator.p[1][4].col_idx_d18O]   = u_δ18O_SWATI
-            u[integrator.p[1][4].row_idx_SWATI,        integrator.p[1][4].col_idx_d2H ]   = u_δ2H_SWATI
+            integrator.u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d18O]   = u_δ18O_GWAT
+            integrator.u[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d2H ]   = u_δ2H_GWAT
+            integrator.u[integrator.p[1][4].row_idx_SWATI,        integrator.p[1][4].col_idx_d18O]   = u_δ18O_SWATI
+            integrator.u[integrator.p[1][4].row_idx_SWATI,        integrator.p[1][4].col_idx_d2H ]   = u_δ2H_SWATI
         else
             @error "Unknown method for updating Isotopes in GWAT and SWAT specified."
         end
@@ -840,8 +840,8 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # Define concentrations of source/sink terms in transport equation (TRANI, DSFLI, INFLI, SLVP)
         ### Define δ signature of in- and outflows
         # TODO(bernhard) for debugging:
-        δ18O_INFLI = p_δ18O_PREC(t)#TODO(bernhard): debug remove workaround and set again = δ18O_SLFL
-        δ2H_INFLI  = p_δ2H_PREC(t) #TODO(bernhard): debug remove workaround and set again = δ2H_SLFL
+        δ18O_INFLI = p_δ18O_PREC(integrator.t)#TODO(bernhard): debug remove workaround and set again = δ18O_SLFL
+        δ2H_INFLI  = p_δ2H_PREC(integrator.t) #TODO(bernhard): debug remove workaround and set again = δ2H_SLFL
 
         C_¹⁸O_INFLI = LWFBrook90.ISO.δ_to_C.(δ18O_INFLI, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O) # for debugging use: LWFBrook90.ISO.δ_to_C.(p_δ18O_PREC(integrator.tprev), LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O)
         # C_¹⁸O_TRANI = C_¹⁸Oᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
