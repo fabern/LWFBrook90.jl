@@ -372,12 +372,13 @@ for Δz_m in (
         # plot(pl_θ,pl_ψ,layout = (2,1))
         # b) for RWU
         # b1) RWU heatmap (depths vs time)
-        rows_RWU      = sol_LWFBrook90[sol_LWFBrook90.prob.p[1][4].row_idx_RWU, 1, :]
+        rows_RWU_mmDay = sol_LWFBrook90[sol_LWFBrook90.prob.p[1][4].row_idx_RWU, 1, :]
+        rows_RWU = rows_RWU_mmDay ./ sol_LWFBrook90.prob.p[1][1].p_THICK
         pl_RWU = heatmap(x,y,rows_RWU; yticks = (y_ticks, y_labels),
                 yflip = true,
                 c = :diverging_bwr_20_95_c54_n256, clim = maximum(abs.(rows_RWU)) .* (-1, 1),
                 ylabel = "Depth [mm]",
-                colorbar_title = "RWU [mm/day]",
+                colorbar_title = "RWU [mm water/day per mm soil depth]",
                 size=(1400,800), dpi = 300, leftmargin = 15mm);
         # b2) distribution of RWU and roots
         plot_avgRWU = plot(sum(rows_RWU,dims=2), y,
@@ -406,9 +407,10 @@ for Δz_m in (
                 pl_θ, empty_plot,
                 pl_ψ, plot(pl_roots,xlabel=""),
                 pl_RWU, plot(plot_avgRWU,xlabel=""),
-                title = permutedims(["a) θ (m3/m3):",      " ",
-                                    "b) ψ (kPa):",         "d) Root density (-) distribution:",
-                                    "c) RWU (mm/day):",    "e) Total RWU (mm) averaged over time:"]),
+
+                title = permutedims(["a) θ (m3/m3):",                              " ",
+                                    "b) ψ (kPa):",                                 "d) Root density (-) distribution:",
+                                    "c) RWU (mm water/day per mm soil depth):",    "e) Total RWU (mm water / mm soil)\naveraged over time:"]),
                 titleloc = :left, titlefont = font(8),
                 size=(1400,800), dpi = 300, leftmargin = 15mm, bottommargin = 10mm,
                 link = :y,
