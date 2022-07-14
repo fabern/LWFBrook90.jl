@@ -136,8 +136,8 @@ function define_LWFB90_u0(p, uScalar_initial,
                        SNOW     = 4 ,
                        CC       = 5 ,
                        SNOWLQ   = 6 ,
-                       totalRWU = 48,
-                       XylemV   = 49,)
+                       totalRWU = 6 + length(u_SWATIinit_mm) + 1,
+                       XylemV   = 6 + length(u_SWATIinit_mm) + length(u_totalRWUinit_mmday) + 1)
     row_idx_SWATI = collect(6 + layer_idx                 for layer_idx in 1:p_soil.NLAYER)
     row_idx_RWU   = collect(8 + layer_idx + p_soil.NLAYER for layer_idx in 1:p_soil.NLAYER)
     if compute_intermediate_quantities
