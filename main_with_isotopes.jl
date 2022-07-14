@@ -17,6 +17,8 @@ input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
 # input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/LAE2010-2021/";
 # input_prefix = "DAV2010-2021";
 # input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/DAV2010-2021/";
+# input_prefix = "WaldLab";
+# input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/WaldLab/";
 
 ####################
 simulate_isotopes = true
@@ -144,7 +146,7 @@ for Δz_m in (
     ####################
 
     ####################
-    ## Benchmarking
+    ## Benchmarking of input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/"
     @time sol_LWFBrook90 = solve_LWFB90(u0, tspan, p);
         # 700 days in: 40 seconds dt=1e-3, adaptive = false (isoBea default spacing: NLAYER = 7)
         # 700 days in: 90 seconds dt=1e-3, adaptive = false (isoBea dense spacing (0.05m): NLAYER = 26)
@@ -208,6 +210,7 @@ for Δz_m in (
     using DataFrames
     using CSV: File
     using Plots, Measures
+    using Dates: DateTime
     fname = joinpath(
         "out",
         input_prefix*"_NLAYER+" * string(sol_LWFBrook90.prob.p[1][1].NLAYER)*
@@ -225,7 +228,14 @@ for Δz_m in (
         plot!(pl2, link = :x);
         savefig(pl2, fname*"_plotRecipe.png")
     end
-
+    if input_prefix == "WaldLab"
+        pl2b = LWFBrook90.ISO.plotisotopes(
+                sol_LWFBrook90, optim_ticks;
+                layout = grid(4, 1, heights=[0.1 ,0.4, 0.1, 0.4]),
+                size=(1000,1400), dpi = 300, leftmargin = 15mm,
+                xlim = (DateTime("2020-01-01"), DateTime("2020-12-31")))
+        savefig(pl2b, fname*"_plotRecipe-2020.png")
+    end
     # plot RWU time series
     # idx_u_scalar_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][8     ]
     #     idx_u_vector_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][9     ]

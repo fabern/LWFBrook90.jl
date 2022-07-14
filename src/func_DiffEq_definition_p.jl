@@ -9,7 +9,6 @@ Generate vector p needed for ODE() problem in DiffEq.jl package.
 - `FLAG_MualVanGen::...`: TODO argument description.
 - `constant_dt_solver::...`: TODO argument description.
 - `NOOUTF::...`: TODO argument description.
-- `Reset::...`: TODO argument description.
 - `compute_intermediate_quantities::...`: TODO argument description.
 - `input_meteoveg::...`: TODO argument description.
 - `input_param::...`: TODO argument description.
@@ -26,7 +25,7 @@ function define_LWFB90_p(
     input_soil_horizons,
     input_soil_discretization,
     simOption_FLAG_MualVanGen;
-    Reset = false,
+    Reset = false,# TODO(bernhard): remove this
     compute_intermediate_quantities = false,
     simulate_isotopes::Bool = false,
     soil_output_depths = zeros(Float64, 0), # = [],
@@ -339,6 +338,7 @@ function define_LWFB90_p(
 
     # p_cst_1 and p_cst_2 for both RHS and CallBack in DiffEq.jl
     p_cst_1 = p_soil
+    Reset = false # hardcoded
     p_cst_2 = (NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, Reset,
         p_DTP, p_NPINT,
 
