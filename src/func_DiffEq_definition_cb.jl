@@ -729,6 +729,8 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # u_δ2H_SNOW  = integrator.u[integrator.p[1][4].row_idx_scalars[4], integrator.p[1][4].col_idx_d2H ]
         u_δ18O_SWATI  = @view integrator.u[integrator.p[1][4].row_idx_SWATI, integrator.p[1][4].col_idx_d18O]
         u_δ2H_SWATI   = @view integrator.u[integrator.p[1][4].row_idx_SWATI, integrator.p[1][4].col_idx_d2H]
+        u_δ18O_XYLEM  = @view integrator.u[integrator.p[1][4].row_idx_scalars.XylemV, integrator.p[1][4].col_idx_d18O]
+        u_δ2H_XYLEM   = @view integrator.u[integrator.p[1][4].row_idx_scalars.XylemV, integrator.p[1][4].col_idx_d2H]
 
         # unpack other needed quantities
         ## A) constant parameters:
@@ -1104,6 +1106,8 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         C_²Hᵏ  .= LWFBrook90.ISO.δ_to_x.(δ²Hᵏ,  LWFBrook90.ISO.R_VSMOW²H)  # -, isotope amounts
         # C_¹⁸Oᵏ   = LWFBrook90.ISO.δ_to_C(δ¹⁸Oᵏ, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O) # kg/m3, # concentrations
         # C_²Hᵏ    = LWFBrook90.ISO.δ_to_C(δ²Hᵏ,  LWFBrook90.ISO.R_VSMOW²H,  LWFBrook90.ISO.Mi_²H)  # kg/m3, # concentrations
+        C_¹⁸O_Xylem = LWFBrook90.ISO.δ_to_x(u_δ18O_XYLEM, LWFBrook90.ISO.R_VSMOW¹⁸O) # -, isotope amounts
+        C_²H_Xylem  = LWFBrook90.ISO.δ_to_x(u_δ2H_XYLEM,  LWFBrook90.ISO.R_VSMOW²H)  # -, isotope amounts
 
 
         #                     D_at_interface                                    .*   dC/dz_at_interface
@@ -1120,7 +1124,12 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         Cᵢ¹⁸O_INFLI = LWFBrook90.ISO.δ_to_x.(p_δ18O_PREC(integrator.t), LWFBrook90.ISO.R_VSMOW¹⁸O)  # TODO(bernhard): for debugging, remove this again and replace with δ18O_INFLI
         # Cᵢ¹⁸O_INFLI = δ18O_INFLI
         # Cᵢ¹⁸O_INFLI = ifelse(sum(aux_du_INFLI) == 0, 0, δ18O_INFLI) # in case there is no inflow δ18O_INFLI was set to NaN, set it to zero for below equation
-        Cᵢ¹⁸O_TRANI = C_¹⁸Oᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
+        Cᵢ¹⁸O_TRANI = ifelse.(aux_du_TRANI .< 0,
+                              C_¹⁸O_Xylem,
+                              C_¹⁸Oᵏ)
+                             # Under root water uptake assume no fractionation occurring, i.e. outflux composition equal to storage composition C_¹⁸Oᵏ
+                             # however if aux_du_TRANI is negative for some layers it means water from the root xylem flows out into the soil domain
+                             # This is hereby accounted for the the isotope balance in soil water, as well as for the Xylem and δ_RWU
         Cᵢ¹⁸O_DSFL  = C_¹⁸Oᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
         C_¹⁸O_SLVP .= 0
         C_¹⁸O_SLVP[1]  = LWFBrook90.ISO.δ_to_x.(δ¹⁸O_SLVP, LWFBrook90.ISO.R_VSMOW¹⁸O)
@@ -1128,6 +1137,12 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # Cᵢ²H_INFLI = δ2H_INFLI
         # Cᵢ²H_INFLI = ifelse(sum(aux_du_INFLI) == 0, 0, δ2H_INFLI) # in case there is no inflow δ2H_INFLI was set to NaN, set it to zero for below equation
         Cᵢ²H_TRANI = C_²Hᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
+        Cᵢ²H_TRANI = ifelse.(aux_du_TRANI .< 0,
+                              C_²H_Xylem,
+                              C_²Hᵏ)
+                             # Under root water uptake assume no fractionation occurring, i.e. outflux composition equal to storage composition C_²Hᵏ
+                             # however if aux_du_TRANI is negative for some layers it means water from the root xylem flows out into the soil domain
+                             # This is hereby accounted for the the isotope balance in soil water, as well as for the Xylem and δ_RWU
         Cᵢ²H_DSFL  = C_²Hᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
         C_²H_SLVP    .= 0
         C_²H_SLVP[1]  = LWFBrook90.ISO.δ_to_x.(δ²H_SLVP,  LWFBrook90.ISO.R_VSMOW²H )
@@ -1150,11 +1165,13 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         du_Cᵢ²H_SWATI .= 0 # assert vector is zero
         du_Cᵢ¹⁸_SWATI .= -C_¹⁸Oᵏ./u_SWATIᵏ⁺¹ .* dVdt .+ 1 ./ u_SWATIᵏ⁺¹ .* (
                                 -diff¹⁸O_upp*1000 .+ diff¹⁸O_low*1000 .+ qCᵢ¹⁸O_upp .- qCᵢ¹⁸O_low .+
-                                aux_du_INFLI.*Cᵢ¹⁸O_INFLI .- aux_du_TRANI.*Cᵢ¹⁸O_TRANI .- aux_du_DSFLI.*Cᵢ¹⁸O_DSFL .- aux_du_SLVP.*C_¹⁸O_SLVP
+                                aux_du_INFLI.*Cᵢ¹⁸O_INFLI .- aux_du_DSFLI.*Cᵢ¹⁸O_DSFL .- aux_du_SLVP.*C_¹⁸O_SLVP .-
+                                aux_du_TRANI.*Cᵢ¹⁸O_TRANI
                             )
         du_Cᵢ²H_SWATI .= -C_²Hᵏ./u_SWATIᵏ⁺¹ .* dVdt .+ 1 ./ u_SWATIᵏ⁺¹ .* (
                                 -diff²H_upp*1000 .+ diff²H_low*1000 .+ qCᵢ²H_upp .- qCᵢ²H_low .+
-                                aux_du_INFLI.*Cᵢ²H_INFLI .- aux_du_TRANI.*Cᵢ²H_TRANI .- aux_du_DSFLI.*Cᵢ²H_DSFL .- aux_du_SLVP.*C_²H_SLVP
+                                aux_du_INFLI.*Cᵢ²H_INFLI .- aux_du_DSFLI.*Cᵢ²H_DSFL .- aux_du_SLVP.*C_²H_SLVP .-
+                                aux_du_TRANI.*Cᵢ²H_TRANI
                             )
 
     #TODO(bernhard): Diffusion slows the code down considerably and makes it unstable (for NLAYER=81 only, NLAYER=41 seems okay...)
@@ -1246,6 +1263,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # # ==>     dx/dt    = A * (B - x) = AB - Ax
         # # ==>     x = (x0 - B)*e^(-At) + B
         # # ==>     δ_xylem = δ_RWU + (δ_xylem - δ_RWU)*exp(-sum(aux_du_TRANI)/V_xylem * t)
+        # NOTE that above equations are also correct when some elements of aux_du_TRANI are negative, i.e. outflow from xylem to soil water
 
         # current state and parameter V_xylem
         u_δ¹⁸O_Xylem = integrator.u[integrator.p[1][4].row_idx_scalars.XylemV,   integrator.p[1][4].col_idx_d18O]
