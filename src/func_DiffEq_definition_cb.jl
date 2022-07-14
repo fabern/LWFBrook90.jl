@@ -1231,6 +1231,8 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # go back from atom fraction to delta values
         # u_δ18O_RWU = LWFBrook90.ISO.x_to_δ.(C¹⁸O_RWU, LWFBrook90.ISO.R_VSMOW¹⁸O)
         # u_δ2H_RWU  = LWFBrook90.ISO.x_to_δ.(C²H_RWU, LWFBrook90.ISO.R_VSMOW²H)
+        δ¹⁸O_RWU = LWFBrook90.ISO.x_to_δ(mean(Cᵢ¹⁸O_TRANI, weights(aux_du_TRANI)), LWFBrook90.ISO.R_VSMOW¹⁸O) #sum(aux_du_TRANI.*Cᵢ¹⁸O_TRANI)/sum(aux_du_TRANI)
+        δ²H_RWU  = LWFBrook90.ISO.x_to_δ(mean(Cᵢ²H_TRANI,  weights(aux_du_TRANI)), LWFBrook90.ISO.R_VSMOW²H)  #sum(aux_du_TRANI.*Cᵢ²H_TRANI) /sum(aux_du_TRANI)
 
         # # Assume δXylem is a reservoir of volume Vxylem (initial conditions ...) and influx is
         # # sum(aux_du_TRANI) of composition δ_RWU and outflux of same volume but composition δ_Xylem:
@@ -1238,23 +1240,27 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # # ==> dδ_xylem/dt = sum(aux_du_TRANI)/V_xylem * (δ_RWU - δ_xylem)
         # # ==>     dx/dt    = A * (B - x) = AB - Ax
         # # ==>     x = (x0 - B)*e^(-At) + B
-        # # ==>     δ_xylem = δ_RWU + (δ_xylem0 - δ_RWU)*exp(-sum(aux_du_TRANI)/V_xylem * t)
-        # V_xylem = 100 # mm, Volume of well mixed xylem storage per area, TODO(bernhard): make this a parameter
-        # u_δ18O_Xylem = u[integrator.p[1][4].row_idx_scalars.XylemV, integrator.p[1][4].col_idx_d18O]
-        # u_δ2H_Xylem  = u[integrator.p[1][4].row_idx_scalars.XylemV, integrator.p[1][4].col_idx_d2H ]
-        # u_δ18O_Xylem = u_δ18O_RWU + (u_δ18O_Xylem - u_δ18O_RWU)*exp(-sum(aux_du_TRANI)/V_xylem * integrator.dt) #TODO: this should be using δ_to_x() and back
-        # u_δ2H_Xylem  = u_δ2H_RWU  + (u_δ2H_Xylem  - u_δ2H_RWU )*exp(-sum(aux_du_TRANI)/V_xylem * integrator.dt) #TODO: this should be using δ_to_x() and back
+        # # ==>     δ_xylem = δ_RWU + (δ_xylem - δ_RWU)*exp(-sum(aux_du_TRANI)/V_xylem * t)
 
         # u[integrator.p[1][4].row_idx_scalars.totalRWU, integrator.p[1][4].col_idx_d18O] = sum(Cᵢ¹⁸O_TRANI, aux_du_TRANI) #sum(aux_du_TRANI.*Cᵢ¹⁸O_TRANI)/sum(aux_du_TRANI)
         # u[integrator.p[1][4].row_idx_scalars.totalRWU, integrator.p[1][4].col_idx_d2H ] = sum(Cᵢ²H_TRANI, aux_du_TRANI) #sum(aux_du_TRANI.*Cᵢ²H_TRANI) /sum(aux_du_TRANI)
-        u[integrator.p[1][4].row_idx_scalars.totalRWU, integrator.p[1][4].col_idx_d18O] = LWFBrook90.ISO.x_to_δ(mean(Cᵢ¹⁸O_TRANI, weights(aux_du_TRANI)), LWFBrook90.ISO.R_VSMOW¹⁸O) #sum(aux_du_TRANI.*Cᵢ¹⁸O_TRANI)/sum(aux_du_TRANI)
-        u[integrator.p[1][4].row_idx_scalars.totalRWU, integrator.p[1][4].col_idx_d2H ] = LWFBrook90.ISO.x_to_δ(mean(Cᵢ²H_TRANI, weights(aux_du_TRANI)), LWFBrook90.ISO.R_VSMOW²H) #sum(aux_du_TRANI.*Cᵢ²H_TRANI) /sum(aux_du_TRANI)
-
+        # u[integrator.p[1][4].row_idx_scalars.totalRWU, integrator.p[1][4].col_idx_d18O] = LWFBrook90.ISO.x_to_δ(mean(Cᵢ¹⁸O_TRANI, weights(aux_du_TRANI)), LWFBrook90.ISO.R_VSMOW¹⁸O) #sum(aux_du_TRANI.*Cᵢ¹⁸O_TRANI)/sum(aux_du_TRANI)
+        # u[integrator.p[1][4].row_idx_scalars.totalRWU, integrator.p[1][4].col_idx_d2H ] = LWFBrook90.ISO.x_to_δ(mean(Cᵢ²H_TRANI, weights(aux_du_TRANI)), LWFBrook90.ISO.R_VSMOW²H) #sum(aux_du_TRANI.*Cᵢ²H_TRANI) /sum(aux_du_TRANI)
+        u[integrator.p[1][4].row_idx_scalars.totalRWU, integrator.p[1][4].col_idx_d18O] = δ¹⁸O_RWU
+        u[integrator.p[1][4].row_idx_scalars.totalRWU, integrator.p[1][4].col_idx_d2H ] = δ²H_RWU
 
         # u[integrator.p[1][4].row_idx_scalars.totalRWU, integrator.p[1][4].col_idx_d18O] = u_δ18O_RWU  # TODO(bernhard): why does this triple allocations?
         # u[integrator.p[1][4].row_idx_scalars.totalRWU, integrator.p[1][4].col_idx_d2H ] = u_δ2H_RWU   # TODO(bernhard): why does this triple allocations?
-        # u[integrator.p[1][4].row_idx_scalars.XylemV, integrator.p[1][4].col_idx_d18O] = u_δ18O_Xylem
-        # u[integrator.p[1][4].row_idx_scalars.XylemV, integrator.p[1][4].col_idx_d2H ] = u_δ2H_Xylem
+
+        # V_xylem = 100 # mm, Volume of well mixed xylem storage per area, TODO(bernhard): make this a parameter
+        # u_δ18O_Xylem = u[integrator.p[1][4].row_idx_scalars.XylemV, integrator.p[1][4].col_idx_d18O]
+        # u_δ2H_Xylem  = u[integrator.p[1][4].row_idx_scalars.XylemV, integrator.p[1][4].col_idx_d2H ]
+        # Precise
+        # u_δ18O_Xylem = u_δ18O_RWU + (u_δ18O_Xylem - u_δ18O_RWU)*exp(-sum(aux_du_TRANI)/V_xylem * integrator.dt) #TODO: this should be using δ_to_x() and back
+        # u_δ2H_Xylem  = u_δ2H_RWU  + (u_δ2H_Xylem  - u_δ2H_RWU )*exp(-sum(aux_du_TRANI)/V_xylem * integrator.dt) #TODO: this should be using δ_to_x() and back
+
+        u[integrator.p[1][4].row_idx_scalars.XylemV, integrator.p[1][4].col_idx_d18O]         .+= integrator.dt * du_δ18O_SWATI    #TODO(bernhard)
+        u[integrator.p[1][4].row_idx_scalars.XylemV, integrator.p[1][4].col_idx_d2H]          .+= integrator.dt * du_δ2H_SWATI     #TODO(bernhard)
 
     end
 
