@@ -1,6 +1,7 @@
 using LWFBrook90
 using OrdinaryDiffEq: solve, Tsit5, init#, step!
 # example = LWFBrook90.run_example()
+using Plots, Measures
 
 # Read in input data
 # input_prefix = "isoBEA2016-reset-FALSE"
@@ -48,7 +49,7 @@ unused = discretize_soil(input_path, input_prefix)
 # Δz_m = [fill(0.04, 5); fill(0.05, 5); 0.3; 0.35; 0.1]                    # grid spacing (heterogenous), meter (N=13)
 # Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); 0.35; 0.1]          # grid spacing (heterogenous), meter (N=17)
 Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5); 0.1]; # grid spacing (heterogenous), meter (N=21)
-Δz_m = [fill(0.02, 10); fill(0.025, 10); fill(0.03, 10); fill(0.035, 10); 0.1]; # grid spacing (heterogenous), meter (N=41)
+# Δz_m = [fill(0.02, 10); fill(0.025, 10); fill(0.03, 10); fill(0.035, 10); 0.1]; # grid spacing (heterogenous), meter (N=41)
 # Δz_m = [fill(0.02, 60)... ]; # grid spacing (homgenous), meter (N=60)
 # Δz_m = [fill(0.01, 20); fill(0.0125, 20); fill(0.015, 20); fill(0.0175, 20); 0.1]; # grid spacing (heterogenous), meter (N=81)
 # Δz_m = [0.04, 0.04, 0.12, 0.25, 0.3, 0.35, 0.1];                           # grid spacing (heterogenous), meter (N=7)
@@ -71,6 +72,7 @@ for Δz_m in (
         uAux_PSIM_init_kPa = f2,
         u_delta18O_init_permil = ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.),
         u_delta2H_init_permil  = ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.))
+    # input_soil_discretization = unused
     ####################
 
     ####################
@@ -83,8 +85,7 @@ for Δz_m in (
         # # E.g:
         # # Soil hydraulic model
         # input_param[1,"NOOUTF"] = true # `true` if outflow from roots prevented, `false` if allowed
-    input_param[1,"NOOUTF"]
-    input_soil_horizons.gravel_volFrac .= 0.00
+        # input_soil_horizons.gravel_volFrac .= 0.00
     ####################
 
     ####################
@@ -204,6 +205,10 @@ for Δz_m in (
 
     ####################
     ## Plotting
+
+    θ_limits = (minimum(sol_LWFBrook90.prob.p[1][1].p_θr), maximum(sol_LWFBrook90.prob.p[1][1].p_THSAT))
+    ψ_pF_limits = (-2, 7)
+
     # 0) defined in module_ISO.jl
     # using Plots, Measures
     mkpath("out")
@@ -214,8 +219,8 @@ for Δz_m in (
     fname = joinpath(
         "out",
         input_prefix*"_NLAYER+" * string(sol_LWFBrook90.prob.p[1][1].NLAYER)*
-        "-git+"*chomp(read(`git rev-parse --short HEAD`, String))*
-        ifelse(length(read(`git status --porcelain`, String))==0, "+gitclean","+gitdirty")*
+        "-git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
+        ifelse(length(Base.read(`git status --porcelain`, String))==0, "+gitclean","+gitdirty")*
         "-iso+"*string(simulate_isotopes))
 
     if simulate_isotopes
@@ -270,7 +275,7 @@ for Δz_m in (
     end
 
 
-    if true
+    if (true)
         # theme(:default) # theme(:sand)
         PREC_color = :black
         depth_to_read_out_mm = [150 500 800 1500]
@@ -283,12 +288,13 @@ for Δz_m in (
             LWFBrook90.get_θ(depth_to_read_out_mm, sol_LWFBrook90),
             labels = string.(depth_to_read_out_mm) .* "mm",
             xlabel = "Date",
-            ylabel = "θ\n[-]",
-            legend = :outerright);
+            ylabel = "θ\n[-]", ylims = θ_limits,
+            legend = :outerright)
         pl_ψ = plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
             # -LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90) .+ 1, yaxis = :log, yflip = true,
             # LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90),  ylabel = "ψ\n[kPa]",
-            log.(-10 .* LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
+            log10.(-10 .* LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
+            ylims = ψ_pF_limits,
             labels = string.(depth_to_read_out_mm) .* "mm",
             xlabel = "Date",
             legend = :outerright);
@@ -347,7 +353,7 @@ for Δz_m in (
                 ylabel = "Water balance error [mm]")
     savefig(fname*"_plot-water-balance-error.png")
 
-    if true
+    if (true)
         # Depth-vs-time heatmap plots of θ, ψ, RWU
         # For all heatmaps
         t_ref = sol_LWFBrook90.prob.p[2][17]
@@ -361,14 +367,22 @@ for Δz_m in (
         (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
                         LWFBrook90.get_auxiliary_variables(sol_LWFBrook90)
         t_to_plot = 1:length(x)
-        pl_θ = heatmap(x, y, u_aux_θ', yflip = true,
+        pl_θ = heatmap(x, y,
+                    u_aux_θ', colorbar_title = "θ [-]", clims = θ_limits, c=cgrad(:inferno, rev=true),
+                    yflip = true,
                     xlabel = "",#"Date",
-                    ylabel = "Depth [mm]",
-                    colorbar_title = "θ [-]");
-        pl_ψ = heatmap(x, y, u_aux_PSIM', yflip = true,
+                    ylabel = "Depth [mm]");
+        pl_ψ = heatmap(x, y,
+                    # u_aux_PSIM', colorbar_title = "ψ_m [kPa]",
+                    log10.(-10 .* u_aux_PSIM'),  colorbar_title = "pF = log₁₀(-ψ hPa)", clims = ψ_pF_limits, c=cgrad(:inferno, rev=false),
+                    yflip = true,
                     xlabel = "",#"Date",
-                    ylabel = "Depth [mm]",
-                    colorbar_title = "ψ_m [kPa]");
+                    ylabel = "Depth [mm]");
+        # -LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90) .+ 1, yaxis = :log, yflip = true,
+            # LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90),  ylabel = "ψ\n[kPa]",
+
+
+
         # plot(pl_θ,pl_ψ,layout = (2,1))
         # b) for RWU
         # b1) RWU heatmap (depths vs time)
@@ -384,12 +398,13 @@ for Δz_m in (
         plot_avgRWU = plot(sum(rows_RWU,dims=2), y,
             yflip = true, ylabel = "Depth [mm]", #xlabel = "Total RWU over\nsimulation period [mm]")
             #xlabel = "RWU (mm)"
+            legend = :bottomright
         )
         root_data_start_end = [sol_LWFBrook90.prob.p[2].p_RELDEN.(t, 1:sol_LWFBrook90.prob.p[1][1].NLAYER)
                                 for t in extrema(sol_LWFBrook90.prob.tspan)]
         pl_roots = plot(root_data_start_end, y,
             labels = ("t=" .* string.(permutedims(collect(extrema(sol_LWFBrook90.prob.tspan))))),  linestyle = [:solid :dash],
-            yflip = true, ylabel = "Depth [mm]", xlabel = "Relative root\ndensity [-]");
+            yflip = true, ylabel = "Depth [mm]", xlabel = "Relative root\ndensity [-]", legend = :bottomright);
         empty_plot = plot(legend=false,grid=false,foreground_color_subplot=:white)
         # pl_RWU2 = plot(pl_θ, pl_ψ, pl_RWU,
         #         empty_plot, plot(pl_roots, ylabel = ""), plot(plot_avgRWU, ylabel = ""),
@@ -415,7 +430,7 @@ for Δz_m in (
                 size=(1400,800), dpi = 300, leftmargin = 15mm, bottommargin = 10mm,
                 link = :y,
                 layout = @layout [a{0.333h} d{0.2w}; b e; c{0.333h} f]
-        )
+        );
         savefig(pl_RWU2, fname*"_RWU2.png")
         # savefig(plot(pl_θ, pl_ψ, pl_RWU, layout = (3,1)),
         #         fname*"_RWU.png")
@@ -577,3 +592,277 @@ end
 # #      ylabel = "θ [-]",
 # #      legend = :bottomright)
 # # savefig(input_prefix*"_θ-feinUndSteinErde_depths_NLAYER"*string(sol_LWFBrook90.prob.p[1][1].NLAYER)*".png")
+
+
+
+
+
+# ###################################
+# ## More complex plots (comparing with LWFBrook90R results if available):
+# using Statistics
+# using Plots, Dates, StatsPlots, DataFramesMeta
+# using Gadfly, Cairo #,Fontconfig
+# using CSV
+
+using CSV: read, File
+using Dates: DateTime, Millisecond, Second, Day, Month, month, value, dayofyear
+using Plots
+using DataFrames: DataFrame, rename, sort!# ,select
+using DataFramesMeta#: @linq, transform, DataFramesMeta
+# input_meteoveg = @linq DataFrame(File(path_meteoveg;
+#     skipto=3, delim=',', ignorerepeated=false,
+#     # Be strict about loading NA's -> error if NA present
+#     types=parsing_types, missingstring = nothing, strict=true))  |>
+#     transform(:dates = DateTime.(:dates))
+
+if input_prefix == "DAV2010-2021";
+    # File("../../../LWF-Brook90.jl-calibration/Isotope-Data/2-combined-deposition/outputs/DAV2010-2021_meteoiso.csv")
+    # File("../../../LWF-Brook90.jl-calibration/Meteo-Data/DAV2010-2021/DAV2010-2021_meteoiso.csv")
+    dat_δ_soilSol   = DataFrame(File("../../../LWF-Brook90.jl-calibration/Isotope-Data/3-LWF-soil-solution/outputs/DAV-2022-07_soilsolutioniso.csv";header=1,skipto=3))
+    dat_δ_soilbulk  = DataFrame(File("../../../LWF-Brook90.jl-calibration/Isotope-Data/4-LWF-xylem-bulksoil/outputs/DAV-2022-07_bulksoiliso.csv";header=1,skipto=3))
+    dat_δ_xylem     = DataFrame(File("../../../LWF-Brook90.jl-calibration/Isotope-Data/4-LWF-xylem-bulksoil/outputs/DAV-2022-07_xylemiso.csv";header=1,skipto=3))
+    dat_ψ_tensiometer= DataFrame(File("../../../LWF-Brook90.jl-calibration/Soil-Data/1-LWF-tensiometer/DAV-2022-07_tensiometer.csv";header=1,skipto=3))
+    dat_θ_EC5Waldner = DataFrame(File("../../../LWF-Brook90.jl-calibration/Soil-Data/2-LWF-EC5-Waldner/outputs/DAV-2022-07_ec5-Waldner.csv";header=1,skipto=3))
+    dat_ψ_tensiomark = DataFrame(File("../../../LWF-Brook90.jl-calibration/Soil-Data/3-LWF-Tensiomark-EC5-Meusburger/outputs/DAV-2022-07_tensiomark-Meusburger.csv";header=1,skipto=3))
+    dat_ψ_tensiomarkAVG= DataFrame(File("../../../LWF-Brook90.jl-calibration/Soil-Data/3-LWF-Tensiomark-EC5-Meusburger/outputs/DAV-2022-07_tensiomarkAVG-Meusburger.csv";header=1,skipto=3))
+
+    # # a) Using Wide data sets:
+    # df = unstack(dat_ψ_tensiomarkAVG, :depth_cm, :psi_kPa)
+    # plot(df.dates,
+    #      Matrix(df[:,Not(:dates)]),
+    #      labels = permutedims(names(df[:,Not(:dates)])).*"cm",
+    #      legend = :bottomright, marker = :dot)
+
+    # df = unstack(dat_ψ_tensiomark, :depth_cm, :psi_kPa; allowduplicates=true)
+    # plot(df.dates,
+    #      Matrix(df[:,Not(:dates)]),
+    #      labels = permutedims(names(df[:,Not(:dates)])).*"cm",
+    #      legend = :bottomright, marker = :dot)
+
+    # # b) Keeping Long data sets:
+    # scatter(dat_ψ_tensiomark.dates, dat_ψ_tensiomark.psi_kPa, group = dat_ψ_tensiomark.depth_cm)
+    # scatter(dat_ψ_tensiomarkAVG.dates, dat_ψ_tensiomarkAVG.psi_kPa, group = dat_ψ_tensiomarkAVG.depth_cm)
+    # scatter(dat_θ_EC5Waldner.dates, dat_θ_EC5Waldner.theta_m3m3, group = dat_θ_EC5Waldner.depth_cm)
+    # scatter(dat_ψ_tensiometer.dates, dat_ψ_tensiometer.psim_median_kPa, group = dat_ψ_tensiometer.depth_cm)
+
+    @chain dat_ψ_tensiomark    scatter(_.dates, _.psi_kPa,         group = _.depth_cm)
+    @chain dat_ψ_tensiomarkAVG scatter(_.dates, _.psi_kPa,         group = _.depth_cm)
+    @chain dat_θ_EC5Waldner    scatter(_.dates, _.theta_m3m3,      group = _.depth_cm)
+    @chain dat_ψ_tensiometer   scatter(_.dates, _.psim_median_kPa, group = _.depth_cm)
+    @chain dat_δ_soilSol       scatter(_.dates, _.delta18O_permil, group = _.depth_cm)
+    @chain dat_δ_soilbulk      scatter(_.dates, _.delta18O_permil, group = _.depth_cm)
+    @chain dat_δ_xylem         scatter(_.dates, _.delta18O_permil, group = _.treeID)
+
+    depth_to_read_out_mm = [150 500 800 1500]
+
+    @chain dat_ψ_tensiometer[1:100,:]   scatter(convert.(DateTime, _.dates), _.psim_median_kPa, group = _.depth_cm .* 10)
+    pl_ψ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+        # -LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90) .+ 1, yaxis = :log, yflip = true,
+        LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90),  ylabel = "ψ\n[kPa]",
+        # log10.(-10 .* LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
+        labels = string.(depth_to_read_out_mm) .* "mm",
+        xlabel = "Date",
+        legend = :outerright)
+
+    @chain dat_θ_EC5Waldner[1:900,:]    scatter(convert.(DateTime, _.dates), _.theta_m3m3,      group = _.depth_cm)
+    pl_θ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+        LWFBrook90.get_θ(depth_to_read_out_mm, sol_LWFBrook90),
+        labels = string.(depth_to_read_out_mm) .* "mm",
+        xlabel = "Date",
+        ylabel = "θ\n[-]",
+        legend = :outerright)
+    xlims!(extrema(convert.(DateTime, dat_θ_EC5Waldner[1:900,:].dates)))
+
+    @chain dat_ψ_tensiometer[1:100,:]   scatter!(_.dates, _.psim_median_kPa, group = _.depth_cm)
+    @chain dat_ψ_tensiomarkAVG scatter!(
+        _.dates,
+        log10.(-10 .* _.psi_kPa),
+        group = _.depth_cm)
+
+
+    # Averages with nominal depth (or rounded depth actually)
+    depth_to_read_out_mm = sort(unique(dat_ψ_tensiomarkAVG.depth_nominal_cm)).*10
+    col_palette = palette(:inferno, length(depth_to_read_out_mm)+1; rev = true)[Not(1)]
+    @chain dat_ψ_tensiomarkAVG scatter(
+            convert.(DateTime, _.dates),
+            _.psi_kPa,
+            group = _.depth_nominal_cm,
+            # color_palette = [:blue, :red, :green, :yellow]
+            # color_palette = palette(:inferno, 4; rev = true),
+            # color_palette = palette(:inferno, 4+2; rev = true)[Not(1,end)],
+            # color_palette = palette(:inferno, 4+1; rev = true)[Not(1)],
+            color_palette = col_palette,
+            marker = (0.3, :o), markerstrokewidth = 0)
+    pl_ψ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+        # -LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90) .+ 1, yaxis = :log, yflip = true,
+        LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90),  ylabel = "ψ\n[kPa]",
+        # log10.(-10 .* LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
+        labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
+        xlabel = "Date", legend = :outerright, color_palette = col_palette,
+        linewidth = 3)
+    xlims!(extrema(convert.(DateTime, dat_ψ_tensiomarkAVG.dates)));
+    ylims!(-15,0);
+    plot!(size=(800,500), dpi = 200, leftmargin = 5mm)
+    savefig(fname*"_vs-ψ-average-data.png")
+
+    @chain dat_ψ_tensiomarkAVG scatter(
+            convert.(DateTime, _.dates),
+            log10.(-10 .* _.psi_kPa), yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", # _.psi_kPa,
+            group = _.depth_nominal_cm,
+            color_palette = col_palette,
+            marker = (0.3, :o), markerstrokewidth = 0)
+    pl_ψ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+        log10.(-10 .* LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
+        labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
+        xlabel = "Date", legend = :outerright, color_palette = col_palette,
+        linewidth = 3)
+    xlims!(extrema(convert.(DateTime, dat_ψ_tensiomarkAVG.dates)))
+    ylims!(0,3) #ylims!(log10(-10 * -0), log10(-10 * -15)); # ylims!(-15,0);
+    plot!(size=(800,500), dpi = 200, leftmargin = 5mm)
+    savefig(fname*"_vs-ψ-average-data-log.png")
+
+    # Each sensore with actual depth
+    depth_to_read_out_mm = sort(unique(dat_ψ_tensiomark.depth_cm)).*10
+    col_palette = palette(:inferno, length(depth_to_read_out_mm)+1; rev = true)[Not(1)]
+    @chain dat_ψ_tensiomark scatter(
+            convert.(DateTime, _.dates),
+            _.psi_kPa,
+            group = _.depth_cm,
+            # color_palette = [:blue, :red, :green, :yellow]
+            # color_palette = palette(:inferno, 4; rev = true),
+            # color_palette = palette(:inferno, 4+2; rev = true)[Not(1,end)],
+            # color_palette = palette(:inferno, 4+1; rev = true)[Not(1)],
+            color_palette = col_palette,
+            marker = (0.3, :o), markerstrokewidth = 0)
+
+    pl_ψ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+        # -LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90) .+ 1, yaxis = :log, yflip = true,
+        LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90),  ylabel = "ψ\n[kPa]",
+        # log10.(-10 .* LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
+        labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
+        xlabel = "Date", legend = :outerright, color_palette = col_palette,
+        linewidth = 3)
+    xlims!(extrema(convert.(DateTime, dat_ψ_tensiomarkAVG.dates)));
+    ylims!(-15,0);
+    plot!(size=(800,500), dpi = 200, leftmargin = 5mm)
+    savefig(fname*"_vs-ψ-data.png")
+
+
+
+    @chain dat_ψ_tensiomark scatter(
+            convert.(DateTime, _.dates),
+            log10.(-10 .* _.psi_kPa), yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", # _.psi_kPa,
+            group = _.depth_cm,
+            color_palette = col_palette,
+            marker = (0.3, :o), markerstrokewidth = 0)
+    pl_ψ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+        log10.(-10 .* LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
+        labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
+        xlabel = "Date", legend = :outerright, color_palette = col_palette,
+        linewidth = 3)
+    xlims!(extrema(convert.(DateTime, dat_ψ_tensiomarkAVG.dates)));
+    ylims!(0,3) #ylims!(log10(-10 * -0), log10(-10 * -15)); # ylims!(-15,0);
+
+    plot!(size=(800,500), dpi = 200, leftmargin = 5mm)
+    savefig(fname*"_vs-ψ-data_log.png")
+
+
+
+
+    ### Tensiometer:
+
+    depth_to_read_out_mm = sort(unique(dat_ψ_tensiometer.depth_cm)).*10
+    col_palette = palette(:inferno, length(depth_to_read_out_mm)+1; rev = true)[Not(1)]
+
+    @chain dat_ψ_tensiometer   scatter(
+            convert.(DateTime, _.dates),
+            # log10.(-10 .* _.psim_median_kPa), yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", # _.psi_kPa,
+            _.psim_median_kPa,
+            group = _.depth_cm,
+            color_palette = col_palette,
+            marker = (0.3, :o), markerstrokewidth = 0)
+    pl_ψ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+        # log10.(-10 .* LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
+        LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90),  ylabel = "ψ [kPa]",
+        labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
+        xlabel = "Date", legend = :outerright, color_palette = col_palette,
+        linewidth = 3)
+    ylims!(-15,0)
+
+    plot!(size=(800,500), dpi = 200, leftmargin = 5mm)
+    savefig(fname*"_vs-ψ-tensiometer.png")
+
+
+
+
+    ### Soilsolution isotopes:
+    depth_to_read_out_mm = sort(unique(dat_δ_soilSol.depth_cm)).*10
+    col_palette = palette(:inferno, length(depth_to_read_out_mm)+1; rev = true)[Not(1)]
+
+    @chain dat_δ_soilSol   scatter(
+            convert.(DateTime, _.dates),
+            _.delta18O_permil,
+            group = _.depth_cm,
+            color_palette = col_palette,
+            marker = (0.7, :o), markerstrokewidth = 0)
+    pl_δsoil = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+        LWFBrook90.get_δsoil(depth_to_read_out_mm  .+ 0.01, sol_LWFBrook90).d18O,
+        ylabel = "δ18O [permil]",
+        labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
+        xlabel = "Date", legend = :outerright, color_palette = col_palette,
+        linewidth = 3, alpha = 0.5)
+    # add precipitation
+    pl_δsoil = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+                    sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t),
+                    color = "grey", alpha = 0.5, labels = "Precipiation")
+
+    # ylims!(-15,0)
+    xlims!(extrema(convert.(DateTime, dat_δ_soilSol.dates)))
+    plot!(size=(800,500), dpi = 200, leftmargin = 5mm)
+    savefig(fname*"_vs-δ-soilsolution.png")
+
+
+    # ### Bulksoil isotopes:
+    # # TODO
+    # dat_for_heatmap = @chain begin
+    #     dat_δ_soilbulk
+    #     @subset (:treeID .== "240")
+    #     @select($(Not(:delta2H_permil)))
+    #     @orderby :depth_cm
+    #     unstack(:depth_cm, :delta18O_permil)
+    #     @orderby :dates
+    # end
+
+
+    # Plots.heatmap(
+    #     dat_for_heatmap.dates, # 1:5,
+    #     parse.(Int, names(dat_for_heatmap)[Not(1,2)]),
+    #     permutedims(Matrix(dat_for_heatmap[:,Not(1,2)])),
+    #     yflip = true
+    #     )
+
+    ### Xylem isotopes:
+    @chain dat_δ_xylem   scatter(
+            convert.(DateTime, _.dates),
+            _.delta18O_permil,
+            group = _.treeID,
+            marker = (0.7, :o), markerstrokewidth = 0)
+    pl_δsoil = plot!(
+        LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+        permutedims([LWFBrook90.get_δ(sol_LWFBrook90).RWU.d18O;
+                    LWFBrook90.get_δ(sol_LWFBrook90).XYL.d18O]),
+        ylabel = "δ18O [permil]",
+        labels = ["RWU" "Xylem"],
+        xlabel = "Date", legend = :outerright,
+        linewidth = 3, alpha = 0.5)
+    # add precipitation
+    pl_δsoil = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
+                    sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t),
+                    color = "grey", alpha = 0.5, labels = "Precipiation")
+
+    # ylims!(-15,0)
+    xlims!(extrema(convert.(DateTime, dat_δ_xylem.dates)) .+ (-Day(100), Day(50)))
+    plot!(size=(800,500), dpi = 200, leftmargin = 5mm)
+    savefig(fname*"_vs-δ-xylem.png")
+end
+
