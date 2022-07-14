@@ -177,7 +177,13 @@ end
         p_WETINF = [1])
 end
 
-@testset "pointers-to-elements-of-u0" begin
+# @testset "pointers-to-elements-of-u0" begin
+Δz_m_data = [
+            [fill(0.5, 4);],
+            [fill(0.02, 100);],
+            [fill(0.01, 200);]
+        ]
+@testset "pointers-to-elements-of-u0 (Δz_m = $(first(Δz_m)))" for Δz_m in Δz_m_data # source: https://stackoverflow.com/a/63871951
     simulate_isotopes = true
     compute_intermediate_quantities = true; # Flag whether ODE containes additional quantities than only states
 
@@ -188,11 +194,12 @@ end
         input_storm_durations,
         input_initial_conditions,
         input_soil_horizons,
-        simOption_FLAG_MualVanGen) = read_inputData("test/test-assets/Hammel-2001/input-files-ISO/",
+        simOption_FLAG_MualVanGen) = read_inputData("test-assets/Hammel-2001/input-files-ISO/",
                                                     "Hammel_loam-NLayer-103-RESET=FALSE";
                                                     simulate_isotopes = simulate_isotopes);
     f1 = (Δz_m) -> LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)  # function for root density as f(Δz)
     f2 = (Δz_m) -> fill(-6.3, length(Δz_m))          # function for initial conditions as f(Δz)
+
     input_soil_discretization = discretize_soil(;
         Δz_m = Δz_m,
         Rootden_ = f1,
