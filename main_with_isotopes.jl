@@ -190,6 +190,21 @@ for Δz_m in (
         #  git+e6ad7ad+gitdirty-iso+true  NLAYER=21: 0.857902 seconds (3.19 M allocations: 548.413 MiB, 10.90% gc time) 7020 Δt's
         #  git+e6ad7ad+gitdirty-iso+true  NLAYER=41: 2.700105 seconds (6.28 M allocations: 1.763 GiB, 15.09% gc time) 14469 Δt's
         #  git+e6ad7ad+gitdirty-iso+true  NLAYER=60: 3.271614 seconds (4.72 M allocations: 1.875 GiB, 13.70% gc time) 10619 Δt's
+        # isoBEAdense2010-18-reset-FALSE_NLAYER+7-git+544f265+gitclean-iso+true:  1.100431 seconds (6.02 M allocations: 582.128 MiB, 12.61% gc time) 12417 Δt's
+        # isoBEAdense2010-18-reset-FALSE_NLAYER+13-git+544f265+gitclean-iso+true: 1.689267 seconds (6.84 M allocations: 893.392 MiB, 15.44% gc time) 14124 Δt's
+        # isoBEAdense2010-18-reset-FALSE_NLAYER+21-git+544f265+gitclean-iso+true: 1.261623 seconds (4.01 M allocations: 703.352 MiB, 14.22% gc time) 8411 Δt's
+        # isoBEAdense2010-18-reset-FALSE_NLAYER+14-git+544f265+gitclean-iso+true: 3.212237 seconds (5.96 M allocations: 1.726 GiB, 33.60% gc time) 12811 Δt's
+        # isoBEAdense2010-18-reset-FALSE_NLAYER+62-git+544f265+gitclean-iso+true: 1.224711 seconds (1.96 M allocations: 823.858 MiB, 16.57% gc time) 4089 Δt's
+        # isoBEAdense2010-18-reset-FALSE_NLAYER+7-git+544f265+gitclean-iso+true gravelFrac=0:  0.249753 seconds (1.07 M allocations: 104.647 MiB, 23.68% gc time) 2203 Δt's
+        # isoBEAdense2010-18-reset-FALSE_NLAYER+13-git+544f265+gitclean-iso+true gravelFrac=0: 0.307845 seconds (1.26 M allocations: 165.862 MiB, 22.77% gc time) 2555 Δt's
+        # isoBEAdense2010-18-reset-FALSE_NLAYER+21-git+544f265+gitclean-iso+true gravelFrac=0: 1.090218 seconds (3.19 M allocations: 548.413 MiB, 12.95% gc time) 7020 Δt's
+        # isoBEAdense2010-18-reset-FALSE_NLAYER+14-git+544f265+gitclean-iso+true gravelFrac=0: 2.708308 seconds (6.28 M allocations: 1.763 GiB, 16.18% gc time) 14469 Δt's
+        # isoBEAdense2010-18-reset-FALSE_NLAYER+62-git+544f265+gitclean-iso+true gravelFrac=0: 2.620070 seconds (4.72 M allocations: 1.875 GiB, 12.91% gc time) 10619 Δt's
+        # isoBEAdense2010-18-reset-FALSE_NLAYER+7-git+4cdb5e8+gitclean-iso+true gravelFrac=0: 0.156029 seconds (1.11 M allocations: 105.185 MiB) 2203 Δt's
+        # isoBEAdense2010-18-reset-FALSE_NLAYER+13-git+4cdb5e8+gitclean-iso+true gravelFrac=0: 0.536214 seconds (1.30 M allocations: 166.486 MiB, 50.42% gc time) 2555 Δt's
+        # isoBEAdense2010-18-reset-FALSE_NLAYER+21-git+4cdb5e8+gitclean-iso+true gravelFrac=0: 0.994925 seconds (3.30 M allocations: 550.127 MiB, 16.16% gc time) 7020 Δt's
+        # isoBEAdense2010-18-reset-FALSE_NLAYER+14-git+4cdb5e8+gitclean-iso+true gravelFrac=0: 3.067565 seconds (6.52 M allocations: 1.767 GiB, 14.51% gc time) 14469 Δt's
+        # isoBEAdense2010-18-reset-FALSE_NLAYER+62-git+4cdb5e8+gitclean-iso+true gravelFrac=0: 2.926338 seconds (4.89 M allocations: 1.878 GiB, 13.04% gc time) 10619 Δt's
                 # TODO(bernhard): there is a bug in NLAYER=60...
 
                     # integrator =  init(ode_LWFBrook90, Tsit5(); progress = true,
