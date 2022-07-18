@@ -94,7 +94,9 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     # for MSBPREINT:
     p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS,
     p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS,
-    p_DURATN, p_MAXLQF, p_GRDMLT) = integrator.p[1][3]
+    p_DURATN, p_MAXLQF, p_GRDMLT,
+
+    p_VXYLEM) = integrator.p[1][3]
 
     ## B) time dependent parameters
     p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC,
@@ -735,6 +737,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # unpack other needed quantities
         ## A) constant parameters:
         NLAYER = integrator.p[1][2][1]
+        p_VXYLEM = integrator.p[1][3][64]
 
         # TODO(bernhard): Note to below:
         #                 Fluxes in integrator.p[3][:] might be just the values overwritten by the last call to f.
@@ -1268,17 +1271,16 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # current state and parameter V_xylem
         u_δ¹⁸O_Xylem = integrator.u[integrator.p[1][4].row_idx_scalars.XylemV,   integrator.p[1][4].col_idx_d18O]
         u_δ²H_Xylem  = integrator.u[integrator.p[1][4].row_idx_scalars.XylemV,   integrator.p[1][4].col_idx_d2H]
-        V_xylem = 100 # mm, Volume of well mixed xylem storage per area, TODO(bernhard): make this a parameter
 
         # a) Approximate solution (Forward Euler integration over dt)
         # if δ¹⁸O_RWU is NaN, it means aux_du_TRANI is zero
-        du_δ¹⁸O_Xylem = ifelse(isnan(δ¹⁸O_RWU), 0.0, sum(aux_du_TRANI) / V_xylem * (δ¹⁸O_RWU - u_δ¹⁸O_Xylem))
-        du_δ²H_Xylem  = ifelse(isnan(δ²H_RWU), 0.0, sum(aux_du_TRANI) / V_xylem * (δ²H_RWU  - u_δ²H_Xylem))
+        du_δ¹⁸O_Xylem = ifelse(isnan(δ¹⁸O_RWU), 0.0, sum(aux_du_TRANI) / p_VXYLEM * (δ¹⁸O_RWU - u_δ¹⁸O_Xylem))
+        du_δ²H_Xylem  = ifelse(isnan(δ²H_RWU), 0.0, sum(aux_du_TRANI) / p_VXYLEM * (δ²H_RWU  - u_δ²H_Xylem))
         integrator.u[integrator.p[1][4].row_idx_scalars.XylemV,   integrator.p[1][4].col_idx_d18O] += integrator.dt * du_δ¹⁸O_Xylem
         integrator.u[integrator.p[1][4].row_idx_scalars.XylemV,   integrator.p[1][4].col_idx_d2H]  += integrator.dt * du_δ²H_Xylem
         # b) Precise solution (Analytical integration over dt)
-        # u_δ¹⁸O_Xylem = u_δ18O_RWU + (u_δ¹⁸O_Xylem - u_δ18O_RWU)*exp(-sum(aux_du_TRANI)/V_xylem * integrator.dt) #TODO: this should be using δ_to_x() and back
-        # u_δ²H_Xylem  = u_δ2H_RWU  + (u_δ²H_Xylem  - u_δ2H_RWU )*exp(-sum(aux_du_TRANI)/V_xylem * integrator.dt) #TODO: this should be using δ_to_x() and back
+        # u_δ¹⁸O_Xylem = u_δ18O_RWU + (u_δ¹⁸O_Xylem - u_δ18O_RWU)*exp(-sum(aux_du_TRANI)/p_VXYLEM * integrator.dt) #TODO: this should be using δ_to_x() and back
+        # u_δ²H_Xylem  = u_δ2H_RWU  + (u_δ²H_Xylem  - u_δ2H_RWU )*exp(-sum(aux_du_TRANI)/p_VXYLEM * integrator.dt) #TODO: this should be using δ_to_x() and back
     end
 
     return nothing

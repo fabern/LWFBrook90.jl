@@ -76,7 +76,7 @@ generate_LWFBrook90jl_Input <- function(Julia_target_dir = NA,
     group_by(HorizonNr = with(rle(mat), rep(seq_along(lengths), lengths))) %>% # source: # https://stackoverflow.com/a/54582075/
     # Note: we cannot simply group_by(mat), as we need to split the same mat into multiple horizons
     #       if it is not consecutive e.g. dat$mat = c(1,1,2,2,1,1,1)
-    summarize(HorizonNr = group_indices(),
+    summarize(HorizonNr = cur_group_id(),
               Upper_m = max(Upper_m),
               Lower_m = min(Lower_m),
               mat     = unique(mat))
@@ -96,19 +96,17 @@ generate_LWFBrook90jl_Input <- function(Julia_target_dir = NA,
   ) %>% select(-mat)
 
 
-
   # B3) initial conditions of scalar state variables
-  out_initial_conditions <- with(input_Data$param_b90,c(
-    "### Initial conditions (of vector states) -------" = NA,
-    "u_GWAT_init_mm"=gwatini,
-    "u_INTS_init_mm"=intsnowini,
-    "u_INTR_init_mm"=intrainini,
-    "u_SNOW_init_mm"=snowini,
-    "u_CC_init_MJ_per_m2"    =0,
-    "u_SNOWLQ_init_mm"=0
-  ))
-  out_csv_initial_conditions <- data.frame(param_id = names(out_initial_conditions),
-                                           amount   = unname(out_initial_conditions))
+  out_csv_initial_conditions <- with(input_Data$param_b90,
+    tribble(
+      ~param_id,~amount,~u_delta18O_init_permil,~u_delta2H_init_permil,
+      "### Initial conditions (of vector states) -------", NA,NA,NA,
+      "u_GWAT_init_mm", gwatini, NA, NA,
+      "u_INTS_init_mm", intsnowini, NA, NA,
+      "u_INTR_init_mm", intrainini, NA, NA,
+      "u_SNOW_init_mm", snowini, NA, NA,
+      "u_CC_init_MJ_per_m2" ,  0, NA, NA,
+      "u_SNOWLQ_init_mm"    ,  0, NA, NA ))
 
 
   # B4) other model parameters
@@ -121,12 +119,17 @@ generate_LWFBrook90jl_Input <- function(Julia_target_dir = NA,
   }
   # Save all parameters
   out_param <- with(input_Data$param_b90,
-                        c("### Meteorologic site parameters -------" = NA,
+                        c("### Isotope transport parameters  -------" = NA,
+                          "### TODO" = 42.000,
+                          "### TODO2" = 42.000,
+                          "VXYLEM_mm" = 20, # Note: use a hardcoded default value of 20mm
+                          "### Meteorologic site parameters -------" = NA,
                           "LAT_DEG"=coords_y, "ESLOPE_DEG"=eslope,"ASPECT_DEG"=aspect,
                           "ALB"=alb,          "ALBSN"=albsn,
                           "C1"=c1,            "C2"=c2,          "C3"=c3,
                           "WNDRAT"=wndrat,    "FETCH"=fetch,    "Z0W"=z0w,   "ZW"=zw,
                           "### Canopy parameters -------" = NA,
+                          "MAXLAI" = 2.9299999, # TODO(bernhard): use the max value of LAI
                           "LWIDTH"=lwidth,    "Z0G" = obsheight * czs,  "Z0S"=z0s,
                           "LPC"=lpc,          "CS"=cs,                  "CZS"=czs,
                           "CZR"=czr,          "HS"=hs,                  "HR"=hr,

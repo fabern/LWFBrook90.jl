@@ -54,10 +54,10 @@ function define_LWFB90_p(
             input_param[1,"INITRLEN"],
             input_param[1,"RGROPER"],
             soil_discr["tini"],
-            soil_discr["frelden"])
-    # TODO(bernhard): document input parameters: INITRDEP, INITRLEN, RGROPER, tini, frelden,
+            soil_discr["frelden"],
+            input_param[1,"MAXLAI"])
+    # TODO(bernhard): document input parameters: INITRDEP, INITRLEN, RGROPER, tini, frelden, MAXLAI
     ########
-
 
     ########
     ## Solver algorithm options
@@ -75,6 +75,8 @@ function define_LWFB90_p(
     # p_TopInfT = soil_discr["TopInfT"]
     # unused p_HeatCapOld = soil_discr["HeatCapOld"]
 
+    # Isotope transport parameters
+    p_VXYLEM = input_param[1,"VXYLEM_mm"] # mm, storage volume of well mixed xylem storage per ground area # TODO(bernhard): possibly link this to SAI...
 
     ## Location / Meteo
     p_NPINT  = 1 # Hardcoded. If p_NPINT>1, then multiple precipitation intervals would need
@@ -371,7 +373,10 @@ function define_LWFB90_p(
         # for MSBPREINT:
         p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS,
         p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS,
-        p_DURATN, p_MAXLQF, p_GRDMLT)
+        p_DURATN, p_MAXLQF, p_GRDMLT,
+
+        # for isotope mixing:
+        p_VXYLEM)
 
 
     p_cst_4 = (
@@ -478,7 +483,8 @@ function interpolate_meteoveg(
     p_INITRLEN,
     p_RGROPER,
     p_tini,
-    p_frelden)
+    p_frelden,
+    p_MAXLAI)
 
     # 2) Interpolate input data in time
     # ### FOR DEVELOPMENT:

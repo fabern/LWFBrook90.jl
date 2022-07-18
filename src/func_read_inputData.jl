@@ -395,6 +395,7 @@ function read_path_param(path_param; simulate_isotopes::Bool = false)
         Dict(### Isotope transport parameters  -------,NA
             # "TODO" => Float64, "TODO2" => Float64,
             # TODO(bernhard): this needs to be extended with the currently hardcoded isotope transport parameters
+            "VXYLEM_mm" => Float64,
             # Meteorologic site parameters -------
             "LAT_DEG" => Float64,
             "ESLOPE_DEG" => Float64,       "ASPECT_DEG" => Float64,
@@ -402,6 +403,7 @@ function read_path_param(path_param; simulate_isotopes::Bool = false)
             "C1" => Float64,               "C2" => Float64,               "C3" => Float64,
             "WNDRAT" => Float64,           "FETCH" => Float64,            "Z0W" => Float64,              "ZW" => Float64,
             # Canopy parameters -------
+            "MAXLAI" => Float64,
             "LWIDTH" => Float64,           "Z0G" => Float64,              "Z0S" => Float64,
             "LPC" => Float64,              "CS" => Float64,               "CZS" => Float64,
             "CZR" => Float64,              "HS" => Float64,               "HR" => Float64,
