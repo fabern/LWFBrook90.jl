@@ -55,8 +55,14 @@ function define_LWFB90_p(
             input_param[1,"RGROPER"],
             soil_discr["tini"],
             soil_discr["frelden"],
-            input_param[1,"MAXLAI"])
-    # TODO(bernhard): document input parameters: INITRDEP, INITRLEN, RGROPER, tini, frelden, MAXLAI
+            input_param[1,"MAXLAI"],
+            input_param[1,"SAI_baseline_"],
+            input_param[1,"DENSEF_baseline_"],
+            input_param[1,"AGE_baseline_yrs"],
+            input_param[1,"HEIGHT_baseline_m"])
+
+
+    # TODO(bernhard): document input parameters: INITRDEP, INITRLEN, RGROPER, tini, frelden, MAXLAI, HEIGHT_baseline_m
     ########
 
     ########
@@ -484,7 +490,11 @@ function interpolate_meteoveg(
     p_RGROPER,
     p_tini,
     p_frelden,
-    p_MAXLAI)
+    p_MAXLAI,
+    p_SAI_baseline_,
+    p_DENSEF_baseline_,
+    p_AGE_baseline_yrs,
+    p_HEIGHT_baseline_m)
 
     # 2) Interpolate input data in time
     # ### FOR DEVELOPMENT:
@@ -531,18 +541,23 @@ function interpolate_meteoveg(
     #     xlims!(0, 500)
     # ### END FOR DEVELOPMENT
 
-    p_GLOBRAD = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.GLOBRAD, Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
-    p_TMAX    = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.TMAX,    Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
-    p_TMIN    = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.TMIN,    Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
-    p_VAPPRES = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.VAPPRES, Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
-    p_WIND    = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.WIND,    Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
-    p_DENSEF  = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.DENSEF,  Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
-    p_HEIGHT  = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.HEIGHT,  Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
-    p_LAI     = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.LAI,     Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
-    p_SAI     = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.SAI,     Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
-    p_AGE     = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.AGE,     Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
-    p_PREC    = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.PRECIN,  Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+    # Interpolate input data without modification
+    p_GLOBRAD = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.GLOBRAD,          Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+    p_TMAX    = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.TMAX,             Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+    p_TMIN    = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.TMIN,             Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+    p_VAPPRES = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.VAPPRES,          Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+    p_WIND    = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.WIND,             Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+    p_PREC    = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.PRECIN,           Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
     # NOTE: PRECIN is already in mm/day from the input data set. No transformation is needed for p_PREC.
+
+    # Interpolate input data with consideration of baselines
+    p_LAI     = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.LAI./100 .* p_MAXLAI,              Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+    p_SAI     = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.SAI./100 .* p_SAI_baseline_,       Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+    p_DENSEF  = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.DENSEF./100 .* p_DENSEF_baseline_, Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+    p_HEIGHT  = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.HEIGHT./100 .* p_HEIGHT_baseline_m,Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+
+    # p_AGE     = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.AGE, Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+    p_AGE     = (t) -> p_AGE_baseline_yrs + t/365
 
     if (isnothing(input_meteoiso))
         function p_d18OPREC(t)
@@ -562,7 +577,15 @@ function interpolate_meteoveg(
     # Which is a vector quantity that is dependent on time:
     p_RELDEN_2Darray = fill(NaN, nrow(input_meteoveg), NLAYER)
     for i in 1:nrow(input_meteoveg)
-        p_RELDEN_2Darray[i,:] = LWFBrook90.WAT.LWFRootGrowth(p_frelden, p_tini, input_meteoveg.AGE[i], p_RGROPER, p_INITRDEP, p_INITRLEN, NLAYER)
+        p_RELDEN_2Darray[i,:] =
+            LWFBrook90.WAT.LWFRootGrowth(
+                p_frelden,
+                p_tini,
+                p_AGE(input_meteoveg.days[i]),
+                p_RGROPER,
+                p_INITRDEP,
+                p_INITRLEN,
+                NLAYER)
     end
     p_RELDEN =  extrapolate(interpolate((input_meteoveg.days, 1:NLAYER), p_RELDEN_2Darray,
                                         (Gridded(Constant{Next}()), NoInterp()), # 1st dimension: ..., 2nd dimension NoInterp()

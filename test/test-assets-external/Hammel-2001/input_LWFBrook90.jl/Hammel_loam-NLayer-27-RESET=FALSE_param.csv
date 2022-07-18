@@ -17,7 +17,11 @@ FETCH,5000
 Z0W,0.005
 ZW,2
 ### Canopy parameters -------,NA
-MAXLAI,1.0000
+MAXLAI,1.0
+DENSEF_baseline_,1
+SAI_baseline_,1
+AGE_baseline_yrs,200
+HEIGHT_baseline_m,23.0
 LWIDTH,0.1
 Z0G,0.00325
 Z0S,0.001
