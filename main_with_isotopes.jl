@@ -20,6 +20,8 @@ input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
 # input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/DAV2010-2021/";
 # input_prefix = "WaldLab";
 # input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/WaldLab/";
+# input_prefix = "DAV_LW1_def";
+# input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/DAV_LW1_def/";
 
 ####################
 simulate_isotopes = true
@@ -215,7 +217,7 @@ for Δz_m in (
     using DataFrames
     using CSV: File
     using Plots, Measures
-    using Dates: DateTime
+    using Dates: DateTime, format
     fname = joinpath(
         "out",
         input_prefix*"_NLAYER+" * string(sol_LWFBrook90.prob.p[1][1].NLAYER)*
@@ -318,6 +320,11 @@ for Δz_m in (
             plot!(pl_δ18O,
                 LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date),
                 δ_results.PREC.d18O', labels = "PREC", color = PREC_color, linestyle = :dot);
+                # # add raw data values to check interpolation
+                # data_days_to_plot = (input_meteoiso.days .> tspan[1] .&& input_meteoiso.days .< tspan[2])
+                # scatter!(LWFBrook90.RelativeDaysFloat2DateTime.(input_meteoiso.days[data_days_to_plot], input_meteoveg_reference_date),
+                #         input_meteoiso.delta18O_permil[data_days_to_plot])
+
             row_RWU_d18O  = reshape(sol_LWFBrook90[p[1][4].row_idx_scalars.totalRWU, sol_LWFBrook90.prob.p[1][4].col_idx_d18O, :, 1], 1, :)
             row_XYL_d18O  = reshape(sol_LWFBrook90[p[1][4].row_idx_scalars.XylemV,   sol_LWFBrook90.prob.p[1][4].col_idx_d18O, :, 1], 1, :)
             plot!(pl_δ18O, linestyle = :dash,
@@ -400,10 +407,11 @@ for Δz_m in (
             #xlabel = "RWU (mm)"
             legend = :bottomright
         )
-        root_data_start_end = [sol_LWFBrook90.prob.p[2].p_RELDEN.(t, 1:sol_LWFBrook90.prob.p[1][1].NLAYER)
-                                for t in extrema(sol_LWFBrook90.prob.tspan)]
+        t_toPlot = range(extrema(sol_LWFBrook90.prob.tspan)..., length=5)
+        root_data_start_end = [sol_LWFBrook90.prob.p[2].p_RELDEN.(t, 1:sol_LWFBrook90.prob.p[1][1].NLAYER) for t in t_toPlot]
         pl_roots = plot(root_data_start_end, y,
-            labels = ("t=" .* string.(permutedims(collect(extrema(sol_LWFBrook90.prob.tspan))))),  linestyle = [:solid :dash],
+            labels = (Dates.format.(permutedims(RelativeDaysFloat2DateTime.(t_toPlot, t_ref)), "yyyy-mm")),
+            linestyle = [:solid :solid :solid :solid :dash],
             yflip = true, ylabel = "Depth [mm]", xlabel = "Relative root\ndensity [-]", legend = :bottomright);
         empty_plot = plot(legend=false,grid=false,foreground_color_subplot=:white)
         # pl_RWU2 = plot(pl_θ, pl_ψ, pl_RWU,
@@ -605,7 +613,7 @@ end
 # using CSV
 
 using CSV: read, File
-using Dates: DateTime, Millisecond, Second, Day, Month, month, value, dayofyear
+using Dates: DateTime, Millisecond, Second, Day, Month, month, value, dayofyear, format
 using Plots
 using DataFrames: DataFrame, rename, sort!# ,select
 using DataFramesMeta#: @linq, transform, DataFramesMeta
@@ -615,7 +623,7 @@ using DataFramesMeta#: @linq, transform, DataFramesMeta
 #     types=parsing_types, missingstring = nothing, strict=true))  |>
 #     transform(:dates = DateTime.(:dates))
 
-if input_prefix == "DAV2010-2021";
+if (input_prefix == "DAV2010-2021" || input_prefix == "DAV_LW1_def");
     # File("../../../LWF-Brook90.jl-calibration/Isotope-Data/2-combined-deposition/outputs/DAV2010-2021_meteoiso.csv")
     # File("../../../LWF-Brook90.jl-calibration/Meteo-Data/DAV2010-2021/DAV2010-2021_meteoiso.csv")
     dat_δ_soilSol   = DataFrame(File("../../../LWF-Brook90.jl-calibration/Isotope-Data/3-LWF-soil-solution/outputs/DAV-2022-07_soilsolutioniso.csv";header=1,skipto=3))

@@ -68,7 +68,7 @@ if basename(pwd()) != "test"; cd("test"); end
     if (false) # Do these manually outside of automatic testing in order not to require Plots pkg
         git_string = "git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
             ifelse(length(read(`git status --porcelain`, String))==0, "+clean","+dirty")
-        using Plots, Measures
+        # using Plots, Measures
         function my_plot(df; args...)
             plot(df[:,:time], Matrix(df[:,Not(:time)]); args...)
         end
@@ -223,7 +223,7 @@ end
         git_string = "git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
         ifelse(length(read(`git status --porcelain`, String))==0, "+clean","+dirty")
 
-        using Plots, Measures
+        # using Plots, Measures
         function my_plot(df; args...)
             plot(df[:,:time], Matrix(df[:,Not(:time)]); args...)
         end
@@ -382,7 +382,7 @@ end
         ifelse(length(read(`git status --porcelain`, String))==0, "+clean","+dirty")
 
         # if some error appears, the following code can be used to plot the solutions
-        using Plots
+        # using Plots
         # Compare with LWFBrook90R as reference solution
         # θ:
         @test RMS_differences(sim.θ, ref_NLAYER7.θ) < 0.007

@@ -129,7 +129,7 @@ if !is_a_CI_system
 
             # plot
             if (false)
-                using Plots, Measures
+                # using Plots, Measures
                 optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
                 pl1 = LWFBrook90.plotlwfbrook90(
                     sol[1], optim_ticks;

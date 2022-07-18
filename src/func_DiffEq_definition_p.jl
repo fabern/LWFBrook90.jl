@@ -1,4 +1,4 @@
-using Interpolations: interpolate, BSpline, Constant, Previous, scale, extrapolate, NoInterp
+using Interpolations: interpolate, extrapolate, NoInterp, Gridded, Constant, Next, Flat, Throw, scale
 """
     define_diff_eq_parameters()
 
@@ -481,28 +481,61 @@ function interpolate_meteoveg(
     p_frelden)
 
     # 2) Interpolate input data in time
-    time_range = range(minimum(input_meteoveg.days), maximum(input_meteoveg.days), length=length(input_meteoveg.days))
-
-    # using Plots
-    # time_range = range(minimum(input_meteoveg.days), maximum(input_meteoveg.days), length=length(input_meteoveg.days))
-    # ts = 0:0.01:365
-    # scatter(input_meteoveg.days, input_meteoveg.PRECIN)
-    # plot!(ts, scale(interpolate(input_meteoveg.PRECIN, (BSpline(Constant{Previous}()))), time_range)(ts), label = "PRECIN {Previous}",  xlims=(0,30))
-    # plot!(ts, scale(interpolate(input_meteoveg.PRECIN, (BSpline(Constant{Next}()))),     time_range)(ts), label = "PRECIN {Next}",      xlims=(0,30))
-    # plot!(ts, scale(interpolate(input_meteoveg.PRECIN, (BSpline(Constant()))),           time_range)(ts), label = "PRECIN {Nearest}",   xlims=(0,30))
+    # ### FOR DEVELOPMENT:
+    # # Test interpolation based on regular grid:
+    # # using Plots
+    # # time_range = range(minimum(input_meteoveg.days), maximum(input_meteoveg.days), length=length(input_meteoveg.days))
+    # # ts = 0:0.01:365
+    # # scatter(input_meteoveg.days[1:365], input_meteoveg.PRECIN[1:365])
+    # # plot!(ts, scale(interpolate(input_meteoveg.PRECIN, (BSpline(Constant{Previous}()))), time_range)(ts), label = "PRECIN {Previous}",  xlims=(0,30))
+    # # plot!(ts, scale(interpolate(input_meteoveg.PRECIN, (BSpline(Constant{Next}()))),     time_range)(ts), label = "PRECIN {Next}",      xlims=(0,30))
+    # # plot!(ts .+ 1,
+    # #       scale(interpolate(input_meteoveg.PRECIN, (BSpline(Constant{Next}()))),     time_range)(ts), label = "PRECIN+1 {Previous}",      xlims=(0,30))
+    # # plot!(ts, scale(interpolate(input_meteoveg.PRECIN, (BSpline(Constant()))),           time_range)(ts), label = "PRECIN {Nearest}",   xlims=(0,30))
     # # plot!(ts, scale(interpolate(input_meteoveg.PRECIN, (BSpline(Linear()))),             time_range)(ts), label = "PRECIN Linear",   xlims=(0,30))
 
-    p_GLOBRAD = extrapolate(scale(interpolate(input_meteoveg.GLOBRAD, (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_TMAX    = extrapolate(scale(interpolate(input_meteoveg.TMAX,    (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_TMIN    = extrapolate(scale(interpolate(input_meteoveg.TMIN,    (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_VAPPRES = extrapolate(scale(interpolate(input_meteoveg.VAPPRES, (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_WIND    = extrapolate(scale(interpolate(input_meteoveg.WIND,    (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_DENSEF  = extrapolate(scale(interpolate(input_meteoveg.DENSEF,  (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_HEIGHT  = extrapolate(scale(interpolate(input_meteoveg.HEIGHT,  (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_LAI     = extrapolate(scale(interpolate(input_meteoveg.LAI,     (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_SAI     = extrapolate(scale(interpolate(input_meteoveg.SAI,     (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_AGE     = extrapolate(scale(interpolate(input_meteoveg.AGE,     (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_PREC    = extrapolate(scale(interpolate(input_meteoveg.PRECIN,  (BSpline(Constant{Previous}()))), time_range) ,0)
+    # # Test interpolation based on irregular:
+    # test_ip_mv = input_meteoveg[[1:10...,15,17:19..., 25:4326...], :]
+    # time_range = range(minimum(test_ip_mv.days), maximum(test_ip_mv.days), length=length(test_ip_mv.days))
+    # ts = 0:0.01:365
+    # scatter(test_ip_mv.days[1:365], test_ip_mv.PRECIN[1:365])
+    # # plot!(ts, scale(interpolate(test_ip_mv.PRECIN, (BSpline(Constant{Previous}()))), time_range)(ts), label = "PRECIN {Previous}",  xlims=(0,30))
+    # # plot!(ts, scale(interpolate(test_ip_mv.PRECIN, (BSpline(Constant{Next}()))),     time_range)(ts), label = "PRECIN {Next}",      xlims=(0,30))
+    # plot!(ts .+ 1,
+    #       scale(interpolate(test_ip_mv.PRECIN, (BSpline(Constant{Next}()))),     time_range)(ts), label = "PRECIN+1 {Previous}",      xlims=(0,30))
+    # # plot!(ts, scale(interpolate(test_ip_mv.PRECIN, (BSpline(Constant()))),           time_range)(ts), label = "PRECIN {Nearest}",   xlims=(0,30))
+    # # plot!(ts, scale(interpolate(test_ip_mv.PRECIN, (BSpline(Linear()))),             time_range)(ts), label = "PRECIN Linear",   xlims=(0,30))
+    # plot!(ts, scale(interpolate(test_ip_mv.PRECIN, (BSpline(Linear()))),             time_range)(ts), label = "PRECIN Linear",   xlims=(0,30))
+    # plot!(ts, extrapolate(interpolate((test_ip_mv.days, ), test_ip_mv.PRECIN, Gridded(Linear())), Throw())(ts), label = "Gridded(Linear()",xlims=(0,30))
+    # plot!(ts, extrapolate(interpolate((test_ip_mv.days, ), test_ip_mv.PRECIN, Gridded(Constant())), Throw())(ts), label = "Gridded(Constant()",xlims=(0,30))
+    # plot!(ts, extrapolate(interpolate((test_ip_mv.days, ), test_ip_mv.PRECIN, Gridded(Constant{Next}())), Throw())(ts), label = "Gridded(Constant{Previous}()",xlims=(0,30))
+
+    #     ts = 0:1:4000
+    #     scatter(input_meteoiso.days, input_meteoiso.delta18O_permil)
+    #     # # plot!(ts, scale(interpolate(input_meteoiso.delta18O_permil, (BSpline(Constant{Previous}()))), time_range)(ts), label = "PRECIN {Previous}",  xlims=(0,30))
+    #     # # plot!(ts, scale(interpolate(input_meteoiso.delta18O_permil, (BSpline(Constant{Next}()))),     time_range)(ts), label = "PRECIN {Next}",      xlims=(0,30))
+    #     # plot!(ts .+ 1,
+    #     #     scale(interpolate(input_meteoiso.delta18O_permil, (BSpline(Constant{Next}()))),     time_range)(ts), label = "PRECIN+1 {Previous}",      xlims=(0,30))
+    #     # # plot!(ts, scale(interpolate(input_meteoiso.delta18O_permil, (BSpline(Constant()))),           time_range)(ts), label = "PRECIN {Nearest}",   xlims=(0,30))
+    #     # # plot!(ts, scale(interpolate(input_meteoiso.delta18O_permil, (BSpline(Linear()))),             time_range)(ts), label = "PRECIN Linear",   xlims=(0,30))
+    #     # plot!(ts, scale(interpolate(input_meteoiso.delta18O_permil, (BSpline(Linear()))),             time_range)(ts), label = "PRECIN Linear",   xlims=(0,30))
+    #     plot!(ts, extrapolate(interpolate((input_meteoiso.days, ), input_meteoiso.delta18O_permil, Gridded(Linear())), Throw())(ts), label = "Gridded(Linear()")
+    #     plot!(ts, extrapolate(interpolate((input_meteoiso.days, ), input_meteoiso.delta18O_permil, Gridded(Constant())), Throw())(ts), label = "Gridded(Constant()")
+    #     plot!(ts, extrapolate(interpolate((input_meteoiso.days, ), input_meteoiso.delta18O_permil, Gridded(Constant{Next}())), Throw())(ts), label = "Gridded(Constant{Previous}()")
+    #     xlims!(0, 500)
+    # ### END FOR DEVELOPMENT
+
+    p_GLOBRAD = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.GLOBRAD, Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+    p_TMAX    = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.TMAX,    Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+    p_TMIN    = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.TMIN,    Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+    p_VAPPRES = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.VAPPRES, Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+    p_WIND    = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.WIND,    Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+    p_DENSEF  = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.DENSEF,  Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+    p_HEIGHT  = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.HEIGHT,  Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+    p_LAI     = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.LAI,     Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+    p_SAI     = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.SAI,     Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+    p_AGE     = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.AGE,     Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+    p_PREC    = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.PRECIN,  Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
     # NOTE: PRECIN is already in mm/day from the input data set. No transformation is needed for p_PREC.
 
     if (isnothing(input_meteoiso))
@@ -513,11 +546,10 @@ function interpolate_meteoveg(
             return nothing
         end
     else
-        time_range_iso = range(minimum(input_meteoiso.days), maximum(input_meteoiso.days), length=length(input_meteoiso.days))
-        p_d18OPREC= extrapolate(scale(interpolate(input_meteoiso.delta18O_permil,    (BSpline(Constant{Previous}()))), time_range_iso) ,0)
-        p_d2HPREC = extrapolate(scale(interpolate(input_meteoiso.delta2H_permil,     (BSpline(Constant{Previous}()))), time_range_iso) ,0)
         # using Plots; plot(1:300, p_d18OPREC.(1:300))
         # using Plots; plot(1:300, p_d2HPREC.(1:300))
+        p_d18OPREC= extrapolate(interpolate((input_meteoiso.days .+ 1, ), input_meteoiso.delta18O_permil,    (Gridded(Constant{Next}()))), Flat()) #extrapolate flat, alternative: Throw())
+        p_d2HPREC = extrapolate(interpolate((input_meteoiso.days .+ 1, ), input_meteoiso.delta2H_permil,     (Gridded(Constant{Next}()))), Flat()) #extrapolate flat, alternative: Throw())
     end
 
     # 2a Compute time dependent root density parameters
@@ -526,10 +558,9 @@ function interpolate_meteoveg(
     for i in 1:nrow(input_meteoveg)
         p_RELDEN_2Darray[i,:] = LWFBrook90.WAT.LWFRootGrowth(p_frelden, p_tini, input_meteoveg.AGE[i], p_RGROPER, p_INITRDEP, p_INITRLEN, NLAYER)
     end
-    p_RELDEN =  extrapolate(scale(interpolate(p_RELDEN_2Darray, (BSpline(Constant{Previous}()), NoInterp()) ),# 1st dimension: ..., 2nd dimension NoInterp()
-                            time_range, 1:size(p_RELDEN_2Darray,2)),
-                    0) # extrapolate with fillvalue = 0
-
+    p_RELDEN =  extrapolate(interpolate((input_meteoveg.days, 1:NLAYER), p_RELDEN_2Darray,
+                                        (Gridded(Constant{Next}()), NoInterp()), # 1st dimension: ..., 2nd dimension NoInterp()
+                                        ), Flat()) # extrapolate flat, alternative: Throw()
     return (p_GLOBRAD      = p_GLOBRAD,
             p_TMAX         = p_TMAX,
             p_TMIN         = p_TMIN,
