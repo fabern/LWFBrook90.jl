@@ -2,6 +2,7 @@ param_id,x
 ### Isotope transport parameters  -------,NA
 ### TODO, 42.000
 ### TODO2, 42.000
+VXYLEM_mm, 20
 ### Meteorologic site parameters -------,NA
 LAT_DEG,46.70052
 ESLOPE_DEG,0
@@ -16,6 +17,11 @@ FETCH,5000
 Z0W,0.005
 ZW,2
 ### Canopy parameters -------,NA
+MAXLAI,2.9299999
+DENSEF_baseline_,1
+SAI_baseline_,1
+AGE_baseline_yrs,200
+HEIGHT_baseline_m,23.0
 LWIDTH,0.1
 Z0G,0.00325
 Z0S,0.001
