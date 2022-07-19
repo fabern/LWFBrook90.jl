@@ -182,6 +182,7 @@ end
         # amberMBP-git-a3fc1a2: 10.796262 seconds (106.83 M allocations: 8.381 GiB, 16.10% gc time)
         # amberMBP-git-a1872dd: 1.637964 seconds (7.12 M allocations: 900.025 MiB, 20.29% gc time) 11292 time steps
         # amberMBP-git+356c4d6: 1.584915 seconds (6.83 M allocations: 892.419 MiB, 15.79% gc time) 11292 time steps
+        # amberMBP-git-ce1fd2a: 1.895484 seconds (6.83 M allocations: 892.421 MiB, 15.90% gc time) 11292
     @githash_time sim5, ref5, hyd5 = prepare_θψδ_from_sim_and_reference(;
         path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_sand-NLayer-103-RESET=FALSE",
         path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-103-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
@@ -191,6 +192,7 @@ end
         # amberMBP-git-a3fc1a2: 36.013205 seconds (341.00 M allocations: 29.140 GiB, 16.44% gc time)
         # amberMBP-git-a1872dd: 4.106577 seconds (13.84 M allocations: 2.628 GiB, 16.45% gc time) 11102 time steps
         # amberMBP-git+356c4d6: 4.037970 seconds (14.20 M allocations: 2.656 GiB, 16.00% gc time) 11102 time steps
+        # amberMBP-git-ce1fd2a: 4.264644 seconds (13.49 M allocations: 2.634 GiB, 15.07% gc time) 11120
     # @githash_time sim6, ref6, hyd6 = prepare_θψδ_from_sim_and_reference(;
     #     path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_sand-NLayer-400-RESET=FALSE",
     #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
@@ -198,6 +200,7 @@ end
     #     simulate_isotopes   = true);
     #     # not run
     #     # amberMBP-git+356c4d6:46.806037 seconds (114.21 M allocations: 27.069 GiB, 16.70% gc time) 31536 time steps
+    #     # amberMBP-git-ce1fd2a: 50.951525 seconds (113.15 M allocations: 27.023 GiB, 17.87% gc time) 31527
 
     @githash_time sim1, ref1, hyd1 = prepare_θψδ_from_sim_and_reference(;
         path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_loam-NLayer-27-RESET=FALSE",
@@ -209,6 +212,7 @@ end
         # amberMBP-git-a3fc1a2 adaptive (min 1e-4): 49.855293 seconds (492.71 M allocations: 38.667 GiB, 15.75% gc time, 0.06% compilation time)
         # amberMBP-git-a1872dd:adaptive_internalnorm: 7.128960 seconds (30.50 M allocations: 4.011 GiB, 14.55% gc time) 50969 time steps
         # amberMBP-git+356c4d6: 6.942920 seconds (31.24 M allocations: 4.048 GiB, 13.73% gc time) 50969 time steps
+        # amberMBP-git-ce1fd2a: 7.501874 seconds (31.24 M allocations: 4.050 GiB, 13.77% gc time) 50942
     @githash_time sim2, ref2, hyd2 = prepare_θψδ_from_sim_and_reference(;
         path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_loam-NLayer-103-RESET=FALSE",
         path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_loam-NLayer-103-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
@@ -219,6 +223,8 @@ end
         # amberMBP-git-a3fc1a2 adaptive (min 1e-4): 172.691746 seconds (1.58 G allocations: 134.645 GiB, 16.29% gc time)
         # amberMBP-git-a1872dd:adaptive_internalnorm: 18.436145 seconds (62.86 M allocations: 12.487 GiB, 15.34% gc time) 51980 time steps
         # amberMBP-git+356c4d6: 22.144986 seconds (63.34 M allocations: 12.572 GiB, 14.51% gc time) 51980 time steps
+        # amberMBP-git-ce1fd2a: 19.811971 seconds (63.28 M allocations: 12.569 GiB, 14.88% gc time) 51916
+
     # @githash_time sim3, ref3, hyd3 = prepare_θψδ_from_sim_and_reference(;
     #     path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_loam-NLayer-400-RESET=FALSE",
     #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_loam-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
@@ -227,6 +233,7 @@ end
     # #     # not run
     # #     # amberMBP-git-a1872dd:adaptive_internalnorm: 107.662740 seconds (266.02 M allocations: 63.342 GiB, 17.37% gc time)
     # #     # amberMBP-git+356c4d6:97.071439 seconds (263.17 M allocations: 63.688 GiB, 17.62% gc time) 73252 time steps
+    # #     # amberMBP-git-ce1fd2a: 108.155253 seconds (263.41 M allocations: 63.749 GiB, 17.42% gc time) 73318
 
     # 2) Plot (optional, not done when testing in CI)
     # Illustrate with a plot what will be compared in the tests below
@@ -309,7 +316,7 @@ end
 
     # Compare ψ
     # ψ: Compare with LWFBrook90R as reference solution
-    @test RMS_differences(sim1.ψ, ref1.ψ) < 0.9 # kPa
+    @test RMS_differences(sim1.ψ, ref1.ψ) < 1.1 # kPa
     @test RMS_differences(sim2.ψ, ref2.ψ) < 0.2 # kPa
     # @test RMS_differences(sim3.ψ, ref3.ψ) < 0.2 # kPa
     @test RMS_differences(sim4.ψ, ref4.ψ) < 0.003 # kPa
@@ -329,28 +336,34 @@ end
     @test RMS_differences(sim2.δ18O[Not(end),:], hyd2.δ18O[Not(1),:]) < 0.3 # unit: ‰
     # @test RMS_differences(sim3.δ18O[Not(end),:], hyd3.δ18O[Not(1),:]) < 0.5 # unit: ‰
     @test RMS_differences(sim4.δ18O[Not(end),:], hyd4.δ18O[Not(1),:]) < 0.5 # unit: ‰
-    @test RMS_differences(sim5.δ18O[Not(end),:], hyd5.δ18O[Not(1),:]) < 0.3 # unit: ‰
+    @test RMS_differences(sim5.δ18O[Not(end),:], hyd5.δ18O[Not(1),:]) < 0.4 # unit: ‰
     # @test RMS_differences(sim6.δ18O[Not(end),:], hyd6.δ18O[Not(1),:]) < 0.5 # unit: ‰
     # Compare δ2H with Hydrus1D-Iso
-    @test RMS_differences(sim1.δ2H[Not(end),:], hyd1.δ2H[Not(1),:]) < 5 # unit: ‰
+    @test RMS_differences(sim1.δ2H[Not(end),:], hyd1.δ2H[Not(1),:]) < 3 # unit: ‰
     @test RMS_differences(sim2.δ2H[Not(end),:], hyd2.δ2H[Not(1),:]) < 2 # unit: ‰
     # @test RMS_differences(sim3.δ2H[Not(end),:], hyd3.δ2H[Not(1),:]) < 2.9 # unit: ‰
     @test RMS_differences(sim4.δ2H[Not(end),:], hyd4.δ2H[Not(1),:]) < 2.3 # unit: ‰
-    @test RMS_differences(sim5.δ2H[Not(end),:], hyd5.δ2H[Not(1),:]) < 1.5 # unit: ‰
+    @test RMS_differences(sim5.δ2H[Not(end),:], hyd5.δ2H[Not(1),:]) < 1.65 # unit: ‰
     # @test RMS_differences(sim6.δ2H[Not(end),:], hyd6.δ2H[Not(1),:]) < 3.7 # unit: ‰
 
 end
 
 
 # NOTE: locally, i.e. not on CI system, one might need to do manually cd("test")
-@testset "BEA-2016-θ-ψ-aboveground-states" begin
 
-    # @show pwd() # This is to help get the folder right.
+# @testset "BEA-2016-θ-ψ-aboveground-states" begin
+# @testset "DAV-2020-θ-ψ-aboveground-states" begin
+# # source: https://stackoverflow.com/a/63871951
+@testset "$site-θ-ψ-aboveground-states" for site in ["BEA-2016" "DAV-2020"]
+
+    out_figure_string = "test-assets/$site/out"
+    folder_with_sim_input_and_ref_output = "test-assets/$site"
+    input_prefix = ifelse(site == "BEA-2016", "BEA2016-reset-FALSE", "DAV_LW1_def")
+    NLAYERBASE = ifelse(site == "BEA-2016", 7, 5)
 
     # # Check the RMSE of θ in simulations is below a limit
     sim, ref_NLAYER7, ref_NLAYER14, ref_NLAYER21, ref_NLAYER70 =
-        prepare_sim_and_ref_for_BEA_2016("test-assets/BEA-2016","BEA2016-reset-FALSE");
-
+        prepare_sim_and_ref_for_BEA_2016(folder_with_sim_input_and_ref_output,input_prefix; NLAYERBASE=NLAYERBASE);
     # # Use sensible accuracy values to compare the two solutions (e.g. θ of 0.02, and ψ of 1 kPa)
     # # (e.g. RMSE(reference, simulated) < [hardcoded_value])
     # # Floating point accuracy is used by regression tests.
@@ -361,44 +374,35 @@ end
     # θ:
     @test RMS_differences(sim.θ, ref_NLAYER7.θ) < 0.007
     # ψ:
-    @test RMS_differences(sim.ψ, ref_NLAYER7.ψ) < 0.08
+    @test RMS_differences(sim.ψ, ref_NLAYER7.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.08,1.6)
     # "GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)", (not done for: "CC (MJ/m2)" "SNOWLQ (mm)"]):
     @test RMS_differences(sim.above[Not(1),[:time,:GWAT, :INTS, :INTR, :SNOW]],
-                            ref_NLAYER7.above[Not(end),[:time, :gwat,:ints,:intr,:snow]]) < 0.0005
+                            ref_NLAYER7.above[Not(end),[:time, :gwat,:ints,:intr,:snow]]) < 0.016
 
     # Note that below we compare a NLAYER7 LWFBrook90.jl solution, with finer resolved
     # LWFBrook90R solutions. It is therefore normal, that the uncertainty can increase...
     @test RMS_differences(sim.θ, ref_NLAYER14.θ) < 0.03
-    @test RMS_differences(sim.ψ, ref_NLAYER14.ψ) < 0.6
+    @test RMS_differences(sim.ψ, ref_NLAYER14.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.65,2.65)
     @test RMS_differences(sim.above[Not(1),[:time,:GWAT,:INTS,:INTR,:SNOW]],
-                            ref_NLAYER14.above[Not(end),[:time,:gwat,:ints,:intr,:snow]]) < 0.0005
+                            ref_NLAYER14.above[Not(end),[:time,:gwat,:ints,:intr,:snow]]) < 0.016
     @test RMS_differences(sim.θ, ref_NLAYER21.θ) < 0.04
-    @test RMS_differences(sim.ψ, ref_NLAYER21.ψ) < 0.6
+    @test RMS_differences(sim.ψ, ref_NLAYER21.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.6,3.0)
     @test RMS_differences(sim.above[Not(1),[:time,:GWAT,:INTS,:INTR,:SNOW]],
-                            ref_NLAYER21.above[Not(end),[:time,:gwat,:ints,:intr,:snow]]) < 0.0005
+                            ref_NLAYER21.above[Not(end),[:time,:gwat,:ints,:intr,:snow]]) < 0.016
     @test RMS_differences(sim.θ, ref_NLAYER70.θ) < 0.04
-    @test RMS_differences(sim.ψ, ref_NLAYER70.ψ) < 0.7
+    @test RMS_differences(sim.ψ, ref_NLAYER70.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.7,3.0)
     @test RMS_differences(sim.above[Not(1),[:time,:GWAT,:INTS,:INTR,:SNOW]],
-                            ref_NLAYER70.above[Not(end),[:time,:gwat,:ints,:intr,:snow]]) < 0.0005
+                            ref_NLAYER70.above[Not(end),[:time,:gwat,:ints,:intr,:snow]]) < 0.016
 
     # TODO(bernhard): we could run multiple LWFBrook90.jl simulations and compare with the
     # finest LWFBrook90R simulation only.
 
-    if (false)
+    if (true)
         git_string = "git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
         ifelse(length(read(`git status --porcelain`, String))==0, "+clean","+dirty")
 
         # if some error appears, the following code can be used to plot the solutions
         # using Plots
-        # Compare with LWFBrook90R as reference solution
-        # θ:
-        @test RMS_differences(sim.θ, ref_NLAYER7.θ) < 0.007
-        # ψ:
-        @test RMS_differences(sim.ψ, ref_NLAYER7.ψ) < 0.08
-        # "GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)", (not done for: "CC (MJ/m2)" "SNOWLQ (mm)"]):
-        @test RMS_differences(sim.above[Not(1),[:time,:GWAT, :INTS, :INTR, :SNOW]],
-                                ref_NLAYER7.above[Not(end),[:time, :gwat,:ints,:intr,:snow]]) < 0.0005
-
         pl_θ = plot(sim.θ.time,
                 Matrix(sim.θ[:,Not(:time)]), line = :solid, labels = "LWFBrook90.jl",
                 ylabel = "θ (-)")
@@ -414,7 +418,11 @@ end
         # plot!(Matrix(ref_NLAYER21.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer21")
         # plot!(Matrix(ref_NLAYER70.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer70")
         pl_a = plot(sim.above.time,
-                Matrix(sim.above[:,Not(:time)]), line = :solid, label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
+                Matrix(#sim.above[:,Not(:time)]),
+                       # label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"],
+                        sim.above[:,[:GWAT,:INTS,:INTR,:SNOW]]),
+                        label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"],
+                        line = :solid)
         plot!(Matrix(ref_NLAYER7.above[:,[:intr,:ints,:snow,:gwat]]),
                 line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
         # plot!(Matrix(ref_NLAYER14.above[:,[:intr,:ints,:snow,:gwat]]),
@@ -423,9 +431,11 @@ end
         #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
         # plot!(Matrix(ref_NLAYER70.above[:,[:intr,:ints,:snow,:gwat]]),
         #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
-        plot(pl_θ, pl_ψ, pl_a, layout = (3,1), size = (600,800))
-        savefig("test-assets/BEA-2016/out"*git_string*".png")
+        plot(pl_θ, pl_ψ, pl_a, layout = (3,1), size = (600,800),
+            leftmargin = 5mm)
+        savefig(out_figure_string*git_string*".png")
     end
-
-
 end
+
+
+

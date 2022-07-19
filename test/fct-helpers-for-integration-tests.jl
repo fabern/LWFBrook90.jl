@@ -264,7 +264,7 @@ end
 
 function prepare_sim_and_ref_for_BEA_2016(
     folder_with_sim_input_and_ref_output,
-    input_prefix)
+    input_prefix; NLAYERBASE = 7)
     # folder_with_sim_input_and_ref_output = "test-assets/BEA-2016"
     # input_prefix = "BEA2016-reset-FALSE"
 
@@ -303,39 +303,39 @@ function prepare_sim_and_ref_for_BEA_2016(
     ref_above_1 = read_LWFBrook90R_dailyCSV(path =
         joinpath(
             folder_with_sim_input_and_ref_output, "output_LWFBrook90R",
-            input_prefix*"_NLAYER7_LWFBrook90R-0.4.5daily_output.csv"))
+            input_prefix*"_NLAYER$(NLAYERBASE*1)_LWFBrook90R-0.4.5daily_output.csv"))
     ref_above_2 = read_LWFBrook90R_dailyCSV(path =
         joinpath(
             folder_with_sim_input_and_ref_output, "output_LWFBrook90R",
-            input_prefix*"_NLAYER14_LWFBrook90R-0.4.5daily_output.csv"))
+            input_prefix*"_NLAYER$(NLAYERBASE*2)_LWFBrook90R-0.4.5daily_output.csv"))
     ref_above_3 = read_LWFBrook90R_dailyCSV(path =
         joinpath(
             folder_with_sim_input_and_ref_output, "output_LWFBrook90R",
-            input_prefix*"_NLAYER21_LWFBrook90R-0.4.5daily_output.csv"))
+            input_prefix*"_NLAYER$(NLAYERBASE*3)_LWFBrook90R-0.4.5daily_output.csv"))
     ref_above_4 = read_LWFBrook90R_dailyCSV(path =
         joinpath(
             folder_with_sim_input_and_ref_output, "output_LWFBrook90R",
-            input_prefix*"_NLAYER70_LWFBrook90R-0.4.5daily_output.csv"))
+            input_prefix*"_NLAYER$(NLAYERBASE*10)_LWFBrook90R-0.4.5daily_output.csv"))
 
     ## Belowground
     ref_below_1 = read_LWFBrook90R_layerCSV_extract_depths(;
         path = joinpath(folder_with_sim_input_and_ref_output, "output_LWFBrook90R",
-                        input_prefix*"_NLAYER7_LWFBrook90R-0.4.5layer_output.csv"),
+                        input_prefix*"_NLAYER$(NLAYERBASE*1)_LWFBrook90R-0.4.5layer_output.csv"),
         depth_to_read_out_mm = [100 500 1000 1500 1900])
 
     ref_below_2 = read_LWFBrook90R_layerCSV_extract_depths(;
         path = joinpath(folder_with_sim_input_and_ref_output, "output_LWFBrook90R",
-                        input_prefix*"_NLAYER14_LWFBrook90R-0.4.5layer_output.csv"),
+                        input_prefix*"_NLAYER$(NLAYERBASE*2)_LWFBrook90R-0.4.5layer_output.csv"),
         depth_to_read_out_mm = [100 500 1000 1500 1900])
 
     ref_below_3 = read_LWFBrook90R_layerCSV_extract_depths(;
         path = joinpath(folder_with_sim_input_and_ref_output, "output_LWFBrook90R",
-                        input_prefix*"_NLAYER21_LWFBrook90R-0.4.5layer_output.csv"),
+                        input_prefix*"_NLAYER$(NLAYERBASE*3)_LWFBrook90R-0.4.5layer_output.csv"),
         depth_to_read_out_mm = [100 500 1000 1500 1900])
 
     ref_below_4 = read_LWFBrook90R_layerCSV_extract_depths(;
         path = joinpath(folder_with_sim_input_and_ref_output, "output_LWFBrook90R",
-                        input_prefix*"_NLAYER70_LWFBrook90R-0.4.5layer_output.csv"),
+                        input_prefix*"_NLAYER$(NLAYERBASE*10)_LWFBrook90R-0.4.5layer_output.csv"),
         depth_to_read_out_mm = [100 500 1000 1500 1900])
 
     # Make simulation and reference comparable (formatting)
