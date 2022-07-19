@@ -376,13 +376,12 @@ function read_path_initial_conditions(path_initial_conditions; simulate_isotopes
     expected_names = [String(k) for k in keys(parsing_types)]
     assert_colnames_as_expected(input_initial_conditions, path_initial_conditions, expected_names)
 
-    if simulate_isotopes
-        # Impose type of Float64 instead of Float64?, by defining unused variables as -9999.99
-        input_initial_conditions[2, "u_CC_init_MJ_per_m2"] = -9999.99
-        input_initial_conditions[2, "u_SNOWLQ_init_mm"]    = -9999.99
-        input_initial_conditions[3, "u_CC_init_MJ_per_m2"] = -9999.99
-        input_initial_conditions[3, "u_SNOWLQ_init_mm"]    = -9999.99
-    end
+    # Impose type of Float64 instead of Float64?, by defining unused variables as -9999.99
+    input_initial_conditions[2, "u_CC_init_MJ_per_m2"] = -9999.99
+    input_initial_conditions[2, "u_SNOWLQ_init_mm"]    = -9999.99
+    input_initial_conditions[3, "u_CC_init_MJ_per_m2"] = -9999.99
+    input_initial_conditions[3, "u_SNOWLQ_init_mm"]    = -9999.99
+
     disallowmissing!(input_initial_conditions)
 
     return input_initial_conditions
