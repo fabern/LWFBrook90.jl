@@ -106,15 +106,19 @@ function run_simulation(args)
         # soil_output_depths = [-0.1, -0.5, -1.0, -1.5, -1.9],
         compute_intermediate_quantities = compute_intermediate_quantities,
         simulate_isotopes = simulate_isotopes);
-
     u0, p = define_LWFB90_u0(p, input_initial_conditions,
         ψM_initial, _δ18O_initial, _δ2H_initial, # NOTE: _ indicates that it is possibly unused (depends on simulate_isotopes)
         compute_intermediate_quantities;
         simulate_isotopes = simulate_isotopes);
 
     tspan = (minimum(input_meteoveg[:, "days"]), maximum(input_meteoveg[:, "days"])) # simulate all available days
-
-    @time sol_LWFBrook90 = solve_LWFB90(u0, tspan, p)
+    # using Plots
+    # using Interpolations: interpolate, extrapolate, NoInterp, Gridded, Constant, Next, Previous, Flat, Throw, scale
+    # scatter(input_meteoveg.days[1:10], input_meteoveg.PRECIN[1:10])
+    # t_to_eval = 0:0.2:10
+    # plot!(t_to_eval, p[2].p_PREC(t_to_eval), xtick = 1:10)
+    # plot!(t_to_eval,extrapolate(interpolate((input_meteoveg.days .- 0.00001, ), input_meteoveg.PRECIN, Gridded(Constant{Previous}())), Throw())(t_to_eval))
+    sol_LWFBrook90 = solve_LWFB90(u0, tspan, p)
     @info sol_LWFBrook90.destats
     @info "Time steps for solving: $(sol_LWFBrook90.destats.naccept) ($(sol_LWFBrook90.destats.naccept) accepted out of $(sol_LWFBrook90.destats.nreject + sol_LWFBrook90.destats.naccept) total)"
     # using Plots, Measures
