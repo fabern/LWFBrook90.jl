@@ -155,13 +155,13 @@ row containng the `NA` is assumed to be the start date of the first collection i
 | -1.1    | -1.2    | 0.00092     | -6.3                  | -10                       | -70                      |
 
 
-`param.csv` contains scalar model parameters: TODO(bernhard): this needs to be extended with the currently hardcoded isotope transport parameters
+`param.csv` contains scalar model parameters:
 
 | param_id                                                     | x        |
 | ------------------------------------------------------------ | -------- |
 | **### Isotope transport parameters  -------**                | NA       |
-| ### TODO                                                     | 42.000   |
-| ### TODO2                                                    | 42.000   |
+| VXYLEM_mm                                                    | 20       |
+| DISPERSIVITY_mm                                              | 40       |
 | **### Meteorologic site parameters -------**                 | NA       |
 | LAT_DEG                                                      | 46.70052 |
 | ESLOPE_DEG                                                   | 18.26    |
@@ -176,6 +176,11 @@ row containng the `NA` is assumed to be the start date of the first collection i
 | Z0W                                                          | 0.005    |
 | ZW                                                           | 2        |
 | **### Canopy parameters -------**                            | NA       |
+| MAXLAI                                                       | 2.929999 |
+| DENSEF_baseline_                                             | 1        |
+| SAI_baseline_                                                | 1        |
+| AGE_baseline_yrs                                             | 200      |
+| HEIGHT_baseline_m                                            | 23.0     |
 | LWIDTH                                                       | 0.1      |
 | Z0G                                                          | 0.00325  |
 | Z0S                                                          | 0.001    |

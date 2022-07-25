@@ -96,7 +96,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS,
     p_DURATN, p_MAXLQF, p_GRDMLT,
 
-    p_VXYLEM) = integrator.p[1][3]
+    p_VXYLEM, p_DISPERSIVITY) = integrator.p[1][3]
 
     ## B) time dependent parameters
     p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC,
@@ -128,14 +128,12 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
         LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil)
 
-    IDAY = floor(integrator.t) # TODO(bernhard) is just for debug, remove again after
     p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY, p_fu_HEIGHT, p_fu_LAI, p_fu_SAI, p_fT_RTLEN,
         p_fT_RPLANT,p_fu_Z0GS, p_fu_Z0C, p_fu_DISPC, p_fu_Z0, p_fu_DISP, p_fu_ZA,
       p_fT_RXYLEM, p_fT_RROOTI, p_fT_ALPHA,
       p_fu_SHEAT,p_fu_SOLRADC, p_fu_TA, p_fu_TADTM, p_fu_TANTM, p_fu_UADTM, p_fu_UANTM,
       p_fT_SNOFRC,p_fu_TSNOW,p_fu_PSNVP, p_fu_ALBEDO,p_fu_RSS, p_fu_SNOEN =
-      MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
-                 FLAG_MualVanGen, NLAYER, p_soil,
+      MSBSETVARS(FLAG_MualVanGen, NLAYER, p_soil,
                  # for SUNDS:
                  p_LAT, p_ESLOPE, p_DOY(integrator.t), p_L1, p_L2,
                  # for LWFBrook90_CANOPY:
@@ -168,8 +166,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     #* * * * *  B E G I N   D A Y - N I G H T   E T   L O O P  * * * * * * * * *
     # Compute day and night rates
     (p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR, p_fu_ATRI, p_fu_PGER) =
-        MSBDAYNIGHT(IDAY,
-                    FLAG_MualVanGen,
+        MSBDAYNIGHT(FLAG_MualVanGen,
                     p_fT_SLFDAY, p_fu_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fu_TADTM, p_fu_UADTM, p_fu_TANTM, p_fu_UANTM,
                     p_fT_I0HDAY,
                     # for AVAILEN:
@@ -702,7 +699,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         diff¹⁸O_upp,diff²H_upp,qCᵢ¹⁸O_upp,qCᵢ²H_upp,
         diff¹⁸O_low,diff²H_low,qCᵢ¹⁸O_low,qCᵢ²H_low,
         du_Cᵢ¹⁸_SWATI,du_Cᵢ²H_SWATI,du_δ18O_SWATI,du_δ2H_SWATI,
-        Tsoil_K,τw,Λ = integrator.p[4][2]
+        Tsoil_K,τw,p_Λ = integrator.p[4][2]
         # diff¹⁸O_interfaces,diff²H_interfaces,qCᵢ¹⁸O_interfaces,qCᵢ²H_interfaces =
         #     integrator.p[4][3]
 
@@ -738,7 +735,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         ## A) constant parameters:
         NLAYER = integrator.p[1][2][1]
         p_VXYLEM = integrator.p[1][3][64]
-
+        p_DISPERSIVITY = integrator.p[1][3][65]
         # TODO(bernhard): Note to below:
         #                 Fluxes in integrator.p[3][:] might be just the values overwritten by the last call to f.
         #                 For a multi-stage method (Runge-Kutta) this might not be representative for the entire time step Δt
@@ -829,18 +826,16 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # Define (constant) soil transport properties
         N = NLAYER
         Tsoil_K .= (p_fu_TADTM + 273.15) .* ones(N) # °C, TODO: use solution from heat equation instead of approximation of p_fu_TADTM
-        # τw = θᵏ⁺¹ .^ (7/3) ./ (θsat .^ 2)            # TODO: express tortuosity as function of θ, (Millington and Quirk 1961 as shown in Radcliffe et al. 2018, eq 6.6)
+        # τw = θᵏ⁺¹ .^ (7/3) ./ (θsat .^ 2)         # TODO: express tortuosity as function of θ, (Millington and Quirk 1961 as shown in Radcliffe et al. 2018, eq 6.6)
         τw .= 1.0 .* ones(N)   # -, tortuosity in liquid phase (w = water), using 1.0 will overestimate diffusion
         # τg = 1.0 .* ones(N) # -, tortuosity in vapor phase (g = gas), unused as no vapor transport is considered
-        Λ .= 0.04 .* ones(N)   # m, dispersivity length (4cm is the average fitted dispersivity to the lysimters of Stumpp et al. 2012)
+        # p_Λ = p_soil.p_DISPER #(instead of p_DISPERSIVITY .* ones(N))         # m, dispersivity length (if we want to have different dispersivities per soil layer)
         D⁰_¹⁸O .= 0.96691 .* 10^-9 .* exp.(-535400 ./ Tsoil_K.^2 .+ 1393.3 ./ Tsoil_K .+ 2.1876)  .* 3600 .* 24 # m²/day molecular diffusion constant of ¹⁸O in liquid water (eq. A3, Zhou et al. 2021)
         D⁰_²H  .= 0.98331 .* 10^-9 .* exp.(-535400 ./ Tsoil_K.^2 .+ 1393.3 ./ Tsoil_K .+ 2.1876)  .* 3600 .* 24 # m²/day molecular diffusion constant of ²H  in liquid water (eq. A3, Zhou et al. 2021)
 
         # Effective dispersion coefficient (Eq. 33 Zhou et al. 2021)
-        # D_¹⁸O_ᵏ⁺¹ = D⁰_¹⁸O .* τw .* θᵏ⁺¹ .+ Λ .* abs.(q) # m²/day
-        # D_²H_ᵏ⁺¹  = D⁰_²H  .* τw .* θᵏ⁺¹ .+ Λ .* abs.(q) # m²/day
-        D_¹⁸O_ᵏ⁺¹ .= D⁰_¹⁸O .* τw .* θᵏ⁺¹ .+ Λ .* abs.(q) # m²/day # TODO(bernhard): for debugging reduce diffusion
-        D_²H_ᵏ⁺¹  .= D⁰_²H  .* τw .* θᵏ⁺¹ .+ Λ .* abs.(q) # m²/day # TODO(bernhard): for debugging reduce diffusion
+        D_¹⁸O_ᵏ⁺¹ .= D⁰_¹⁸O .* τw .* θᵏ⁺¹ .+ p_DISPERSIVITY .* abs.(q) # m²/day
+        D_²H_ᵏ⁺¹  .= D⁰_²H  .* τw .* θᵏ⁺¹ .+ p_DISPERSIVITY .* abs.(q) # m²/day
 
         # Define concentrations of source/sink terms in transport equation (TRANI, DSFLI, INFLI, SLVP)
         ### Define δ signature of in- and outflows
@@ -857,8 +852,8 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # TODO(bernhard): for TRANI and DSFL we are instead using Cᵏ⁺¹ (i.e. use the concentrations in the LHS in the implicit scheme...)
 
         ### Compute δ signature of evaporating flux
-        δ¹⁸O_SLVP = u_δ18O_SWATI[1] # TODO(bernhard) for debugging: disabling evaporation fractionation (TODO: should yield solution similar to Stumpp 2012 model)
-        δ²H_SLVP  = u_δ2H_SWATI[1]  # TODO(bernhard) for debugging: disabling evaporation fractionation (TODO: should yield solution similar to Stumpp 2012 model)
+        δ¹⁸O_SLVP = u_δ18O_SWATI[1] # TODO(bernhard): disabling evaporation fractionation (TODO: should yield solution similar to Stumpp 2012 model)
+        δ²H_SLVP  = u_δ2H_SWATI[1]  # TODO(bernhard): disabling evaporation fractionation (TODO: should yield solution similar to Stumpp 2012 model)
         # Equation derived based on Gonfiantini (see 60 lines above in comment)
         # # δ_E = 1000*(1 + 1/((γ - h)*(α_dif)^X) * (γ/α*(1+δ_w/1000) - h*(1+δ_A/1000)))
         # δ¹⁸O_SLVP = 1000*( 1 + (γ/α¹⁸O_eq*(1 + u_δ18O_SWATI[1] / 1000) - h*(1 + δ¹⁸O_a/1000)) /
@@ -1096,9 +1091,6 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # δ²H_SLVP  = 1000*( 1 + (γ/α²H_eq*(1 + u_δ2H_SWATI[1] / 1000) - h*(1 + δ²H_a/1000)) /
         #                         ((γ - h)*(LWFBrook90.ISO.α²H_dif)^X_SOIL)
         # )
-        # TODO(bernhard): for debugging:
-        δ¹⁸O_SLVP = u_δ18O_SWATI[1] # disabling evaporation fractionation
-        δ²H_SLVP  = u_δ2H_SWATI[1]  # disabling evaporation fractionation
         # (Above is an alternative to formulation in Benettin 2018 HESS eq. 1 and Gibson 2016)
         # Cᵢ_SLVP = ( (Cᵢ - ε¹⁸O_eq)/α¹⁸O_eq - h*δ¹⁸O_a - ε¹⁸O_dif ) /
         #             (1 - h + ε¹⁸O_dif/1000) # [‰]

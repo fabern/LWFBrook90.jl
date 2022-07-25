@@ -8,8 +8,7 @@ callback function.
 # Arguments
 - many
 """
-function MSBSETVARS(IDAY, #TODO(bernhard) just for debug... remove again!
-                    # arguments
+function MSBSETVARS(# arguments
                     FLAG_MualVanGen, NLAYER, p_soil,
                     # for SUNDS
                     p_LAT, p_ESLOPE, DOY, p_L1, p_L2,
@@ -136,8 +135,7 @@ new, higher GER is calculated by subroutine SWGE. BROOK90 then weights the dayti
 nighttime rates by the solar daylength (DAYLEN) to obtain average rates for the day, PTRAN,
 GEVP, PINT, GIVP, and TRANI, which are used in later calculations.
 """
-function MSBDAYNIGHT(IDAY, #TODO(bernhard) just for debug... remove again!
-                     FLAG_MualVanGen,
+function MSBDAYNIGHT(FLAG_MualVanGen,
                      # arguments
                      p_fT_SLFDAY, p_fu_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fu_TADTM, p_fu_UADTM, p_fu_TANTM, p_fu_UANTM,
                      p_fT_I0HDAY,

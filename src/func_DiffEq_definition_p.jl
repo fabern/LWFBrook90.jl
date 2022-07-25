@@ -82,7 +82,8 @@ function define_LWFB90_p(
     # unused p_HeatCapOld = soil_discr["HeatCapOld"]
 
     # Isotope transport parameters
-    p_VXYLEM = input_param[1,"VXYLEM_mm"] # mm, storage volume of well mixed xylem storage per ground area # TODO(bernhard): possibly link this to SAI...
+    p_VXYLEM       = input_param[1,"VXYLEM_mm"] # mm, storage volume of well mixed xylem storage per ground area # TODO(bernhard): possibly link this to SAI...
+    p_DISPERSIVITY = input_param[1,"DISPERSIVITY_mm"]/1000  # m, dispersivity length (0.04m is the average fitted dispersivity to the lysimters of Stumpp et al. 2012)
 
     ## Location / Meteo
     p_NPINT  = 1 # Hardcoded. If p_NPINT>1, then multiple precipitation intervals would need
@@ -382,7 +383,7 @@ function define_LWFB90_p(
         p_DURATN, p_MAXLQF, p_GRDMLT,
 
         # for isotope mixing:
-        p_VXYLEM)
+        p_VXYLEM, p_DISPERSIVITY)
 
 
     p_cst_4 = (
