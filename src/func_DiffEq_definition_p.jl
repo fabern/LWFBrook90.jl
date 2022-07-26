@@ -1,4 +1,4 @@
-using Interpolations: interpolate, extrapolate, NoInterp, Gridded, Constant, Next, Flat, Throw, scale
+using Interpolations: interpolate, extrapolate, NoInterp, Gridded, Constant, Next, Previous, Flat, Throw, scale, BSpline
 """
     define_diff_eq_parameters()
 
@@ -54,10 +54,16 @@ function define_LWFB90_p(
             input_param[1,"INITRLEN"],
             input_param[1,"RGROPER"],
             soil_discr["tini"],
-            soil_discr["frelden"])
-    # TODO(bernhard): document input parameters: INITRDEP, INITRLEN, RGROPER, tini, frelden,
-    ########
+            soil_discr["frelden"],
+            input_param[1,"MAXLAI"],
+            input_param[1,"SAI_baseline_"],
+            input_param[1,"DENSEF_baseline_"],
+            input_param[1,"AGE_baseline_yrs"],
+            input_param[1,"HEIGHT_baseline_m"])
 
+
+    # TODO(bernhard): document input parameters: INITRDEP, INITRLEN, RGROPER, tini, frelden, MAXLAI, HEIGHT_baseline_m
+    ########
 
     ########
     ## Solver algorithm options
@@ -75,6 +81,9 @@ function define_LWFB90_p(
     # p_TopInfT = soil_discr["TopInfT"]
     # unused p_HeatCapOld = soil_discr["HeatCapOld"]
 
+    # Isotope transport parameters
+    p_VXYLEM       = input_param[1,"VXYLEM_mm"] # mm, storage volume of well mixed xylem storage per ground area # TODO(bernhard): possibly link this to SAI...
+    p_DISPERSIVITY = input_param[1,"DISPERSIVITY_mm"]/1000  # m, dispersivity length (0.04m is the average fitted dispersivity to the lysimters of Stumpp et al. 2012)
 
     ## Location / Meteo
     p_NPINT  = 1 # Hardcoded. If p_NPINT>1, then multiple precipitation intervals would need
@@ -371,7 +380,10 @@ function define_LWFB90_p(
         # for MSBPREINT:
         p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS,
         p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS,
-        p_DURATN, p_MAXLQF, p_GRDMLT)
+        p_DURATN, p_MAXLQF, p_GRDMLT,
+
+        # for isotope mixing:
+        p_VXYLEM, p_DISPERSIVITY)
 
 
     p_cst_4 = (
@@ -478,7 +490,12 @@ function interpolate_meteoveg(
     p_INITRLEN,
     p_RGROPER,
     p_tini,
-    p_frelden)
+    p_frelden,
+    p_MAXLAI,
+    p_SAI_baseline_,
+    p_DENSEF_baseline_,
+    p_AGE_baseline_yrs,
+    p_HEIGHT_baseline_m)
 
     # 2) Interpolate input data in time
     # ### FOR DEVELOPMENT:
@@ -525,18 +542,49 @@ function interpolate_meteoveg(
     #     xlims!(0, 500)
     # ### END FOR DEVELOPMENT
 
-    p_GLOBRAD = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.GLOBRAD, Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
-    p_TMAX    = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.TMAX,    Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
-    p_TMIN    = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.TMIN,    Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
-    p_VAPPRES = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.VAPPRES, Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
-    p_WIND    = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.WIND,    Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
-    p_DENSEF  = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.DENSEF,  Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
-    p_HEIGHT  = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.HEIGHT,  Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
-    p_LAI     = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.LAI,     Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
-    p_SAI     = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.SAI,     Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
-    p_AGE     = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.AGE,     Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
-    p_PREC    = extrapolate(interpolate((input_meteoveg.days .+ 1, ), input_meteoveg.PRECIN,  Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
-    # NOTE: PRECIN is already in mm/day from the input data set. No transformation is needed for p_PREC.
+    # # Interpolate regular data with Previous.
+    # # (e.g. PREC reported for 2010-01-01 is rain that has fallen on that day and rate is applied until 2010-01-02.)
+    # # Note that we need to shift it slightly ahead so that p_GLOBRAD(1.0) is equal to p_GLOBRAD(1.1)
+    # # Interpolate input data without modification
+    # p_GLOBRAD = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.GLOBRAD,          Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_TMAX    = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.TMAX,             Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_TMIN    = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.TMIN,             Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_VAPPRES = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.VAPPRES,          Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_WIND    = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.WIND,             Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_PREC    = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.PRECIN,           Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # # NOTE: PRECIN is already in mm/day from the input data set. No transformation is needed for p_PREC.
+
+    # # Interpolate input data with consideration of baselines
+    # p_LAI     = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.LAI./100 .* p_MAXLAI,              Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_SAI     = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.SAI./100 .* p_SAI_baseline_,       Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_DENSEF  = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.DENSEF./100 .* p_DENSEF_baseline_, Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_HEIGHT  = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.HEIGHT./100 .* p_HEIGHT_baseline_m,Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+
+    ### Quickfix:
+    @assert 1==length(unique(diff(input_meteoveg.days))) """
+        Error: LWFBrook90.jl expects the input data in meteoveg.csv to be regularly spaced in time.
+    """
+    @assert unique(diff(input_meteoveg.days)) == [1.0] """
+        Error: LWFBrook90.jl expects the input data in meteoveg.csv to provided as daily values.
+    """
+    time_range = range(minimum(input_meteoveg.days), maximum(input_meteoveg.days), length=length(input_meteoveg.days))
+    p_GLOBRAD = extrapolate(scale(interpolate(input_meteoveg.GLOBRAD, (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_TMAX    = extrapolate(scale(interpolate(input_meteoveg.TMAX,    (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_TMIN    = extrapolate(scale(interpolate(input_meteoveg.TMIN,    (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_VAPPRES = extrapolate(scale(interpolate(input_meteoveg.VAPPRES, (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_WIND    = extrapolate(scale(interpolate(input_meteoveg.WIND,    (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_PREC    = extrapolate(scale(interpolate(input_meteoveg.PRECIN,  (BSpline(Constant{Previous}()))), time_range) ,0)
+
+    p_LAI     = extrapolate(scale(interpolate(input_meteoveg.LAI./100 .* p_MAXLAI,              (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_SAI     = extrapolate(scale(interpolate(input_meteoveg.SAI./100 .* p_SAI_baseline_,       (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_DENSEF  = extrapolate(scale(interpolate(input_meteoveg.DENSEF./100 .* p_DENSEF_baseline_, (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_HEIGHT  = extrapolate(scale(interpolate(input_meteoveg.HEIGHT./100 .* p_HEIGHT_baseline_m,(BSpline(Constant{Previous}()))), time_range) ,0)
+    ###
+    # p_AGE     = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.AGE, Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
+    p_AGE     = (t) -> p_AGE_baseline_yrs + t/365
+
+    # Note that meteoiso does not need to be regularly spaced:
+    # Interpolate irregular data with Next and shift to noon
 
     if (isnothing(input_meteoiso))
         function p_d18OPREC(t)
@@ -546,17 +594,35 @@ function interpolate_meteoveg(
             return nothing
         end
     else
-        # using Plots; plot(1:300, p_d18OPREC.(1:300))
-        # using Plots; plot(1:300, p_d2HPREC.(1:300))
-        p_d18OPREC= extrapolate(interpolate((input_meteoiso.days .+ 1, ), input_meteoiso.delta18O_permil,    (Gridded(Constant{Next}()))), Flat()) #extrapolate flat, alternative: Throw())
-        p_d2HPREC = extrapolate(interpolate((input_meteoiso.days .+ 1, ), input_meteoiso.delta2H_permil,     (Gridded(Constant{Next}()))), Flat()) #extrapolate flat, alternative: Throw())
+        ## Quickfix:
+        # @assert 1==length(unique(diff(input_meteoiso.days))) """
+        #     Error: LWFBrook90.jl expects the input data in meeoiso.csv to be regularly spaced in time.
+        # """
+        # @assert unique(diff(input_meteoiso.days)) == [1.0] """
+        #     Error: LWFBrook90.jl expects the input data in meeoiso.csv to provided as daily values.
+        # """
+        # time_range_iso = range(minimum(input_meteoiso.days), maximum(input_meteoiso.days), length=length(input_meteoiso.days))
+        # p_d18OPREC= extrapolate(scale(interpolate(input_meteoiso.delta18O_permil,    (BSpline(Constant{Previous}()))), time_range_iso) ,0)
+        # p_d2HPREC = extrapolate(scale(interpolate(input_meteoiso.delta2H_permil,     (BSpline(Constant{Previous}()))), time_range_iso) ,0)
+        ## End Quickfix:
+        # Here we shift the days of collection of the cumulative samples to noon. => + 12/24 days
+        p_d18OPREC= extrapolate(interpolate((input_meteoiso.days .+ 12/24, ), input_meteoiso.delta18O_permil,    (Gridded(Constant{Next}()))), Flat()) #extrapolate flat, alternative: Throw())
+        p_d2HPREC = extrapolate(interpolate((input_meteoiso.days .+ 12/24, ), input_meteoiso.delta2H_permil,     (Gridded(Constant{Next}()))), Flat()) #extrapolate flat, alternative: Throw())
     end
 
     # 2a Compute time dependent root density parameters
     # Which is a vector quantity that is dependent on time:
     p_RELDEN_2Darray = fill(NaN, nrow(input_meteoveg), NLAYER)
     for i in 1:nrow(input_meteoveg)
-        p_RELDEN_2Darray[i,:] = LWFBrook90.WAT.LWFRootGrowth(p_frelden, p_tini, input_meteoveg.AGE[i], p_RGROPER, p_INITRDEP, p_INITRLEN, NLAYER)
+        p_RELDEN_2Darray[i,:] =
+            LWFBrook90.WAT.LWFRootGrowth(
+                p_frelden,
+                p_tini,
+                p_AGE(input_meteoveg.days[i]),
+                p_RGROPER,
+                p_INITRDEP,
+                p_INITRLEN,
+                NLAYER)
     end
     p_RELDEN =  extrapolate(interpolate((input_meteoveg.days, 1:NLAYER), p_RELDEN_2Darray,
                                         (Gridded(Constant{Next}()), NoInterp()), # 1st dimension: ..., 2nd dimension NoInterp()

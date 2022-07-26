@@ -77,7 +77,7 @@ function solve_LWFB90(u0, tspan, p)
 
     # @info sol_LWFBrook90.destats
     @info "Time steps for solving: $(sol_LWFBrook90.destats.naccept) ($(sol_LWFBrook90.destats.naccept) accepted out of $(sol_LWFBrook90.destats.nreject + sol_LWFBrook90.destats.naccept) total)"
-    @show now()
+    # @show now()
 
     return sol_LWFBrook90
 end

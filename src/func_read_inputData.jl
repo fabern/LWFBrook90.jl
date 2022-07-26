@@ -168,11 +168,10 @@ function read_path_meteoveg(path_meteoveg)
             :vappres_kPa     => Float64,
             :windspeed_ms    => Float64,
             :prec_mmDay      => Float64,
-            :densef_         => Float64,
-            :height_m        => Float64,
-            :lai_            => Float64,
-            :sai_            => Float64,
-            :age_yrs         => Float64)
+            :densef_percent  => Float64,
+            :height_percent  => Float64,
+            :lai_percent     => Float64,
+            :sai_percent     => Float64)
 
     input_meteoveg = @linq DataFrame(File(path_meteoveg;
         skipto=3, delim=',', ignorerepeated=false,
@@ -190,18 +189,18 @@ function read_path_meteoveg(path_meteoveg)
         :vappres_kPa     => :VAPPRES,
         :windspeed_ms    => :WIND,
         :prec_mmDay      => :PRECIN,
-        :densef_         => :DENSEF,
-        :height_m        => :HEIGHT,
-        :lai_            => :LAI,
-        :sai_            => :SAI,
-        :age_yrs         => :AGE)
+        :densef_percent  => :DENSEF,
+        :height_percent  => :HEIGHT,
+        :lai_percent     => :LAI,
+        :sai_percent     => :SAI)
 
     # Assert units:
     assert_unitsHeader_as_expected(path_meteoveg,
         DataFrame(dates = "YYYY-MM-DD", globrad_MJDayM2 = "MJ/Day/m2",
         tmax_degC = "degree C", tmin_degC = "degree C", vappres_kPa = "kPa",
-        windspeed_ms = "m per s", prec_mmDay = "mm per day", densef_ = "-",
-        height_m = "m", lai_ = "-", sai_ = "-", age_yrs = "years"))
+        windspeed_ms = "m per s", prec_mmDay = "mm per day",
+        densef_percent = "percent", height_percent = "percent",
+        lai_percent = "percent", sai_percent = "percent"))
 
     # Identify period of interest
     # Starting date: latest among the input data
@@ -377,13 +376,12 @@ function read_path_initial_conditions(path_initial_conditions; simulate_isotopes
     expected_names = [String(k) for k in keys(parsing_types)]
     assert_colnames_as_expected(input_initial_conditions, path_initial_conditions, expected_names)
 
-    if simulate_isotopes
-        # Impose type of Float64 instead of Float64?, by defining unused variables as -9999.99
-        input_initial_conditions[2, "u_CC_init_MJ_per_m2"] = -9999.99
-        input_initial_conditions[2, "u_SNOWLQ_init_mm"]    = -9999.99
-        input_initial_conditions[3, "u_CC_init_MJ_per_m2"] = -9999.99
-        input_initial_conditions[3, "u_SNOWLQ_init_mm"]    = -9999.99
-    end
+    # Impose type of Float64 instead of Float64?, by defining unused variables as -9999.99
+    input_initial_conditions[2, "u_CC_init_MJ_per_m2"] = -9999.99
+    input_initial_conditions[2, "u_SNOWLQ_init_mm"]    = -9999.99
+    input_initial_conditions[3, "u_CC_init_MJ_per_m2"] = -9999.99
+    input_initial_conditions[3, "u_SNOWLQ_init_mm"]    = -9999.99
+
     disallowmissing!(input_initial_conditions)
 
     return input_initial_conditions
@@ -395,6 +393,8 @@ function read_path_param(path_param; simulate_isotopes::Bool = false)
         Dict(### Isotope transport parameters  -------,NA
             # "TODO" => Float64, "TODO2" => Float64,
             # TODO(bernhard): this needs to be extended with the currently hardcoded isotope transport parameters
+            "DISPERSIVITY_mm" => Float64,
+            "VXYLEM_mm" => Float64,
             # Meteorologic site parameters -------
             "LAT_DEG" => Float64,
             "ESLOPE_DEG" => Float64,       "ASPECT_DEG" => Float64,
@@ -402,6 +402,11 @@ function read_path_param(path_param; simulate_isotopes::Bool = false)
             "C1" => Float64,               "C2" => Float64,               "C3" => Float64,
             "WNDRAT" => Float64,           "FETCH" => Float64,            "Z0W" => Float64,              "ZW" => Float64,
             # Canopy parameters -------
+            "MAXLAI" => Float64,
+            "DENSEF_baseline_" => Float64,
+            "SAI_baseline_" => Float64,
+            "AGE_baseline_yrs" => Float64,
+            "HEIGHT_baseline_m" => Float64,
             "LWIDTH" => Float64,           "Z0G" => Float64,              "Z0S" => Float64,
             "LPC" => Float64,              "CS" => Float64,               "CZS" => Float64,
             "CZR" => Float64,              "HS" => Float64,               "HR" => Float64,

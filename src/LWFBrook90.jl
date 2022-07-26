@@ -106,15 +106,19 @@ function run_simulation(args)
         # soil_output_depths = [-0.1, -0.5, -1.0, -1.5, -1.9],
         compute_intermediate_quantities = compute_intermediate_quantities,
         simulate_isotopes = simulate_isotopes);
-
     u0, p = define_LWFB90_u0(p, input_initial_conditions,
         ψM_initial, _δ18O_initial, _δ2H_initial, # NOTE: _ indicates that it is possibly unused (depends on simulate_isotopes)
         compute_intermediate_quantities;
         simulate_isotopes = simulate_isotopes);
 
     tspan = (minimum(input_meteoveg[:, "days"]), maximum(input_meteoveg[:, "days"])) # simulate all available days
-
-    @time sol_LWFBrook90 = solve_LWFB90(u0, tspan, p)
+    # using Plots
+    # using Interpolations: interpolate, extrapolate, NoInterp, Gridded, Constant, Next, Previous, Flat, Throw, scale
+    # scatter(input_meteoveg.days[1:10], input_meteoveg.PRECIN[1:10])
+    # t_to_eval = 0:0.2:10
+    # plot!(t_to_eval, p[2].p_PREC(t_to_eval), xtick = 1:10)
+    # plot!(t_to_eval,extrapolate(interpolate((input_meteoveg.days .- 0.00001, ), input_meteoveg.PRECIN, Gridded(Constant{Previous}())), Throw())(t_to_eval))
+    sol_LWFBrook90 = solve_LWFB90(u0, tspan, p)
     @info sol_LWFBrook90.destats
     @info "Time steps for solving: $(sol_LWFBrook90.destats.naccept) ($(sol_LWFBrook90.destats.naccept) accepted out of $(sol_LWFBrook90.destats.nreject + sol_LWFBrook90.destats.naccept) total)"
     # using Plots, Measures
@@ -336,8 +340,16 @@ end
     #     :] ./ sol.prob.p[1][1].p_THICK
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
         LWFBrook90.get_auxiliary_variables(sol)
-    rows_SWAT_amt = u_aux_θ'
     rows_ψₘ = u_aux_PSIM'
+    rows_ψₘpF = log10.(u_aux_PSIM' .* -10) #(from kPa to log10(hPa))
+
+    rows_SWAT_amt0 = u_aux_θ'
+    rows_SWAT_amt1 = sol[7 .+ (0:sol.prob.p[1][1].NLAYER-1),
+        1,
+        :] ./ sol.prob.p[1][1].p_THICK # mm per mm of soil thickness
+    rows_SWAT_amt2 = sol[7 .+ (0:sol.prob.p[1][1].NLAYER-1),
+        1,
+        :] ./ sol.prob.p[1][1].p_THICK ./ (1 .- sol.prob.p[1][1].p_STONEF) # mm per mm of fine soil thickness (assuming gravel fraction contains no water)
 
     # row_NaN = fill(NaN, 1, length(x))
 
@@ -395,7 +407,7 @@ end
     # NOTE: --> sets attributes only when they don't already exist
     # NOTE: :=  sets attributes even when they already exist
     # link := :x #TODO(bernhard): link doesn't seem to work...
-    layout --> (3, 1)
+    layout --> (5, 1)
     # using layout because @layout is unsupported: https://github.com/JuliaPlots/RecipesBase.jl/issues/15
     # TODO(bernhard): find an easy way to do: l = @layout [grid(2, 1, heights=[0.2, 0.8]) a{0.055w}]
     # Possibly it needs to be provided when calling `plot_LWFBrook90_isotopes(... ; layout = ...)`
@@ -424,21 +436,53 @@ end
         x, transpose(sol[1:6, 1, :]) #transpose(sol[1:6, 1, :])
     end
     # # 3b) Heatmap (containing θ)
-    @series begin # pl2
+    @series begin # pl4
         title := "Soil (distributed state)"
         seriestype := :heatmap
         yflip := true
         yticks := y_soil_ticks #(y_ticks, y_labels)
         colorbar := true #true_to_check_colorbar
         yguide := "Depth [mm]"
-        colorbar_title := "θ [-]"
+        colorbar_title := "θ [-]\n(fine soil)"
         # clims := clims_d18O
-        subplot := 2
+        subplot := 4
 
         # and other arguments:
         # x, y_extended, rows_SWAT_amt
         # x, y, rows_SWAT_amt
-        x, y_centers, rows_SWAT_amt
+        x, y_centers, rows_SWAT_amt0
+   end
+    @series begin
+        title := "Soil (distributed state)"
+        seriestype := :heatmap
+        yflip := true
+        yticks := y_soil_ticks #(y_ticks, y_labels)
+        colorbar := true #true_to_check_colorbar
+        yguide := "Depth [mm]"
+        colorbar_title := "θ [-]\n(total, incl stonef)"
+        # clims := clims_d18O
+        subplot := 5
+
+        # and other arguments:
+        # x, y_extended, rows_SWAT_amt
+        # x, y, rows_SWAT_amt
+        x, y_centers, rows_SWAT_amt1
+    end
+    @series begin
+        title := "Soil (distributed state)"
+        seriestype := :heatmap
+        yflip := true
+        yticks := y_soil_ticks #(y_ticks, y_labels)
+        colorbar := true #true_to_check_colorbar
+        yguide := "Depth [mm]"
+        colorbar_title := "θ [-]\n(fine soil 2)"
+        # clims := clims_d18O
+        subplot := 6
+
+        # and other arguments:
+        # x, y_extended, rows_SWAT_amt
+        # x, y, rows_SWAT_amt
+        x, y_centers, rows_SWAT_amt2
     end
     # display(plot(t = :heatmap, x, y_centers, rows_SWAT_amt_old; yflip = true))
     # display(plot(t = :heatmap, x, y_centers[1:20], rows_SWAT_amt_old[1:20,:]; yflip = true))
@@ -446,7 +490,7 @@ end
     # display(plot(t = :plots_heatmap, x, y_centers, u_aux_θ'; yflip = true)) # doesn't work
     # display(plot(t = :plots_heatmap_edges, x, y_centers, u_aux_θ'; yflip = true)) # works
     # # 3b) Heatmap (containing ψₘ)
-    @series begin # pl3
+    @series begin # pl2
         title := "Soil (distributed state)"
         seriestype := :heatmap
         yflip := true
@@ -455,10 +499,24 @@ end
         yguide := "Depth [mm]"
         colorbar_title := "ψₘ [kPa]"
         # clims := clims_d18O
-        subplot := 3
+        subplot := 2
 
         # and other arguments:
         x, y_centers, rows_ψₘ
+    end
+   @series begin # pl3
+        title := "Soil (distributed state)"
+        seriestype := :heatmap
+        yflip := true
+        yticks := y_soil_ticks #(y_ticks, y_labels)
+        colorbar := true #true_to_check_colorbar
+        yguide := "Depth [mm]"
+        colorbar_title := "pF = \nlog₁₀(-ψ hPa)"
+        # clims := clims_d18O
+        subplot := 3
+
+        # and other arguments:
+        x, y_centers, rows_ψₘpF
     end
     # display(plot(t = :heatmap, x, y_centers, rows_ψₘ; yflip = true))
     # display(plot(t = :plots_heatmap, x, y_centers, rows_ψₘ; yflip = true)) # doesn't work

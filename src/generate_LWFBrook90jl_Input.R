@@ -33,13 +33,25 @@ generate_LWFBrook90jl_Input <- function(Julia_target_dir = NA,
 
   # A) time-dependent parameters: (meteo and stand properties)
   veg_daily   <- input_Data$standprop_daily %>% select(dates, densef, height, lai, sai, age)
+  densef_baseline = veg_daily$densef[1]
+  height_baseline = veg_daily$height[1]
+  lai_max         = max(veg_daily$lai)
+  sai_baseline    = veg_daily$sai[1]
+  age_baseline    = veg_daily$age[1]
+  
+  veg_daily2 <- veg_daily %>% mutate(
+    densef_percent = 100 * densef/densef_baseline,
+    height_percent = 100 * height/height_baseline,
+    lai_percent    = 100 * lai / lai_max,
+    sai_percent    = 100 * sai / sai_baseline)
+  
   clim_daily  <- original_arguments$climate %>%
     select(dates, globrad, tmax, tmin, vappres, windspeed, prec) %>%
     filter(dates >= input_Data$options_b90$startdate) %>%
     filter(dates <= input_Data$options_b90$enddate)
-
+  
   out_csv_meteoveg <- clim_daily %>%
-    dplyr::left_join(veg_daily, by="dates") %>%
+    dplyr::left_join(veg_daily2, by="dates") %>%
     select("dates",
            "globrad_MJDayM2" = globrad,
            "tmax_degC" = tmax,
@@ -47,11 +59,10 @@ generate_LWFBrook90jl_Input <- function(Julia_target_dir = NA,
            "vappres_kPa" = vappres,
            "windspeed_ms" = windspeed,
            "prec_mmDay" = prec,
-           "densef_" = densef,
-           "height_m" = height,
-           "lai_" = lai,
-           "sai_" = sai,
-           "age_yrs" = age)
+           "densef_percent" = densef_percent,
+           "height_percent" = height_percent,
+           "lai_percent" = lai_percent,
+           "sai_percent" = sai_percent)
 
   # B) time-independent parameters:
   # B1) site climate data
@@ -76,7 +87,7 @@ generate_LWFBrook90jl_Input <- function(Julia_target_dir = NA,
     group_by(HorizonNr = with(rle(mat), rep(seq_along(lengths), lengths))) %>% # source: # https://stackoverflow.com/a/54582075/
     # Note: we cannot simply group_by(mat), as we need to split the same mat into multiple horizons
     #       if it is not consecutive e.g. dat$mat = c(1,1,2,2,1,1,1)
-    summarize(HorizonNr = group_indices(),
+    summarize(HorizonNr = cur_group_id(),
               Upper_m = max(Upper_m),
               Lower_m = min(Lower_m),
               mat     = unique(mat))
@@ -96,20 +107,17 @@ generate_LWFBrook90jl_Input <- function(Julia_target_dir = NA,
   ) %>% select(-mat)
 
 
-
   # B3) initial conditions of scalar state variables
-  out_initial_conditions <- with(input_Data$param_b90,c(
-    "### Initial conditions (of vector states) -------" = NA,
-    "u_GWAT_init_mm"=gwatini,
-    "u_INTS_init_mm"=intsnowini,
-    "u_INTR_init_mm"=intrainini,
-    "u_SNOW_init_mm"=snowini,
-    "u_CC_init_MJ_per_m2"    =0,
-    "u_SNOWLQ_init_mm"=0
-  ))
-  out_csv_initial_conditions <- data.frame(param_id = names(out_initial_conditions),
-                                           amount   = unname(out_initial_conditions))
-
+  out_csv_initial_conditions <- with(input_Data$param_b90,
+    tribble(
+      ~param_id,~amount,~u_delta18O_init_permil,~u_delta2H_init_permil,
+      "### Initial conditions (of vector states) -------", NA,NA,NA,
+      "u_GWAT_init_mm", gwatini, NA, NA,
+      "u_INTS_init_mm", intsnowini, NA, NA,
+      "u_INTR_init_mm", intrainini, NA, NA,
+      "u_SNOW_init_mm", snowini, NA, NA,
+      "u_CC_init_MJ_per_m2" ,  0, NA, NA,
+      "u_SNOWLQ_init_mm"    ,  0, NA, NA ))
 
   # B4) other model parameters
   # Define idepth and qdepth
@@ -121,12 +129,21 @@ generate_LWFBrook90jl_Input <- function(Julia_target_dir = NA,
   }
   # Save all parameters
   out_param <- with(input_Data$param_b90,
-                        c("### Meteorologic site parameters -------" = NA,
+                        c("### Isotope transport parameters  -------" = NA,
+                          "### TODO" = 42.000,
+                          "### TODO2" = 42.000,
+                          "VXYLEM_mm" = 20, # Note: use a hardcoded default value of 20mm
+                          "### Meteorologic site parameters -------" = NA,
                           "LAT_DEG"=coords_y, "ESLOPE_DEG"=eslope,"ASPECT_DEG"=aspect,
                           "ALB"=alb,          "ALBSN"=albsn,
                           "C1"=c1,            "C2"=c2,          "C3"=c3,
                           "WNDRAT"=wndrat,    "FETCH"=fetch,    "Z0W"=z0w,   "ZW"=zw,
                           "### Canopy parameters -------" = NA,
+                          "MAXLAI" = lai_max,
+                          "DENSEF_baseline_"=densef_baseline,
+                          "SAI_baseline_"=sai_baseline,
+                          "AGE_baseline_yrs"=age_baseline,
+                          "HEIGHT_baseline_m"=height_baseline,
                           "LWIDTH"=lwidth,    "Z0G" = obsheight * czs,  "Z0S"=z0s,
                           "LPC"=lpc,          "CS"=cs,                  "CZS"=czs,
                           "CZR"=czr,          "HS"=hs,                  "HR"=hr,
@@ -194,7 +211,7 @@ generate_LWFBrook90jl_Input <- function(Julia_target_dir = NA,
   dir.create(Julia_target_dir, showWarnings = TRUE, recursive = T)
   withr::with_options(c(scipen=100), { # temporarily switches off scientific notation
     require(dplyr)
-    units_meteoveg            = c("YYYY-MM-DD","MJ/Day/m2","degree C","degree C","kPa","m per s","mm per day","-","m","-","-","years")
+    units_meteoveg            = c("YYYY-MM-DD","MJ/Day/m2","degree C","degree C","kPa","m per s","mm per day","percent","percent","percent","percent")
     units_soil_discretization = c("m","m","-","kPa","permil","permil")
     units_soil_horizons       = c("-","m","m","volume fraction (-)","volume fraction (-)","perMeter","-","mm per day","-","volume fraction (-)")
 

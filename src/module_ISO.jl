@@ -243,7 +243,7 @@ end
 
     t_ref = sol.prob.p[2][17]
     x = RelativeDaysFloat2DateTime.(sol.t, t_ref);
-    y = cumsum(sol.prob.p[1][1].p_THICK) - sol.prob.p[1][1].p_THICK/2
+    y_center = cumsum(sol.prob.p[1][1].p_THICK) - sol.prob.p[1][1].p_THICK/2
 
     row_PREC_amt = sol.prob.p[2][8].(sol.t)
     rows_SWAT_amt = sol[sol.prob.p[1][4].row_idx_SWATI, 1, :]./sol.prob.p[1][1].p_THICK;
@@ -345,15 +345,16 @@ end
     end
 
     # 3b) Heatmap (containing SWATI and other compartments)
-    y_extended = [-500; -350; -300; -250; -200; -150; -100;   -50;         y;          (maximum(y) .+ 50 .+ [50; 100; 150; 250])]
-    # y_labels   = ["INTS"; ""; "INTR"; ""; "SNOW"; ""; round.(y); "";             "GWAT"]
-    # y_soil_ticks = optimize_ticks(extrema(y)...; k_min = 4)[1]
+    # y_labels   = ["INTS"; ""; "INTR"; ""; "SNOW"; ""; round.(y_center); "";             "GWAT"]
+    # y_soil_ticks = optimize_ticks(extrema(y_center)...; k_min = 4)[1]
     # y_soil_ticks = optimize_ticks(0., round(maximum(cumsum(sol.prob.p[1][1].p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
+
+    y_extended = [-500; -350; -300; -250; -200; -150; -100; -50;         y_center;             (maximum(cumsum(sol.prob.p[1][1].p_THICK)) .+ [50; 100; 150; 250; 300;400])]
     y_soil_ticks = tick_function(0., round(maximum(cumsum(sol.prob.p[1][1].p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
-    y_ticks    = [-500;       -300;       -200;       -100;     y_soil_ticks;          (maximum(y) .+ 50 .+ [    100;    250])]
-    y_labels   = ["PREC";   "INTS";     "INTR";     "SNOW";     round.(y_soil_ticks; digits=0); "GWAT"  ; "RWU"]
-    z2_extended = [row_PREC_d18O; row_NaN; row_INTS_d18O; row_NaN; row_INTR_d18O; row_NaN; row_SNOW_d18O; row_NaN; rows_SWAT_d18O; row_NaN; row_GWAT_d18O; row_NaN; row_RWU_d18O]
-    z3_extended = [row_PREC_d2H;  row_NaN; row_INTS_d2H;  row_NaN; row_INTR_d2H;  row_NaN; row_SNOW_d2H;  row_NaN; rows_SWAT_d2H;  row_NaN; row_GWAT_d2H;  row_NaN; row_RWU_d2H]
+    y_ticks    = [-500;       -300;       -200;       -100;          y_soil_ticks;             (maximum(cumsum(sol.prob.p[1][1].p_THICK)) .+ [    100;      250;     400])]
+    y_labels   = ["PREC";   "INTS";     "INTR";     "SNOW";     round.(y_soil_ticks; digits=0);                                                "GWAT";    "RWU";     "XYLEM"]
+    z2_extended = [row_PREC_d18O; row_NaN; row_INTS_d18O; row_NaN; row_INTR_d18O; row_NaN; row_SNOW_d18O; row_NaN; rows_SWAT_d18O; row_NaN; row_GWAT_d18O; row_NaN; row_RWU_d18O; row_NaN; row_XYL_d18O]
+    z3_extended = [row_PREC_d2H;  row_NaN; row_INTS_d2H;  row_NaN; row_INTR_d2H;  row_NaN; row_SNOW_d2H;  row_NaN; rows_SWAT_d2H;  row_NaN; row_GWAT_d2H;  row_NaN; row_RWU_d2H;  row_NaN; row_XYL_d2H ]
 
     # We reproduce the following plots:
     # pl_δ18O = heatmap(x, y_extended, z2_extended;
