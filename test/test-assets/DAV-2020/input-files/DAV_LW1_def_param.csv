@@ -2,7 +2,8 @@ param_id,x
 ### Isotope transport parameters  -------,NA
 ### TODO,42
 ### TODO2,42
-VXYLEM_mm,20
+VXYLEM_mm, 20
+DISPERSIVITY_mm, 40
 ### Meteorologic site parameters -------,NA
 LAT_DEG,47
 ESLOPE_DEG,0
