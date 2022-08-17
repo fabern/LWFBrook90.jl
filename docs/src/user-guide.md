@@ -26,7 +26,7 @@ The steps in a typical simulation script are:
 - plot and/or postprocess simulation results
 
 LWFBrook90.jl can output additional quantities in daily resolution derived during simulation. Monthly or yearly quantities can be derived in the post processing.
-For performance reasons, e.g. for Bayesian parameter estimation, computation of these additional quantities can also be deactivated during simulation, and they could be calculated in a post-processing step from the state vector (currently not implemented).
+For performance reasons, e.g. for Bayesian parameter estimation, computation of these additional quantities can also be deactivated during simulation, and they could be calculated in a post-processing step from the state vector.
 
 
 
@@ -37,7 +37,7 @@ To run a simulation following input data are needed
 - `soil_horizons.csv` - containing the hydraulic parameters of the different soil horizons
 - `meteoveg.csv` - containing daily values of meteorologic variables and stand properties
 - `meteoiso.csv` - containing isotopic signatures of aggregate precipitation samples
-- `meteo_storm_durations.csv` - containing parameters of sub-daily storm/precipitation event patterns
+- `meteo_storm_durations.csv` - containing parameters of sub-daily storm/precipitation event patterns for each month
 - `initial_conditions.csv` - containing initial conditions of scalar state variables
 - `soil_discretization.csv` - containing the initial conditions of the soil water status in the form of the soil matric potential (kPa) and the initial isotopic signatures (vector state variables); continuously defined parameters of relative root density distributions; as well as the definition of the numerical discretization of the soil domain (nodes with upper and lower limits).
 - `param.csv` - containing further scalar model parameters
@@ -46,7 +46,7 @@ The structure of the input data is illustrated by the example input data set `is
 
 For convenience, input files can be generated from a script that sets up a simulation with the R package [LWFBrook90R (v0.4.3)](https://github.com/pschmidtwalter/LWFBrook90R#usage). Instead of running the simulation with `run_LWFB90()`, the same arguments can be used to generate the input files for LWFBrook90.jl using the R function provided in the file `generate_LWFBrook90jl_Input.R`. Note that the input file `meteoiso.csv` needs to be generated separately and the files containing the initial conditions (`initial_conditions.csv` and `soil_discretization.csv`) also need to be extended manually with the isotope values (see structure of these input files below).
 
-To load load input data and prepare a simulation follow the instructions in section [Example](@ref) or alternatively use the sample script `main_with_isotopes.jl`. TODO: these will shortly be replace with Jupyter-notebooks generated with Literate.jl
+To load load input data and prepare a simulation follow the instructions in section [Example](@ref) or alternatively use the sample script `main_with_isotopes.jl`. NOTE: these will shortly be replace with Jupyter-notebooks generated with Literate.jl (TODO).
 
 In case you're unfamiliar to Julia, there are various ways to run a script such as `main.jl`: One possibility is to open the Julia REPL and run the script using `include(“main.jl”)`. Alternatively, the editor VS Code in combination with the Julia extension ([julia-vscode.org](https://www.julia-vscode.org)), provides a complete IDE for programming in Julia.
 
@@ -66,14 +66,6 @@ In case you're unfamiliar to Julia, there are various ways to run a script such 
 | 7         | -1.1    | -1.2    | 0.46743             | 0.069               | 164.564        | 1.05103 | 67.97846   | 0.01    | 0.95                |
 
 
-`soil_horizons.csv`: (when using Clapp-Hornberger parametrization of the soil retention curve, is currently not implemented):
-
-| HorizonNr  | Upper_m | Lower_m | thsat_volFrac       | thetaf_volFrac      | psif_kPa    | bexp_  | kf_mmDay     | wtinf_ | gravel_volFrac      |
-| ---------- | ------- | ------- | ------------------- | ------------------- | ----------- | ------ | ------------ | ------ | ------------------- |
-| -          | m       | m       | volume fraction (-) | volume fraction (-) | kPa         | -      | mm per day   | -      | volume fraction (-) |
-| 1          | 0       | -0.04   | NA                  | NA                  | NA          | NA     | NA           | NA     | NA                  |
-
-
 `meteoveg.csv`: contains time dependent parameters (meterologic variables and vegetation parameters):
 
 | dates      | globrad_MJDayM2 | tmax_degC | tmin_degC | vappres_kPa | windspeed_ms | prec_mmDay | densef_ | height_m | lai_   | sai_  | age_yrs       |
@@ -87,8 +79,8 @@ In case you're unfamiliar to Julia, there are various ways to run a script such 
 | 22.06.10   | 8.17            | 5.62      | 2.85      | 0.77        | 2.17         | 0.1        | 1       | 25       | 3.79   | 1     | 240.47253     |
 | 23.06.10   | 30.39           | 13.53     | 1.68      | 0.81        | 2.66         | 0          | 1       | 25       | 3.79   | 1     | 240.47527     |
 | 24.06.10   | 30.57           | 16.13     | 3.95      | 0.88        | 2.28         | 0          | 1       | 25       | 3.79   | 1     | 240.47802     |
+`meteoiso.csv`: contains time dependent isotopic signatures of precipiation.
 
-`meteoveg.csv`: contains time dependent isotopic signatures of precipiation.
 (Note that the `dates` contain the end dates of the collection interval of cumulative
 isotope samples. The values are backward interpolated with piecewise constants. The first
 row containng the `NA` is assumed to be the start date of the first collection interval.):
