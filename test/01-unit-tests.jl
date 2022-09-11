@@ -8,6 +8,8 @@
 # - _Regression testing_ asserts that behavior is unchanged over time. Also known as
 #       _reference tests_.
 
+# NOTE: locally, i.e. not on CI system, one might need to do manually cd("test")
+if basename(pwd()) != "test"; cd("test"); end
 @testset "Soil Hydraulics" begin
     # Test a single element of MualemVanGenuchtenSHP
     shp = LWFBrook90.MualemVanGenuchtenSHP(; p_THSAT = 1.0, p_θr = 1.0, p_MvGα = 1.0, p_MvGn = 1.0, p_KSAT = 1.0,
