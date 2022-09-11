@@ -8,6 +8,30 @@
 # - _Regression testing_ asserts that behavior is unchanged over time. Also known as
 #       _reference tests_.
 
+@testset "Soil Hydraulics" begin
+    # Test a single element of MualemVanGenuchtenSHP
+    shp = LWFBrook90.MualemVanGenuchtenSHP(; p_THSAT = 1.0, p_θr = 1.0, p_MvGα = 1.0, p_MvGn = 1.0, p_KSAT = 1.0,
+                                p_MvGl = 1.0, p_STONEF = 1.0)
+    @test shp.p_THSAT ≈ 1.0
+    @test shp.p_θr ≈ 1.0
+    @test shp.p_MvGα ≈ 1.0
+    @test shp.p_MvGn ≈ 1.0
+    @test shp.p_KSAT ≈ 1.0
+    @test shp.p_MvGl ≈ 1.0
+    @test shp.p_STONEF ≈ 1.0
+
+    # Test generating an array of MualemVanGenuchtenSHP'S
+    soil_horizons, _ = LWFBrook90.read_path_soil_horizons(
+        "test-assets/DAV-2020/input-files/DAV_LW1_def_soil_horizons.csv");
+
+    @test [shp.p_THSAT  for shp in soil_horizons.shp] ≈ [0.3786, 0.3786, 0.3786]
+    @test [shp.p_θr     for shp in soil_horizons.shp] ≈ [0.0, 0.0, 0.0]
+    @test [shp.p_MvGα   for shp in soil_horizons.shp] ≈ [20.387, 20.387, 20.387]
+    @test [shp.p_MvGn   for shp in soil_horizons.shp] ≈ [1.2347, 1.2347, 1.2347]
+    @test [shp.p_KSAT   for shp in soil_horizons.shp] ≈ [2854.91, 2854.91, 2854.91]
+    @test [shp.p_MvGl   for shp in soil_horizons.shp] ≈ [-3.339, -3.339, -3.339]
+    @test [shp.p_STONEF for shp in soil_horizons.shp] ≈ [0.175, 0.375, 0.75]
+end
 
 # @testset "Module WAT" begin
 @testset "WAT.KKMEAN" begin
@@ -97,11 +121,15 @@ end
     input_soil_discretization = DataFrame(Upper_m = -(0.:8.), Lower_m = -(1.:9.),
                                 Rootden_ = (1:9) ./ 10, uAux_PSIM_init_kPa = -6.0,
                                 u_delta18O_init_permil = NaN, u_delta2H_init_permil = NaN)
-    input_soil_horizons = DataFrame(HorizonNr = 1:5, Upper_m = -[0.,3,8,10,15], Lower_m = -[3.,8,10,15,20],
-                    ths_volFrac = (11:15) ./ 20, thr_volFrac = 0.069,
-                    gravel_volFrac = 0.9:-0.1:0.5,
-                    ksat_mmDay = 50, alpha_perMeter = 10:14, npar_ = 0, tort_ = 0
-                    )
+    # input_soil_horizons, _ = LWFBrook90.read_path_soil_horizons(
+    #     "test-assets/DAV-2020/input-files/DAV_LW1_def_soil_horizons.csv");
+    input_soil_horizons =
+        DataFrame(HorizonNr = 1:5, Upper_m = -[0.,3,8,10,15], Lower_m = -[3.,8,10,15,20],
+                    shp = LWFBrook90.MualemVanGenuchtenSHP(;
+                        p_THSAT = 0.55, p_θr = 0.069, p_MvGα = 12, p_MvGn = 0, p_KSAT = 50,
+                        p_MvGl = 0, p_STONEF = 0.7))
+                        # p_THSAT = (11:15) ./ 20, p_θr = 0.069, p_MvGα = 10:14, p_MvGn = 0, p_KSAT = 50,
+                        # p_MvGl = 0, p_STONEF = 0.9:-0.1:0.5))
     IDEPTH_m = 0.045 # m
     QDEPTH_m = 0.0  # m
     INITRDEP = 10
@@ -114,13 +142,15 @@ end
 
     @test soil_disc["NLAYER"] == 10
     @test soil_disc["THICK"]  ≈ [45.0, 955.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0]
-    @test soil_disc["STONEF"] ≈ [0.9, 0.9, 0.9, 0.9, 0.8, 0.8, 0.8, 0.8, 0.8, 0.7]
     @test soil_disc["PSIM_init"] ≈ [-6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0]
     @test soil_disc["frelden"] ≈ [0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
     @test soil_disc["QLAYER"] == 0
     @test soil_disc["ILAYER"] == 1
     #soil_disc["tini"] .= 0.0
-    @test soil_disc["PAR"][!,"θs"] ≈ [0.55, 0.55, 0.55, 0.55, 0.6, 0.6, 0.6, 0.6, 0.6, 0.65]
+    @test [shp.p_STONEF for shp in soil_disc["SHP"]] ≈ [0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7]
+    # @test [shp.p_STONEF for shp in soil_disc["SHP"]] ≈ [0.9, 0.9, 0.9, 0.9, 0.8, 0.8, 0.8, 0.8, 0.8, 0.7]
+    @test [shp.p_THSAT for shp in soil_disc["SHP"]] ≈ [0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55]
+    # @test [shp.p_THSAT for shp in soil_disc["SHP"]] ≈ [0.55, 0.55, 0.55, 0.55, 0.6, 0.6, 0.6, 0.6, 0.6, 0.65]
 end
 
 @testset "KPT.KPT_SOILPAR_Ch1d" begin

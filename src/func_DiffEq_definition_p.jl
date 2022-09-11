@@ -242,30 +242,33 @@ function define_LWFB90_p(
     FLAG_MualVanGen = simOption_FLAG_MualVanGen # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
     p_RSSA   = input_param[1,"RSSA"] # Soil evaporation resistance (RSS) at field capacity, s/m (BROOK90: RSSA is fixed at 500 s/m following Shuttleworth and Gurney (1990))
     p_RSSB   = input_param[1,"RSSB"] # Exponent in relation of soil evaporation resistance (RSS) to soil water potential (PSIM) in the top layer, dimensionless, (BROOK90: RSSB is fixed at 1.0, which makes RSS directly proportional to PSIM)
+    # TODO(bernharf): get rid of this and simply use the vector of AbstractSoilHydraulicParams...
     if FLAG_MualVanGen == 0
         p_soil = LWFBrook90.KPT.KPT_SOILPAR_Ch1d(;
             p_THICK = p_THICK,
-            p_STONEF = soil_discr["STONEF"],           # stone volume fraction in each soil layer, dimensionless
-            p_THSAT  = soil_discr["PAR"][!,"θs"],      # THETA at saturation, m3/m3
-            p_THETAF = soil_discr["PAR"][!,"θf"],      # volumetric water content at "field capacity" corresponding to KF and PSIF for soil layer, m3/m3
-            p_KF     = soil_discr["PAR"][!,"kf"],      # hydraulic conductivity at field capacity corresponding to THETAF and PSIF for a soil layer, mm/d
-            p_PSIF   = soil_discr["PAR"][!,"ψf"],      # matric potential at "field capacity" corresponding to KF and THETAF for a soil layer, kPa
-            p_BEXP   = soil_discr["PAR"][!,"bexp"],    # Clapp-Hornberger exponent for ψ-θ relation
-            p_WETINF = soil_discr["PAR"][!,"wetinf"])  # wetness at dry end of near-saturation range for a soil layer, dimensionless
-
+            p_STONEF = [shp.p_STONEF for shp in soil_discr["SHP"]], # stone volume fraction in each soil layer, dimensionless
+            p_THSAT  = [shp.p_THSAT  for shp in soil_discr["SHP"]], # THETA at saturation, m3/m3
+            p_THETAF = [shp.p_THETAF for shp in soil_discr["SHP"]], # volumetric water content at "field capacity" corresponding to KF and PSIF for soil layer, m3/m3
+            p_KF     = [shp.p_KF     for shp in soil_discr["SHP"]], # hydraulic conductivity at field capacity corresponding to THETAF and PSIF for a soil layer, mm/d
+            p_PSIF   = [shp.p_PSIF   for shp in soil_discr["SHP"]], # matric potential at "field capacity" corresponding to KF and THETAF for a soil layer, kPa
+            p_BEXP   = [shp.p_BEXP   for shp in soil_discr["SHP"]], # Clapp-Hornberger exponent for ψ-θ relation
+            p_WETINF = [shp.p_WETINF for shp in soil_discr["SHP"]]) # wetness at dry end of near-saturation range for a soil layer, dimensionless
     elseif FLAG_MualVanGen == 1
+        # ..it's a sin......
+        # Hard default of 2 [mm d-1] for saturated hydraulic conductivity at field capacity K(θ_fc)
+
         # Instantiate soil parameters
+        hardcodedKθfc = 2. .+ 0. * similar(p_THICK) #PAR[:,"K(θ_fc)"] .= 2.
         p_soil = LWFBrook90.KPT.KPT_SOILPAR_Mvg1d(;
             p_THICK  = p_THICK,
-            p_STONEF = soil_discr["STONEF"],
-            p_THSAT  = soil_discr["PAR"][!,"θs"],
-            p_Kθfc   = soil_discr["PAR"][!,"K(θ_fc)"],
-            p_KSAT   = soil_discr["PAR"][!,"Ksat"],
-            p_MvGα   = soil_discr["PAR"][!,"α"],
-            p_MvGn   = soil_discr["PAR"][!,"n"],
-            p_MvGl   = soil_discr["PAR"][!,"tort"],
-            p_θr     = soil_discr["PAR"][!,"θr"])
-
+            p_STONEF = [shp.p_STONEF for shp in soil_discr["SHP"]],
+            p_THSAT  = [shp.p_THSAT  for shp in soil_discr["SHP"]],
+            p_Kθfc   = 2. .+ 0. * similar(p_THICK), #hardcodedKθfc,
+            p_KSAT   = [shp.p_KSAT   for shp in soil_discr["SHP"]],
+            p_MvGα   = [shp.p_MvGα   for shp in soil_discr["SHP"]],
+            p_MvGn   = [shp.p_MvGn   for shp in soil_discr["SHP"]],
+            p_MvGl   = [shp.p_MvGl   for shp in soil_discr["SHP"]],
+            p_θr     = [shp.p_θr     for shp in soil_discr["SHP"]])
     else
         error("Unsupported FLAG_MualVanGen: $FLAG_MualVanGen")
     end
@@ -848,38 +851,44 @@ function discretize_soil_params(
     end
     ############
 
-    ############
-    # 3) Bring to simple vecotr and matrix form
+    # ############
+    # # 3) Bring to simple vector and matrix form
 
-    # Parse the stonefraction and hydraulic parameters for each layer
-    # depending on wheter we use FLAG_MualVanGen ==1 or ==2
-    STONEF = soil_discretization[:,"gravel_volFrac"]
-
-    if FLAG_MualVanGen == 1
-        # Mualem-van Genuchten
-        PAR = select(soil_discretization,
-                :ths_volFrac    => :θs,
-                :ksat_mmDay     => :Ksat,
-                :alpha_perMeter => :α,
-                :npar_          => :n,
-                :tort_          => :tort,
-                :thr_volFrac    => :θr
-                )
-        # ..it's a sin......
-        # Hard default of 2 [mm d-1] for saturated hydraulic conductivity at field capacity K(θ_fc)
-        PAR[:,"K(θ_fc)"] .= 2. #insertcols!(copy(soil_discretization), ("K(θ_fc)" => 2.)),
-    end
-    if FLAG_MualVanGen == 0
-        # Clapp-Hornberger
-        PAR = select(soil_discretization,
-                :thsat    => :θs,
-                :thetaf   => :θf,
-                :kf_mmD   => :kf,
-                :psif_kPa => :ψf,
-                :bexp     => :bexp,
-                :wetinf   => :wetinf
-                )
-    end
+    # # Parse the stonefraction and hydraulic parameters for each layer
+    # # depending on wheter we use FLAG_MualVanGen ==1 or ==2
+    # # STONEF = [shp.p_STONEF for shp in soil_discretization.shp] # soil_discretization[:,"gravel_volFrac"]
+    # # [shp.p_THSAT  for shp in soil_discretization.shp] # ths_volFrac
+    # # [shp.p_θr     for shp in soil_discretization.shp] # thr_volFrac
+    # # [shp.p_MvGα   for shp in soil_discretization.shp] # alpha_perMeter
+    # # [shp.p_MvGn   for shp in soil_discretization.shp] # npar_
+    # # [shp.p_KSAT   for shp in soil_discretization.shp] # ksat_mmDay
+    # # [shp.p_MvGl   for shp in soil_discretization.shp] # tort_
+    # # [shp.p_STONEF for shp in soil_discretization.shp] # gravel_volFrac)
+    # if FLAG_MualVanGen == 1
+    #     # Mualem-van Genuchten
+    #     PAR = select(soil_discretization,
+    #             :ths_volFrac    => :θs,
+    #             :ksat_mmDay     => :Ksat,
+    #             :alpha_perMeter => :α,
+    #             :npar_          => :n,
+    #             :tort_          => :tort,
+    #             :thr_volFrac    => :θr
+    #             )
+    #     # ..it's a sin......
+    #     # Hard default of 2 [mm d-1] for saturated hydraulic conductivity at field capacity K(θ_fc)
+    #     PAR[:,"K(θ_fc)"] .= 2. #insertcols!(copy(soil_discretization), ("K(θ_fc)" => 2.)),
+    # end
+    # if FLAG_MualVanGen == 0
+    #     # Clapp-Hornberger
+    #     PAR = select(soil_discretization,
+    #             :thsat    => :θs,
+    #             :thetaf   => :θf,
+    #             :kf_mmD   => :kf,
+    #             :psif_kPa => :ψf,
+    #             :bexp     => :bexp,
+    #             :wetinf   => :wetinf
+    #             )
+    # end
 
     # find thickness of maximum root zone
     # frelden: relative values of final root density per unit volume
@@ -964,8 +973,9 @@ function discretize_soil_params(
                 ("d18O_init",d18O_soil_init),
                 ("d2H_init",d2H_soil_init),
                 ("frelden",frelden),
-                ("PAR",PAR),
-                ("STONEF",STONEF),
+                ("SHP", soil_discretization.shp),
+                # ("PAR",PAR),
+                # ("STONEF",STONEF),
                 ("tini",tini)])#,
                 #
                 #("HeatCapOld",HeatCapOld),

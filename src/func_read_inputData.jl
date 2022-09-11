@@ -91,7 +91,6 @@ function read_inputData(folder::String, prefix::String;
     disallowmissing!(input_param)
     disallowmissing!(input_storm_durations, [:month, :storm_durations_h])
     disallowmissing!(input_initial_conditions)
-    disallowmissing!(input_soil_horizons)
 
     return (input_meteoveg,
         input_meteoiso,
@@ -556,7 +555,16 @@ function read_path_soil_horizons(path_soil_horizons)
         Please check and correct the input file.
         """
 
-    return input_soil_horizons, FLAG_MualVanGen
+    # Assert that no missing values in
+    # Impose type of Float64 instead of Float64?
+    disallowmissing!(input_soil_horizons)
+
+    # Make dataframe representing physical horizons/layers in 1D domain
+    # soil_horizons = DataFrame()
+    soil_horizons = input_soil_horizons[:,["HorizonNr", "Upper_m", "Lower_m"]];
+    soil_horizons[!, :shp] = LWFBrook90.MualemVanGenuchtenSHP(input_soil_horizons);
+
+    return soil_horizons, FLAG_MualVanGen # TODO: remove FLAG_MualVanGen and use multiple dispatch (or if needed derive FLAG_MualVanGen = typeof(soil_horizons[1,:shp]) == LWFBrook90.KPT.MualemVanGenuchtenSHP)
 end
 
 # path_soil_discretization = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_soil_discretization.csv"

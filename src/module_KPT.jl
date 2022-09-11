@@ -53,8 +53,10 @@ module KPT # SOIL WATER PROPERTIES
 
 export SOILPAR_CH, derive_auxiliary_SOILVAR
 export KPT_SOILPAR_Mvg1d, KPT_SOILPAR_Ch1d, FWETNES
+export AbstractSoilHydraulicParams, MualemVanGenuchtenSHP
 using Roots: find_zero, Bisection # to find wetness for a given hydraulic conductivity
 using ..CONSTANTS: p_ThCrit,p_RHOWG # https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
+using DataFrames: DataFrame
 
 ### ### Parameters
 ### #   Clapp and Hornberger (FLAG_MualVanGen=0)
@@ -100,6 +102,95 @@ using ..CONSTANTS: p_ThCrit,p_RHOWG # https://discourse.julialang.org/t/large-pr
 #     end
 # end
 # d(field1::T, field2::T) where {T<:Number} = d{T}(field1,field2) # see https://docs.julialang.org/en/v1/manual/constructors/#Parametric-Constructors
+
+"""
+    AbstractSoilHydraulicParams
+
+Represents an abstract parametrization of soil hydraulics.
+Examples of soil hydraulic parametrizations are:
+- Mualem-van Genuchten
+- Clapp-Hornberger
+
+A summary is available in
+Shao, Y. and Irannejad, P.: On the Choice of Soil Hydraulic Models in Land-Surface Schemes, Boundary Layer Meterol., 90, 83–115, https://doi.org/10.1023/A:1001786023282, 1999.
+"""
+abstract type AbstractSoilHydraulicParams end # The concrete types are defined in module KPT
+
+@doc raw"""
+    MualemVanGenuchtenSHP
+
+Mualem-van Genuchten parametrization of soil hydraulics
+
+```math
+\Theta    = \frac{\theta - \theta_r}{\theta_s - \theta_r} = \left( \frac{1}{1+(-\alpha \psi)^n} \right)^m \\
+n         = \frac{1}{m-1} \\
+K(\theta) = K_s \Theta^{1/2}\left[ 1 - (1 - \Theta^{1/m})^m \right ]^2 \\
+K(\psi)   = K_s\frac{\left[ 1- (-\alpha\psi)^{n-1} (1 + (-\alpha \psi)^n)^{-m} \right ]^2}{\left[ 1 + (-\alpha\psi)^n \right ]^{m/2}}
+```
+source: Shao, Y. and Irannejad, P.: On the Choice of Soil Hydraulic Models in Land-Surface Schemes, Boundary Layer Meterol., 90, 83–115, https://doi.org/10.1023/A:1001786023282, 1999.
+"""
+Base.@kwdef struct MualemVanGenuchtenSHP <: AbstractSoilHydraulicParams
+    # Soil hydraulic parameters: Mualem-van Genuchten
+    # Input fields
+    "Saturation volumetric soil water content [m³ m⁻³]"
+    p_THSAT::Real
+    "Residual volumetric soil water content [m³ m⁻³]"
+    p_θr::Real
+    "Mualem-van Genuchten α [m⁻¹]"
+    p_MvGα::Real
+    "Mualem-van Genuchten n [-]"
+    p_MvGn::Real
+    "Saturated hydraulic conductivity [mm day⁻¹]"
+    p_KSAT::Real
+    "Tortuosity [-]"
+    p_MvGl::Real
+    "Gravel/stone fraction [m³ m⁻³]"
+    p_STONEF::Real
+end
+
+function MualemVanGenuchtenSHP(df::DataFrame)
+    [MualemVanGenuchtenSHP(
+        p_THSAT  = dfrow.ths_volFrac,     p_θr     = dfrow.thr_volFrac,
+        p_MvGα   = dfrow.alpha_perMeter,  p_MvGn   = dfrow.npar_,
+        p_KSAT   = dfrow.ksat_mmDay,      p_MvGl   = dfrow.tort_,
+        p_STONEF = dfrow.gravel_volFrac)
+    for dfrow in eachrow(df)]
+end
+
+@doc raw"""
+    ClappHornbergerSHP
+
+Clapp-Hornberger parametrization of soil hydraulics
+
+```math
+\frac{\psi}{\psi_s} = w^{-1/\lambda} \qquad \textup{if: }\psi \leq \psi_i \\
+\psi                = -m(w-n)(w-1) \qquad \textup{if: }\psi_i \leq \psi \leq 0 \\
+K(\theta)           = K_s \left( \frac{\theta}{\theta_s} \right)^{(3+2/\lambda)} \\
+\\
+\textup{Parameters:} \\
+m = \frac{\psi_i}{(1-w_i)^2} - \frac{\psi_i}{w_i(1-w_i)\lambda} \\
+n = 2w_i - \frac{\psi_i}{mw_i\lambda} -1
+```
+source: Shao, Y. and Irannejad, P.: On the Choice of Soil Hydraulic Models in Land-Surface Schemes, Boundary Layer Meterol., 90, 83–115, https://doi.org/10.1023/A:1001786023282, 1999.
+"""
+struct ClappHornbergerSHP <: AbstractSoilHydraulicParams
+    # Input fields
+    p_THSAT::Real
+    p_THETAF::Real
+    p_KF::Real
+    p_PSIF::Real
+    p_BEXP::Real
+    p_WETINF::Real
+    p_STONEF::Real
+    # TODO: finalize by commenting (see also l.246 in "definition_p.jl")
+end
+# TODO(bernhard): Rewrite functions below for AbstractSoilHydraulicParams and specialize
+# derive_auxiliary_SOILVAR(shp::AbstractSoilHydraulicParams)
+# derive_auxiliary_SOILVAR(shp::MualemVanGenuchtenSHP)
+# derive_auxiliary_SOILVAR(shp::ClappHornbergerSHP)
+# FK(shp::AbstractSoilHydraulicParams, θ)
+# FK(shp::MualemVanGenuchtenSHP, θ)
+# FK(shp::ClappHornbergerSHP, θ)
 
 abstract type AbstractKptSoilpar end
 """

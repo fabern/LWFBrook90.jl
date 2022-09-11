@@ -16,6 +16,10 @@ The file `soil_discretization.csv` was created with an R script
 function discretize_soil(folder::String, prefix::String; suffix::String = "")
     # Load pre-defined discretization
     path_soil_discretization = joinpath(folder, prefix * "_soil_discretization" * suffix * ".csv")
+    discretize_soil(path_soil_discretization)
+end
+function discretize_soil(path_soil_discretization::String)
+    # Load pre-defined discretization
     input_soil_discretization = LWFBrook90.read_path_soil_discretization(path_soil_discretization)
 
     return input_soil_discretization
