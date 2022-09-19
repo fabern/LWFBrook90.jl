@@ -31,7 +31,19 @@ function define_LWFB90_p(
     constant_dt_solver = 1)
 
     ########
-    ## Discretize soil parameters and interpolate meteo and vegetation parameters
+    ## Interpolate meteo and vegetation parameters
+    interpolated_meteoveg =
+        LWFBrook90.interpolate_meteoveg(;
+            input_meteoveg                = input_meteoveg,
+            input_meteoveg_reference_date = input_meteoveg_reference_date,
+            input_meteoiso                = input_meteoiso,
+            p_MAXLAI                      = input_param[:MAXLAI],
+            p_SAI_baseline_               = input_param[:SAI_baseline_],
+            p_DENSEF_baseline_            = input_param[:DENSEF_baseline_],
+            p_AGE_baseline_yrs            = input_param[:AGE_baseline_yrs],
+            p_HEIGHT_baseline_m           = input_param[:HEIGHT_baseline_m]);
+
+    ## Discretize soil parameters and interpolate discretized root distribution
     soil_discr =
         LWFBrook90.discretize_soil_params(
             input_soil_horizons,
@@ -42,25 +54,17 @@ function define_LWFB90_p(
             input_param[:INITRDEP],
             input_param[:RGRORATE])
 
-    interpolated_meteoveg =
-        LWFBrook90.interpolate_meteoveg(
-            input_meteoveg,
-            input_meteoveg_reference_date,
-            input_meteoiso,
-            soil_discr["NLAYER"],
-            input_param[:INITRDEP],
-            input_param[:INITRLEN],
-            input_param[:RGROPER],
-            soil_discr["tini"],
-            soil_discr["frelden"],
-            input_param[:MAXLAI],
-            input_param[:SAI_baseline_],
-            input_param[:DENSEF_baseline_],
-            input_param[:AGE_baseline_yrs],
-            input_param[:HEIGHT_baseline_m])
-
-
+    p_RELDEN = LWFBrook90.interpolate_spaceDiscretized_root_density(;
+        timepoints = input_meteoveg.days,
+        p_AGE      = interpolated_meteoveg.p_AGE,
+        p_INITRDEP = input_param[:INITRDEP],
+        p_INITRLEN = input_param[:INITRLEN],
+        p_RGROPER  = input_param[:RGROPER],
+        p_tini     = soil_discr["tini"],
+        p_frelden  = soil_discr["frelden"]);
     # TODO(bernhard): document input parameters: INITRDEP, INITRLEN, RGROPER, tini, frelden, MAXLAI, HEIGHT_baseline_m
+
+    interpolated_meteoveg = merge(interpolated_meteoveg, (; p_RELDEN = p_RELDEN))
     ########
 
     ########
@@ -471,7 +475,42 @@ end
 
 
 
+"""
+    interpolate_spaceDiscretized_root_density()
 
+Take root density distribution parameters and generates root density in time (t) and space (z, negative downward).
+"""
+
+function interpolate_spaceDiscretized_root_density(;
+        timepoints,
+        p_AGE,
+        p_INITRDEP,
+        p_INITRLEN,
+        p_RGROPER,
+        p_tini,
+        p_frelden)
+
+    NLAYER = length(p_frelden)
+
+    # 2a Compute time dependent root density parameters
+    # Which is a vector quantity that is dependent on time:
+    p_RELDEN_2Darray = fill(NaN, length(timepoints), NLAYER)
+    for i in eachindex(timepoints)
+        p_RELDEN_2Darray[i,:] =
+            LWFBrook90.WAT.LWFRootGrowth(;
+                final_relden      = p_frelden,
+                tini_yrs          = p_tini,
+                INITRDEP_m        = p_INITRDEP,
+                INITRLEN_m_per_m2 = p_INITRLEN,
+                RGROPER_yrs       = p_RGROPER,
+                age_yrs           = p_AGE(timepoints[i]),
+                NLAYER            = NLAYER)
+    end
+    p_RELDEN =  extrapolate(interpolate((timepoints, 1:NLAYER), p_RELDEN_2Darray,
+                                        (Gridded(Constant{Next}()), NoInterp()), # 1st dimension: ..., 2nd dimension NoInterp()
+                                        ), Flat()) # extrapolate flat, alternative: Throw()
+    return p_RELDEN
+end
 
 """
     interpolate_meteoveg(
@@ -481,17 +520,10 @@ end
 
 Take climate and vegetation parameters in `input_meteoveg` and `input_meteoiso` and generates continuous parameters.
 """
-function interpolate_meteoveg(
+function interpolate_meteoveg(;
     input_meteoveg::DataFrame,
     input_meteoveg_reference_date::DateTime,
     input_meteoiso::Union{DataFrame,Nothing},
-    # root density parameters
-    NLAYER,
-    p_INITRDEP,
-    p_INITRLEN,
-    p_RGROPER,
-    p_tini,
-    p_frelden,
     p_MAXLAI,
     p_SAI_baseline_,
     p_DENSEF_baseline_,
@@ -610,24 +642,6 @@ function interpolate_meteoveg(
         p_d18OPREC= extrapolate(interpolate((input_meteoiso.days .+ 12/24, ), input_meteoiso.delta18O_permil,    (Gridded(Constant{Next}()))), Flat()) #extrapolate flat, alternative: Throw())
         p_d2HPREC = extrapolate(interpolate((input_meteoiso.days .+ 12/24, ), input_meteoiso.delta2H_permil,     (Gridded(Constant{Next}()))), Flat()) #extrapolate flat, alternative: Throw())
     end
-
-    # 2a Compute time dependent root density parameters
-    # Which is a vector quantity that is dependent on time:
-    p_RELDEN_2Darray = fill(NaN, nrow(input_meteoveg), NLAYER)
-    for i in 1:nrow(input_meteoveg)
-        p_RELDEN_2Darray[i,:] =
-            LWFBrook90.WAT.LWFRootGrowth(
-                p_frelden,
-                p_tini,
-                p_AGE(input_meteoveg.days[i]),
-                p_RGROPER,
-                p_INITRDEP,
-                p_INITRLEN,
-                NLAYER)
-    end
-    p_RELDEN =  extrapolate(interpolate((input_meteoveg.days, 1:NLAYER), p_RELDEN_2Darray,
-                                        (Gridded(Constant{Next}()), NoInterp()), # 1st dimension: ..., 2nd dimension NoInterp()
-                                        ), Flat()) # extrapolate flat, alternative: Throw()
     return (p_GLOBRAD      = p_GLOBRAD,
             p_TMAX         = p_TMAX,
             p_TMIN         = p_TMIN,
@@ -641,7 +655,7 @@ function interpolate_meteoveg(
             p_LAI          = p_LAI,
             p_SAI          = p_SAI,
             p_AGE          = p_AGE,
-            p_RELDEN       = p_RELDEN,
+            # p_RELDEN       = p_RELDEN,
             REFERENCE_DATE = input_meteoveg_reference_date)
 end
 

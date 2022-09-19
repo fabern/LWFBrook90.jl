@@ -37,7 +37,7 @@ function SPAC(folder::String, prefix::String;
     path_soil_horizons      = joinpath(folder, replace(input_file_XXXX, "XXXX" => "soil_horizons"))
 
     ## Load time-varying atmospheric forcing
-    input_meteoveg_reference_date, tspan, input_meteoveg, meteo_iso_forcing, storm_durations =
+    reference_date, tspan, input_meteoveg, meteo_iso_forcing, storm_durations =
         init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes)
 
     meteo_forcing = input_meteoveg[:, [:days, :GLOBRAD, :TMAX, :TMIN, :VAPPRES, :WIND, :PRECIN]]
@@ -57,10 +57,10 @@ function SPAC(folder::String, prefix::String;
     ## Load model input parameters
     params = init_param(path_param; simulate_isotopes = simulate_isotopes)
 
-    # return SPAC(input_meteoveg_reference_date, tspan, meteo_forcing, meteo_iso_forcing, storm_durations,
+    # return SPAC(reference_date, tspan, meteo_forcing, meteo_iso_forcing, storm_durations,
     #             soil_horizons, canopy_evolution, root_distribution, continuousIC, params)
     return SPAC(;
-        reference_date    = input_meteoveg_reference_date,
+        reference_date    = reference_date,
         tspan             = tspan,
         meteo_forcing     = meteo_forcing,
         meteo_iso_forcing = meteo_iso_forcing,
@@ -74,7 +74,7 @@ function SPAC(folder::String, prefix::String;
     # input_initial_conditions = continuousIC.scalar
     # return (input_meteoveg, # note this contains both meteo_forcing and canopy_evolution
     #     meteo_iso_forcing,
-    #     input_meteoveg_reference_date,
+    #     reference_date,
     #     params,
     #     storm_durations,
     #     input_initial_conditions,

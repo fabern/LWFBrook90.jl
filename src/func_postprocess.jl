@@ -43,8 +43,8 @@ function plot_and_save_results(sol, input_prefix, input_path)
     df_out3 = DataFrame(u_aux_θ,    "zLower=".*string.(z_to_plot))
 
     ## append time metadata
-    input_meteoveg_reference_date = sol.prob.p[2][17]
-    time_to_plot = LWFBrook90.RelativeDaysFloat2DateTime.(sol.t, input_meteoveg_reference_date)
+    reference_date = sol.prob.p[2][17]
+    time_to_plot = LWFBrook90.RelativeDaysFloat2DateTime.(sol.t, reference_date)
     df_out1.Date = time_to_plot
     df_out2.Date = time_to_plot
     df_out3.Date = time_to_plot
