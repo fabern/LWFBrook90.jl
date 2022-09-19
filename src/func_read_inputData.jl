@@ -88,7 +88,6 @@ function read_inputData(folder::String, prefix::String;
     if (simulate_isotopes)
         disallowmissing!(input_meteoiso, [:days, :delta18O_permil, :delta2H_permil])
     end
-    disallowmissing!(input_param)
     disallowmissing!(input_storm_durations, [:month, :storm_durations_h])
     disallowmissing!(input_initial_conditions)
 
@@ -456,6 +455,11 @@ function read_path_param(path_param; simulate_isotopes::Bool = false)
     input_param[:,:FXYLEM]  = min.(input_param[:,:FXYLEM], 0.990)
     input_param[:,:INITRLEN] = max.(input_param[:,:INITRLEN], 0.010)
     input_param[:,:INITRDEP] = max.(input_param[:,:INITRDEP], 0.010)
+
+    # Impose type of Float64 instead of Float64?
+    disallowmissing!(input_param)
+    # Transform to NamedTuple
+    input_param = NamedTuple(input_param[1, :])
 
     return input_param
 end

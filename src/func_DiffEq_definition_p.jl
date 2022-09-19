@@ -38,10 +38,10 @@ function define_LWFB90_p(
             input_soil_horizons,
             input_soil_discretization,
             soil_output_depths,
-            input_param[1,"IDEPTH_m"],
-            input_param[1,"QDEPTH_m"],
-            input_param[1,"INITRDEP"],
-            input_param[1,"RGRORATE"],
+            input_param[:IDEPTH_m],
+            input_param[:QDEPTH_m],
+            input_param[:INITRDEP],
+            input_param[:RGRORATE],
             simOption_FLAG_MualVanGen)
 
     interpolated_meteoveg =
@@ -50,16 +50,16 @@ function define_LWFB90_p(
             input_meteoveg_reference_date,
             input_meteoiso,
             soil_discr["NLAYER"],
-            input_param[1,"INITRDEP"],
-            input_param[1,"INITRLEN"],
-            input_param[1,"RGROPER"],
+            input_param[:INITRDEP],
+            input_param[:INITRLEN],
+            input_param[:RGROPER],
             soil_discr["tini"],
             soil_discr["frelden"],
-            input_param[1,"MAXLAI"],
-            input_param[1,"SAI_baseline_"],
-            input_param[1,"DENSEF_baseline_"],
-            input_param[1,"AGE_baseline_yrs"],
-            input_param[1,"HEIGHT_baseline_m"])
+            input_param[:MAXLAI],
+            input_param[:SAI_baseline_],
+            input_param[:DENSEF_baseline_],
+            input_param[:AGE_baseline_yrs],
+            input_param[:HEIGHT_baseline_m])
 
 
     # TODO(bernhard): document input parameters: INITRDEP, INITRLEN, RGROPER, tini, frelden, MAXLAI, HEIGHT_baseline_m
@@ -67,9 +67,9 @@ function define_LWFB90_p(
 
     ########
     ## Solver algorithm options
-    p_DPSIMAX = input_param[1,"DPSIMAX"] # maximum potential difference considered "equal", kPa               (BROOK90: DPSIMAX is fixed at 0.01 kPa)
-    p_DSWMAX = input_param[1,"DSWMAX"] # maximum change allowed in soil wetness SWATI, percent of SWATMAX(i) (BROOK90: DSWMAX is fixed at 2 %)
-    p_DTIMAX = input_param[1,"DTIMAX"] # maximum iteration time step, d (BROOK90: DTIMAX is fixed at 0.5 d)
+    p_DPSIMAX = input_param[:DPSIMAX] # maximum potential difference considered "equal", kPa               (BROOK90: DPSIMAX is fixed at 0.01 kPa)
+    p_DSWMAX = input_param[:DSWMAX] # maximum change allowed in soil wetness SWATI, percent of SWATMAX(i) (BROOK90: DSWMAX is fixed at 2 %)
+    p_DTIMAX = input_param[:DTIMAX] # maximum iteration time step, d (BROOK90: DTIMAX is fixed at 0.5 d)
     # Documentation from ecoshift:
     # DPSIMAX (Fixed parameter) - maximum potential difference considered equal during soil water integration, kPa. There is no vertical flow between layers whose potentials differ by less than DPSIMAX. This reduces oscillation initiated by flows that are the product of large conductivities and large time steps, but small gradients. The number of iterations used is not at all linearly related to the three iteration parameters DPSIMAX, DSWMAX, and DTIMAX. Selection of values depends on whether the user only wants monthly or daily totals, or is concerned with behaviour at shorter time steps. Generally, faster runs are obtained by using fewer thicker soil layers rather than by using large values of DSWMAX and DPSIMAX. DPSIMAX is fixed at 0.01 kPa. [see WAT-ITER]
     # DSWMAX (Fixed parameter) - maximum change allowed in soil wetness for any layer during an iteration, percent. DSWMAX sets the maximum change in soil wetness or saturation fraction (SWATI / SWATMAX(i)) allowed for any layer in an iteration. See also DPSIMAX. DSWMAX is fixed at 2 %. [see WAT-ITER]
@@ -77,13 +77,13 @@ function define_LWFB90_p(
 
 
     ## Heat flow (unimplemented)
-    # p_HEAT    = input_param[1,"HEAT"]
+    # p_HEAT    = input_param[:HEAT]
     # p_TopInfT = soil_discr["TopInfT"]
     # unused p_HeatCapOld = soil_discr["HeatCapOld"]
 
     # Isotope transport parameters
-    p_VXYLEM       = input_param[1,"VXYLEM_mm"] # mm, storage volume of well mixed xylem storage per ground area # TODO(bernhard): possibly link this to SAI...
-    p_DISPERSIVITY = input_param[1,"DISPERSIVITY_mm"]/1000  # m, dispersivity length (0.04m is the average fitted dispersivity to the lysimters of Stumpp et al. 2012)
+    p_VXYLEM       = input_param[:VXYLEM_mm] # mm, storage volume of well mixed xylem storage per ground area # TODO(bernhard): possibly link this to SAI...
+    p_DISPERSIVITY = input_param[:DISPERSIVITY_mm]/1000  # m, dispersivity length (0.04m is the average fitted dispersivity to the lysimters of Stumpp et al. 2012)
 
     ## Location / Meteo
     p_NPINT  = 1 # Hardcoded. If p_NPINT>1, then multiple precipitation intervals would need
@@ -94,11 +94,11 @@ function define_LWFB90_p(
         error("Case with multiple precipitation intervals (using PRECDAT and precip_interval != 1) is not implemented.")
     end
     p_DURATN = input_storm_durations[1:12,"storm_durations_h"]# average storm duration for each month, hr
-    p_LAT    = input_param[1,"LAT_DEG"]   /57.296  # (Location parameter), latitude, radians
-    p_ASPECT = input_param[1,"ASPECT_DEG"]/57.296  # (Location parameter), aspect, radians through east from north
-    p_ESLOPE = input_param[1,"ESLOPE_DEG"]/57.296  # (Location parameter), slope for evapotranspiration and snowmelt, radians
-    p_MELFAC = input_param[1,"MELFAC"]    # (Location parameter), degree day melt factor for open land, MJ m-2 d-1 K-1
-    p_RSTEMP = input_param[1,"RSTEMP"]    # (Location parameter), base temperature for snow-rain transition, °C
+    p_LAT    = input_param[:LAT_DEG]   /57.296  # (Location parameter), latitude, radians
+    p_ASPECT = input_param[:ASPECT_DEG]/57.296  # (Location parameter), aspect, radians through east from north
+    p_ESLOPE = input_param[:ESLOPE_DEG]/57.296  # (Location parameter), slope for evapotranspiration and snowmelt, radians
+    p_MELFAC = input_param[:MELFAC]    # (Location parameter), degree day melt factor for open land, MJ m-2 d-1 K-1
+    p_RSTEMP = input_param[:RSTEMP]    # (Location parameter), base temperature for snow-rain transition, °C
     # removed for LWFBrook90: RELHT
     # removed for LWFBrook90: RELLAI
     # Documentation from ecoshift:
@@ -116,20 +116,20 @@ function define_LWFB90_p(
 
 
     ## Meteo
-    p_FETCH  = input_param[1,"FETCH"]  # Fetch upwind of the weather station at which wind speed was measured, m (BROOK90: FETCH is fixed at 5000 m)
-    p_WNDRAT = input_param[1,"WNDRAT"] # Average ratio of nighttime to daytime wind speed, dimensionless (BROOK90: WNDRAT is fixed at 0.3)
-    p_Z0G    = input_param[1,"Z0G"]    # Ground surface roughness, m ()
-    p_Z0S    = input_param[1,"Z0S"]    # Roughness parameter of snow surface, m (BROOK90: Z0S is fixed at 0.001 m)
-    p_Z0W    = input_param[1,"Z0W"]    # Roughness parameter at the weather station where wind speed was measured, m
-    p_ZMINH  = input_param[1,"ZMINH"]  # Reference height for weather data above canopy HEIGHT, m (BROOK90: ZMINH is fixed at 2 m)
-    p_ZW     = input_param[1,"ZW"]     # Weather station measurement height for wind, m (BROOK90: W is fixed at 10 m)
-    p_HS     = input_param[1,"HS"]     # Lower height limit, for roughness parameter interpolation, if canopy HEIGHT is below -> CZS (BROOK90: HS is fixed at 1 m)
-    p_HR     = input_param[1,"HR"]     # Upper height limit, for roughness parameter interpolation, if canopy HEIGHT is above -> CZR (BROOK90: HR is fixed at 10 m)
-    p_CZS    = input_param[1,"CZS"]    # Ratio of roughness parameter to HEIGHT (canopy) for HEIGHT < HS, dimensionless (BROOK90: CZS is fixed at 0.13)
-    p_CZR    = input_param[1,"CZR"]    # Ratio of roughness parameter to HEIGHT (canopy) for HEIGHT > HR, dimensionless (BROOK90: CZR is fixed at 0.05)
-    p_C1     = input_param[1,"C1"]     # intercept of linear relation between the ratio of actual to potential solar radiation for the day and sunshine duration (BROOK90: C1 is fixed at 0.25 following Brutsaert (1982))
-    p_C2     = input_param[1,"C2"]     # slope     of linear relation between the ratio of actual to potential solar radiation for the day and sunshine duration (BROOK90: C2 is fixed at 0.5 following Brutsaert (1982))
-    p_C3     = input_param[1,"C3"]     # Ratio of net longwave radiation for overcast sky (sunshine duration = 0) to that for clear sky (sunshine duration = 1). (BROOK90: C3 is fixed at 0.2 following Brutsaert (1982))
+    p_FETCH  = input_param[:FETCH]  # Fetch upwind of the weather station at which wind speed was measured, m (BROOK90: FETCH is fixed at 5000 m)
+    p_WNDRAT = input_param[:WNDRAT] # Average ratio of nighttime to daytime wind speed, dimensionless (BROOK90: WNDRAT is fixed at 0.3)
+    p_Z0G    = input_param[:Z0G]    # Ground surface roughness, m ()
+    p_Z0S    = input_param[:Z0S]    # Roughness parameter of snow surface, m (BROOK90: Z0S is fixed at 0.001 m)
+    p_Z0W    = input_param[:Z0W]    # Roughness parameter at the weather station where wind speed was measured, m
+    p_ZMINH  = input_param[:ZMINH]  # Reference height for weather data above canopy HEIGHT, m (BROOK90: ZMINH is fixed at 2 m)
+    p_ZW     = input_param[:ZW]     # Weather station measurement height for wind, m (BROOK90: W is fixed at 10 m)
+    p_HS     = input_param[:HS]     # Lower height limit, for roughness parameter interpolation, if canopy HEIGHT is below -> CZS (BROOK90: HS is fixed at 1 m)
+    p_HR     = input_param[:HR]     # Upper height limit, for roughness parameter interpolation, if canopy HEIGHT is above -> CZR (BROOK90: HR is fixed at 10 m)
+    p_CZS    = input_param[:CZS]    # Ratio of roughness parameter to HEIGHT (canopy) for HEIGHT < HS, dimensionless (BROOK90: CZS is fixed at 0.13)
+    p_CZR    = input_param[:CZR]    # Ratio of roughness parameter to HEIGHT (canopy) for HEIGHT > HR, dimensionless (BROOK90: CZR is fixed at 0.05)
+    p_C1     = input_param[:C1]     # intercept of linear relation between the ratio of actual to potential solar radiation for the day and sunshine duration (BROOK90: C1 is fixed at 0.25 following Brutsaert (1982))
+    p_C2     = input_param[:C2]     # slope     of linear relation between the ratio of actual to potential solar radiation for the day and sunshine duration (BROOK90: C2 is fixed at 0.5 following Brutsaert (1982))
+    p_C3     = input_param[:C3]     # Ratio of net longwave radiation for overcast sky (sunshine duration = 0) to that for clear sky (sunshine duration = 1). (BROOK90: C3 is fixed at 0.2 following Brutsaert (1982))
     # Documentation from ecoshift:
     # C3 (Fixed parameter) - ratio of net longwave radiation for overcast sky (sunshine duration = 0) to that for clear sky (sunshine duration = 1). C3 is fixed at 0.2 following Brutsaert (1982). [see SUN-AVAILEN]
     # FETCH (Fixed parameter) - fetch upwind of the weather station at which wind speed was measured, m. Sensitivity to FETCH is small if it is > 1000 m. See also Z0W. FETCH is fixed at 5000 m. FETCH is ignored if Z0W = 0. [see PET-WNDADJ]
@@ -149,12 +149,12 @@ function define_LWFB90_p(
 
     ## Snowpack
     # SNODEN is the snowpack density or the ratio of water content to depth. SNODEN is used only to correct leaf area index and stem area index to the fraction of them that is above the snow. It does not vary with time or snowpack ripeness in BROOK90. [see PET-CANOPY]
-    p_SNODEN = input_param[1,"SNODEN"] # snowpack density, mm/mm (BROOK90: SNODEN is fixed at 0.3)
-    p_CCFAC  = input_param[1,"CCFAC"]  # cold content factor, MJ m-2 d-1 K-1 (BROOK90: CCFAC is fixed at 0.3 MJ m-2 d-1 K-1)
-    p_GRDMLT = input_param[1,"GRDMLT"] # rate of groundmelt of snowpack, mm/d (BROOK90: GRDMLT is fixed at 0.35 mm/d from Hubbard Brook (Federer 1965))
-    p_LAIMLT = input_param[1,"LAIMLT"] # dependence of snowmelt on LAI, dimensionless (BROOK90: LAIMLT is fixed at 0.2)
-    p_SAIMLT = input_param[1,"SAIMLT"] # dependence of snowmelt on SAI, dimensionless (BROOK90: SAIMLT is fixed at 0.5)
-    p_MAXLQF = input_param[1,"MAXLQF"] # maximum liquid water fraction of SNOW, dimensionless (BROOK90: MAXLQF is fixed at 0.05)
+    p_SNODEN = input_param[:SNODEN] # snowpack density, mm/mm (BROOK90: SNODEN is fixed at 0.3)
+    p_CCFAC  = input_param[:CCFAC]  # cold content factor, MJ m-2 d-1 K-1 (BROOK90: CCFAC is fixed at 0.3 MJ m-2 d-1 K-1)
+    p_GRDMLT = input_param[:GRDMLT] # rate of groundmelt of snowpack, mm/d (BROOK90: GRDMLT is fixed at 0.35 mm/d from Hubbard Brook (Federer 1965))
+    p_LAIMLT = input_param[:LAIMLT] # dependence of snowmelt on LAI, dimensionless (BROOK90: LAIMLT is fixed at 0.2)
+    p_SAIMLT = input_param[:SAIMLT] # dependence of snowmelt on SAI, dimensionless (BROOK90: SAIMLT is fixed at 0.5)
+    p_MAXLQF = input_param[:MAXLQF] # maximum liquid water fraction of SNOW, dimensionless (BROOK90: MAXLQF is fixed at 0.05)
     # Documentation from ecoshift:
     # SNODEN (Fixed parameter) - snow density, mm/mm. SNODEN is the snowpack density or the ratio of water content to depth. SNODEN is used only to correct leaf area index and stem area index to the fraction of them that is above the snow. It does not vary with time or snowpack ripeness in BROOK90. SNODEN is fixed at 0.3. [see PET-CANOPY]
     # CCFAC (Fixed parameter) - cold content factor, MJ m-2 d-1 K-1. CCFAC is a degree day factor for accumulation of cold content for a day with daylength of 0.5 d. It controls the snow energy balance when TA is less than 0°C. Larger values make the snow temperature lag farther behind the air temperature. Sensitivity of snowmelt to CCFAC is small unless CCFAC is less than 0.05 MJ m-2 d-1 K-1. CCFAC = 0 means there is no cold content and snow temperature is always 0°C. CCFAC is fixed at 0.3 MJ m-2 d-1 K-1. [see SNO-SNOENRGY]
@@ -166,39 +166,39 @@ function define_LWFB90_p(
 
     ## Vegetation (canopy)
     ### Vegetation dimensions
-    p_CR     = input_param[1,"CR"]     # (Canopy parameter), ratio of projected stem area index (SAI) to HEIGHT when DENSEF = 1, (SAI = CS * HEIGHT * DENSEF)
-    p_RHOTP  = input_param[1,"RHOTP"]  # (Fixed  parameter), Ratio of total leaf area to projected area, dimensionless (BROOK90: RHOTP is fixed at 2)
-    p_LWIDTH = input_param[1,"LWIDTH"] # (Canopy parameter), average leaf width, m
-    p_LPC    = input_param[1,"LPC"]    # (Fixed  parameter), Minimum LAI defining a closed canopy, dimensionless (BROOK90: LPC is fixed at 4.0)
+    p_CR     = input_param[:CR]     # (Canopy parameter), ratio of projected stem area index (SAI) to HEIGHT when DENSEF = 1, (SAI = CS * HEIGHT * DENSEF)
+    p_RHOTP  = input_param[:RHOTP]  # (Fixed  parameter), Ratio of total leaf area to projected area, dimensionless (BROOK90: RHOTP is fixed at 2)
+    p_LWIDTH = input_param[:LWIDTH] # (Canopy parameter), average leaf width, m
+    p_LPC    = input_param[:LPC]    # (Fixed  parameter), Minimum LAI defining a closed canopy, dimensionless (BROOK90: LPC is fixed at 4.0)
     ### Vegetation influence on atmosphere and meteorology
-    p_KSNVP  = input_param[1,"KSNVP"]  # (Canopy parameter), reduction factor to reduce snow evaporation (SNVP), (0.05 - 1)
-    p_ALBSN  = input_param[1,"ALBSN"]  # (Canopy parameter), albedo or surface reflectivity with snow on the ground, (typically 0.1-0.9)
-    p_ALB    = input_param[1,"ALB"]    # (Canopy parameter), albedo or surface reflectivity without snow on the ground, (typically 0.1-0.3)
-    p_NN     = input_param[1,"NN"]     # (Fixed  parameter), Wind/diffusivity extinction coefficient, dimensionless (BROOK90: NN is fixed at 2.5 following Shuttleworth and Gurney (1990))
-    p_CS     = input_param[1,"CS"]     # (Canopy parameter), extinction coefficient for photosynthetically-active radiation in the canopy, (unit?)
-    p_RM     = input_param[1,"RM"]     # (Fixed  parameter), Nominal maximum solar radiation possible on a leaf, W/m2 (BROOK90: RM is fixed at 1000 W/m2)
+    p_KSNVP  = input_param[:KSNVP]  # (Canopy parameter), reduction factor to reduce snow evaporation (SNVP), (0.05 - 1)
+    p_ALBSN  = input_param[:ALBSN]  # (Canopy parameter), albedo or surface reflectivity with snow on the ground, (typically 0.1-0.9)
+    p_ALB    = input_param[:ALB]    # (Canopy parameter), albedo or surface reflectivity without snow on the ground, (typically 0.1-0.3)
+    p_NN     = input_param[:NN]     # (Fixed  parameter), Wind/diffusivity extinction coefficient, dimensionless (BROOK90: NN is fixed at 2.5 following Shuttleworth and Gurney (1990))
+    p_CS     = input_param[:CS]     # (Canopy parameter), extinction coefficient for photosynthetically-active radiation in the canopy, (unit?)
+    p_RM     = input_param[:RM]     # (Fixed  parameter), Nominal maximum solar radiation possible on a leaf, W/m2 (BROOK90: RM is fixed at 1000 W/m2)
     ### Interception
-    p_CINTRL = input_param[1,"CINTRL"] # (Fixed  parameter), Maximum interception storage of rain       per unit LAI, mm (BROOK90: CINTRL and CINTRS are both fixed at 0.15 mm)
-    p_CINTRS = input_param[1,"CINTRS"] # (Fixed  parameter), Maximum interception storage of rain       per unit SAI, mm (BROOK90: CINTRL and CINTRS are both fixed at 0.15 mm)
-    p_CINTSL = input_param[1,"CINTSL"] # (Fixed  parameter), Maximum interception storage of snow water per unit LAI, mm (BROOK90: CINTSL and CINTSS are both fixed at 0.6 mm)
-    p_CINTSS = input_param[1,"CINTSS"] # (Fixed  parameter), Maximum interception storage of snow water per unit SAI, mm (BROOK90: CINTSL and CINTSS are both fixed at 0.6 mm)
-    p_FRINTL = input_param[1,"FRINTLAI"] # (Fixed  parameter), Intercepted fraction of rain per unit LAI, dimensionless (BROOK90: FRINTLAI and FRINTSAI are both fixed at 0.06)
-    p_FRINTS = input_param[1,"FRINTSAI"] # (Fixed  parameter), Intercepted fraction of rain per unit SAI, dimensionless (BROOK90: FRINTLAI and FRINTSAI are both fixed at 0.06)
-    p_FSINTL = input_param[1,"FSINTLAI"] # (Fixed  parameter), Intercepted fraction of snow per unit LAI, dimensionless (BROOK90: FSINTLAI and FSINTSAI are both fixed at 0.04)
-    p_FSINTS = input_param[1,"FSINTSAI"] # (Fixed  parameter), Intercepted fraction of snow per unit SAI, dimensionless (BROOK90: FSINTLAI and FSINTSAI are both fixed at 0.04)
+    p_CINTRL = input_param[:CINTRL] # (Fixed  parameter), Maximum interception storage of rain       per unit LAI, mm (BROOK90: CINTRL and CINTRS are both fixed at 0.15 mm)
+    p_CINTRS = input_param[:CINTRS] # (Fixed  parameter), Maximum interception storage of rain       per unit SAI, mm (BROOK90: CINTRL and CINTRS are both fixed at 0.15 mm)
+    p_CINTSL = input_param[:CINTSL] # (Fixed  parameter), Maximum interception storage of snow water per unit LAI, mm (BROOK90: CINTSL and CINTSS are both fixed at 0.6 mm)
+    p_CINTSS = input_param[:CINTSS] # (Fixed  parameter), Maximum interception storage of snow water per unit SAI, mm (BROOK90: CINTSL and CINTSS are both fixed at 0.6 mm)
+    p_FRINTL = input_param[:FRINTLAI] # (Fixed  parameter), Intercepted fraction of rain per unit LAI, dimensionless (BROOK90: FRINTLAI and FRINTSAI are both fixed at 0.06)
+    p_FRINTS = input_param[:FRINTSAI] # (Fixed  parameter), Intercepted fraction of rain per unit SAI, dimensionless (BROOK90: FRINTLAI and FRINTSAI are both fixed at 0.06)
+    p_FSINTL = input_param[:FSINTLAI] # (Fixed  parameter), Intercepted fraction of snow per unit LAI, dimensionless (BROOK90: FSINTLAI and FSINTSAI are both fixed at 0.04)
+    p_FSINTS = input_param[:FSINTSAI] # (Fixed  parameter), Intercepted fraction of snow per unit SAI, dimensionless (BROOK90: FSINTLAI and FSINTSAI are both fixed at 0.04)
     ### Vegetation conductivity
-    p_MXKPL  = input_param[1,"MXKPL"]  # (Canopy parameter), maximum plant conductivity, mm d-1 MPa-1.
-    p_FXYLEM = input_param[1,"FXYLEM"] # (Canopy parameter), fraction of plant resistance that is in the xylem (above ground) and not in the roots, (0-1)
-    p_GLMAX  = input_param[1,"GLMAX"]  # (Canopy parameter), maximum leaf conductance, cm/s
-    p_GLMIN  = input_param[1,"GLMIN"]  # (Canopy parameter), minimum leaf conductance, cm/s
+    p_MXKPL  = input_param[:MXKPL]  # (Canopy parameter), maximum plant conductivity, mm d-1 MPa-1.
+    p_FXYLEM = input_param[:FXYLEM] # (Canopy parameter), fraction of plant resistance that is in the xylem (above ground) and not in the roots, (0-1)
+    p_GLMAX  = input_param[:GLMAX]  # (Canopy parameter), maximum leaf conductance, cm/s
+    p_GLMIN  = input_param[:GLMIN]  # (Canopy parameter), minimum leaf conductance, cm/s
     ### Stomatal regulation
-    p_TH     = input_param[1,"TH"]     # (Canopy parameter), temperature controlling closing of stomates,°C
-    p_T1     = input_param[1,"T1"]     # (Canopy parameter), temperature controlling closing of stomates,°C
-    p_T2     = input_param[1,"T2"]     # (Canopy parameter), temperature controlling closing of stomates,°C
-    p_TL     = input_param[1,"TL"]     # (Canopy parameter), temperature controlling closing of stomates,°C
-    p_CVPD   = input_param[1,"CVPD"]   # (Fixed  parameter), Vapor pressure deficit at which stomatal conductance is halved, kPa (BROOK90: CVPD is fixed at 2 kPa for all cover types)
-    p_R5     = input_param[1,"R5"]     # (Fixed  parameter), Solar radiation at which stomatal conductance is half of its value at RM, W/m2 (BROOK90: BROOK90 fixes R5 = 100 W/m2 as the default for all cover types)
-    p_PSICR  = input_param[1,"PSICR"]  # (Canopy parameter), minimum plant leaf water potential, MPa.
+    p_TH     = input_param[:TH]     # (Canopy parameter), temperature controlling closing of stomates,°C
+    p_T1     = input_param[:T1]     # (Canopy parameter), temperature controlling closing of stomates,°C
+    p_T2     = input_param[:T2]     # (Canopy parameter), temperature controlling closing of stomates,°C
+    p_TL     = input_param[:TL]     # (Canopy parameter), temperature controlling closing of stomates,°C
+    p_CVPD   = input_param[:CVPD]   # (Fixed  parameter), Vapor pressure deficit at which stomatal conductance is halved, kPa (BROOK90: CVPD is fixed at 2 kPa for all cover types)
+    p_R5     = input_param[:R5]     # (Fixed  parameter), Solar radiation at which stomatal conductance is half of its value at RM, W/m2 (BROOK90: BROOK90 fixes R5 = 100 W/m2 as the default for all cover types)
+    p_PSICR  = input_param[:PSICR]  # (Canopy parameter), minimum plant leaf water potential, MPa.
     # Documentation from ecoshift:
     # MXKPL The internal resistance to water flow through the plants RPLANT = 1 / (MXKPL * RELHT * DENSEF). MXKPL is the main controller of soil-water availability and is a property of all of the plants on a unit area, not of any one plant. When the canopy is at its maximum seasonal LAI and height, and when soil is wet so that soil water potential is effectively zero, and when the leaf water potential is at its critical value, PSICR, then MXKPL is the transpiration rate divided by PSICR. Abdul-Jabbar et al. (1988) found that MXKPL ranges only from 7 to 30 mm d-1 MPa-1 over a wide range of vegetations, a surprisingly constant parameter. A transpiration rate of 0.5 mm/hr at a gradient of -1.5 MPa is typical, giving MXKPL of 8 mm d-1 MPa-1 (Hunt et al. 1991). MXKPL controls the rate of water supply to the leaves and thus the transpiration when soil water supply is limiting. Decreasing MXKPL makes soil water less available and thus reduces actual transpiration below potential transpiration at higher soil water content. [see PET-CANOPY] [see EVP-PLNTRES]
     # CR (Canopy parameter) - extinction coefficient for photosynthetically-active radiation in the canopy. Values usually range from 0.5 to 0.7. Values outside this range should be used very cautiously. The extinction coefficient can be determined from the canopy transmissivity, t, as CR = - (ln t) / (Lp + Sp). For a canopy of Lp = 6 and Sp = 0.7, PAR penetration at the ground of 1, 3, and 5% gives CR = 0.69, 0.52, and 0.45 respectively. I use CR values of 0.5 for conifer forest, 0.6 for broadleaved forest, and 0.7 for short vegetation covers. CR is also used to calculate the extinction of net radiation, though this is theoretically incorrect. [see PET-SRSC] [see SUN-AVAILEN]
@@ -223,9 +223,9 @@ function define_LWFB90_p(
     # FSINTLAI and FSINTSAI (Fixed parameters) - intercepted fraction of snow per unit LAI and per unit SAI respectively, dimensionless. See also FRINTLAI. FSINTLAI and FSINTSAI are both fixed at 0.04. For LAI = 6 and SAI = 0.7 these values catch snow at 27%. For leafless deciduous forest with LAI = 0 and SAI = 0.7 the snowfall catch rate is 3%. To turn off SINT, set both FSINTLAI and FSINTSAI to zero. [see EVP-INTER]
 
     ## Soil vegetation (roots)
-    NOOUTF   = 1 == input_param[1,"NOOUTF"] # flag to prevent outflow from roots (hydraulic redistribution), (0/1)
-    p_RTRAD  = input_param[1,"RTRAD"] # average root radius, mm (BROOK90: RTRAD is fixed at 0.35 mm)
-    p_MXRTLN = input_param[1,"MXRTLN"] # (Canopy parameter), maximum length of fine roots per unit ground area, m/m2.
+    NOOUTF   = 1 == input_param[:NOOUTF] # flag to prevent outflow from roots (hydraulic redistribution), (0/1)
+    p_RTRAD  = input_param[:RTRAD] # average root radius, mm (BROOK90: RTRAD is fixed at 0.35 mm)
+    p_MXRTLN = input_param[:MXRTLN] # (Canopy parameter), maximum length of fine roots per unit ground area, m/m2.
     # Documentation from ecoshift:
     # NOOUTF (Fixed parameter) - 0 to allow outflow from roots, 1 for no outflow. NOOUTF is a switch that when set to 1 prevents outflow from the plant roots to the soil when soil is dry. NOOUTF = 0 allows such outflow, so water can move from wet soil layers to dry soil layers through the roots. [see EVP-TBYLAYER]
     # RTRAD (Fixed parameter) - average root radius, mm. RTRAD is the average radius of the fine or water-absorbing roots. It is only relevant to transpiration from dry soil. RTRAD is fixed at 0.35 mm. [see EVP-PLNTRES]
@@ -240,8 +240,8 @@ function define_LWFB90_p(
 
     ## Soil hydraulics
     FLAG_MualVanGen = simOption_FLAG_MualVanGen # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
-    p_RSSA   = input_param[1,"RSSA"] # Soil evaporation resistance (RSS) at field capacity, s/m (BROOK90: RSSA is fixed at 500 s/m following Shuttleworth and Gurney (1990))
-    p_RSSB   = input_param[1,"RSSB"] # Exponent in relation of soil evaporation resistance (RSS) to soil water potential (PSIM) in the top layer, dimensionless, (BROOK90: RSSB is fixed at 1.0, which makes RSS directly proportional to PSIM)
+    p_RSSA   = input_param[:RSSA] # Soil evaporation resistance (RSS) at field capacity, s/m (BROOK90: RSSA is fixed at 500 s/m following Shuttleworth and Gurney (1990))
+    p_RSSB   = input_param[:RSSB] # Exponent in relation of soil evaporation resistance (RSS) to soil water potential (PSIM) in the top layer, dimensionless, (BROOK90: RSSB is fixed at 1.0, which makes RSS directly proportional to PSIM)
     # TODO(bernharf): get rid of this and simply use the vector of AbstractSoilHydraulicParams...
     if FLAG_MualVanGen == 0
         p_soil = LWFBrook90.KPT.KPT_SOILPAR_Ch1d(;
@@ -303,22 +303,22 @@ function define_LWFB90_p(
 
     ## FLOW Infiltration, groundwater, and overland flow
     ### Infiltration (incl. preferential flow)
-    p_IMPERV = input_param[1,"IMPERV"] # (Flow parameter), fraction of impervious surface area generating surface or source area flow (SRFL), dimensionless
-    p_INFEXP = input_param[1,"INFEXP"] # (Flow parameter), infiltration exponent that determines the distribution of infiltrated water with depth, dimensionless (from 0 to >1; 0 = all infiltration to top soil layer, 1 = uniform distribution down to ILAYER, >1 = more water in lower layers closer to ILAYER)
+    p_IMPERV = input_param[:IMPERV] # (Flow parameter), fraction of impervious surface area generating surface or source area flow (SRFL), dimensionless
+    p_INFEXP = input_param[:INFEXP] # (Flow parameter), infiltration exponent that determines the distribution of infiltrated water with depth, dimensionless (from 0 to >1; 0 = all infiltration to top soil layer, 1 = uniform distribution down to ILAYER, >1 = more water in lower layers closer to ILAYER)
     p_ILAYER = soil_discr["ILAYER"] # (Flow parameter), number of layers over which infiltration is distributed
     p_QLAYER = soil_discr["QLAYER"] # (Flow parameter), number of soil layers for SRFL
     p_INFRAC = LWFBrook90.WAT.INFPAR(p_INFEXP, p_ILAYER, p_soil, NLAYER) # fraction of (preferential) infiltration to each layer
     # TODO(bernhard):switch to ILAYAER and QLAYER to IDEPTH_m and QDEPTH_m, which are independent of soil discretization.
 
     ### Flow generation
-    p_BYPAR  = input_param[1,"BYPAR"]  # (Flow parameter), flag to activate bypass flow (BYFL), (0/1)
-    p_DRAIN  = input_param[1,"DRAIN"] # (Flow parameter), continuous flag to activate drainge VRFLI(n), (between 0 and 1; 1 = gravity drainage, 0 = no drainage)
-    p_DSLOPE = input_param[1,"DSLOPE"] # (Flow parameter), hillslope angle for downslope matric flow (DSFL), degrees
-    p_GSC    = input_param[1,"GSC"] # (Flow parameter), fraction of groundwater storage (GWAT), that is transferred to groundwater flow (GWFL) and deep seepage (SEEP) each day, d-1
-    p_GSP    = input_param[1,"GSP"] # (Flow parameter), fraction of groundwater discharge produced by GSC that goes to deep seepage (SEEP) and is not added to streamflow (FLOW), dimensionless
-    p_LENGTH_SLOPE = input_param[1,"LENGTH_SLOPE"] # (Flow parameter), slope length for downslope flow (DSFL), m
-    p_QFFC   = input_param[1,"QFFC"] # (Flow parameter), quick flow fraction for SRFL and BYFL at THETAF, dimensionless
-    p_QFPAR  = input_param[1,"QFPAR"] # (Flow parameter), raction of the water content between field capacity (THETAF) and saturation (THSAT) at which the quick flow fraction is 1, dimensionless
+    p_BYPAR  = input_param[:BYPAR]  # (Flow parameter), flag to activate bypass flow (BYFL), (0/1)
+    p_DRAIN  = input_param[:DRAIN] # (Flow parameter), continuous flag to activate drainge VRFLI(n), (between 0 and 1; 1 = gravity drainage, 0 = no drainage)
+    p_DSLOPE = input_param[:DSLOPE] # (Flow parameter), hillslope angle for downslope matric flow (DSFL), degrees
+    p_GSC    = input_param[:GSC] # (Flow parameter), fraction of groundwater storage (GWAT), that is transferred to groundwater flow (GWFL) and deep seepage (SEEP) each day, d-1
+    p_GSP    = input_param[:GSP] # (Flow parameter), fraction of groundwater discharge produced by GSC that goes to deep seepage (SEEP) and is not added to streamflow (FLOW), dimensionless
+    p_LENGTH_SLOPE = input_param[:LENGTH_SLOPE] # (Flow parameter), slope length for downslope flow (DSFL), m
+    p_QFFC   = input_param[:QFFC] # (Flow parameter), quick flow fraction for SRFL and BYFL at THETAF, dimensionless
+    p_QFPAR  = input_param[:QFPAR] # (Flow parameter), raction of the water content between field capacity (THETAF) and saturation (THSAT) at which the quick flow fraction is 1, dimensionless
 
     # source area parameters SRFPAR()
     p_SWATQX = sum(p_soil.p_SWATMAX[1:p_QLAYER]) # maximum water storage for layers 1 through QLAYER, mm
@@ -821,7 +821,7 @@ function discretize_soil_params(
     ############
 
     # hardcoded:
-    HEAT = 0 # flag for heat balance; not implemented; input_param[1,"HEAT"],
+    HEAT = 0 # flag for heat balance; not implemented; input_param[:HEAT],
 
     THICK_m   = soil_discretization[!,"Upper_m"] - soil_discretization[!,"Lower_m"] # thickness of soil layer [m]
     THICK     = 1000*(THICK_m)                                    # thickness of soil layer [mm]
