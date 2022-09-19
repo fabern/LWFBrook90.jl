@@ -120,7 +120,7 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC, Δz = nothing; tspan = not
     if isnothing(Δz)
         # a) either read the discretization from a file `soil_discretization.csv`
         soil_discretization = discretize_soil(continuous_SPAC.continuousIC.soil)
-        if (simulate_isotopes)
+        if (solver_options.simulate_isotopes)
             disallowmissing!(soil_discretization, [:Rootden_, :uAux_PSIM_init_kPa, :u_delta18O_init_permil, :u_delta2H_init_permil])
         else
             disallowmissing!(soil_discretization, [:Rootden_, :uAux_PSIM_init_kPa])
@@ -175,7 +175,7 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC, Δz = nothing; tspan = not
         soil_discretization;
         Reset                           = solver_options.Reset,
         compute_intermediate_quantities = solver_options.compute_intermediate_quantities,
-        simulate_isotopes = simulate_isotopes,
+        simulate_isotopes               = solver_options.simulate_isotopes,
         # soil_output_depths = [-0.35, -0.42, -0.48, -1.05]
         # soil_output_depths = collect(-0.05:-0.05:-1.1)
     );
@@ -194,7 +194,7 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC, Δz = nothing; tspan = not
         ψM_initial, δ18O_initial, δ2H_initial,
 
         solver_options.compute_intermediate_quantities;
-        simulate_isotopes = simulate_isotopes);
+        simulate_isotopes = solver_options.simulate_isotopes);
     ####################
 
     ####################
@@ -289,7 +289,8 @@ include("func_DiffEq_definition_ode.jl")
 include("func_MSB_functions.jl")
 include("func_postprocess.jl")
 
-include("../examples/BEA2016-reset-FALSE-input/func_run_example.jl") # defines RelativeDaysFloat2DateTime
+include("../examples/func_run_example.jl") # defines RelativeDaysFloat2DateTime
+
 
 ############################################################################################
 ############################################################################################

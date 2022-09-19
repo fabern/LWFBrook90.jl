@@ -216,10 +216,9 @@ end
             [fill(0.01, 200);]
         ]
 @testset "pointers-to-elements-of-u0 (Δz_m = $(first(Δz_m)))" for Δz_m in Δz_m_data # source: https://stackoverflow.com/a/63871951
-
     continuous_SPAC = SPAC("test-assets/Hammel-2001/input-files-ISO/",
                       "Hammel_loam-NLayer-103-RESET=FALSE";
-                      simulate_isotopes = simulate_isotopes);
+                      simulate_isotopes = false);
     f1 = (Δz_m) -> LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)  # function for root density as f(Δz)
     f2 = (Δz_m) -> fill(-6.3, length(Δz_m))          # function for initial conditions as f(Δz)
 
@@ -246,7 +245,7 @@ end
         soil_discretization;
         Reset                           = solver_options.Reset,
         compute_intermediate_quantities = solver_options.compute_intermediate_quantities,
-        simulate_isotopes = simulate_isotopes,
+        simulate_isotopes = !isnothing(continuous_SPAC.meteo_iso_forcing),
         # soil_output_depths = [-0.35, -0.42, -0.48, -1.05]
         # soil_output_depths = collect(-0.05:-0.05:-1.1)
     )
@@ -257,7 +256,7 @@ end
         continuous_SPAC.continuousIC.scalar,
         ψM_initial, δ18O_initial, δ2H_initial,
         solver_options.compute_intermediate_quantities;
-        simulate_isotopes = simulate_isotopes);
+        simulate_isotopes = !isnothing(continuous_SPAC.meteo_iso_forcing));
 
     # Assert that the pointers to the rows of u are correct and unique:
     all_rows_defined = [collect(p[1][4].row_idx_scalars)
