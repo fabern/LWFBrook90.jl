@@ -61,13 +61,17 @@ Base.@kwdef struct SPAC
 
     # simulation parameter:
     """
-    NamedTuple: (continuousIC.soil, continuousIC.scalar), which conatains the initial
-    conditions of the state variables (scalar or related to the soil).
-    TODO: for soil it is either a path to soil_discretization.csv or alternatively:
-        a set of functions describing initial conditions (ψM, δ18O, δ2H) with depth (f(z_m) with z_m in meters and negative downward)
+        params
+
+    NamedTuple: (), which contains parameter values for the model
     """
     params # e.g. (VXYLEM_mm = 20.0, DISPERSIVITY_mm = 10, Str = "oh")
+    """
+        solver_options
 
+    NamedTuple: (), which contains some solver options for the model
+    """
+    solver_options # reset_flag, compute_intermediate_quantities, simulate_isotopes, soil_output_depths
 end
 
 @doc raw"""
@@ -78,9 +82,7 @@ An discretization of a soil-plant-atmopsheric continuum model ready for simulati
 Base.@kwdef struct DiscretizedSPAC
 	# input fields:
 	continuous_SPAC::SPAC
-
 	soil_discretization
-	solver_options # reset_flag, compute_intermediate_quantities, simulate_isotopes, soil_output_depths
 
 	# derived fields:
 	ODEProblem
@@ -89,38 +91,44 @@ end
 Base.@kwdef mutable struct DiscretizedSPACmutable
 	# input fields:
 	continuous_SPAC::SPAC
-
 	soil_discretization
-	solver_options # reset_flag, compute_intermediate_quantities, simulate_isotopes, soil_output_depths
 
 	# derived fields:
 	ODEProblem
 	ODESolution
 end
 
-function LWFBrook90.discretize(continuous_SPAC::SPAC, Δz = nothing; tspan = nothing)
-    ##########
-    # Define solver options
-    solver_options =
-        (Reset                           = false, # currently only Reset = 0 implemented
-         compute_intermediate_quantities = true,  # Flag whether ODE containes additional quantities than only states
-         simulate_isotopes               = !isnothing(continuous_SPAC.meteo_iso_forcing)
-        )
-    ##########
-
-
+function LWFBrook90.discretize(continuous_SPAC::SPAC; Δz = nothing, tspan = nothing)
     ##########
     # Discretize the model in space
 
     # Needed extents of domain
     zspan = (maximum(continuous_SPAC.soil_horizons.Upper_m),
              minimum(continuous_SPAC.soil_horizons.Lower_m))
+    # Define grid for spatial discretization
+
+
+
+
+
+    # TODO(bernhard): make this code a three step procedure:
+        # 1) define a grid resolution Δz (either a) reading in from soil_discretization or b) manually defined vector)
+        # 2) get info about initial conditions (either a) reading in from soil_discretization or then or b) manually defined mathematical function  )
+        # 2) get info about root distribution (either a) reading in from soil_discretization or then or b) manually defined mathematical function  )
+        # 3) map initial condition to discretized grid resolution Δz
+        # 3) map root distribution to discretized grid resolution Δz (and interpolate in time giving us a function rootden(z, t))
+
+
+
+
 
     # Define grid for spatial discretization as well as initial conditions and root densities
     if isnothing(Δz)
         # a) either read the discretization from a file `soil_discretization.csv`
+            continuous_SPAC.continuousIC.soil
+            continuous_SPAC.root_distribution # TODO: assert that root distribution is consistent, otherwise it needs to be discretized too....
         soil_discretization = discretize_soil(continuous_SPAC.continuousIC.soil)
-        if (solver_options.simulate_isotopes)
+        if (continuous_SPAC.solver_options.simulate_isotopes)
             disallowmissing!(soil_discretization, [:Rootden_, :uAux_PSIM_init_kPa, :u_delta18O_init_permil, :u_delta2H_init_permil])
         else
             disallowmissing!(soil_discretization, [:Rootden_, :uAux_PSIM_init_kPa])
@@ -166,19 +174,10 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC, Δz = nothing; tspan = not
     ####################
     # Define parameters for differential equation
     (ψM_initial, δ18O_initial, δ2H_initial), p = define_LWFB90_p(
-        innerjoin(continuous_SPAC.meteo_forcing, continuous_SPAC.canopy_evolution, on = :days), #input_meteoveg,
-        continuous_SPAC.meteo_iso_forcing, #input_meteoiso,
-        continuous_SPAC.reference_date, #input_meteoveg_reference_date,
-        continuous_SPAC.params,# input_param,
-        continuous_SPAC.storm_durations, # input_storm_durations,
-        continuous_SPAC.soil_horizons, #input_soil_horizons,
-        soil_discretization;
-        Reset                           = solver_options.Reset,
-        compute_intermediate_quantities = solver_options.compute_intermediate_quantities,
-        simulate_isotopes               = solver_options.simulate_isotopes,
+        continuous_SPAC, soil_discretization;
         # soil_output_depths = [-0.35, -0.42, -0.48, -1.05]
         # soil_output_depths = collect(-0.05:-0.05:-1.1)
-    );
+    )
     # using Plots
     # hline([0; cumsum(p[1][1].p_THICK)], yflip = true, xticks = false,
     #     title = "N_layer = "*string(p[1][1].NLAYER))
@@ -192,9 +191,9 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC, Δz = nothing; tspan = not
         p,
         continuous_SPAC.continuousIC.scalar,
         ψM_initial, δ18O_initial, δ2H_initial,
+        continuous_SPAC.solver_options.compute_intermediate_quantities;
 
-        solver_options.compute_intermediate_quantities;
-        simulate_isotopes = solver_options.simulate_isotopes);
+        simulate_isotopes = continuous_SPAC.solver_options.simulate_isotopes);
     ####################
 
     ####################
@@ -241,7 +240,6 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC, Δz = nothing; tspan = not
     return DiscretizedSPACmutable(;
         continuous_SPAC     = continuous_SPAC,
         soil_discretization = soil_discretization,
-        solver_options      = solver_options,
         ODEProblem          = ode_LWFBrook90,
         ODESolution         = [1])
 end

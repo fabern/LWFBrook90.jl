@@ -5,73 +5,49 @@ using Interpolations: interpolate, extrapolate, NoInterp, Gridded, Constant, Nex
 Generate vector p needed for ODE() problem in DiffEq.jl package.
 
 # Arguments
-- `NLAYER::...`: TODO argument description.
-- `FLAG_MualVanGen::...`: TODO argument description.
-- `constant_dt_solver::...`: TODO argument description.
-- `NOOUTF::...`: TODO argument description.
+- `continuous_SPAC::SPAC`: Instance of a SPAC-model (soil-plant-atmosphere continuum)
 - `compute_intermediate_quantities::...`: TODO argument description.
-- `input_meteoveg::...`: TODO argument description.
-- `input_param::...`: TODO argument description.
-- `input_soil::...`: TODO argument description.
-- `input_storm_durations::...`: TODO argument description.
+- `simulate_isotopes::...`: TODO argument description.
 - `soil_output_depths`: vector of depths at which state variables should be extractable (negative numeric values [in meter])
 """
-function define_LWFB90_p(
-    input_meteoveg,
-    input_meteoiso,
-    input_meteoveg_reference_date,
-    input_param,
-    input_storm_durations,
-    input_soil_horizons,
-    input_soil_discretization;
-    Reset = false,# TODO(bernhard): remove this
-    compute_intermediate_quantities = false,
-    simulate_isotopes::Bool = false,
-    soil_output_depths = zeros(Float64, 0), # = [],
-    constant_dt_solver = 1)
+function define_LWFB90_p(continuous_SPAC::SPAC, input_soil_discretization;
+    soil_output_depths = zeros(Float64, 0), # constant_dt_solver = 1
+    )
 
     ########
-    ## Interpolate meteo and vegetation parameters
-    interpolated_meteoveg =
-        LWFBrook90.interpolate_meteoveg(;
-            input_meteoveg                = input_meteoveg,
-            input_meteoveg_reference_date = input_meteoveg_reference_date,
-            input_meteoiso                = input_meteoiso,
-            p_MAXLAI                      = input_param[:MAXLAI],
-            p_SAI_baseline_               = input_param[:SAI_baseline_],
-            p_DENSEF_baseline_            = input_param[:DENSEF_baseline_],
-            p_AGE_baseline_yrs            = input_param[:AGE_baseline_yrs],
-            p_HEIGHT_baseline_m           = input_param[:HEIGHT_baseline_m]);
-
     ## Discretize soil parameters and interpolate discretized root distribution
+    # TODO::: path_soil_discretization
+    # Use:
+    continuous_SPAC.root_distribution # e.g. β_root
+    continuous_SPAC.continuousIC.soil
+
     soil_discr =
         LWFBrook90.discretize_soil_params(
-            input_soil_horizons,
+            continuous_SPAC.soil_horizons,
             input_soil_discretization,
             soil_output_depths,
-            input_param[:IDEPTH_m],
-            input_param[:QDEPTH_m],
-            input_param[:INITRDEP],
-            input_param[:RGRORATE])
+            continuous_SPAC.params[:IDEPTH_m],
+            continuous_SPAC.params[:QDEPTH_m],
+            continuous_SPAC.params[:INITRDEP],
+            continuous_SPAC.params[:RGRORATE])
 
     p_RELDEN = LWFBrook90.interpolate_spaceDiscretized_root_density(;
-        timepoints = input_meteoveg.days,
-        p_AGE      = interpolated_meteoveg.p_AGE,
-        p_INITRDEP = input_param[:INITRDEP],
-        p_INITRLEN = input_param[:INITRLEN],
-        p_RGROPER  = input_param[:RGROPER],
+        timepoints = continuous_SPAC.meteo_forcing.p_days,
+        p_AGE      = continuous_SPAC.canopy_evolution.p_AGE,
+        p_INITRDEP = continuous_SPAC.params[:INITRDEP],
+        p_INITRLEN = continuous_SPAC.params[:INITRLEN],
+        p_RGROPER  = continuous_SPAC.params[:RGROPER],
         p_tini     = soil_discr["tini"],
         p_frelden  = soil_discr["frelden"]);
     # TODO(bernhard): document input parameters: INITRDEP, INITRLEN, RGROPER, tini, frelden, MAXLAI, HEIGHT_baseline_m
-
-    interpolated_meteoveg = merge(interpolated_meteoveg, (; p_RELDEN = p_RELDEN))
+    # TOOD(bernhard): remove from params: IDEPTH_m, QDEPTH_m, INITRDEP, RGRORATE, INITRDEP, INITRLEN, RGROPER
     ########
 
     ########
     ## Solver algorithm options
-    p_DPSIMAX = input_param[:DPSIMAX] # maximum potential difference considered "equal", kPa               (BROOK90: DPSIMAX is fixed at 0.01 kPa)
-    p_DSWMAX = input_param[:DSWMAX] # maximum change allowed in soil wetness SWATI, percent of SWATMAX(i) (BROOK90: DSWMAX is fixed at 2 %)
-    p_DTIMAX = input_param[:DTIMAX] # maximum iteration time step, d (BROOK90: DTIMAX is fixed at 0.5 d)
+    p_DPSIMAX = continuous_SPAC.solver_options[:DPSIMAX] # maximum potential difference considered "equal", kPa               (BROOK90: DPSIMAX is fixed at 0.01 kPa)
+    p_DSWMAX  = continuous_SPAC.solver_options[:DSWMAX] # maximum change allowed in soil wetness SWATI, percent of SWATMAX(i) (BROOK90: DSWMAX is fixed at 2 %)
+    p_DTIMAX  = continuous_SPAC.solver_options[:DTIMAX] # maximum iteration time step, d (BROOK90: DTIMAX is fixed at 0.5 d)
     # Documentation from ecoshift:
     # DPSIMAX (Fixed parameter) - maximum potential difference considered equal during soil water integration, kPa. There is no vertical flow between layers whose potentials differ by less than DPSIMAX. This reduces oscillation initiated by flows that are the product of large conductivities and large time steps, but small gradients. The number of iterations used is not at all linearly related to the three iteration parameters DPSIMAX, DSWMAX, and DTIMAX. Selection of values depends on whether the user only wants monthly or daily totals, or is concerned with behaviour at shorter time steps. Generally, faster runs are obtained by using fewer thicker soil layers rather than by using large values of DSWMAX and DPSIMAX. DPSIMAX is fixed at 0.01 kPa. [see WAT-ITER]
     # DSWMAX (Fixed parameter) - maximum change allowed in soil wetness for any layer during an iteration, percent. DSWMAX sets the maximum change in soil wetness or saturation fraction (SWATI / SWATMAX(i)) allowed for any layer in an iteration. See also DPSIMAX. DSWMAX is fixed at 2 %. [see WAT-ITER]
@@ -79,13 +55,13 @@ function define_LWFB90_p(
 
 
     ## Heat flow (unimplemented)
-    # p_HEAT    = input_param[:HEAT]
+    # p_HEAT    = continuous_SPAC.params[:HEAT]
     # p_TopInfT = soil_discr["TopInfT"]
     # unused p_HeatCapOld = soil_discr["HeatCapOld"]
 
     # Isotope transport parameters
-    p_VXYLEM       = input_param[:VXYLEM_mm] # mm, storage volume of well mixed xylem storage per ground area # TODO(bernhard): possibly link this to SAI...
-    p_DISPERSIVITY = input_param[:DISPERSIVITY_mm]/1000  # m, dispersivity length (0.04m is the average fitted dispersivity to the lysimters of Stumpp et al. 2012)
+    p_VXYLEM       = continuous_SPAC.params[:VXYLEM_mm] # mm, storage volume of well mixed xylem storage per ground area # TODO(bernhard): possibly link this to SAI...
+    p_DISPERSIVITY = continuous_SPAC.params[:DISPERSIVITY_mm]/1000  # m, dispersivity length (0.04m is the average fitted dispersivity to the lysimters of Stumpp et al. 2012)
 
     ## Location / Meteo
     p_NPINT  = 1 # Hardcoded. If p_NPINT>1, then multiple precipitation intervals would need
@@ -95,12 +71,12 @@ function define_LWFB90_p(
     else
         error("Case with multiple precipitation intervals (using PRECDAT and precip_interval != 1) is not implemented.")
     end
-    p_DURATN = input_storm_durations[1:12,"storm_durations_h"]# average storm duration for each month, hr
-    p_LAT    = input_param[:LAT_DEG]   /57.296  # (Location parameter), latitude, radians
-    p_ASPECT = input_param[:ASPECT_DEG]/57.296  # (Location parameter), aspect, radians through east from north
-    p_ESLOPE = input_param[:ESLOPE_DEG]/57.296  # (Location parameter), slope for evapotranspiration and snowmelt, radians
-    p_MELFAC = input_param[:MELFAC]    # (Location parameter), degree day melt factor for open land, MJ m-2 d-1 K-1
-    p_RSTEMP = input_param[:RSTEMP]    # (Location parameter), base temperature for snow-rain transition, °C
+    p_DURATN = continuous_SPAC.storm_durations[1:12,"storm_durations_h"]# average storm duration for each month, hr
+    p_LAT    = continuous_SPAC.params[:LAT_DEG]   /57.296  # (Location parameter), latitude, radians
+    p_ASPECT = continuous_SPAC.params[:ASPECT_DEG]/57.296  # (Location parameter), aspect, radians through east from north
+    p_ESLOPE = continuous_SPAC.params[:ESLOPE_DEG]/57.296  # (Location parameter), slope for evapotranspiration and snowmelt, radians
+    p_MELFAC = continuous_SPAC.params[:MELFAC]    # (Location parameter), degree day melt factor for open land, MJ m-2 d-1 K-1
+    p_RSTEMP = continuous_SPAC.params[:RSTEMP]    # (Location parameter), base temperature for snow-rain transition, °C
     # removed for LWFBrook90: RELHT
     # removed for LWFBrook90: RELLAI
     # Documentation from ecoshift:
@@ -118,20 +94,20 @@ function define_LWFB90_p(
 
 
     ## Meteo
-    p_FETCH  = input_param[:FETCH]  # Fetch upwind of the weather station at which wind speed was measured, m (BROOK90: FETCH is fixed at 5000 m)
-    p_WNDRAT = input_param[:WNDRAT] # Average ratio of nighttime to daytime wind speed, dimensionless (BROOK90: WNDRAT is fixed at 0.3)
-    p_Z0G    = input_param[:Z0G]    # Ground surface roughness, m ()
-    p_Z0S    = input_param[:Z0S]    # Roughness parameter of snow surface, m (BROOK90: Z0S is fixed at 0.001 m)
-    p_Z0W    = input_param[:Z0W]    # Roughness parameter at the weather station where wind speed was measured, m
-    p_ZMINH  = input_param[:ZMINH]  # Reference height for weather data above canopy HEIGHT, m (BROOK90: ZMINH is fixed at 2 m)
-    p_ZW     = input_param[:ZW]     # Weather station measurement height for wind, m (BROOK90: W is fixed at 10 m)
-    p_HS     = input_param[:HS]     # Lower height limit, for roughness parameter interpolation, if canopy HEIGHT is below -> CZS (BROOK90: HS is fixed at 1 m)
-    p_HR     = input_param[:HR]     # Upper height limit, for roughness parameter interpolation, if canopy HEIGHT is above -> CZR (BROOK90: HR is fixed at 10 m)
-    p_CZS    = input_param[:CZS]    # Ratio of roughness parameter to HEIGHT (canopy) for HEIGHT < HS, dimensionless (BROOK90: CZS is fixed at 0.13)
-    p_CZR    = input_param[:CZR]    # Ratio of roughness parameter to HEIGHT (canopy) for HEIGHT > HR, dimensionless (BROOK90: CZR is fixed at 0.05)
-    p_C1     = input_param[:C1]     # intercept of linear relation between the ratio of actual to potential solar radiation for the day and sunshine duration (BROOK90: C1 is fixed at 0.25 following Brutsaert (1982))
-    p_C2     = input_param[:C2]     # slope     of linear relation between the ratio of actual to potential solar radiation for the day and sunshine duration (BROOK90: C2 is fixed at 0.5 following Brutsaert (1982))
-    p_C3     = input_param[:C3]     # Ratio of net longwave radiation for overcast sky (sunshine duration = 0) to that for clear sky (sunshine duration = 1). (BROOK90: C3 is fixed at 0.2 following Brutsaert (1982))
+    p_FETCH  = continuous_SPAC.params[:FETCH]  # Fetch upwind of the weather station at which wind speed was measured, m (BROOK90: FETCH is fixed at 5000 m)
+    p_WNDRAT = continuous_SPAC.params[:WNDRAT] # Average ratio of nighttime to daytime wind speed, dimensionless (BROOK90: WNDRAT is fixed at 0.3)
+    p_Z0G    = continuous_SPAC.params[:Z0G]    # Ground surface roughness, m ()
+    p_Z0S    = continuous_SPAC.params[:Z0S]    # Roughness parameter of snow surface, m (BROOK90: Z0S is fixed at 0.001 m)
+    p_Z0W    = continuous_SPAC.params[:Z0W]    # Roughness parameter at the weather station where wind speed was measured, m
+    p_ZMINH  = continuous_SPAC.params[:ZMINH]  # Reference height for weather data above canopy HEIGHT, m (BROOK90: ZMINH is fixed at 2 m)
+    p_ZW     = continuous_SPAC.params[:ZW]     # Weather station measurement height for wind, m (BROOK90: W is fixed at 10 m)
+    p_HS     = continuous_SPAC.params[:HS]     # Lower height limit, for roughness parameter interpolation, if canopy HEIGHT is below -> CZS (BROOK90: HS is fixed at 1 m)
+    p_HR     = continuous_SPAC.params[:HR]     # Upper height limit, for roughness parameter interpolation, if canopy HEIGHT is above -> CZR (BROOK90: HR is fixed at 10 m)
+    p_CZS    = continuous_SPAC.params[:CZS]    # Ratio of roughness parameter to HEIGHT (canopy) for HEIGHT < HS, dimensionless (BROOK90: CZS is fixed at 0.13)
+    p_CZR    = continuous_SPAC.params[:CZR]    # Ratio of roughness parameter to HEIGHT (canopy) for HEIGHT > HR, dimensionless (BROOK90: CZR is fixed at 0.05)
+    p_C1     = continuous_SPAC.params[:C1]     # intercept of linear relation between the ratio of actual to potential solar radiation for the day and sunshine duration (BROOK90: C1 is fixed at 0.25 following Brutsaert (1982))
+    p_C2     = continuous_SPAC.params[:C2]     # slope     of linear relation between the ratio of actual to potential solar radiation for the day and sunshine duration (BROOK90: C2 is fixed at 0.5 following Brutsaert (1982))
+    p_C3     = continuous_SPAC.params[:C3]     # Ratio of net longwave radiation for overcast sky (sunshine duration = 0) to that for clear sky (sunshine duration = 1). (BROOK90: C3 is fixed at 0.2 following Brutsaert (1982))
     # Documentation from ecoshift:
     # C3 (Fixed parameter) - ratio of net longwave radiation for overcast sky (sunshine duration = 0) to that for clear sky (sunshine duration = 1). C3 is fixed at 0.2 following Brutsaert (1982). [see SUN-AVAILEN]
     # FETCH (Fixed parameter) - fetch upwind of the weather station at which wind speed was measured, m. Sensitivity to FETCH is small if it is > 1000 m. See also Z0W. FETCH is fixed at 5000 m. FETCH is ignored if Z0W = 0. [see PET-WNDADJ]
@@ -151,12 +127,12 @@ function define_LWFB90_p(
 
     ## Snowpack
     # SNODEN is the snowpack density or the ratio of water content to depth. SNODEN is used only to correct leaf area index and stem area index to the fraction of them that is above the snow. It does not vary with time or snowpack ripeness in BROOK90. [see PET-CANOPY]
-    p_SNODEN = input_param[:SNODEN] # snowpack density, mm/mm (BROOK90: SNODEN is fixed at 0.3)
-    p_CCFAC  = input_param[:CCFAC]  # cold content factor, MJ m-2 d-1 K-1 (BROOK90: CCFAC is fixed at 0.3 MJ m-2 d-1 K-1)
-    p_GRDMLT = input_param[:GRDMLT] # rate of groundmelt of snowpack, mm/d (BROOK90: GRDMLT is fixed at 0.35 mm/d from Hubbard Brook (Federer 1965))
-    p_LAIMLT = input_param[:LAIMLT] # dependence of snowmelt on LAI, dimensionless (BROOK90: LAIMLT is fixed at 0.2)
-    p_SAIMLT = input_param[:SAIMLT] # dependence of snowmelt on SAI, dimensionless (BROOK90: SAIMLT is fixed at 0.5)
-    p_MAXLQF = input_param[:MAXLQF] # maximum liquid water fraction of SNOW, dimensionless (BROOK90: MAXLQF is fixed at 0.05)
+    p_SNODEN = continuous_SPAC.params[:SNODEN] # snowpack density, mm/mm (BROOK90: SNODEN is fixed at 0.3)
+    p_CCFAC  = continuous_SPAC.params[:CCFAC]  # cold content factor, MJ m-2 d-1 K-1 (BROOK90: CCFAC is fixed at 0.3 MJ m-2 d-1 K-1)
+    p_GRDMLT = continuous_SPAC.params[:GRDMLT] # rate of groundmelt of snowpack, mm/d (BROOK90: GRDMLT is fixed at 0.35 mm/d from Hubbard Brook (Federer 1965))
+    p_LAIMLT = continuous_SPAC.params[:LAIMLT] # dependence of snowmelt on LAI, dimensionless (BROOK90: LAIMLT is fixed at 0.2)
+    p_SAIMLT = continuous_SPAC.params[:SAIMLT] # dependence of snowmelt on SAI, dimensionless (BROOK90: SAIMLT is fixed at 0.5)
+    p_MAXLQF = continuous_SPAC.params[:MAXLQF] # maximum liquid water fraction of SNOW, dimensionless (BROOK90: MAXLQF is fixed at 0.05)
     # Documentation from ecoshift:
     # SNODEN (Fixed parameter) - snow density, mm/mm. SNODEN is the snowpack density or the ratio of water content to depth. SNODEN is used only to correct leaf area index and stem area index to the fraction of them that is above the snow. It does not vary with time or snowpack ripeness in BROOK90. SNODEN is fixed at 0.3. [see PET-CANOPY]
     # CCFAC (Fixed parameter) - cold content factor, MJ m-2 d-1 K-1. CCFAC is a degree day factor for accumulation of cold content for a day with daylength of 0.5 d. It controls the snow energy balance when TA is less than 0°C. Larger values make the snow temperature lag farther behind the air temperature. Sensitivity of snowmelt to CCFAC is small unless CCFAC is less than 0.05 MJ m-2 d-1 K-1. CCFAC = 0 means there is no cold content and snow temperature is always 0°C. CCFAC is fixed at 0.3 MJ m-2 d-1 K-1. [see SNO-SNOENRGY]
@@ -168,39 +144,39 @@ function define_LWFB90_p(
 
     ## Vegetation (canopy)
     ### Vegetation dimensions
-    p_CR     = input_param[:CR]     # (Canopy parameter), ratio of projected stem area index (SAI) to HEIGHT when DENSEF = 1, (SAI = CS * HEIGHT * DENSEF)
-    p_RHOTP  = input_param[:RHOTP]  # (Fixed  parameter), Ratio of total leaf area to projected area, dimensionless (BROOK90: RHOTP is fixed at 2)
-    p_LWIDTH = input_param[:LWIDTH] # (Canopy parameter), average leaf width, m
-    p_LPC    = input_param[:LPC]    # (Fixed  parameter), Minimum LAI defining a closed canopy, dimensionless (BROOK90: LPC is fixed at 4.0)
+    p_CR     = continuous_SPAC.params[:CR]     # (Canopy parameter), ratio of projected stem area index (SAI) to HEIGHT when DENSEF = 1, (SAI = CS * HEIGHT * DENSEF)
+    p_RHOTP  = continuous_SPAC.params[:RHOTP]  # (Fixed  parameter), Ratio of total leaf area to projected area, dimensionless (BROOK90: RHOTP is fixed at 2)
+    p_LWIDTH = continuous_SPAC.params[:LWIDTH] # (Canopy parameter), average leaf width, m
+    p_LPC    = continuous_SPAC.params[:LPC]    # (Fixed  parameter), Minimum LAI defining a closed canopy, dimensionless (BROOK90: LPC is fixed at 4.0)
     ### Vegetation influence on atmosphere and meteorology
-    p_KSNVP  = input_param[:KSNVP]  # (Canopy parameter), reduction factor to reduce snow evaporation (SNVP), (0.05 - 1)
-    p_ALBSN  = input_param[:ALBSN]  # (Canopy parameter), albedo or surface reflectivity with snow on the ground, (typically 0.1-0.9)
-    p_ALB    = input_param[:ALB]    # (Canopy parameter), albedo or surface reflectivity without snow on the ground, (typically 0.1-0.3)
-    p_NN     = input_param[:NN]     # (Fixed  parameter), Wind/diffusivity extinction coefficient, dimensionless (BROOK90: NN is fixed at 2.5 following Shuttleworth and Gurney (1990))
-    p_CS     = input_param[:CS]     # (Canopy parameter), extinction coefficient for photosynthetically-active radiation in the canopy, (unit?)
-    p_RM     = input_param[:RM]     # (Fixed  parameter), Nominal maximum solar radiation possible on a leaf, W/m2 (BROOK90: RM is fixed at 1000 W/m2)
+    p_KSNVP  = continuous_SPAC.params[:KSNVP]  # (Canopy parameter), reduction factor to reduce snow evaporation (SNVP), (0.05 - 1)
+    p_ALBSN  = continuous_SPAC.params[:ALBSN]  # (Canopy parameter), albedo or surface reflectivity with snow on the ground, (typically 0.1-0.9)
+    p_ALB    = continuous_SPAC.params[:ALB]    # (Canopy parameter), albedo or surface reflectivity without snow on the ground, (typically 0.1-0.3)
+    p_NN     = continuous_SPAC.params[:NN]     # (Fixed  parameter), Wind/diffusivity extinction coefficient, dimensionless (BROOK90: NN is fixed at 2.5 following Shuttleworth and Gurney (1990))
+    p_CS     = continuous_SPAC.params[:CS]     # (Canopy parameter), extinction coefficient for photosynthetically-active radiation in the canopy, (unit?)
+    p_RM     = continuous_SPAC.params[:RM]     # (Fixed  parameter), Nominal maximum solar radiation possible on a leaf, W/m2 (BROOK90: RM is fixed at 1000 W/m2)
     ### Interception
-    p_CINTRL = input_param[:CINTRL] # (Fixed  parameter), Maximum interception storage of rain       per unit LAI, mm (BROOK90: CINTRL and CINTRS are both fixed at 0.15 mm)
-    p_CINTRS = input_param[:CINTRS] # (Fixed  parameter), Maximum interception storage of rain       per unit SAI, mm (BROOK90: CINTRL and CINTRS are both fixed at 0.15 mm)
-    p_CINTSL = input_param[:CINTSL] # (Fixed  parameter), Maximum interception storage of snow water per unit LAI, mm (BROOK90: CINTSL and CINTSS are both fixed at 0.6 mm)
-    p_CINTSS = input_param[:CINTSS] # (Fixed  parameter), Maximum interception storage of snow water per unit SAI, mm (BROOK90: CINTSL and CINTSS are both fixed at 0.6 mm)
-    p_FRINTL = input_param[:FRINTLAI] # (Fixed  parameter), Intercepted fraction of rain per unit LAI, dimensionless (BROOK90: FRINTLAI and FRINTSAI are both fixed at 0.06)
-    p_FRINTS = input_param[:FRINTSAI] # (Fixed  parameter), Intercepted fraction of rain per unit SAI, dimensionless (BROOK90: FRINTLAI and FRINTSAI are both fixed at 0.06)
-    p_FSINTL = input_param[:FSINTLAI] # (Fixed  parameter), Intercepted fraction of snow per unit LAI, dimensionless (BROOK90: FSINTLAI and FSINTSAI are both fixed at 0.04)
-    p_FSINTS = input_param[:FSINTSAI] # (Fixed  parameter), Intercepted fraction of snow per unit SAI, dimensionless (BROOK90: FSINTLAI and FSINTSAI are both fixed at 0.04)
+    p_CINTRL = continuous_SPAC.params[:CINTRL] # (Fixed  parameter), Maximum interception storage of rain       per unit LAI, mm (BROOK90: CINTRL and CINTRS are both fixed at 0.15 mm)
+    p_CINTRS = continuous_SPAC.params[:CINTRS] # (Fixed  parameter), Maximum interception storage of rain       per unit SAI, mm (BROOK90: CINTRL and CINTRS are both fixed at 0.15 mm)
+    p_CINTSL = continuous_SPAC.params[:CINTSL] # (Fixed  parameter), Maximum interception storage of snow water per unit LAI, mm (BROOK90: CINTSL and CINTSS are both fixed at 0.6 mm)
+    p_CINTSS = continuous_SPAC.params[:CINTSS] # (Fixed  parameter), Maximum interception storage of snow water per unit SAI, mm (BROOK90: CINTSL and CINTSS are both fixed at 0.6 mm)
+    p_FRINTL = continuous_SPAC.params[:FRINTLAI] # (Fixed  parameter), Intercepted fraction of rain per unit LAI, dimensionless (BROOK90: FRINTLAI and FRINTSAI are both fixed at 0.06)
+    p_FRINTS = continuous_SPAC.params[:FRINTSAI] # (Fixed  parameter), Intercepted fraction of rain per unit SAI, dimensionless (BROOK90: FRINTLAI and FRINTSAI are both fixed at 0.06)
+    p_FSINTL = continuous_SPAC.params[:FSINTLAI] # (Fixed  parameter), Intercepted fraction of snow per unit LAI, dimensionless (BROOK90: FSINTLAI and FSINTSAI are both fixed at 0.04)
+    p_FSINTS = continuous_SPAC.params[:FSINTSAI] # (Fixed  parameter), Intercepted fraction of snow per unit SAI, dimensionless (BROOK90: FSINTLAI and FSINTSAI are both fixed at 0.04)
     ### Vegetation conductivity
-    p_MXKPL  = input_param[:MXKPL]  # (Canopy parameter), maximum plant conductivity, mm d-1 MPa-1.
-    p_FXYLEM = input_param[:FXYLEM] # (Canopy parameter), fraction of plant resistance that is in the xylem (above ground) and not in the roots, (0-1)
-    p_GLMAX  = input_param[:GLMAX]  # (Canopy parameter), maximum leaf conductance, cm/s
-    p_GLMIN  = input_param[:GLMIN]  # (Canopy parameter), minimum leaf conductance, cm/s
+    p_MXKPL  = continuous_SPAC.params[:MXKPL]  # (Canopy parameter), maximum plant conductivity, mm d-1 MPa-1.
+    p_FXYLEM = continuous_SPAC.params[:FXYLEM] # (Canopy parameter), fraction of plant resistance that is in the xylem (above ground) and not in the roots, (0-1)
+    p_GLMAX  = continuous_SPAC.params[:GLMAX]  # (Canopy parameter), maximum leaf conductance, cm/s
+    p_GLMIN  = continuous_SPAC.params[:GLMIN]  # (Canopy parameter), minimum leaf conductance, cm/s
     ### Stomatal regulation
-    p_TH     = input_param[:TH]     # (Canopy parameter), temperature controlling closing of stomates,°C
-    p_T1     = input_param[:T1]     # (Canopy parameter), temperature controlling closing of stomates,°C
-    p_T2     = input_param[:T2]     # (Canopy parameter), temperature controlling closing of stomates,°C
-    p_TL     = input_param[:TL]     # (Canopy parameter), temperature controlling closing of stomates,°C
-    p_CVPD   = input_param[:CVPD]   # (Fixed  parameter), Vapor pressure deficit at which stomatal conductance is halved, kPa (BROOK90: CVPD is fixed at 2 kPa for all cover types)
-    p_R5     = input_param[:R5]     # (Fixed  parameter), Solar radiation at which stomatal conductance is half of its value at RM, W/m2 (BROOK90: BROOK90 fixes R5 = 100 W/m2 as the default for all cover types)
-    p_PSICR  = input_param[:PSICR]  # (Canopy parameter), minimum plant leaf water potential, MPa.
+    p_TH     = continuous_SPAC.params[:TH]     # (Canopy parameter), temperature controlling closing of stomates,°C
+    p_T1     = continuous_SPAC.params[:T1]     # (Canopy parameter), temperature controlling closing of stomates,°C
+    p_T2     = continuous_SPAC.params[:T2]     # (Canopy parameter), temperature controlling closing of stomates,°C
+    p_TL     = continuous_SPAC.params[:TL]     # (Canopy parameter), temperature controlling closing of stomates,°C
+    p_CVPD   = continuous_SPAC.params[:CVPD]   # (Fixed  parameter), Vapor pressure deficit at which stomatal conductance is halved, kPa (BROOK90: CVPD is fixed at 2 kPa for all cover types)
+    p_R5     = continuous_SPAC.params[:R5]     # (Fixed  parameter), Solar radiation at which stomatal conductance is half of its value at RM, W/m2 (BROOK90: BROOK90 fixes R5 = 100 W/m2 as the default for all cover types)
+    p_PSICR  = continuous_SPAC.params[:PSICR]  # (Canopy parameter), minimum plant leaf water potential, MPa.
     # Documentation from ecoshift:
     # MXKPL The internal resistance to water flow through the plants RPLANT = 1 / (MXKPL * RELHT * DENSEF). MXKPL is the main controller of soil-water availability and is a property of all of the plants on a unit area, not of any one plant. When the canopy is at its maximum seasonal LAI and height, and when soil is wet so that soil water potential is effectively zero, and when the leaf water potential is at its critical value, PSICR, then MXKPL is the transpiration rate divided by PSICR. Abdul-Jabbar et al. (1988) found that MXKPL ranges only from 7 to 30 mm d-1 MPa-1 over a wide range of vegetations, a surprisingly constant parameter. A transpiration rate of 0.5 mm/hr at a gradient of -1.5 MPa is typical, giving MXKPL of 8 mm d-1 MPa-1 (Hunt et al. 1991). MXKPL controls the rate of water supply to the leaves and thus the transpiration when soil water supply is limiting. Decreasing MXKPL makes soil water less available and thus reduces actual transpiration below potential transpiration at higher soil water content. [see PET-CANOPY] [see EVP-PLNTRES]
     # CR (Canopy parameter) - extinction coefficient for photosynthetically-active radiation in the canopy. Values usually range from 0.5 to 0.7. Values outside this range should be used very cautiously. The extinction coefficient can be determined from the canopy transmissivity, t, as CR = - (ln t) / (Lp + Sp). For a canopy of Lp = 6 and Sp = 0.7, PAR penetration at the ground of 1, 3, and 5% gives CR = 0.69, 0.52, and 0.45 respectively. I use CR values of 0.5 for conifer forest, 0.6 for broadleaved forest, and 0.7 for short vegetation covers. CR is also used to calculate the extinction of net radiation, though this is theoretically incorrect. [see PET-SRSC] [see SUN-AVAILEN]
@@ -225,9 +201,9 @@ function define_LWFB90_p(
     # FSINTLAI and FSINTSAI (Fixed parameters) - intercepted fraction of snow per unit LAI and per unit SAI respectively, dimensionless. See also FRINTLAI. FSINTLAI and FSINTSAI are both fixed at 0.04. For LAI = 6 and SAI = 0.7 these values catch snow at 27%. For leafless deciduous forest with LAI = 0 and SAI = 0.7 the snowfall catch rate is 3%. To turn off SINT, set both FSINTLAI and FSINTSAI to zero. [see EVP-INTER]
 
     ## Soil vegetation (roots)
-    NOOUTF   = 1 == input_param[:NOOUTF] # flag to prevent outflow from roots (hydraulic redistribution), (0/1)
-    p_RTRAD  = input_param[:RTRAD] # average root radius, mm (BROOK90: RTRAD is fixed at 0.35 mm)
-    p_MXRTLN = input_param[:MXRTLN] # (Canopy parameter), maximum length of fine roots per unit ground area, m/m2.
+    NOOUTF   = 1 == continuous_SPAC.params[:NOOUTF] # flag to prevent outflow from roots (hydraulic redistribution), (0/1)
+    p_RTRAD  = continuous_SPAC.params[:RTRAD] # average root radius, mm (BROOK90: RTRAD is fixed at 0.35 mm)
+    p_MXRTLN = continuous_SPAC.params[:MXRTLN] # (Canopy parameter), maximum length of fine roots per unit ground area, m/m2.
     # Documentation from ecoshift:
     # NOOUTF (Fixed parameter) - 0 to allow outflow from roots, 1 for no outflow. NOOUTF is a switch that when set to 1 prevents outflow from the plant roots to the soil when soil is dry. NOOUTF = 0 allows such outflow, so water can move from wet soil layers to dry soil layers through the roots. [see EVP-TBYLAYER]
     # RTRAD (Fixed parameter) - average root radius, mm. RTRAD is the average radius of the fine or water-absorbing roots. It is only relevant to transpiration from dry soil. RTRAD is fixed at 0.35 mm. [see EVP-PLNTRES]
@@ -241,10 +217,10 @@ function define_LWFB90_p(
     # THICK(1 To ML) (Soil parameter) - layer thicknesses, mm. THICK is the vertical thickness of each soil layer. Each layer can have a different thickness, but the number of iterations goes up as the thickness of any layer goes down. THICK should probably not be less than 50 mm unless run time is not important. [see EVP-PLNTRES] [see KPT] [see WAT-VERT]
 
     ## Soil hydraulics
-    p_RSSA   = input_param[:RSSA] # Soil evaporation resistance (RSS) at field capacity, s/m (BROOK90: RSSA is fixed at 500 s/m following Shuttleworth and Gurney (1990))
-    p_RSSB   = input_param[:RSSB] # Exponent in relation of soil evaporation resistance (RSS) to soil water potential (PSIM) in the top layer, dimensionless, (BROOK90: RSSB is fixed at 1.0, which makes RSS directly proportional to PSIM)
+    p_RSSA   = continuous_SPAC.params[:RSSA] # Soil evaporation resistance (RSS) at field capacity, s/m (BROOK90: RSSA is fixed at 500 s/m following Shuttleworth and Gurney (1990))
+    p_RSSB   = continuous_SPAC.params[:RSSB] # Exponent in relation of soil evaporation resistance (RSS) to soil water potential (PSIM) in the top layer, dimensionless, (BROOK90: RSSB is fixed at 1.0, which makes RSS directly proportional to PSIM)
     # TODO(bernharf): get rid of this and simply use the vector of AbstractSoilHydraulicParams...
-    FLAG_MualVanGen = typeof(input_soil_horizons[1,:shp]) == LWFBrook90.KPT.MualemVanGenuchtenSHP # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
+    FLAG_MualVanGen = typeof(continuous_SPAC.soil_horizons[1,:shp]) == LWFBrook90.KPT.MualemVanGenuchtenSHP # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
     if FLAG_MualVanGen == 0
         p_soil = LWFBrook90.KPT.KPT_SOILPAR_Ch1d(;
             p_THICK = p_THICK,
@@ -305,22 +281,22 @@ function define_LWFB90_p(
 
     ## FLOW Infiltration, groundwater, and overland flow
     ### Infiltration (incl. preferential flow)
-    p_IMPERV = input_param[:IMPERV] # (Flow parameter), fraction of impervious surface area generating surface or source area flow (SRFL), dimensionless
-    p_INFEXP = input_param[:INFEXP] # (Flow parameter), infiltration exponent that determines the distribution of infiltrated water with depth, dimensionless (from 0 to >1; 0 = all infiltration to top soil layer, 1 = uniform distribution down to ILAYER, >1 = more water in lower layers closer to ILAYER)
+    p_IMPERV = continuous_SPAC.params[:IMPERV] # (Flow parameter), fraction of impervious surface area generating surface or source area flow (SRFL), dimensionless
+    p_INFEXP = continuous_SPAC.params[:INFEXP] # (Flow parameter), infiltration exponent that determines the distribution of infiltrated water with depth, dimensionless (from 0 to >1; 0 = all infiltration to top soil layer, 1 = uniform distribution down to ILAYER, >1 = more water in lower layers closer to ILAYER)
     p_ILAYER = soil_discr["ILAYER"] # (Flow parameter), number of layers over which infiltration is distributed
     p_QLAYER = soil_discr["QLAYER"] # (Flow parameter), number of soil layers for SRFL
     p_INFRAC = LWFBrook90.WAT.INFPAR(p_INFEXP, p_ILAYER, p_soil, NLAYER) # fraction of (preferential) infiltration to each layer
     # TODO(bernhard):switch to ILAYAER and QLAYER to IDEPTH_m and QDEPTH_m, which are independent of soil discretization.
 
     ### Flow generation
-    p_BYPAR  = input_param[:BYPAR]  # (Flow parameter), flag to activate bypass flow (BYFL), (0/1)
-    p_DRAIN  = input_param[:DRAIN] # (Flow parameter), continuous flag to activate drainge VRFLI(n), (between 0 and 1; 1 = gravity drainage, 0 = no drainage)
-    p_DSLOPE = input_param[:DSLOPE] # (Flow parameter), hillslope angle for downslope matric flow (DSFL), degrees
-    p_GSC    = input_param[:GSC] # (Flow parameter), fraction of groundwater storage (GWAT), that is transferred to groundwater flow (GWFL) and deep seepage (SEEP) each day, d-1
-    p_GSP    = input_param[:GSP] # (Flow parameter), fraction of groundwater discharge produced by GSC that goes to deep seepage (SEEP) and is not added to streamflow (FLOW), dimensionless
-    p_LENGTH_SLOPE = input_param[:LENGTH_SLOPE] # (Flow parameter), slope length for downslope flow (DSFL), m
-    p_QFFC   = input_param[:QFFC] # (Flow parameter), quick flow fraction for SRFL and BYFL at THETAF, dimensionless
-    p_QFPAR  = input_param[:QFPAR] # (Flow parameter), raction of the water content between field capacity (THETAF) and saturation (THSAT) at which the quick flow fraction is 1, dimensionless
+    p_BYPAR  = continuous_SPAC.params[:BYPAR]  # (Flow parameter), flag to activate bypass flow (BYFL), (0/1)
+    p_DRAIN  = continuous_SPAC.params[:DRAIN] # (Flow parameter), continuous flag to activate drainge VRFLI(n), (between 0 and 1; 1 = gravity drainage, 0 = no drainage)
+    p_DSLOPE = continuous_SPAC.params[:DSLOPE] # (Flow parameter), hillslope angle for downslope matric flow (DSFL), degrees
+    p_GSC    = continuous_SPAC.params[:GSC] # (Flow parameter), fraction of groundwater storage (GWAT), that is transferred to groundwater flow (GWFL) and deep seepage (SEEP) each day, d-1
+    p_GSP    = continuous_SPAC.params[:GSP] # (Flow parameter), fraction of groundwater discharge produced by GSC that goes to deep seepage (SEEP) and is not added to streamflow (FLOW), dimensionless
+    p_LENGTH_SLOPE = continuous_SPAC.params[:LENGTH_SLOPE] # (Flow parameter), slope length for downslope flow (DSFL), m
+    p_QFFC   = continuous_SPAC.params[:QFFC] # (Flow parameter), quick flow fraction for SRFL and BYFL at THETAF, dimensionless
+    p_QFPAR  = continuous_SPAC.params[:QFPAR] # (Flow parameter), raction of the water content between field capacity (THETAF) and saturation (THSAT) at which the quick flow fraction is 1, dimensionless
 
     # source area parameters SRFPAR()
     p_SWATQX = sum(p_soil.p_SWATMAX[1:p_QLAYER]) # maximum water storage for layers 1 through QLAYER, mm
@@ -352,8 +328,7 @@ function define_LWFB90_p(
 
     # p_cst_1 and p_cst_2 for both RHS and CallBack in DiffEq.jl
     p_cst_1 = p_soil
-    Reset = false # hardcoded
-    p_cst_2 = (NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, Reset,
+    p_cst_2 = (NLAYER, FLAG_MualVanGen, continuous_SPAC.solver_options.compute_intermediate_quantities, false, # Reset is hardcoded as false
         p_DTP, p_NPINT,
 
         # FOR MSBITERATE:
@@ -393,8 +368,8 @@ function define_LWFB90_p(
 
     p_cst_4 = (
         FLAG_MualVanGen,
-        compute_intermediate_quantities,
-        simulate_isotopes,
+        continuous_SPAC.solver_options.compute_intermediate_quantities,
+        continuous_SPAC.solver_options.simulate_isotopes,
         row_idx_scalars = [],
         row_idx_SWATI   = [],
         row_idx_RWU     = [],
@@ -405,23 +380,25 @@ function define_LWFB90_p(
     p_cst = (p_cst_1, p_cst_2, p_cst_3, p_cst_4)
 
     # 2b) Time varying parameters (e.g. meteorological forcings)
-    p_fT = (p_DOY          = (t) -> LWFBrook90.p_DOY(t,    interpolated_meteoveg.REFERENCE_DATE),
-            p_MONTHN       = (t) -> LWFBrook90.p_MONTHN(t, interpolated_meteoveg.REFERENCE_DATE),
-            p_GLOBRAD      = interpolated_meteoveg.p_GLOBRAD,
-            p_TMAX         = interpolated_meteoveg.p_TMAX,
-            p_TMIN         = interpolated_meteoveg.p_TMIN,
-            p_VAPPRES      = interpolated_meteoveg.p_VAPPRES,
-            p_WIND         = interpolated_meteoveg.p_WIND,
-            p_PREC         = interpolated_meteoveg.p_PREC,
-            p_DENSEF       = interpolated_meteoveg.p_DENSEF, # canopy density multiplier between 0.05 and 1, dimensionless
-            p_HEIGHT       = interpolated_meteoveg.p_HEIGHT,
-            p_LAI          = interpolated_meteoveg.p_LAI,
-            p_SAI          = interpolated_meteoveg.p_SAI,
-            p_AGE          = interpolated_meteoveg.p_AGE,
-            p_RELDEN       = interpolated_meteoveg.p_RELDEN,
-            p_d18OPREC     = interpolated_meteoveg.p_d18OPREC,
-            p_d2HPREC      = interpolated_meteoveg.p_d2HPREC,
-            REFERENCE_DATE = interpolated_meteoveg.REFERENCE_DATE)
+    p_fT = (p_DOY          = (t) -> LWFBrook90.p_DOY(t,    continuous_SPAC.reference_date),
+            p_MONTHN       = (t) -> LWFBrook90.p_MONTHN(t, continuous_SPAC.reference_date),
+            p_GLOBRAD      = continuous_SPAC.meteo_forcing.p_GLOBRAD,
+            p_TMAX         = continuous_SPAC.meteo_forcing.p_TMAX,
+            p_TMIN         = continuous_SPAC.meteo_forcing.p_TMIN,
+            p_VAPPRES      = continuous_SPAC.meteo_forcing.p_VAPPRES,
+            p_WIND         = continuous_SPAC.meteo_forcing.p_WIND,
+            p_PREC         = continuous_SPAC.meteo_forcing.p_PREC,
+
+            p_DENSEF       = continuous_SPAC.canopy_evolution.p_DENSEF, # canopy density multiplier between 0.05 and 1, dimensionless
+            p_HEIGHT       = continuous_SPAC.canopy_evolution.p_HEIGHT,
+            p_LAI          = continuous_SPAC.canopy_evolution.p_LAI,
+            p_SAI          = continuous_SPAC.canopy_evolution.p_SAI,
+            p_AGE          = continuous_SPAC.canopy_evolution.p_AGE,
+            p_RELDEN       = p_RELDEN,
+
+            p_d18OPREC     = continuous_SPAC.meteo_iso_forcing.p_d18OPREC,
+            p_d2HPREC      = continuous_SPAC.meteo_iso_forcing.p_d2HPREC,
+            REFERENCE_DATE = continuous_SPAC.reference_date)
     # Documentation from ecoshift:
     # DENSEF (Fixed parameter) - canopy density multiplier between 0.05 and 1, dimensionless. DENSEF is normally 1; it should be reduced below this ONLY to simulate thinning of the existing canopy by cutting. It multiplies MAXLAI, CS, MXRTLN, and MXKPL and thus proportionally reduces LAI, SAI, and RTLEN, and increases RPLANT. However it does NOT reduce canopy HEIGHT and thus will give erroneous aerodynamic resistances if it is less than about 0.05. It should NOT be set to 0 to simulate a clearcut. [see PET-CANOPY]
 
@@ -521,14 +498,17 @@ end
 Take climate and vegetation parameters in `input_meteoveg` and `input_meteoiso` and generates continuous parameters.
 """
 function interpolate_meteoveg(;
-    input_meteoveg::DataFrame,
-    input_meteoveg_reference_date::DateTime,
-    input_meteoiso::Union{DataFrame,Nothing},
+    canopy_evolution::DataFrame,
+    meteo_forcing::DataFrame,
+    meteo_iso_forcing::Union{DataFrame,Nothing},
     p_MAXLAI,
     p_SAI_baseline_,
     p_DENSEF_baseline_,
     p_AGE_baseline_yrs,
     p_HEIGHT_baseline_m)
+
+    @assert meteo_forcing.days == canopy_evolution.days "Discrete DataFrames: `meteo_forcing` and `canopy_evolution` are not available for the same dates."
+    # @assert meteo_iso_forcing.days # NOTE: DataFrame `meteo_iso_forcing` can be on a different spacing
 
     # 2) Interpolate input data in time
     # ### FOR DEVELOPMENT:
@@ -561,65 +541,65 @@ function interpolate_meteoveg(;
     # plot!(ts, extrapolate(interpolate((test_ip_mv.days, ), test_ip_mv.PRECIN, Gridded(Constant{Next}())), Throw())(ts), label = "Gridded(Constant{Previous}()",xlims=(0,30))
 
     #     ts = 0:1:4000
-    #     scatter(input_meteoiso.days, input_meteoiso.delta18O_permil)
-    #     # # plot!(ts, scale(interpolate(input_meteoiso.delta18O_permil, (BSpline(Constant{Previous}()))), time_range)(ts), label = "PRECIN {Previous}",  xlims=(0,30))
-    #     # # plot!(ts, scale(interpolate(input_meteoiso.delta18O_permil, (BSpline(Constant{Next}()))),     time_range)(ts), label = "PRECIN {Next}",      xlims=(0,30))
+    #     scatter(meteo_iso_forcing.days, meteo_iso_forcing.delta18O_permil)
+    #     # # plot!(ts, scale(interpolate(meteo_iso_forcing.delta18O_permil, (BSpline(Constant{Previous}()))), time_range)(ts), label = "PRECIN {Previous}",  xlims=(0,30))
+    #     # # plot!(ts, scale(interpolate(meteo_iso_forcing.delta18O_permil, (BSpline(Constant{Next}()))),     time_range)(ts), label = "PRECIN {Next}",      xlims=(0,30))
     #     # plot!(ts .+ 1,
-    #     #     scale(interpolate(input_meteoiso.delta18O_permil, (BSpline(Constant{Next}()))),     time_range)(ts), label = "PRECIN+1 {Previous}",      xlims=(0,30))
-    #     # # plot!(ts, scale(interpolate(input_meteoiso.delta18O_permil, (BSpline(Constant()))),           time_range)(ts), label = "PRECIN {Nearest}",   xlims=(0,30))
-    #     # # plot!(ts, scale(interpolate(input_meteoiso.delta18O_permil, (BSpline(Linear()))),             time_range)(ts), label = "PRECIN Linear",   xlims=(0,30))
-    #     # plot!(ts, scale(interpolate(input_meteoiso.delta18O_permil, (BSpline(Linear()))),             time_range)(ts), label = "PRECIN Linear",   xlims=(0,30))
-    #     plot!(ts, extrapolate(interpolate((input_meteoiso.days, ), input_meteoiso.delta18O_permil, Gridded(Linear())), Throw())(ts), label = "Gridded(Linear()")
-    #     plot!(ts, extrapolate(interpolate((input_meteoiso.days, ), input_meteoiso.delta18O_permil, Gridded(Constant())), Throw())(ts), label = "Gridded(Constant()")
-    #     plot!(ts, extrapolate(interpolate((input_meteoiso.days, ), input_meteoiso.delta18O_permil, Gridded(Constant{Next}())), Throw())(ts), label = "Gridded(Constant{Previous}()")
+    #     #     scale(interpolate(meteo_iso_forcing.delta18O_permil, (BSpline(Constant{Next}()))),     time_range)(ts), label = "PRECIN+1 {Previous}",      xlims=(0,30))
+    #     # # plot!(ts, scale(interpolate(meteo_iso_forcing.delta18O_permil, (BSpline(Constant()))),           time_range)(ts), label = "PRECIN {Nearest}",   xlims=(0,30))
+    #     # # plot!(ts, scale(interpolate(meteo_iso_forcing.delta18O_permil, (BSpline(Linear()))),             time_range)(ts), label = "PRECIN Linear",   xlims=(0,30))
+    #     # plot!(ts, scale(interpolate(meteo_iso_forcing.delta18O_permil, (BSpline(Linear()))),             time_range)(ts), label = "PRECIN Linear",   xlims=(0,30))
+    #     plot!(ts, extrapolate(interpolate((meteo_iso_forcing.days, ), meteo_iso_forcing.delta18O_permil, Gridded(Linear())), Throw())(ts), label = "Gridded(Linear()")
+    #     plot!(ts, extrapolate(interpolate((meteo_iso_forcing.days, ), meteo_iso_forcing.delta18O_permil, Gridded(Constant())), Throw())(ts), label = "Gridded(Constant()")
+    #     plot!(ts, extrapolate(interpolate((meteo_iso_forcing.days, ), meteo_iso_forcing.delta18O_permil, Gridded(Constant{Next}())), Throw())(ts), label = "Gridded(Constant{Previous}()")
     #     xlims!(0, 500)
     # ### END FOR DEVELOPMENT
 
-    # # Interpolate regular data with Previous.
+    # # Interpolate regularly spaced data (`meteo_forcing` and `canopy_evolution`) with Previous.
     # # (e.g. PREC reported for 2010-01-01 is rain that has fallen on that day and rate is applied until 2010-01-02.)
     # # Note that we need to shift it slightly ahead so that p_GLOBRAD(1.0) is equal to p_GLOBRAD(1.1)
     # # Interpolate input data without modification
-    # p_GLOBRAD = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.GLOBRAD,          Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
-    # p_TMAX    = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.TMAX,             Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
-    # p_TMIN    = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.TMIN,             Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
-    # p_VAPPRES = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.VAPPRES,          Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
-    # p_WIND    = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.WIND,             Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
-    # p_PREC    = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.PRECIN,           Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_GLOBRAD = extrapolate(interpolate((meteo_forcing.days  .- 0.00001, ), meteo_forcing.GLOBRAD,          Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_TMAX    = extrapolate(interpolate((meteo_forcing.days  .- 0.00001, ), meteo_forcing.TMAX,             Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_TMIN    = extrapolate(interpolate((meteo_forcing.days  .- 0.00001, ), meteo_forcing.TMIN,             Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_VAPPRES = extrapolate(interpolate((meteo_forcing.days  .- 0.00001, ), meteo_forcing.VAPPRES,          Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_WIND    = extrapolate(interpolate((meteo_forcing.days  .- 0.00001, ), meteo_forcing.WIND,             Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_PREC    = extrapolate(interpolate((meteo_forcing.days  .- 0.00001, ), meteo_forcing.PRECIN,           Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
     # # NOTE: PRECIN is already in mm/day from the input data set. No transformation is needed for p_PREC.
 
     # # Interpolate input data with consideration of baselines
-    # p_LAI     = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.LAI./100 .* p_MAXLAI,              Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
-    # p_SAI     = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.SAI./100 .* p_SAI_baseline_,       Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
-    # p_DENSEF  = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.DENSEF./100 .* p_DENSEF_baseline_, Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
-    # p_HEIGHT  = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.HEIGHT./100 .* p_HEIGHT_baseline_m,Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_LAI     = extrapolate(interpolate((canopy_evolution.days  .- 0.00001, ), canopy_evolution.LAI./100 .* p_MAXLAI,              Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_SAI     = extrapolate(interpolate((canopy_evolution.days  .- 0.00001, ), canopy_evolution.SAI./100 .* p_SAI_baseline_,       Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_DENSEF  = extrapolate(interpolate((canopy_evolution.days  .- 0.00001, ), canopy_evolution.DENSEF./100 .* p_DENSEF_baseline_, Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_HEIGHT  = extrapolate(interpolate((canopy_evolution.days  .- 0.00001, ), canopy_evolution.HEIGHT./100 .* p_HEIGHT_baseline_m,Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
 
     ### Quickfix:
-    @assert 1==length(unique(diff(input_meteoveg.days))) """
+    @assert 1==length(unique(diff(meteo_forcing.days))) """
         Error: LWFBrook90.jl expects the input data in meteoveg.csv to be regularly spaced in time.
     """
-    @assert unique(diff(input_meteoveg.days)) == [1.0] """
+    @assert unique(diff(meteo_forcing.days)) == [1.0] """
         Error: LWFBrook90.jl expects the input data in meteoveg.csv to provided as daily values.
     """
-    time_range = range(minimum(input_meteoveg.days), maximum(input_meteoveg.days), length=length(input_meteoveg.days))
-    p_GLOBRAD = extrapolate(scale(interpolate(input_meteoveg.GLOBRAD, (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_TMAX    = extrapolate(scale(interpolate(input_meteoveg.TMAX,    (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_TMIN    = extrapolate(scale(interpolate(input_meteoveg.TMIN,    (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_VAPPRES = extrapolate(scale(interpolate(input_meteoveg.VAPPRES, (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_WIND    = extrapolate(scale(interpolate(input_meteoveg.WIND,    (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_PREC    = extrapolate(scale(interpolate(input_meteoveg.PRECIN,  (BSpline(Constant{Previous}()))), time_range) ,0)
+    time_range = range(minimum(meteo_forcing.days), maximum(meteo_forcing.days), length=length(meteo_forcing.days))
+    p_GLOBRAD = extrapolate(scale(interpolate(meteo_forcing.GLOBRAD, (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_TMAX    = extrapolate(scale(interpolate(meteo_forcing.TMAX,    (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_TMIN    = extrapolate(scale(interpolate(meteo_forcing.TMIN,    (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_VAPPRES = extrapolate(scale(interpolate(meteo_forcing.VAPPRES, (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_WIND    = extrapolate(scale(interpolate(meteo_forcing.WIND,    (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_PREC    = extrapolate(scale(interpolate(meteo_forcing.PRECIN,  (BSpline(Constant{Previous}()))), time_range) ,0)
 
-    p_LAI     = extrapolate(scale(interpolate(input_meteoveg.LAI./100 .* p_MAXLAI,              (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_SAI     = extrapolate(scale(interpolate(input_meteoveg.SAI./100 .* p_SAI_baseline_,       (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_DENSEF  = extrapolate(scale(interpolate(input_meteoveg.DENSEF./100 .* p_DENSEF_baseline_, (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_HEIGHT  = extrapolate(scale(interpolate(input_meteoveg.HEIGHT./100 .* p_HEIGHT_baseline_m,(BSpline(Constant{Previous}()))), time_range) ,0)
+    p_LAI     = extrapolate(scale(interpolate(canopy_evolution.LAI./100 .* p_MAXLAI,              (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_SAI     = extrapolate(scale(interpolate(canopy_evolution.SAI./100 .* p_SAI_baseline_,       (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_DENSEF  = extrapolate(scale(interpolate(canopy_evolution.DENSEF./100 .* p_DENSEF_baseline_, (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_HEIGHT  = extrapolate(scale(interpolate(canopy_evolution.HEIGHT./100 .* p_HEIGHT_baseline_m,(BSpline(Constant{Previous}()))), time_range) ,0)
     ###
-    # p_AGE     = extrapolate(interpolate((input_meteoveg.days  .- 0.00001, ), input_meteoveg.AGE, Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
     p_AGE     = (t) -> p_AGE_baseline_yrs + t/365
+    # p_AGE     = extrapolate(interpolate((canopy_evolution.days  .- 0.00001, ), canopy_evolution.AGE, Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
 
     # Note that meteoiso does not need to be regularly spaced:
     # Interpolate irregular data with Next and shift to noon
 
-    if (isnothing(input_meteoiso))
+    if (isnothing(meteo_iso_forcing))
         function p_d18OPREC(t)
             return nothing
         end
@@ -628,369 +608,38 @@ function interpolate_meteoveg(;
         end
     else
         ## Quickfix:
-        # @assert 1==length(unique(diff(input_meteoiso.days))) """
+        # @assert 1==length(unique(diff(meteo_iso_forcing.days))) """
         #     Error: LWFBrook90.jl expects the input data in meeoiso.csv to be regularly spaced in time.
         # """
-        # @assert unique(diff(input_meteoiso.days)) == [1.0] """
+        # @assert unique(diff(meteo_iso_forcing.days)) == [1.0] """
         #     Error: LWFBrook90.jl expects the input data in meeoiso.csv to provided as daily values.
         # """
-        # time_range_iso = range(minimum(input_meteoiso.days), maximum(input_meteoiso.days), length=length(input_meteoiso.days))
-        # p_d18OPREC= extrapolate(scale(interpolate(input_meteoiso.delta18O_permil,    (BSpline(Constant{Previous}()))), time_range_iso) ,0)
-        # p_d2HPREC = extrapolate(scale(interpolate(input_meteoiso.delta2H_permil,     (BSpline(Constant{Previous}()))), time_range_iso) ,0)
+        # time_range_iso = range(minimum(meteo_iso_forcing.days), maximum(meteo_iso_forcing.days), length=length(meteo_iso_forcing.days))
+        # p_d18OPREC= extrapolate(scale(interpolate(meteo_iso_forcing.delta18O_permil,    (BSpline(Constant{Previous}()))), time_range_iso) ,0)
+        # p_d2HPREC = extrapolate(scale(interpolate(meteo_iso_forcing.delta2H_permil,     (BSpline(Constant{Previous}()))), time_range_iso) ,0)
         ## End Quickfix:
         # Here we shift the days of collection of the cumulative samples to noon. => + 12/24 days
-        p_d18OPREC= extrapolate(interpolate((input_meteoiso.days .+ 12/24, ), input_meteoiso.delta18O_permil,    (Gridded(Constant{Next}()))), Flat()) #extrapolate flat, alternative: Throw())
-        p_d2HPREC = extrapolate(interpolate((input_meteoiso.days .+ 12/24, ), input_meteoiso.delta2H_permil,     (Gridded(Constant{Next}()))), Flat()) #extrapolate flat, alternative: Throw())
-    end
-    return (p_GLOBRAD      = p_GLOBRAD,
-            p_TMAX         = p_TMAX,
-            p_TMIN         = p_TMIN,
-            p_VAPPRES      = p_VAPPRES,
-            p_WIND         = p_WIND,
-            p_PREC         = p_PREC,
-            p_d18OPREC     = p_d18OPREC,
-            p_d2HPREC      = p_d2HPREC,
-            p_DENSEF       = p_DENSEF,
-            p_HEIGHT       = p_HEIGHT,
-            p_LAI          = p_LAI,
-            p_SAI          = p_SAI,
-            p_AGE          = p_AGE,
-            # p_RELDEN       = p_RELDEN,
-            REFERENCE_DATE = input_meteoveg_reference_date)
-end
-
-"""
-    discretize_soil_params(
-        input_soil_horizons,
-        input_soil_discretization,
-        soil_output_depths,
-        IDEPTH_m,
-        QDEPTH_m,
-        INITRDEP,
-        RGRORATE)
-
-Discretize soil domain into computational layers and attribute soil parameters based on the defined horizons.
-Densify discretization whenever an interface or an additional layer is needed. This is the case for interfaces
-when a new soil horizons begins or an additional computational layer (consisting of upper and lower interfaces)
-when a state variable needs to be extracted at a specified output depth.
-"""
-function discretize_soil_params(
-    input_soil_horizons,
-    input_soil_discretization,
-    soil_output_depths,
-    IDEPTH_m,
-    QDEPTH_m,
-    INITRDEP,
-    RGRORATE)
-
-    # input_soil_horizons =  LWFBrook90.read_path_soil_horizons(
-    #     "test/test-assets/DAV-2020/input-files/DAV_LW1_def_soil_horizons.csv");
-    # input_soil_discretization = LWFBrook90.read_path_soil_discretization
-    # This function maps the input parameters: (input_soil_horizons, ILAYER, QLAYER, INITRDEP, RGRORATE)
-    # onto the soil discretization (input_soil_discretization)
-
-    # input_soil_horizons: A matrix of the 8 soil materials parameters.
-    # input_soil_discretization:
-    # IDEPTH_m depth over which infiltration is distributed, [m] "IDEPTH_m determines the
-    #        number of soil layers over which infiltration is distributed when INFEXP is
-    #        greater than 0."
-    # QDEPTH_m soil depth for SRFL calculation, 0 to prevent SRFL, [m] "QDEPTH_m determines the
-    #        layers over which wetness is calculated to determine source area (SRFL)
-    #        parameters."
-    # INITRDEP
-    # RGRORATE
-
-    ############
-    # 1) Check if discretization needs to be refined
-    # 1a) Find out which layers need to be added
-    layers_to_insert = soil_output_depths
-
-    # ε = 0.001 # thickness of layer to be inserted, [m]
-    # ε = 0.025 # thickness of layer to be inserted, [m]
-    ε = 0.050 # thickness of layer to be inserted, [m]
-
-    needed_interfaces_for_additional_layers = zeros(Float64, 0)
-    for layer in layers_to_insert
-        println(layer)
-        if any(layer .∈ input_soil_discretization.Lower_m)
-            # specific depth is already an interface in the discretization
-            # -> only add a lower interface ε below the upper
-            append!(needed_interfaces_for_additional_layers, round(layer - ε; digits=3))
-        else
-            # specific depth is not yet an interface
-            # -> add upper and lower interface
-            append!(needed_interfaces_for_additional_layers, round(layer;     digits=3))
-            append!(needed_interfaces_for_additional_layers, round(layer - ε; digits=3))
-            # TODO: would technically need to check that no interface between layer and layer + ε
-        end
+        p_d18OPREC= extrapolate(interpolate((meteo_iso_forcing.days .+ 12/24, ), meteo_iso_forcing.delta18O_permil,    (Gridded(Constant{Next}()))), Flat()) #extrapolate flat, alternative: Throw())
+        p_d2HPREC = extrapolate(interpolate((meteo_iso_forcing.days .+ 12/24, ), meteo_iso_forcing.delta2H_permil,     (Gridded(Constant{Next}()))), Flat()) #extrapolate flat, alternative: Throw())
     end
 
-    # 1b) Find out which interfaces need to be added
-    all_needed_interfaces = unique(sort(
-        [
-         # interfaces for change in horizons or inflow depths or QDEPTH_m
-         input_soil_horizons[!,"Upper_m"];
-         input_soil_horizons[!,"Lower_m"];
-         -IDEPTH_m; # m (positive) to m (negative)
-         -QDEPTH_m;  # m (positive) to m (negative)
+    meteo_forcing_cont = (
+        p_days     = time_range,
+        p_GLOBRAD  = p_GLOBRAD,
+        p_TMAX     = p_TMAX,
+        p_TMIN     = p_TMIN,
+        p_VAPPRES  = p_VAPPRES,
+        p_WIND     = p_WIND,
+        p_PREC     = p_PREC)
+    meteo_iso_forcing_cont = (
+        p_d18OPREC = p_d18OPREC,
+        p_d2HPREC  = p_d2HPREC)
+    canopy_evolution_cont = (
+        p_DENSEF   = p_DENSEF,
+        p_HEIGHT   = p_HEIGHT,
+        p_LAI      = p_LAI,
+        p_SAI      = p_SAI,
+        p_AGE      = p_AGE)
 
-         # interfaces for layers determined in 1a)
-         needed_interfaces_for_additional_layers
-         ];
-        rev = true))
-
-    existing_interfaces = [0; input_soil_discretization[!,"Lower_m"]]
-    to_add = all_needed_interfaces[(!).(all_needed_interfaces .∈ (existing_interfaces,))]
-
-    # Add them to the DataFrame
-    soil_discretization = copy(input_soil_discretization) # otherwise input argument is modified in-place
-    # soil_discretization = input_soil_discretization
-    for interface_to_add in to_add
-        for i in 1:nrow(soil_discretization)
-            condition = interface_to_add > soil_discretization[i, "Lower_m"]
-            #println("$i, interface_to_add:$interface_to_add, $(soil_discretization[i, "Lower_m"]) $condition")
-            if (condition)
-                interface_to_add
-                pos = i+1
-                insert!.(eachcol(soil_discretization),
-                        pos,
-                        Matrix(soil_discretization)[pos-1,:])
-                soil_discretization[pos-1, "Lower_m"] = interface_to_add[1]
-                soil_discretization[pos,   "Upper_m"] = interface_to_add[1]
-                break
-            elseif (i == nrow(soil_discretization))
-                # If interface to add is below the lowest layer: add it only in case it is about ε lower
-                if (interface_to_add >= soil_discretization[i, "Lower_m"] - ε)
-                    pos = i+1
-                    insert!.(eachcol(soil_discretization),
-                        pos,
-                        Matrix(soil_discretization)[pos-1,:])
-                    soil_discretization[pos, "Upper_m"] = soil_discretization[pos-1, "Lower_m"]
-                    soil_discretization[pos, "Lower_m"] = interface_to_add[1]
-                    break
-                end
-            end
-        end
-    end
-
-    # Define ILAYER and QLAYER (to be used internally instead of IDEPTH_m and QDEPTH_m)
-    is_infiltration_layer_BOOLEAN = -IDEPTH_m .<= soil_discretization[!,"Lower_m"]
-    is_SRFL_layer_BOOLEAN         = -QDEPTH_m .<= soil_discretization[!,"Lower_m"]
-    ILAYER = sum(is_infiltration_layer_BOOLEAN) # lowest node where Bottom_m is below IDEPTH_m
-    QLAYER = sum(is_SRFL_layer_BOOLEAN)         # lowest node where Bottom_m is below QDEPTH_m
-
-    if (-IDEPTH_m < soil_discretization[end,"Lower_m"]) ||
-        (-QDEPTH_m < soil_discretization[end,"Lower_m"])
-        @error "QDEPTH_m or IDEPTH_m were defined deeper than the lowest simulation element."
-    end
-    ############
-
-    ############
-    # 2) Append soil horizon data to discretized soil domain
-    # Assert expectations
-    @assert input_soil_horizons[1,"Upper_m"] ≈ 0
-    @assert soil_discretization[1,"Upper_m"] ≈ 0
-    @assert input_soil_horizons[1,"Lower_m"] < 0
-    @assert soil_discretization[1,"Lower_m"] < 0
-
-    # Find for each soil_discretization node in which horizon it lies
-   which_horizon = fill(0, nrow(soil_discretization))
-    for i = 1:nrow(soil_discretization)
-        # For each soil discretizations (i) check to which which horizon it belongs
-        idx = findfirst(soil_discretization[i,"Lower_m"] .>= input_soil_horizons[:,"Lower_m"])
-
-        if (isnothing(idx) && i == nrow(soil_discretization))
-            idx = nrow(input_soil_horizons)
-        end
-
-        which_horizon[i] = input_soil_horizons[idx,"HorizonNr"]
-    end
-    soil_discretization[:,"HorizonNr"] = which_horizon
-
-    # If lowest discretized layer is only ε lower than defined soil horizons extrapolate
-    # the properties of the lowest soil horizon to that infinitesimal thin layer
-    if ( (soil_discretization[end,"HorizonNr"] == 0) &
-        (abs(soil_discretization[end,"Lower_m"] - input_soil_horizons[end,"Lower_m"]) < ε) )
-        soil_discretization[end,"HorizonNr"] = nrow(input_soil_horizons)
-    end
-
-    nlayer_before_join = nrow(soil_discretization)
-    soil_discretization = innerjoin(soil_discretization,
-                                    input_soil_horizons, makeunique=true,
-                                    #select(input_soil_horizons, Not([:Upper_m,:Lower_m])),
-                                    on = :HorizonNr)
-                                    # NOTE: not using leftjoin becaus it transforms types to Union{Missing, Float64} instead of only Float64
-                                    # Therefore, use innerjoin and check manually that no rows in soil_discretization are lost
-    @assert nrow(soil_discretization) == nlayer_before_join """
-        When merging soil properties defined in input CSV-file containing soil horizons, some layers from
-        the soil discretization were lost. This is most likely due to the soil horizons not covering the entire discretization domain.
-        (Note that the discretized domain is defined in a separate input CSV-file.)
-
-        Please check and correct the input files.
-        """
-        # (Note that the discretized domain is defined in a separate input CSV-file and is further extended to include internal variables IDEPTH_m and QDEPTH_m.)
-    ############
-
-    ############
-
-    # hardcoded:
-    HEAT = 0 # flag for heat balance; not implemented; input_param[:HEAT],
-
-    THICK_m   = soil_discretization[!,"Upper_m"] - soil_discretization[!,"Lower_m"] # thickness of soil layer [m]
-    THICK     = 1000*(THICK_m)                                    # thickness of soil layer [mm]
-    PSIM_init = soil_discretization[!,"uAux_PSIM_init_kPa"]       # initial condition PSIM [kPa]
-    d18O_soil_init = soil_discretization[!,"u_delta18O_init_permil"] # initial condition soil water δ18O [‰]
-    d2H_soil_init  = soil_discretization[!,"u_delta2H_init_permil"]  # initial condition soil water δ2H [‰]
-
-    @assert all(PSIM_init .<= 0) "Initial matrix psi must be negative or zero"
-
-    NLAYER = nrow(soil_discretization)
-
-    for i = 1:NLAYER
-        if (HEAT != 0)
-            @error "HEAT must be set to zero, as heat balance is not implemented."
-        end
-        # if (HEAT == 1)
-        #     # TemperatureNew(i)       = soil_discretization[i,7] we don't have it in the input file!!!
-        #     if i > NLAYER
-        #         MUE[i] = THICK[i] / ( THICK[i] + THICK(I+1) )
-        #         ZL[i]  = 0.5 * ( THICK[i] + THICK(I+1) )
-        #     else
-        #         MUE[i] = 0.5
-        #         ZL[i]  = THICK[i]
-        #     end
-        #     TMean[i]   = 0.
-        # end
-    end
-    ############
-
-    # ############
-    # # 3) Bring to simple vector and matrix form
-
-    # # Parse the stonefraction and hydraulic parameters for each layer
-    # # depending on wheter we use FLAG_MualVanGen ==1 or ==2
-    # # STONEF = [shp.p_STONEF for shp in soil_discretization.shp] # soil_discretization[:,"gravel_volFrac"]
-    # # [shp.p_THSAT  for shp in soil_discretization.shp] # ths_volFrac
-    # # [shp.p_θr     for shp in soil_discretization.shp] # thr_volFrac
-    # # [shp.p_MvGα   for shp in soil_discretization.shp] # alpha_perMeter
-    # # [shp.p_MvGn   for shp in soil_discretization.shp] # npar_
-    # # [shp.p_KSAT   for shp in soil_discretization.shp] # ksat_mmDay
-    # # [shp.p_MvGl   for shp in soil_discretization.shp] # tort_
-    # # [shp.p_STONEF for shp in soil_discretization.shp] # gravel_volFrac)
-    # if FLAG_MualVanGen == 1
-    #     # Mualem-van Genuchten
-    #     PAR = select(soil_discretization,
-    #             :ths_volFrac    => :θs,
-    #             :ksat_mmDay     => :Ksat,
-    #             :alpha_perMeter => :α,
-    #             :npar_          => :n,
-    #             :tort_          => :tort,
-    #             :thr_volFrac    => :θr
-    #             )
-    #     # ..it's a sin......
-    #     # Hard default of 2 [mm d-1] for saturated hydraulic conductivity at field capacity K(θ_fc)
-    #     PAR[:,"K(θ_fc)"] .= 2. #insertcols!(copy(soil_discretization), ("K(θ_fc)" => 2.)),
-    # end
-    # if FLAG_MualVanGen == 0
-    #     # Clapp-Hornberger
-    #     PAR = select(soil_discretization,
-    #             :thsat    => :θs,
-    #             :thetaf   => :θf,
-    #             :kf_mmD   => :kf,
-    #             :psif_kPa => :ψf,
-    #             :bexp     => :bexp,
-    #             :wetinf   => :wetinf
-    #             )
-    # end
-
-    # find thickness of maximum root zone
-    # frelden: relative values of final root density per unit volume
-    frelden = soil_discretization[!,"Rootden_"]            # root density
-    dep     = soil_discretization[!,"Upper_m"] - THICK/1000/2 # soil depth [m] (midpoint, i.e. average depth of layer)
-    depmax  = dep[1] - THICK[1] / 1000.
-
-    i1 = findfirst(frelden .> 1.e-6) # first layer where frelden[i] is >=1.e-6
-    i2 = findlast(frelden .> 1.e-6)  # last layer (in 1:NLAYER) where frelden[i] is >=1.e-6
-    if !isnothing(i1) && isnothing(i2)
-        i2 = NLAYER
-    end
-
-    tini = fill(NaN, NLAYER)
-    for i = 1:NLAYER
-        tini[i] = 1.e+20 # initial time for root growth in layer
-        if i >= i1 && i <= i2
-            frelden[i] = max( frelden[i], 1.01e-6)
-        end
-        if frelden[i] >= 1.e-6 && (depmax-dep[i]) <= INITRDEP
-            tini[i] = 0.
-        end
-        if frelden[i] >= 1.e-6 && (depmax-dep[i]) > INITRDEP
-            if RGRORATE > 0
-                tini[i] = (depmax-dep[i]-INITRDEP)/RGRORATE
-            end
-        end
-        # write(*,*)'dep= ',dep[i],' tini= ',tini[i]
-    end
-
-
-    # heat flow -------
-    # nmat   = nrow(input_soil_horizons)
-    if (HEAT != 0) @error "HEAT must be set to zero, as heat balance is not implemented." end
-    #       if (HEAT == 1)
-    #        READ (12,*) Comment
-    #        READ (12,*) tTop, Comment
-    #        tTop=tTop
-    #        READ (12,*) tBot, Comment
-    #        tBot=tBot
-    #        READ (12,*) TopInfT, Comment
-    #        READ (12,*) BotInfT, Comment
-    #        READ (12,*) kTopT, Comment
-    #        READ (12,*) kBotT, Comment
-    #        DO 207 I = 1, 7
-    #         READ (12,*) Comment
-    # 207    CONTINUE
-    #        DO 208 I = 1, nmat
-    #         READ (12,*) ilay, SV[i], OV[i], HB1[i], HB2[i], HB3[i]
-    #         TPar[1,I) = SV[i]
-    #         TPar[2,I) = OV[i]
-    #         TPar[3,I) = THDis
-    # C        thermal conductivities -- transfer from [J m-1 s-1 K-1] to  [J mm-1 d-1 K-1]
-    #         TPar[4,I) = HB1[i] * 86.400
-    #         TPar[5,I) = HB2[i] * 86.400
-    #         TPar[6,I) = HB3[i] * 86.400
-    # C         volumetric heat capacities for solid, water and organic -- transfer from [MJ m-2 mm-1 K-1] to [J mm-3 K-1]
-    #         TPar[7,I) = p_CVSOL   # To define in module_CONSTANTS.jl: p_CVSOL = ?  # CVSOL  - volumetric heat capacity of solid (MJ m-2 mm-1 K-1)
-    #         TPar[8,I) = p_CVORG   # To define in module_CONSTANTS.jl: p_CVORG = ?  # volumetric heat capacity of organic material (MJ m-2 mm-1 K-1) (hillel98)
-    #         TPar[9,I) = LWFBrook90.CONSTANTS.p_CVLQ
-    # 208    CONTINUE
-    #        READ (12,*) C
-    #       end
-
-    # mat       = input_soil_horizons[!,"mat"]
-    # ### # from LWFBrook90R:md_brook90.f95 (lines 105)
-    # TPar = fill(NaN, (nmat, 10))
-    # TPar .= -1
-    # HeatCapOld = fill(NaN, NLAYER)
-    # for i = 1:NLAYER
-    #     HeatCapOld[i] = TPar[mat[i],7] * TPar[mat[i],1] + TPar[mat[i],8]
-    #                 # TPar[2,mat[i])+TPar[9,mat[i])*SWATI[i]/THICK[i]
-    # end
-    ###
-
-    return Dict([
-                ("NLAYER",NLAYER),
-                ("ILAYER",ILAYER),
-                ("QLAYER",QLAYER),
-                ("THICK",THICK),
-                ("PSIM_init",PSIM_init),
-                ("d18O_init",d18O_soil_init),
-                ("d2H_init",d2H_soil_init),
-                ("frelden",frelden),
-                ("SHP", soil_discretization.shp),
-                # ("PAR",PAR),
-                # ("STONEF",STONEF),
-                ("tini",tini)])#,
-                #
-                #("HeatCapOld",HeatCapOld),
-                #("TopInfT", TopInfT)])
+    return (meteo_forcing_cont, meteo_iso_forcing_cont, canopy_evolution_cont)
 end

@@ -1,7 +1,7 @@
 # TODO: maybe move this into a module? on soil discretization?
 
-using DataFrames: DataFrame, rename# ,select
-using DataFramesMeta#: @linq, transform, DataFramesMeta
+#using DataFrames: DataFrame, rename# ,select
+#using DataFramesMeta#: @linq, transform, DataFramesMeta
 
 """
     discretize_soil(folder::String, prefix::String; suffix::String = "")
@@ -64,6 +64,350 @@ function discretize_soil(;
         u_delta2H_init_permil = u_delta2H_init_permil)
 
 end
+
+
+
+
+
+# TODO(bernhard): unite this function with discretize_soil
+"""
+    discretize_soil_params(
+        input_soil_horizons,
+        input_soil_discretization,
+        soil_output_depths,
+        IDEPTH_m,
+        QDEPTH_m,
+        INITRDEP,
+        RGRORATE)
+
+Discretize soil domain into computational layers and attribute soil parameters based on the defined horizons.
+Densify discretization whenever an interface or an additional layer is needed. This is the case for interfaces
+when a new soil horizons begins or an additional computational layer (consisting of upper and lower interfaces)
+when a state variable needs to be extracted at a specified output depth.
+"""
+function discretize_soil_params(
+    input_soil_horizons,
+    input_soil_discretization,
+    soil_output_depths,
+    IDEPTH_m,
+    QDEPTH_m,
+    INITRDEP,
+    RGRORATE)
+
+    # input_soil_horizons =  LWFBrook90.read_path_soil_horizons(
+    #     "test/test-assets/DAV-2020/input-files/DAV_LW1_def_soil_horizons.csv");
+    # input_soil_discretization = LWFBrook90.read_path_soil_discretization
+    # This function maps the input parameters: (input_soil_horizons, ILAYER, QLAYER, INITRDEP, RGRORATE)
+    # onto the soil discretization (input_soil_discretization)
+
+    # input_soil_horizons: A matrix of the 8 soil materials parameters.
+    # input_soil_discretization:
+    # IDEPTH_m depth over which infiltration is distributed, [m] "IDEPTH_m determines the
+    #        number of soil layers over which infiltration is distributed when INFEXP is
+    #        greater than 0."
+    # QDEPTH_m soil depth for SRFL calculation, 0 to prevent SRFL, [m] "QDEPTH_m determines the
+    #        layers over which wetness is calculated to determine source area (SRFL)
+    #        parameters."
+    # INITRDEP
+    # RGRORATE
+
+    ############
+    # 1) Check if discretization needs to be refined
+    # 1a) Find out which layers need to be added
+    layers_to_insert = soil_output_depths
+
+    # ε = 0.001 # thickness of layer to be inserted, [m]
+    # ε = 0.025 # thickness of layer to be inserted, [m]
+    ε = 0.050 # thickness of layer to be inserted, [m]
+
+    needed_interfaces_for_additional_layers = zeros(Float64, 0)
+    for layer in layers_to_insert
+        println(layer)
+        if any(layer .∈ input_soil_discretization.Lower_m)
+            # specific depth is already an interface in the discretization
+            # -> only add a lower interface ε below the upper
+            append!(needed_interfaces_for_additional_layers, round(layer - ε; digits=3))
+        else
+            # specific depth is not yet an interface
+            # -> add upper and lower interface
+            append!(needed_interfaces_for_additional_layers, round(layer;     digits=3))
+            append!(needed_interfaces_for_additional_layers, round(layer - ε; digits=3))
+            # TODO: would technically need to check that no interface between layer and layer + ε
+        end
+    end
+
+    # 1b) Find out which interfaces need to be added
+    all_needed_interfaces = unique(sort(
+        [
+         # interfaces for change in horizons or inflow depths or QDEPTH_m
+         input_soil_horizons[!,"Upper_m"];
+         input_soil_horizons[!,"Lower_m"];
+         -IDEPTH_m; # m (positive) to m (negative)
+         -QDEPTH_m;  # m (positive) to m (negative)
+
+         # interfaces for layers determined in 1a)
+         needed_interfaces_for_additional_layers
+         ];
+        rev = true))
+
+    existing_interfaces = [0; input_soil_discretization[!,"Lower_m"]]
+    to_add = all_needed_interfaces[(!).(all_needed_interfaces .∈ (existing_interfaces,))]
+
+    # Add them to the DataFrame
+    soil_discretization = copy(input_soil_discretization) # otherwise input argument is modified in-place
+    # soil_discretization = input_soil_discretization
+    for interface_to_add in to_add
+        for i in 1:nrow(soil_discretization)
+            condition = interface_to_add > soil_discretization[i, "Lower_m"]
+            #println("$i, interface_to_add:$interface_to_add, $(soil_discretization[i, "Lower_m"]) $condition")
+            if (condition)
+                interface_to_add
+                pos = i+1
+                insert!.(eachcol(soil_discretization),
+                        pos,
+                        Matrix(soil_discretization)[pos-1,:])
+                soil_discretization[pos-1, "Lower_m"] = interface_to_add[1]
+                soil_discretization[pos,   "Upper_m"] = interface_to_add[1]
+                break
+            elseif (i == nrow(soil_discretization))
+                # If interface to add is below the lowest layer: add it only in case it is about ε lower
+                if (interface_to_add >= soil_discretization[i, "Lower_m"] - ε)
+                    pos = i+1
+                    insert!.(eachcol(soil_discretization),
+                        pos,
+                        Matrix(soil_discretization)[pos-1,:])
+                    soil_discretization[pos, "Upper_m"] = soil_discretization[pos-1, "Lower_m"]
+                    soil_discretization[pos, "Lower_m"] = interface_to_add[1]
+                    break
+                end
+            end
+        end
+    end
+
+    # Define ILAYER and QLAYER (to be used internally instead of IDEPTH_m and QDEPTH_m)
+    is_infiltration_layer_BOOLEAN = -IDEPTH_m .<= soil_discretization[!,"Lower_m"]
+    is_SRFL_layer_BOOLEAN         = -QDEPTH_m .<= soil_discretization[!,"Lower_m"]
+    ILAYER = sum(is_infiltration_layer_BOOLEAN) # lowest node where Bottom_m is below IDEPTH_m
+    QLAYER = sum(is_SRFL_layer_BOOLEAN)         # lowest node where Bottom_m is below QDEPTH_m
+
+    if (-IDEPTH_m < soil_discretization[end,"Lower_m"]) ||
+        (-QDEPTH_m < soil_discretization[end,"Lower_m"])
+        @error "QDEPTH_m or IDEPTH_m were defined deeper than the lowest simulation element."
+    end
+    ############
+
+    ############
+    # 2) Append soil horizon data to discretized soil domain
+    # Assert expectations
+    @assert input_soil_horizons[1,"Upper_m"] ≈ 0
+    @assert soil_discretization[1,"Upper_m"] ≈ 0
+    @assert input_soil_horizons[1,"Lower_m"] < 0
+    @assert soil_discretization[1,"Lower_m"] < 0
+
+    # Find for each soil_discretization node in which horizon it lies
+   which_horizon = fill(0, nrow(soil_discretization))
+    for i = 1:nrow(soil_discretization)
+        # For each soil discretizations (i) check to which which horizon it belongs
+        idx = findfirst(soil_discretization[i,"Lower_m"] .>= input_soil_horizons[:,"Lower_m"])
+
+        if (isnothing(idx) && i == nrow(soil_discretization))
+            idx = nrow(input_soil_horizons)
+        end
+
+        which_horizon[i] = input_soil_horizons[idx,"HorizonNr"]
+    end
+    soil_discretization[:,"HorizonNr"] = which_horizon
+
+    # If lowest discretized layer is only ε lower than defined soil horizons extrapolate
+    # the properties of the lowest soil horizon to that infinitesimal thin layer
+    if ( (soil_discretization[end,"HorizonNr"] == 0) &
+        (abs(soil_discretization[end,"Lower_m"] - input_soil_horizons[end,"Lower_m"]) < ε) )
+        soil_discretization[end,"HorizonNr"] = nrow(input_soil_horizons)
+    end
+
+    nlayer_before_join = nrow(soil_discretization)
+    soil_discretization = innerjoin(soil_discretization,
+                                    input_soil_horizons, makeunique=true,
+                                    #select(input_soil_horizons, Not([:Upper_m,:Lower_m])),
+                                    on = :HorizonNr)
+                                    # NOTE: not using leftjoin becaus it transforms types to Union{Missing, Float64} instead of only Float64
+                                    # Therefore, use innerjoin and check manually that no rows in soil_discretization are lost
+    @assert nrow(soil_discretization) == nlayer_before_join """
+        When merging soil properties defined in input CSV-file containing soil horizons, some layers from
+        the soil discretization were lost. This is most likely due to the soil horizons not covering the entire discretization domain.
+        (Note that the discretized domain is defined in a separate input CSV-file.)
+
+        Please check and correct the input files.
+        """
+        # (Note that the discretized domain is defined in a separate input CSV-file and is further extended to include internal variables IDEPTH_m and QDEPTH_m.)
+    ############
+
+    ############
+
+    # hardcoded:
+    HEAT = 0 # flag for heat balance; not implemented; continuous_SPAC.params[:HEAT],
+
+    THICK_m   = soil_discretization[!,"Upper_m"] - soil_discretization[!,"Lower_m"] # thickness of soil layer [m]
+    THICK     = 1000*(THICK_m)                                    # thickness of soil layer [mm]
+    PSIM_init = soil_discretization[!,"uAux_PSIM_init_kPa"]       # initial condition PSIM [kPa]
+    d18O_soil_init = soil_discretization[!,"u_delta18O_init_permil"] # initial condition soil water δ18O [‰]
+    d2H_soil_init  = soil_discretization[!,"u_delta2H_init_permil"]  # initial condition soil water δ2H [‰]
+
+    @assert all(PSIM_init .<= 0) "Initial matrix psi must be negative or zero"
+
+    NLAYER = nrow(soil_discretization)
+
+    for i = 1:NLAYER
+        if (HEAT != 0)
+            @error "HEAT must be set to zero, as heat balance is not implemented."
+        end
+        # if (HEAT == 1)
+        #     # TemperatureNew(i)       = soil_discretization[i,7] we don't have it in the input file!!!
+        #     if i > NLAYER
+        #         MUE[i] = THICK[i] / ( THICK[i] + THICK(I+1) )
+        #         ZL[i]  = 0.5 * ( THICK[i] + THICK(I+1) )
+        #     else
+        #         MUE[i] = 0.5
+        #         ZL[i]  = THICK[i]
+        #     end
+        #     TMean[i]   = 0.
+        # end
+    end
+    ############
+
+    # ############
+    # # 3) Bring to simple vector and matrix form
+
+    # # Parse the stonefraction and hydraulic parameters for each layer
+    # # depending on wheter we use FLAG_MualVanGen ==1 or ==2
+    # # STONEF = [shp.p_STONEF for shp in soil_discretization.shp] # soil_discretization[:,"gravel_volFrac"]
+    # # [shp.p_THSAT  for shp in soil_discretization.shp] # ths_volFrac
+    # # [shp.p_θr     for shp in soil_discretization.shp] # thr_volFrac
+    # # [shp.p_MvGα   for shp in soil_discretization.shp] # alpha_perMeter
+    # # [shp.p_MvGn   for shp in soil_discretization.shp] # npar_
+    # # [shp.p_KSAT   for shp in soil_discretization.shp] # ksat_mmDay
+    # # [shp.p_MvGl   for shp in soil_discretization.shp] # tort_
+    # # [shp.p_STONEF for shp in soil_discretization.shp] # gravel_volFrac)
+    # if FLAG_MualVanGen == 1
+    #     # Mualem-van Genuchten
+    #     PAR = select(soil_discretization,
+    #             :ths_volFrac    => :θs,
+    #             :ksat_mmDay     => :Ksat,
+    #             :alpha_perMeter => :α,
+    #             :npar_          => :n,
+    #             :tort_          => :tort,
+    #             :thr_volFrac    => :θr
+    #             )
+    #     # ..it's a sin......
+    #     # Hard default of 2 [mm d-1] for saturated hydraulic conductivity at field capacity K(θ_fc)
+    #     PAR[:,"K(θ_fc)"] .= 2. #insertcols!(copy(soil_discretization), ("K(θ_fc)" => 2.)),
+    # end
+    # if FLAG_MualVanGen == 0
+    #     # Clapp-Hornberger
+    #     PAR = select(soil_discretization,
+    #             :thsat    => :θs,
+    #             :thetaf   => :θf,
+    #             :kf_mmD   => :kf,
+    #             :psif_kPa => :ψf,
+    #             :bexp     => :bexp,
+    #             :wetinf   => :wetinf
+    #             )
+    # end
+
+    # find thickness of maximum root zone
+    # frelden: relative values of final root density per unit volume
+    frelden = soil_discretization[!,"Rootden_"]            # root density
+    dep     = soil_discretization[!,"Upper_m"] - THICK/1000/2 # soil depth [m] (midpoint, i.e. average depth of layer)
+    depmax  = dep[1] - THICK[1] / 1000.
+
+    i1 = findfirst(frelden .> 1.e-6) # first layer where frelden[i] is >=1.e-6
+    i2 = findlast(frelden .> 1.e-6)  # last layer (in 1:NLAYER) where frelden[i] is >=1.e-6
+    if !isnothing(i1) && isnothing(i2)
+        i2 = NLAYER
+    end
+
+    tini = fill(NaN, NLAYER)
+    for i = 1:NLAYER
+        tini[i] = 1.e+20 # initial time for root growth in layer
+        if i >= i1 && i <= i2
+            frelden[i] = max( frelden[i], 1.01e-6)
+        end
+        if frelden[i] >= 1.e-6 && (depmax-dep[i]) <= INITRDEP
+            tini[i] = 0.
+        end
+        if frelden[i] >= 1.e-6 && (depmax-dep[i]) > INITRDEP
+            if RGRORATE > 0
+                tini[i] = (depmax-dep[i]-INITRDEP)/RGRORATE
+            end
+        end
+        # write(*,*)'dep= ',dep[i],' tini= ',tini[i]
+    end
+
+
+    # heat flow -------
+    # nmat   = nrow(input_soil_horizons)
+    if (HEAT != 0) @error "HEAT must be set to zero, as heat balance is not implemented." end
+    #       if (HEAT == 1)
+    #        READ (12,*) Comment
+    #        READ (12,*) tTop, Comment
+    #        tTop=tTop
+    #        READ (12,*) tBot, Comment
+    #        tBot=tBot
+    #        READ (12,*) TopInfT, Comment
+    #        READ (12,*) BotInfT, Comment
+    #        READ (12,*) kTopT, Comment
+    #        READ (12,*) kBotT, Comment
+    #        DO 207 I = 1, 7
+    #         READ (12,*) Comment
+    # 207    CONTINUE
+    #        DO 208 I = 1, nmat
+    #         READ (12,*) ilay, SV[i], OV[i], HB1[i], HB2[i], HB3[i]
+    #         TPar[1,I) = SV[i]
+    #         TPar[2,I) = OV[i]
+    #         TPar[3,I) = THDis
+    # C        thermal conductivities -- transfer from [J m-1 s-1 K-1] to  [J mm-1 d-1 K-1]
+    #         TPar[4,I) = HB1[i] * 86.400
+    #         TPar[5,I) = HB2[i] * 86.400
+    #         TPar[6,I) = HB3[i] * 86.400
+    # C         volumetric heat capacities for solid, water and organic -- transfer from [MJ m-2 mm-1 K-1] to [J mm-3 K-1]
+    #         TPar[7,I) = p_CVSOL   # To define in module_CONSTANTS.jl: p_CVSOL = ?  # CVSOL  - volumetric heat capacity of solid (MJ m-2 mm-1 K-1)
+    #         TPar[8,I) = p_CVORG   # To define in module_CONSTANTS.jl: p_CVORG = ?  # volumetric heat capacity of organic material (MJ m-2 mm-1 K-1) (hillel98)
+    #         TPar[9,I) = LWFBrook90.CONSTANTS.p_CVLQ
+    # 208    CONTINUE
+    #        READ (12,*) C
+    #       end
+
+    # mat       = input_soil_horizons[!,"mat"]
+    # ### # from LWFBrook90R:md_brook90.f95 (lines 105)
+    # TPar = fill(NaN, (nmat, 10))
+    # TPar .= -1
+    # HeatCapOld = fill(NaN, NLAYER)
+    # for i = 1:NLAYER
+    #     HeatCapOld[i] = TPar[mat[i],7] * TPar[mat[i],1] + TPar[mat[i],8]
+    #                 # TPar[2,mat[i])+TPar[9,mat[i])*SWATI[i]/THICK[i]
+    # end
+    ###
+
+    return Dict([
+                ("NLAYER",NLAYER),
+                ("ILAYER",ILAYER),
+                ("QLAYER",QLAYER),
+                ("THICK",THICK),
+                ("PSIM_init",PSIM_init),
+                ("d18O_init",d18O_soil_init),
+                ("d2H_init",d2H_soil_init),
+                ("frelden",frelden),
+                ("SHP", soil_discretization.shp),
+                # ("PAR",PAR),
+                # ("STONEF",STONEF),
+                ("tini",tini)])#,
+                #
+                #("HeatCapOld",HeatCapOld),
+                #("TopInfT", TopInfT)])
+end
+
+
+
 
 
 """

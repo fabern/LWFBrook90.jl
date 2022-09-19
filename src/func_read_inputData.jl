@@ -25,9 +25,17 @@ suffix = ""; simulate_isotopes = true;
 
 function SPAC(folder::String, prefix::String;
     suffix::String = "",
-    simulate_isotopes::Bool = true)
+    simulate_isotopes::Bool = true,
+    compute_intermediate_quantities::Bool = true)
 
-    ## A) Define paths of all input files
+    ## Define solver options
+    solver_options =
+        (#Reset                           = false, # currently only Reset = 0 implemented
+         compute_intermediate_quantities = true,   # Flag whether ODE containes additional quantities than only states
+         simulate_isotopes               = simulate_isotopes
+        )
+
+    ## Define paths of all input files
     input_file_XXXX = prefix*"_XXXX"*suffix*".csv"
     path_meteoveg           = joinpath(folder, replace(input_file_XXXX, "XXXX" => "meteoveg"))
     path_param              = joinpath(folder, replace(input_file_XXXX, "XXXX" => "param"))
@@ -47,7 +55,14 @@ function SPAC(folder::String, prefix::String;
 
     ## Load time- and/or space-varying vegetation parameters
     canopy_evolution, root_distribution = init_vegetation(input_file_XXXX) #(reference_date, tspan, ...)
-    if (isnothing(nothing))
+    if (!isnothing(canopy_evolution))
+        @assert keys(input_meteoveg) """
+                Input_meteoveg contains one of the columns: :DENSEF, :HEIGHT, :LAI, or :SAI, but
+                in that case we would expect canopy_evolution loaded with `init_vegetation` to be `nothing`.
+                Please check your input files and possibly contact the developer team if the error persists.
+                """
+        # TODO(bernharf): generate a canopy_evolution or canopy_evolution_cont
+    elseif (isnothing(canopy_evolution))
         canopy_evolution = input_meteoveg[:, [:days, :DENSEF, :HEIGHT, :LAI, :SAI]]
     end
 
@@ -55,32 +70,41 @@ function SPAC(folder::String, prefix::String;
     continuousIC = init_IC(path_initial_conditions; simulate_isotopes)
 
     ## Load model input parameters
-    params = init_param(path_param; simulate_isotopes = simulate_isotopes)
+    params, solver_opts = init_param(path_param; simulate_isotopes = simulate_isotopes)
 
-    # return SPAC(reference_date, tspan, meteo_forcing, meteo_iso_forcing, storm_durations,
-    #             soil_horizons, canopy_evolution, root_distribution, continuousIC, params)
+    solver_options = merge(solver_options, solver_opts) # append to manually provided solver options
+
+    ## Make time dependent input parameters continuous in time (interpolate)
+    (meteo_forcing_cont, meteo_iso_forcing_cont, canopy_evolution_cont) =
+        LWFBrook90.interpolate_meteoveg(;
+            meteo_forcing                 = meteo_forcing,
+            meteo_iso_forcing             = meteo_iso_forcing,
+            canopy_evolution              = canopy_evolution,
+            p_MAXLAI                      = params[:MAXLAI],
+            p_SAI_baseline_               = params[:SAI_baseline_],
+            p_DENSEF_baseline_            = params[:DENSEF_baseline_],
+            p_AGE_baseline_yrs            = params[:AGE_baseline_yrs],
+            p_HEIGHT_baseline_m           = params[:HEIGHT_baseline_m]);
+            # TODO: remove from params: :MAXLAI, :SAI_baseline_, :DENSEF_baseline_, :AGE_baseline_yrs, :HEIGHT_baseline_m
+            ## unused:
+            ## time_interpolated.REFERENCE_DATE # TODO(bernharf): remove references to REFERENCE_DATE
+    # Note that the continuous versions can easily be discretized again by doing:
+        # keys(model.meteo_forcing);     DataFrame(model.meteo_forcing)
+        # keys(model.meteo_iso_forcing); DataFrame(model.meteo_iso_forcing)
+        # keys(model.canopy_evolution);  DataFrame(model.canopy_evolution)
+
     return SPAC(;
         reference_date    = reference_date,
         tspan             = tspan,
-        meteo_forcing     = meteo_forcing,
-        meteo_iso_forcing = meteo_iso_forcing,
+        meteo_forcing     = meteo_forcing_cont,
+        meteo_iso_forcing = meteo_iso_forcing_cont,
         storm_durations   = storm_durations,
         soil_horizons     = soil_horizons,
-        canopy_evolution  = canopy_evolution,
+        canopy_evolution  = canopy_evolution_cont,
         root_distribution = root_distribution,
         continuousIC      = continuousIC,
-        params            = params)
-
-    # input_initial_conditions = continuousIC.scalar
-    # return (input_meteoveg, # note this contains both meteo_forcing and canopy_evolution
-    #     meteo_iso_forcing,
-    #     reference_date,
-    #     params,
-    #     storm_durations,
-    #     input_initial_conditions,
-    #     soil_horizons,
-    #     # simOption_FLAG_MualVanGen
-    #     )
+        params            = params,
+        solver_options    = solver_options) # Note: unclear whether solver_options should be part of SPAC() or DiscretizedSPAC()
 end
 
 ######################
@@ -221,7 +245,7 @@ function init_soil(path_soil_horizons)
 end
 
 function init_param(path_param; simulate_isotopes = true)
-    read_path_param(path_param; simulate_isotopes = simulate_isotopes)
+    input_param, solver_opts = read_path_param(path_param; simulate_isotopes = simulate_isotopes)
 end
 
 # path_meteoveg = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_meteoveg.csv"
@@ -510,26 +534,27 @@ function read_path_param(path_param; simulate_isotopes::Bool = false)
     #     delete!(parsing_types, "TODO2")
     # end
 
-    input_param = DataFrame(File(path_param;
+    input_param_df = DataFrame(File(path_param;
         transpose=true, drop=[1], comment = "###",
         # Be strict about loading NA's -> error if NA present
         types = parsing_types, missingstring = nothing, strict=true))
 
     expected_names = [String(k) for k in keys(parsing_types)]
-    assert_colnames_as_expected(input_param, path_param, expected_names)
+    assert_colnames_as_expected(input_param_df, path_param, expected_names)
 
     # Set minimum/maximum values
     # from LWFBrook90R:PFILE.h
-    input_param[:,:FXYLEM]  = min.(input_param[:,:FXYLEM], 0.990)
-    input_param[:,:INITRLEN] = max.(input_param[:,:INITRLEN], 0.010)
-    input_param[:,:INITRDEP] = max.(input_param[:,:INITRDEP], 0.010)
+    input_param_df[:,:FXYLEM]  = min.(input_param_df[:,:FXYLEM], 0.990)
+    input_param_df[:,:INITRLEN] = max.(input_param_df[:,:INITRLEN], 0.010)
+    input_param_df[:,:INITRDEP] = max.(input_param_df[:,:INITRDEP], 0.010)
 
     # Impose type of Float64 instead of Float64?
-    disallowmissing!(input_param)
+    disallowmissing!(input_param_df)
     # Transform to NamedTuple
-    input_param = NamedTuple(input_param[1, :])
+    input_param    = NamedTuple(input_param_df[1, Not([:DTIMAX, :DSWMAX, :DPSIMAX])])
+    solver_opts    = NamedTuple(input_param_df[1, [:DTIMAX, :DSWMAX, :DPSIMAX]])
 
-    return input_param
+    return input_param, solver_opts
 end
 
 # path_storm_durations = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_meteo_storm_durations.csv"

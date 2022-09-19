@@ -19,7 +19,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
     # Define simulation model by reading in system definition and input data
     simulate_isotopes = true
     model = SPAC(input_path, input_prefix;
-                      simulate_isotopes = simulate_isotopes);
+                simulate_isotopes = simulate_isotopes);
     ####################
 
     ####################
@@ -31,8 +31,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
         Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5)]; # grid spacing (heterogenous), meter (N=20)
     end
 
-
-    simulation = LWFBrook90.discretize(model, Δz_m);
+    simulation = LWFBrook90.discretize(model; Δz = Δz_m);
         # TODO: still to use:
         model.root_distribution # e.g. β_root
         model.continuousIC.soil
