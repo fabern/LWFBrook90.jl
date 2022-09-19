@@ -23,7 +23,7 @@ if basename(pwd()) != "test"; cd("test"); end
     @test shp.p_STONEF ≈ 1.0
 
     # Test generating an array of MualemVanGenuchtenSHP'S
-    soil_horizons, _ = LWFBrook90.read_path_soil_horizons(
+    soil_horizons = LWFBrook90.read_path_soil_horizons(
         "test-assets/DAV-2020/input-files/DAV_LW1_def_soil_horizons.csv");
 
     @test [shp.p_THSAT  for shp in soil_horizons.shp] ≈ [0.3786, 0.3786, 0.3786]
@@ -123,7 +123,7 @@ end
     input_soil_discretization = DataFrame(Upper_m = -(0.:8.), Lower_m = -(1.:9.),
                                 Rootden_ = (1:9) ./ 10, uAux_PSIM_init_kPa = -6.0,
                                 u_delta18O_init_permil = NaN, u_delta2H_init_permil = NaN)
-    # input_soil_horizons, _ = LWFBrook90.read_path_soil_horizons(
+    # input_soil_horizons = LWFBrook90.read_path_soil_horizons(
     #     "test-assets/DAV-2020/input-files/DAV_LW1_def_soil_horizons.csv");
     input_soil_horizons =
         DataFrame(HorizonNr = 1:5, Upper_m = -[0.,3,8,10,15], Lower_m = -[3.,8,10,15,20],
@@ -140,7 +140,7 @@ end
     # FLAG_MualVanGen = 0
 
     soil_disc = LWFBrook90.discretize_soil_params(
-        input_soil_horizons, input_soil_discretization, [], IDEPTH_m, QDEPTH_m, INITRDEP, RGRORATE, FLAG_MualVanGen)
+        input_soil_horizons, input_soil_discretization, [], IDEPTH_m, QDEPTH_m, INITRDEP, RGRORATE)
 
     @test soil_disc["NLAYER"] == 10
     @test soil_disc["THICK"]  ≈ [45.0, 955.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0]
@@ -216,23 +216,14 @@ end
             [fill(0.01, 200);]
         ]
 @testset "pointers-to-elements-of-u0 (Δz_m = $(first(Δz_m)))" for Δz_m in Δz_m_data # source: https://stackoverflow.com/a/63871951
-    simulate_isotopes = true
-    compute_intermediate_quantities = true; # Flag whether ODE containes additional quantities than only states
 
-    (input_meteoveg,
-        input_meteoiso,
-        input_meteoveg_reference_date,
-        input_param,
-        input_storm_durations,
-        input_initial_conditions,
-        input_soil_horizons,
-        simOption_FLAG_MualVanGen) = read_inputData("test-assets/Hammel-2001/input-files-ISO/",
-                                                    "Hammel_loam-NLayer-103-RESET=FALSE";
-                                                    simulate_isotopes = simulate_isotopes);
+    continuous_SPAC = SPAC("test-assets/Hammel-2001/input-files-ISO/",
+                      "Hammel_loam-NLayer-103-RESET=FALSE";
+                      simulate_isotopes = simulate_isotopes);
     f1 = (Δz_m) -> LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)  # function for root density as f(Δz)
     f2 = (Δz_m) -> fill(-6.3, length(Δz_m))          # function for initial conditions as f(Δz)
 
-    input_soil_discretization = discretize_soil(;
+    soil_discretization = discretize_soil(;
         Δz_m = Δz_m,
         Rootden_ = f1,
         uAux_PSIM_init_kPa = f2,
@@ -240,21 +231,32 @@ end
         u_delta2H_init_permil  = ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.))
 
     # Define parameters for differential equation
-    (ψM_initial,δ18O_initial,δ2H_initial), p = define_LWFB90_p(
-        input_meteoveg,
-        input_meteoiso,
-        input_meteoveg_reference_date,
-        input_param,
-        input_storm_durations,
-        input_soil_horizons,
-        input_soil_discretization,
-        simOption_FLAG_MualVanGen;
-        compute_intermediate_quantities = compute_intermediate_quantities,
-        simulate_isotopes = simulate_isotopes);
+    solver_options =
+        (Reset                           = false, # currently only Reset = 0 implemented
+         compute_intermediate_quantities = true,  # Flag whether ODE containes additional quantities than only states
+         simulate_isotopes               = !isnothing(continuous_SPAC.meteo_iso_forcing)
+        )
+    (ψM_initial, δ18O_initial, δ2H_initial), p = define_LWFB90_p(
+        innerjoin(continuous_SPAC.meteo_forcing, continuous_SPAC.canopy_evolution, on = :days),
+        continuous_SPAC.meteo_iso_forcing,
+        continuous_SPAC.reference_date,
+        continuous_SPAC.params,
+        continuous_SPAC.storm_durations,
+        continuous_SPAC.soil_horizons,
+        soil_discretization;
+        Reset                           = solver_options.Reset,
+        compute_intermediate_quantities = solver_options.compute_intermediate_quantities,
+        simulate_isotopes = simulate_isotopes,
+        # soil_output_depths = [-0.35, -0.42, -0.48, -1.05]
+        # soil_output_depths = collect(-0.05:-0.05:-1.1)
+    )
+
     # Create u0 for DiffEq.jl
-    u0, p = define_LWFB90_u0(p, input_initial_conditions,
+    u0, p = define_LWFB90_u0(
+        p,
+        continuous_SPAC.continuousIC.scalar,
         ψM_initial, δ18O_initial, δ2H_initial,
-        compute_intermediate_quantities;
+        solver_options.compute_intermediate_quantities;
         simulate_isotopes = simulate_isotopes);
 
     # Assert that the pointers to the rows of u are correct and unique:

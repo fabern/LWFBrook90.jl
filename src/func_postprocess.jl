@@ -272,7 +272,7 @@ end
     # NOTE: --> sets attributes only when they don't already exist
     # NOTE: :=  sets attributes even when they already exist
     # link := :x #TODO(bernhard): link doesn't seem to work...
-    layout --> (5, 1)
+    layout --> (6, 1)
     # using layout because @layout is unsupported: https://github.com/JuliaPlots/RecipesBase.jl/issues/15
     # TODO(bernhard): find an easy way to do: l = @layout [grid(2, 1, heights=[0.2, 0.8]) a{0.055w}]
     # Possibly it needs to be provided when calling `plot_LWFBrook90_isotopes(... ; layout = ...)`

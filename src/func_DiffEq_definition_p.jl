@@ -23,8 +23,7 @@ function define_LWFB90_p(
     input_param,
     input_storm_durations,
     input_soil_horizons,
-    input_soil_discretization,
-    simOption_FLAG_MualVanGen;
+    input_soil_discretization;
     Reset = false,# TODO(bernhard): remove this
     compute_intermediate_quantities = false,
     simulate_isotopes::Bool = false,
@@ -41,8 +40,7 @@ function define_LWFB90_p(
             input_param[:IDEPTH_m],
             input_param[:QDEPTH_m],
             input_param[:INITRDEP],
-            input_param[:RGRORATE],
-            simOption_FLAG_MualVanGen)
+            input_param[:RGRORATE])
 
     interpolated_meteoveg =
         LWFBrook90.interpolate_meteoveg(
@@ -239,10 +237,10 @@ function define_LWFB90_p(
     # THICK(1 To ML) (Soil parameter) - layer thicknesses, mm. THICK is the vertical thickness of each soil layer. Each layer can have a different thickness, but the number of iterations goes up as the thickness of any layer goes down. THICK should probably not be less than 50 mm unless run time is not important. [see EVP-PLNTRES] [see KPT] [see WAT-VERT]
 
     ## Soil hydraulics
-    FLAG_MualVanGen = simOption_FLAG_MualVanGen # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
     p_RSSA   = input_param[:RSSA] # Soil evaporation resistance (RSS) at field capacity, s/m (BROOK90: RSSA is fixed at 500 s/m following Shuttleworth and Gurney (1990))
     p_RSSB   = input_param[:RSSB] # Exponent in relation of soil evaporation resistance (RSS) to soil water potential (PSIM) in the top layer, dimensionless, (BROOK90: RSSB is fixed at 1.0, which makes RSS directly proportional to PSIM)
     # TODO(bernharf): get rid of this and simply use the vector of AbstractSoilHydraulicParams...
+    FLAG_MualVanGen = typeof(input_soil_horizons[1,:shp]) == LWFBrook90.KPT.MualemVanGenuchtenSHP # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
     if FLAG_MualVanGen == 0
         p_soil = LWFBrook90.KPT.KPT_SOILPAR_Ch1d(;
             p_THICK = p_THICK,
@@ -655,8 +653,7 @@ end
         IDEPTH_m,
         QDEPTH_m,
         INITRDEP,
-        RGRORATE,
-        FLAG_MualVanGen)
+        RGRORATE)
 
 Discretize soil domain into computational layers and attribute soil parameters based on the defined horizons.
 Densify discretization whenever an interface or an additional layer is needed. This is the case for interfaces
@@ -670,9 +667,11 @@ function discretize_soil_params(
     IDEPTH_m,
     QDEPTH_m,
     INITRDEP,
-    RGRORATE,
-    FLAG_MualVanGen)
+    RGRORATE)
 
+    # input_soil_horizons =  LWFBrook90.read_path_soil_horizons(
+    #     "test/test-assets/DAV-2020/input-files/DAV_LW1_def_soil_horizons.csv");
+    # input_soil_discretization = LWFBrook90.read_path_soil_discretization
     # This function maps the input parameters: (input_soil_horizons, ILAYER, QLAYER, INITRDEP, RGRORATE)
     # onto the soil discretization (input_soil_discretization)
 

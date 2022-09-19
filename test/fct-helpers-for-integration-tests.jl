@@ -35,6 +35,10 @@ function prepare_θψδ_from_sim_and_reference(;
         # path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-27-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv"
         # path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand_ISO2"
         # simulate_isotopes   = true
+        # path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_sand-NLayer-27-RESET=FALSE"; simulate_isotopes   = false
+        # path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-27-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv"
+        # path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand_ISO2"
+
     # Run  simulation
         # cd("test")
     sim_sol, _, _ = run_simulation([dirname(path_jl_prefix),
@@ -267,11 +271,11 @@ function prepare_sim_and_ref_for_BEA_2016(
     input_prefix; NLAYERBASE = 7)
     # folder_with_sim_input_and_ref_output = "test-assets/BEA-2016"
     # input_prefix = "BEA2016-reset-FALSE"
+    # NLAYERBASE = 7
 
     # Run  simulation
     sim_sol, _, _ = run_simulation(
-        [joinpath(folder_with_sim_input_and_ref_output, "input-files/"),
-        input_prefix]
+        [joinpath(folder_with_sim_input_and_ref_output, "input-files/") input_prefix "false"]
         );
     # sim_sol, _, _ = run_simulation(
     #     [joinpath(folder_with_sim_input_and_ref_output, "input-files/"),

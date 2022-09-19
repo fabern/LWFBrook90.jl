@@ -35,7 +35,10 @@ function solve_LWFB90(u0, tspan, p)
                     p,
                     callback=cb_func)
 
-    # 2) Define workarounds to accomodate a state vector (array) that contains NAs
+    solve_LWFB90(ode_LWFBrook90)
+end
+function solve_LWFB90(ode::ODEProblem)
+   # 1) Define workarounds to accomodate a state vector (array) that contains NAs
     # E.g. concentrations are undefined when a compartment is empty (e.g. SNOW = 0mm, δ_SNOW = NA)
     # a) stability check
     # b) norm for adaptive time stepping
@@ -66,9 +69,10 @@ function solve_LWFB90(u0, tspan, p)
         # methods(norm_to_use)
         # methods(DiffEqBase.ODE_DEFAULT_NORM)
 
-    # 3) Solve the system
+    # 2) Solve the system
+    tspan = ode.tspan
     saveat = tspan[1]:tspan[2]
-    @time sol_LWFBrook90 = solve(ode_LWFBrook90, Tsit5();
+    @time sol_LWFBrook90 = solve(ode, Tsit5();
         progress       = true,
         saveat         = saveat,
         unstable_check = unstable_check_function,

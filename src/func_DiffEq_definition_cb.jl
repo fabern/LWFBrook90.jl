@@ -881,7 +881,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         ################
         ################
         ################
-        # SOLVING VARIANT A (Braud et al. 2005, implicit time stepping) -> has a bug as it seems unstable
+        # SOLVING VARIANT A (Braud et al. 2005, implicit time stepping) -> has a bug as it seems unstable (<- might it be linked to not using an upwind scheme?)
             # # #TODO(bernhard): for debugging of my adaptation of Braud et al. 2005 try
             # #                  to make a mistake and see if the solution becomes more
             # #                  stable if we do (mistake on purpose!)
@@ -1110,6 +1110,8 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         diff¹⁸O_low .= [   (D_¹⁸O_ᵏ⁺¹[1:NLAYER-1] + D_¹⁸O_ᵏ⁺¹[2:NLAYER]) /2; 0]  .* [   [(C_¹⁸Oᵏ[i] - C_¹⁸Oᵏ[i-1]) / dz[i-1] for i ∈ 2:length(C_¹⁸Oᵏ)]; 0] # flux in m/d (D: m2/d, dx/dz: m-1)
         diff²H_upp  .= [0; (D_²H_ᵏ⁺¹[1:NLAYER-1]  + D_²H_ᵏ⁺¹[2:NLAYER] ) /2]     .* [0; [(C_²Hᵏ[i]  - C_²Hᵏ[i-1] ) / dz[i-1] for i ∈ 2:length(C_²Hᵏ )]]    # flux in m/d (D: m2/d, dx/dz: m-1)
         diff²H_low  .= [   (D_²H_ᵏ⁺¹[1:NLAYER-1]  + D_²H_ᵏ⁺¹[2:NLAYER] ) /2; 0]  .* [   [(C_²Hᵏ[i]  - C_²Hᵏ[i-1] ) / dz[i-1] for i ∈ 2:length(C_²Hᵏ )]; 0] # flux in m/d (D: m2/d, dx/dz: m-1)
+
+        # TODO(bernhard): below C's are not at interface but in the middle of the cell... best would be to use an upwind scheme and use the correct C based on the sign of aux_du_VRFLI
         #                     q_at_interface                                    .*   C_at_interface
         qCᵢ¹⁸O_upp  .= [0; aux_du_VRFLI[1:(NLAYER-1)]] .* [0; C_¹⁸Oᵏ[1:(NLAYER-1)]]
         qCᵢ¹⁸O_low  .=     aux_du_VRFLI[1:(NLAYER)]    .*     C_¹⁸Oᵏ[1:(NLAYER)]

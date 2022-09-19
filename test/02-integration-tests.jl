@@ -374,7 +374,7 @@ end
     # θ:
     @test RMS_differences(sim.θ, ref_NLAYER7.θ) < 0.007
     # ψ:
-    @test RMS_differences(sim.ψ, ref_NLAYER7.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.08,1.6)
+    @test RMS_differences(sim.ψ, ref_NLAYER7.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.097,1.6)
     # "GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)", (not done for: "CC (MJ/m2)" "SNOWLQ (mm)"]):
     @test RMS_differences(sim.above[Not(1),[:time,:GWAT, :INTS, :INTR, :SNOW]],
                             ref_NLAYER7.above[Not(end),[:time, :gwat,:ints,:intr,:snow]]) < 0.016

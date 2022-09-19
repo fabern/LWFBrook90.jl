@@ -82,7 +82,7 @@ is_a_CI_system = issubset(["GITHUB_ACTION"], collect(keys(ENV))) # checks if ENV
         git_status_string = "__git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
             ifelse(length(Base.read(`git status --porcelain`, String))==0, "+gitclean","+gitdirty")*
             "__"
-        savefig(plot(pl_final, size=(1000,1400), dpi=300, link=:x),
+        savefig(plot(pl_final, size=(1000,1400), dpi=300, link=:x, rightmargin = 10mm),
                 replace(fname, ".jld2"=>git_status_string*".png"))
     end
 end
