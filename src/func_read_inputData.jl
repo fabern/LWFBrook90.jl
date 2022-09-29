@@ -54,10 +54,13 @@ function SPAC(folder::String, prefix::String;
     soil_horizons = init_soil(path_soil_horizons)
 
     ## Load time- and/or space-varying vegetation parameters
-    canopy_evolution, root_distribution = init_vegetation(input_file_XXXX) #(reference_date, tspan, ...)
+    canopy_evolution, root_distribution = init_vegetation(joinpath(folder,input_file_XXXX)) #(reference_date, tspan, ...)
     if (!isnothing(canopy_evolution))
-        @assert keys(input_meteoveg) """
-                Input_meteoveg contains one of the columns: :DENSEF, :HEIGHT, :LAI, or :SAI, but
+        @assert !("DENSEF" in names(input_meteoveg) ||
+                "HEIGHT" in names(input_meteoveg) ||
+                "LAI" in names(input_meteoveg) ||
+                "SAI" in names(input_meteoveg)) """
+                Input_meteoveg contains one or multiple of the columns: :DENSEF, :HEIGHT, :LAI, or :SAI, but
                 in that case we would expect canopy_evolution loaded with `init_vegetation` to be `nothing`.
                 Please check your input files and possibly contact the developer team if the error persists.
                 """
@@ -214,7 +217,7 @@ function init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes = t
 end
 
 function init_vegetation(input_file_XXXX)
-    path_soil_discretization = joinpath(folder, replace(input_file_XXXX, "XXXX" => "soil_discretization"))
+    path_soil_discretization = replace(input_file_XXXX, "XXXX" => "soil_discretization")
 
     canopy_evolution  = nothing                  # if set to nothing input_meteoveg will be used
     root_distribution = path_soil_discretization # if set to a path, this will be loaded when discretizing the soil domain

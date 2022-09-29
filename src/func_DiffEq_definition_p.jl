@@ -10,28 +10,10 @@ Generate vector p needed for ODE() problem in DiffEq.jl package.
 - `simulate_isotopes::...`: TODO argument description.
 - `soil_output_depths`: vector of depths at which state variables should be extractable (negative numeric values [in meter])
 """
-function define_LWFB90_p(continuous_SPAC::SPAC, input_soil_discretization;
-    soil_output_depths = zeros(Float64, 0), # constant_dt_solver = 1
-    )
-
+function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr)
     ########
-    ## Discretize soil parameters and interpolate discretized root distribution
-    # TODO::: path_soil_discretization
-    # Use:
-    continuous_SPAC.root_distribution # e.g. β_root
-    continuous_SPAC.continuousIC.soil
-
-    soil_discr =
-        LWFBrook90.discretize_soil_params(
-            continuous_SPAC.soil_horizons,
-            input_soil_discretization,
-            soil_output_depths,
-            continuous_SPAC.params[:IDEPTH_m],
-            continuous_SPAC.params[:QDEPTH_m],
-            continuous_SPAC.params[:INITRDEP],
-            continuous_SPAC.params[:RGRORATE])
-
-    p_RELDEN = LWFBrook90.interpolate_spaceDiscretized_root_density(;
+    ## Interpolate discretized root distribution
+     p_RELDEN = LWFBrook90.interpolate_spaceDiscretized_root_density(;
         timepoints = continuous_SPAC.meteo_forcing.p_days,
         p_AGE      = continuous_SPAC.canopy_evolution.p_AGE,
         p_INITRDEP = continuous_SPAC.params[:INITRDEP],
@@ -445,8 +427,7 @@ function define_LWFB90_p(continuous_SPAC::SPAC, input_soil_discretization;
         )
 
     # 3) Return different types of parameters as a single object
-    return ((soil_discr["PSIM_init"], soil_discr["d18O_init"],soil_discr["d2H_init"]),
-            (p_cst, p_fT, p_fu, p_cache))
+    return (p_cst, p_fT, p_fu, p_cache)
 end
 
 

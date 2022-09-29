@@ -139,7 +139,7 @@ end
     FLAG_MualVanGen = 1
     # FLAG_MualVanGen = 0
 
-    soil_disc = LWFBrook90.discretize_soil_params(
+    soil_disc = LWFBrook90.refine_soil_discretization(
         input_soil_horizons, input_soil_discretization, [], IDEPTH_m, QDEPTH_m, INITRDEP, RGRORATE)
 
     @test soil_disc["NLAYER"] == 10
@@ -229,34 +229,27 @@ end
         u_delta18O_init_permil = ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.),
         u_delta2H_init_permil  = ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.))
 
+    # Define refinement of grid with soil_output_depths
+    soil_output_depths = soil_output_depths = zeros(Float64, 0)
+    soil_discr =
+        LWFBrook90.refine_soil_discretization(
+            continuous_SPAC.soil_horizons,
+            soil_discretization,
+            soil_output_depths,
+            continuous_SPAC.params[:IDEPTH_m],
+            continuous_SPAC.params[:QDEPTH_m],
+            continuous_SPAC.params[:INITRDEP],
+            continuous_SPAC.params[:RGRORATE])
     # Define parameters for differential equation
-    solver_options =
-        (Reset                           = false, # currently only Reset = 0 implemented
-         compute_intermediate_quantities = true,  # Flag whether ODE containes additional quantities than only states
-         simulate_isotopes               = !isnothing(continuous_SPAC.meteo_iso_forcing)
-        )
-    (ψM_initial, δ18O_initial, δ2H_initial), p = define_LWFB90_p(
-        innerjoin(continuous_SPAC.meteo_forcing, continuous_SPAC.canopy_evolution, on = :days),
-        continuous_SPAC.meteo_iso_forcing,
-        continuous_SPAC.reference_date,
-        continuous_SPAC.params,
-        continuous_SPAC.storm_durations,
-        continuous_SPAC.soil_horizons,
-        soil_discretization;
-        Reset                           = solver_options.Reset,
-        compute_intermediate_quantities = solver_options.compute_intermediate_quantities,
-        simulate_isotopes = !isnothing(continuous_SPAC.meteo_iso_forcing),
-        # soil_output_depths = [-0.35, -0.42, -0.48, -1.05]
-        # soil_output_depths = collect(-0.05:-0.05:-1.1)
-    )
+    p = define_LWFB90_p(continuous_SPAC, soil_discr)
 
     # Create u0 for DiffEq.jl
     u0, p = define_LWFB90_u0(
         p,
         continuous_SPAC.continuousIC.scalar,
-        ψM_initial, δ18O_initial, δ2H_initial,
-        solver_options.compute_intermediate_quantities;
-        simulate_isotopes = !isnothing(continuous_SPAC.meteo_iso_forcing));
+        soil_discr["PSIM_init"], soil_discr["d18O_init"], soil_discr["d2H_init"],
+        continuous_SPAC.solver_options.compute_intermediate_quantities;
+        simulate_isotopes = continuous_SPAC.solver_options.simulate_isotopes);
 
     # Assert that the pointers to the rows of u are correct and unique:
     all_rows_defined = [collect(p[1][4].row_idx_scalars)

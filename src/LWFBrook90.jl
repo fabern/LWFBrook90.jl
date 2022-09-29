@@ -9,7 +9,7 @@ using StatsBase: mean, weights
 using Dates: now
 # using Infiltrator
 
-export SPAC, DiscretizedSPAC, DiscretizedSPACmutable, discretize, simulate, simulate!
+export SPAC, DiscretizedSPAC, discretize, simulate, simulate!
 export read_inputData
 export discretize_soil, Rootden_beta_
 export define_LWFB90_p, define_LWFB90_u0, solve_LWFB90
@@ -17,14 +17,14 @@ export KPT_SOILPAR_Mvg1d, KPT_SOILPAR_Ch1d
 export RelativeDaysFloat2DateTime, plot_LWFBrook90
 
 export run_simulation, plot_and_save_results, find_indices
-export get_auxiliary_variables, get_θ, get_δ, get_δsoil
+export get_auxiliary_variables, get_θ, get_δ, get_ψ, get_δsoil
 
 @doc raw"""
     SPAC
 
 An instance of a soil-plant-atmopsheric continuum model.
 """
-Base.@kwdef struct SPAC
+Base.@kwdef mutable struct SPAC
 
     # time related:
     "Reference date to relate internal use of days to real-world dates [DateTime]"
@@ -79,16 +79,7 @@ end
 
 An discretization of a soil-plant-atmopsheric continuum model ready for simulation.
 """
-Base.@kwdef struct DiscretizedSPAC
-	# input fields:
-	continuous_SPAC::SPAC
-	soil_discretization
-
-	# derived fields:
-	ODEProblem
-	ODESolution
-end
-Base.@kwdef mutable struct DiscretizedSPACmutable
+Base.@kwdef mutable struct DiscretizedSPAC
 	# input fields:
 	continuous_SPAC::SPAC
 	soil_discretization
@@ -98,86 +89,127 @@ Base.@kwdef mutable struct DiscretizedSPACmutable
 	ODESolution
 end
 
-function LWFBrook90.discretize(continuous_SPAC::SPAC; Δz = nothing, tspan = nothing)
+function LWFBrook90.discretize(continuous_SPAC::SPAC;
+                                Δz = nothing, tspan = nothing,
+                                soil_output_depths = zeros(Float64, 0) # e.g. # soil_output_depths = [-0.35, -0.42, -0.48, -1.05]
+        )
     ##########
     # Discretize the model in space
+    ### returns DataFrame with columns: (Upper_m, Lower_m)
+    ### returns DataFrame with columns: (Rootden_)
+    ### returns DataFrame with columns: (uAux_PSIM_init_kPa, u_delta18O_init_permil, u_delta2H_init_permil)
 
     # Needed extents of domain
     zspan = (maximum(continuous_SPAC.soil_horizons.Upper_m),
              minimum(continuous_SPAC.soil_horizons.Lower_m))
+
     # Define grid for spatial discretization
-
-
-
-
-
-    # TODO(bernhard): make this code a three step procedure:
-        # 1) define a grid resolution Δz (either a) reading in from soil_discretization or b) manually defined vector)
-        # 2) get info about initial conditions (either a) reading in from soil_discretization or then or b) manually defined mathematical function  )
-        # 2) get info about root distribution (either a) reading in from soil_discretization or then or b) manually defined mathematical function  )
-        # 3) map initial condition to discretized grid resolution Δz
-        # 3) map root distribution to discretized grid resolution Δz (and interpolate in time giving us a function rootden(z, t))
-
-
-
-
-
-    # Define grid for spatial discretization as well as initial conditions and root densities
+    # Note that later on grid will be further refined with observation nodes and required interfaces (if needed)
     if isnothing(Δz)
-        # a) either read the discretization from a file `soil_discretization.csv`
-            continuous_SPAC.continuousIC.soil
-            continuous_SPAC.root_distribution # TODO: assert that root distribution is consistent, otherwise it needs to be discretized too....
-        soil_discretization = discretize_soil(continuous_SPAC.continuousIC.soil)
+         # a) either read the discretization from a file `soil_discretization.csv`
+        use_soil_discretization_csv = true
+        path_soil_discretization = continuous_SPAC.continuousIC.soil
+        soil_discretization = LWFBrook90.read_path_soil_discretization(path_soil_discretization)
+    else
+        # b) or use manually defined Δz
+        use_soil_discretization_csv = false
+        interfaces_m = [0, cumsum(Δz)...]
+        soil_discretization = DataFrame(
+            Upper_m = -interfaces_m[Not(end)],
+            Lower_m = -interfaces_m[Not(1)],
+            Rootden_ = NaN,
+            uAux_PSIM_init_kPa = NaN,
+            u_delta18O_init_permil = NaN,
+            u_delta2H_init_permil = NaN)
+    end
+    @assert zspan[1] ≈ soil_discretization.Upper_m[1] "Soil discretization is not compatible with provided soil horizons"
+    @assert zspan[2] ≈ soil_discretization.Lower_m[end] "Soil discretization is not compatible with provided soil horizons"
+
+    # Define initial conditions and root densities
+    if use_soil_discretization_csv
+        # Nothing needed as columns in `soil_discretization` are exptected to be already filled.
+
+        # Just checks:
+        @assert !(any(isnan.(soil_discretization.Rootden_))) "Error: 'soil_discretization.Rootden_' contains NaNs."
+        @assert !(any(isnan.(soil_discretization.uAux_PSIM_init_kPa))) "Error: 'soil_discretization.uAux_PSIM_init_kPa' contains NaNs."
+
+        # Just assert type stability by executing disallowmissing!
         if (continuous_SPAC.solver_options.simulate_isotopes)
             disallowmissing!(soil_discretization, [:Rootden_, :uAux_PSIM_init_kPa, :u_delta18O_init_permil, :u_delta2H_init_permil])
         else
             disallowmissing!(soil_discretization, [:Rootden_, :uAux_PSIM_init_kPa])
         end
+
+        # TODO:
+        @assert typeof(continuous_SPAC.continuousIC.soil) == String && isfile(continuous_SPAC.continuousIC.soil) "Expected 'continuous_SPAC.continuousIC.soil' to be a file containing the initial conditions."
+        @assert typeof(continuous_SPAC.root_distribution) == String && isfile(continuous_SPAC.root_distribution) "Expected 'continuous_SPAC.continuousIC.soil' to be a file containing the initial conditions."
+        @assert continuous_SPAC.continuousIC.soil == continuous_SPAC.root_distribution
+        # TODO: assert that root distribution is consistent, otherwise it needs to be discretized and mapped too....
     else
-        # b) or define them manually
-        ## for Δz_m in (
-        ##     [0.04, 0.04, 0.12, 0.25, 0.3, 0.35, 0.1],
-        ##     [fill(0.04, 5); fill(0.05, 5); 0.3;            0.35;         0.1], # N=13
-        ##     [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5); 0.1], # N=21
-        ##     [fill(0.02, 10); fill(0.025, 10); fill(0.03, 10); fill(0.035, 10); 0.1], # N=41
-        ##     [fill(0.02, 60)... ], # N=60, 2cm similar to Pollacco et al. 2022 suggestions
-        ##     )
-
-        # ψ_init = soil_discretization.uAux_PSIM_init_kPa[1]
-        # As a test: subsequently increase resolution of the top layers.
-        Δz_m = [0.04, 0.04, 0.12, 0.25, 0.3, 0.35, 0.1];                           # grid spacing (heterogenous), meter (N=7)
-        # Δz_m = [0.04, 0.04, 0.04, 0.08, 0.25, 0.3, 0.35, 0.1]                    # grid spacing (heterogenous), meter (N=8)
-        # Δz_m = [0.04, 0.04, 0.04, 0.04, 0.04, 0.25, 0.3, 0.35, 0.1]              # grid spacing (heterogenous), meter (N=9)
-        # Δz_m = [fill(0.04, 5); fill(0.05, 5); 0.3; 0.35; 0.1]                    # grid spacing (heterogenous), meter (N=13)
-        # Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); 0.35; 0.1]          # grid spacing (heterogenous), meter (N=17)
-        Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5); 0.1]; # grid spacing (heterogenous), meter (N=21)
-        if zspan[2] == -1.1
-            Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5)]; # grid spacing (heterogenous), meter (N=20)
-        end
-
-        @warn "Using hardcoded values for soil_discretization...."
+        @warn "Using hardcoded values for soil_discretization.... TODO(improve interface to allow to modify these hardcoded values)"
         f1 = (Δz_m) -> LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)  # function for root density as f(Δz)
         f2 = (Δz_m) -> fill(-6.3, length(Δz_m))          # function for initial conditions as f(Δz)
+        f3 = ifelse.(cumsum(Δz) .<= 0.2, -13., -10.)     # initial conditions as vector
+        f4 = ifelse.(cumsum(Δz) .<= 0.2, -95., -70.)     # initial conditions as vector
+
+        # continuous_SPAC.root_distribution = f1
+        # continuous_SPAC.continuousIC.soil = f2
+
+        # @assert typeof(continuous_SPAC.continuousIC.soil) <: Function
+        # @assert typeof(continuous_SPAC.root_distribution) <: Function
+        # @error "Currently manual definition of Δz is unsupported."
+
         soil_discretization = discretize_soil(;
-            Δz_m = Δz_m,
+            Δz_m = Δz,
             Rootden_ = f1,
             uAux_PSIM_init_kPa = f2,
-            u_delta18O_init_permil = ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.),
-            u_delta2H_init_permil  = ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.))
+            u_delta18O_init_permil = f3,
+            u_delta2H_init_permil  = f4)
+
+        # # TO DEVELOP: possibly values of Δz_m:
+        # ## for Δz_m in (
+        # ##     [0.04, 0.04, 0.12, 0.25, 0.3, 0.35, 0.1],
+        # ##     [fill(0.04, 5); fill(0.05, 5); 0.3;            0.35;         0.1], # N=13
+        # ##     [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5); 0.1], # N=21
+        # ##     [fill(0.02, 10); fill(0.025, 10); fill(0.03, 10); fill(0.035, 10); 0.1], # N=41
+        # ##     [fill(0.02, 60)... ], # N=60, 2cm similar to Pollacco et al. 2022 suggestions
+        # ##     )
+        # # As a test: subsequently increase resolution of the top layers.
+        # Δz_m = [0.04, 0.04, 0.12, 0.25, 0.3, 0.35, 0.1];                           # grid spacing (heterogenous), meter (N=7)
+        # # Δz_m = [0.04, 0.04, 0.04, 0.08, 0.25, 0.3, 0.35, 0.1]                    # grid spacing (heterogenous), meter (N=8)
+        # # Δz_m = [0.04, 0.04, 0.04, 0.04, 0.04, 0.25, 0.3, 0.35, 0.1]              # grid spacing (heterogenous), meter (N=9)
+        # # Δz_m = [fill(0.04, 5); fill(0.05, 5); 0.3; 0.35; 0.1]                    # grid spacing (heterogenous), meter (N=13)
+        # # Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); 0.35; 0.1]          # grid spacing (heterogenous), meter (N=17)
+        # Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5); 0.1]; # grid spacing (heterogenous), meter (N=21)
+        # if zspan[2] == -1.1
+        #     Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5)]; # grid spacing (heterogenous), meter (N=20)
+        # end
     end
-    # @show soil_discretization.Lower_m[end]
-    # @show zspan[2]
-    @assert zspan[1] == soil_discretization.Upper_m[1] "Soil discretization is not compatible with provided soil horizons"
-    @assert zspan[2] == soil_discretization.Lower_m[end] "Soil discretization is not compatible with provided soil horizons"
+
+    # TODO(bernhard): make above code a three step procedure:
+        # 1) define a grid resolution Δz (either a) reading in from soil_discretization or b) manually defined vector)
+        # 2) get info about initial conditions (either a) reading in from soil_discretization or then or b) manually defined mathematical function  )
+        # 2) get info about root distribution (either a) reading in from soil_discretization or then or b) manually defined mathematical function  )
+        # 3) map initial condition to discretized grid resolution Δz
+        # 3) map root distribution to discretized grid resolution Δz (and interpolate in time giving us a function rootden(z, t))
+        # 4) include additional interfaces for observation_nodes...
+            # TODO(bernhard): combine step 4) with 1). -> Requires mapping in 3) regardless of whether we have a) or b)
     ####################
 
     ####################
+    ## Discretize soil parameters and interpolate discretized root distribution
+    # Define refinement of grid with soil_output_depths
+    soil_discr =
+        refine_soil_discretization(
+            continuous_SPAC.soil_horizons,
+            soil_discretization,
+            soil_output_depths,
+            continuous_SPAC.params[:IDEPTH_m],
+            continuous_SPAC.params[:QDEPTH_m],
+            continuous_SPAC.params[:INITRDEP],
+            continuous_SPAC.params[:RGRORATE])
     # Define parameters for differential equation
-    (ψM_initial, δ18O_initial, δ2H_initial), p = define_LWFB90_p(
-        continuous_SPAC, soil_discretization;
-        # soil_output_depths = [-0.35, -0.42, -0.48, -1.05]
-        # soil_output_depths = collect(-0.05:-0.05:-1.1)
-    )
+    p = define_LWFB90_p(continuous_SPAC, soil_discr)
     # using Plots
     # hline([0; cumsum(p[1][1].p_THICK)], yflip = true, xticks = false,
     #     title = "N_layer = "*string(p[1][1].NLAYER))
@@ -190,7 +222,7 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC; Δz = nothing, tspan = not
     u0, p = define_LWFB90_u0(
         p,
         continuous_SPAC.continuousIC.scalar,
-        ψM_initial, δ18O_initial, δ2H_initial,
+        soil_discr["PSIM_init"], soil_discr["d18O_init"], soil_discr["d2H_init"],
         continuous_SPAC.solver_options.compute_intermediate_quantities;
 
         simulate_isotopes = continuous_SPAC.solver_options.simulate_isotopes);
@@ -215,7 +247,8 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC; Δz = nothing, tspan = not
     if isnothing(tspan)
         tspan = continuous_SPAC.tspan
     else
-        # tspan = tspan
+        @warn "Overwriting tspan defined in SPAC $(continuous_SPAC.tspan) with provided value of $tspan"
+        tspan = tspan
     end
 
 
@@ -237,16 +270,13 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC; Δz = nothing, tspan = not
                     callback=cb_func)
     ####################
 
-    return DiscretizedSPACmutable(;
+    return DiscretizedSPAC(;
         continuous_SPAC     = continuous_SPAC,
         soil_discretization = soil_discretization,
         ODEProblem          = ode_LWFBrook90,
-        ODESolution         = [1])
+        ODESolution         = nothing)
 end
-function simulate(s::DiscretizedSPAC)
-    sol_SPAC = solve_LWFB90(s.ODEProblem)
-end
-function simulate!(s::DiscretizedSPACmutable)
+function simulate!(s::DiscretizedSPAC)
     sol_SPAC = solve_LWFB90(s.ODEProblem)
     s.ODESolution = sol_SPAC
     return sol_SPAC

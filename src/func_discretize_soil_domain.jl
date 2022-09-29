@@ -71,7 +71,7 @@ end
 
 # TODO(bernhard): unite this function with discretize_soil
 """
-    discretize_soil_params(
+    refine_soil_discretization(
         input_soil_horizons,
         input_soil_discretization,
         soil_output_depths,
@@ -85,7 +85,7 @@ Densify discretization whenever an interface or an additional layer is needed. T
 when a new soil horizons begins or an additional computational layer (consisting of upper and lower interfaces)
 when a state variable needs to be extracted at a specified output depth.
 """
-function discretize_soil_params(
+function refine_soil_discretization(
     input_soil_horizons,
     input_soil_discretization,
     soil_output_depths,
