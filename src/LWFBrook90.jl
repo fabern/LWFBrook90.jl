@@ -5,6 +5,7 @@ using DiffEqCallbacks # instead of loading the full DifferentialEquations
 using RecipesBase
 using LinearAlgebra
 using StatsBase: mean, weights
+using RecursiveArrayTools: ArrayPartition, VectorOfArray#, vecarr_to_vectors # TODO(bernhard): replace this with ComponentArrays.jl see: https://docs.sciml.ai/dev/highlevels/abstractarray_libraries/
 
 using Dates: now
 # using Infiltrator
@@ -89,6 +90,43 @@ Base.@kwdef mutable struct DiscretizedSPAC
 	ODESolution
 end
 
+# input_prefix = "isoBEAdense2010-18-reset-FALSE";
+# input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
+# model = SPAC(input_path, input_prefix;
+#              simulate_isotopes = simulate_isotopes);
+# # # constructor of DiscretizedSPAC
+# continuous_SPAC = model
+# discrete_SPAC = discretize(continuous_SPAC);
+# discrete_SPAC.ODEProblem.tspan
+# simulate!(discrete_SPAC)
+# using Plots
+# plot(discrete_SPAC.ODESolution)
+
+# Include code before defining modules
+include("func_read_inputData.jl") # defines RelativeDaysFloat2DateTime which is used in module ISO
+
+# Define modules
+# on modules: https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
+include("module_CONSTANTS.jl");  # to bring into scope: using .CONSTANTS
+include("module_KPT.jl");        using .KPT # using to bring exports into scope
+include("module_WAT.jl");        using .WAT # using to bring exports into scope
+include("module_SUN.jl");        # to bring into scope: using .SUN
+include("module_PET.jl");        # to bring into scope: using .PET
+include("module_SNO.jl");        # to bring into scope: using .SNO
+include("module_EVP.jl");        # to bring into scope: using .SNO
+include("module_ISO.jl");        # to bring into scope: using .ISO
+
+include("func_discretize_soil_domain.jl")
+include("func_DiffEq_definition_u0.jl")
+include("func_DiffEq_definition_p.jl")
+include("func_DiffEq_definition_cb.jl")
+include("func_DiffEq_definition_f.jl")
+include("func_DiffEq_definition_ode.jl")
+include("func_MSB_functions.jl")
+include("func_postprocess.jl")
+
+include("../examples/func_run_example.jl") # defines RelativeDaysFloat2DateTime
+
 function LWFBrook90.discretize(continuous_SPAC::SPAC;
                                 Δz = nothing, tspan = nothing,
                                 soil_output_depths = zeros(Float64, 0) # e.g. # soil_output_depths = [-0.35, -0.42, -0.48, -1.05]
@@ -155,8 +193,8 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
         # continuous_SPAC.root_distribution = f1
         # continuous_SPAC.continuousIC.soil = f2
 
-        # @assert typeof(continuous_SPAC.continuousIC.soil) <: Function
-        # @assert typeof(continuous_SPAC.root_distribution) <: Function
+        # @assert continuous_SPAC.continuousIC.soil isa Function
+        # @assert continuous_SPAC.root_distribution isa Function
         # @error "Currently manual definition of Δz is unsupported."
 
         soil_discretization = discretize_soil(;
@@ -200,7 +238,7 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
     ## Discretize soil parameters and interpolate discretized root distribution
     # Define refinement of grid with soil_output_depths
     soil_discr =
-        refine_soil_discretization(
+        LWFBrook90.refine_soil_discretization(
             continuous_SPAC.soil_horizons,
             soil_discretization,
             soil_output_depths,
@@ -208,24 +246,32 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
             continuous_SPAC.params[:QDEPTH_m],
             continuous_SPAC.params[:INITRDEP],
             continuous_SPAC.params[:RGRORATE])
+    ####################
+
+    ####################
+    # Define state vector u for DiffEq.jl
+    # a) allocation of u0
+    u0, u0_field_names, u0_variable_names, names_accum =
+        define_LWFB90_u0(;simulate_isotopes = continuous_SPAC.solver_options.simulate_isotopes,
+                         compute_intermediate_quantities = continuous_SPAC.solver_options.compute_intermediate_quantities,
+                         NLAYER = soil_discr["NLAYER"])
+    ####################
+
+    ####################
     # Define parameters for differential equation
-    p = define_LWFB90_p(continuous_SPAC, soil_discr)
+    p = define_LWFB90_p(continuous_SPAC, soil_discr, u0, u0_field_names, names_accum, u0_variable_names)
     # using Plots
     # hline([0; cumsum(p[1][1].p_THICK)], yflip = true, xticks = false,
     #     title = "N_layer = "*string(p[1][1].NLAYER))
-    ####################
+   ####################
 
     ####################
     # Define initial states of differential equation
     # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
     # Create u0 for DiffEq.jl
-    u0, p = define_LWFB90_u0(
-        p,
-        continuous_SPAC.continuousIC.scalar,
-        soil_discr["PSIM_init"], soil_discr["d18O_init"], soil_discr["d2H_init"],
-        continuous_SPAC.solver_options.compute_intermediate_quantities;
-
-        simulate_isotopes = continuous_SPAC.solver_options.simulate_isotopes);
+    # b) initialization of u0
+    init_LWFB90_u0!(;u0=u0, u0_field_names=u0_field_names, u0_variable_names=u0_variable_names,
+                 continuous_SPAC=continuous_SPAC, soil_discr=soil_discr, p_soil=p[1][1])
     ####################
 
     ####################
@@ -276,49 +322,12 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
         ODEProblem          = ode_LWFBrook90,
         ODESolution         = nothing)
 end
+
 function simulate!(s::DiscretizedSPAC)
     sol_SPAC = solve_LWFB90(s.ODEProblem)
     s.ODESolution = sol_SPAC
     return sol_SPAC
 end
-
-# input_prefix = "isoBEAdense2010-18-reset-FALSE";
-# input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
-# model = SPAC(input_path, input_prefix;
-#              simulate_isotopes = simulate_isotopes);
-# # # constructor of DiscretizedSPAC
-# continuous_SPAC = model
-# discrete_SPAC = discretize(continuous_SPAC);
-# discrete_SPAC.ODEProblem.tspan
-# simulate!(discrete_SPAC)
-# using Plots
-# plot(discrete_SPAC.ODESolution)
-
-# Include code before defining modules
-include("func_read_inputData.jl") # defines RelativeDaysFloat2DateTime which is used in module ISO
-
-# Define modules
-# on modules: https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
-include("module_CONSTANTS.jl");  # to bring into scope: using .CONSTANTS
-include("module_KPT.jl");        using .KPT # using to bring exports into scope
-include("module_WAT.jl");        using .WAT # using to bring exports into scope
-include("module_SUN.jl");        # to bring into scope: using .SUN
-include("module_PET.jl");        # to bring into scope: using .PET
-include("module_SNO.jl");        # to bring into scope: using .SNO
-include("module_EVP.jl");        # to bring into scope: using .SNO
-include("module_ISO.jl");        # to bring into scope: using .ISO
-
-include("func_discretize_soil_domain.jl")
-include("func_DiffEq_definition_u0.jl")
-include("func_DiffEq_definition_p.jl")
-include("func_DiffEq_definition_cb.jl")
-include("func_DiffEq_definition_f.jl")
-include("func_DiffEq_definition_ode.jl")
-include("func_MSB_functions.jl")
-include("func_postprocess.jl")
-
-include("../examples/func_run_example.jl") # defines RelativeDaysFloat2DateTime
-
 
 ############################################################################################
 ############################################################################################

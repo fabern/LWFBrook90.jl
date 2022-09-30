@@ -44,28 +44,52 @@ function solve_LWFB90(ode::ODEProblem)
     # b) norm for adaptive time stepping
 
     # a)
-    # simulate_isotopes = p[1][4].simulate_isotopes
-    # if simulate_isotopes
-    #     # only check certain states that are not containing NaNs (δ values might be set to NaN)
-    #     # # unstable_check_function = (dt,u,p,t) -> any(isnan, u[[p[1][4].row_idx_SWATI; p[1][4].row_idx_scalars...], [1,2,3]] ]) # select amts, d18O, d2H
-    #     # unstable_check_function = (dt,u,p,t) -> any(isnan, u[[p[1][4].row_idx_SWATI; p[1][4].row_idx_scalars...], 1])         # select only amts of SWAT
+    # variant a1) also check d18O and d2H, but make sure only to check those that are never NaN
+    # [compartment[:, :] for compartment in ode.u0.x]
+    # function unstable_check_function(dt,u,p,t) any(isnan, u.x) end # select only amounts in each compartment
+    # TODO: unimplemented. Do this after switching to ComponentArrays.jl
 
-    #     unstable_check_function = (dt,u,p,t) -> any(isnan, u[:, 1]) # select only amounts
-    # else
-    #     # check all states
-    #     unstable_check_function = (dt,u,p,t) -> any(isnan,u)
-    # end
-    function unstable_check_function(dt,u,p,t) any(isnan, u[:, 1]) end # select only amounts
+
+    # variant a2) only check certain states that are not containing NaNs (δ values might be set to NaN
+    # init_state = NamedTuple{ode.p[1][4].u0_field_names}(ode.u0.x)
+    # [compartment[:, 1] for compartment in ode.u0.x[1]] # compartments are ode.p[1][4].u0_field_names
+    @assert ode.p[1][4].u0_variable_names == (d18O = 2, d2H = 3)
+    # function unstable_check_function(dt,u,p,t) any(isnan, VectorOfArray([compartment[:, 1] for compartment in u.x])...) end # select only amounts in each compartment
+    function unstable_check_function1(dt,u,p,t) # select only amounts in each compartment, no concentrations
+        # any.(isnan.(VectorOfArray([compartment[:, 1] for compartment in u.x])))
+        # any(isnan, VectorOfArray([compartment[:, 1] for compartment in u.x])...)
+        return_value = false
+        x = [compartment[:, 1] for compartment in u.x]
+        for n in eachindex(x)
+            if any(isnan.(x[n]))
+                return_value = true
+                break
+            end
+        end
+        return return_value
+    end
+    function unstable_check_function2(dt,u,p,t) # select only amounts in the first 12 compartments, no concentrations
+        any(isnan.([u[1,1], u[2,1], u[3,1], u[4,1], u[5,1], u[6,1], u[7,1], u[8,1], u[9,1], u[10,1], u[11,1], u[12,1]]))
+    end
+    function unstable_check_function3(dt,u,p,t) # check all
+        any(isnan.(u[:]))
+    end
+    # @btime unstable_check_function1(0.1,u0,p,t0)
+    # @btime unstable_check_function2(0.1,u0,p,t0)
+    # @btime unstable_check_function3(0.1,u0,p,t0)
+
 
     # b) fix adaptivity by only using a norm that considers amounts (1st column of state array), but no concentrations (2nd and 3rd column of state array)
     # Problem: When adding transport of isotopes adaptive time stepping has difficulties and reduces dt below dtmin.
-    # Solution: It turns out this is linked to the norm that the adaptivitiy algorithm uses. It can be overruled byfl
+    # Solution: It turns out this is linked to the norm that the adaptivitiy algorithm uses. It can be overruled
     #           by only using a norm that considers amounts (1st column of state array), but no concentrations (2nd and 3rd column of state array)
     #           The norm needs to be defined once for scalar elements of u and once for the whole array of u (multiple dispatch).
     function norm_to_use(u::Real,  t) norm(u) end
-    function norm_to_use(u::Array, t) DiffEqBase.ODE_DEFAULT_NORM(u[:,1], t) end
-        # norm_to_use(u0, integrator.t)
-        # norm(u0[:,1])
+    # function norm_to_use(u::Array, t) DiffEqBase.ODE_DEFAULT_NORM(u[:,1], t) end
+    # function norm_to_use(u::ArrayPartition, t) DiffEqBase.ODE_DEFAULT_NORM(VectorOfArray([compartment[:, 1] for compartment in u.x]), t) end
+    function norm_to_use(u::ArrayPartition, t) DiffEqBase.ODE_DEFAULT_NORM([u[1,1],u[2,1],u[3,1],u[4,1],u[5,1],u[6,1],u[7,1],u[8,1],u[9,1],u[10,1],u[11,1],u[12,1]], t) end
+        # TEST IT:
+        # norm_to_use(ode.u0, 1.0)
         # methods(norm_to_use)
         # methods(DiffEqBase.ODE_DEFAULT_NORM)
 
@@ -75,7 +99,7 @@ function solve_LWFB90(ode::ODEProblem)
     @time sol_LWFBrook90 = solve(ode, Tsit5();
         progress       = true,
         saveat         = saveat,
-        unstable_check = unstable_check_function,
+        unstable_check = unstable_check_function2,
         dt             = 1e-3, # dt is initial dt, but can be changed adaptively
         adaptive       = true, internalnorm = norm_to_use) # fix adaptivity norm for NAs
 

@@ -10,6 +10,35 @@ using Dates: DateTime, Millisecond, Second, Day, Month, month, value, dayofyear,
 using DataFrames: DataFrame, rename, sort!# ,select
 using DataFramesMeta#: @linq, transform, DataFramesMeta
 
+        # # TODO: make a test out of this:
+        # continuous_SPAC = SPAC("../../../LWF-Brook90.jl-calibration/Meteo-Data/DAV_LW1_def/", "DAV_LW1_def"; simulate_isotopes = true);
+        # Δz = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5)]; # grid spacing (heterogenous), meter (N=20)
+        # soil_output_depths = zeros(Float64, 0)
+        # continuous_SPAC.tspan
+        # DS = LWFBrook90.discretize(continuous_SPAC::SPAC; Δz = Δz,  tspan = (0,10));
+        # # Test the f and cb() functions (LWFBrook90.f_LWFBrook90R, )
+        # t0 = 0.0
+        # u0 = DS.ODEProblem.u0
+        # p = DS.ODEProblem.p
+        # du = copy(u0)
+        # @btime states = NamedTuple{p[1][4].u0_field_names}(u0.x);
+
+        # LWFBrook90.f_LWFBrook90R(du, u0, p, 1.0)
+        # # integrator = init(DS.ODEProblem, Tsit5();)
+        # # LWFBrook90.LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
+        # # LWFBrook90.LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
+        # # LWFBrook90.LWFBrook90R_updateIsotopes_GWAT_SWAT!(u0, t0, integrator)
+        # # LWFBrook90.LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u0, t0, integrator)
+        # # LWFBrook90.LWFBrook90R_check_balance_errors!(integrator)
+        # # # @run simulate!(DS) # with ArrayParition this simulating 10 days takes about 0.373707 seconds (1.45 M allocations: 105.396 MiB, 14.36% gc time)
+        # DS.ODEProblem.tspan
+        # simulate!(DS); # with ArrayParition this simulating 10 days takes about 0.373707 seconds (1.45 M allocations: 105.396 MiB, 14.36% gc time) Time steps for solving: 580 (580 accepted out of 612 total)
+        # # simulate!(DS); # with ArrayParition this simulating 10 days takes about 0.373707 seconds (1.45 M allocations: 105.396 MiB, 14.36% gc time) Time steps for solving: 580 (580 accepted out of 612 total)
+        # DS = LWFBrook90.discretize(continuous_SPAC::SPAC; Δz = Δz);
+        # DS.ODEProblem.tspan
+        # # simulate!(DS); # with ArrayParition this simulating all the days takes about 167.115807 seconds (762.30 M allocations: 53.365 GiB, 6.18% gc time, 12.43% compilation time) Time steps for solving: 295894 (295894 accepted out of 314371 total)
+
+
 # input_prefix = "isoBEAdense2010-18-reset-FALSE";
 # input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
 # input_prefix = "DAV_LW1_def";

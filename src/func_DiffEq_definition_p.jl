@@ -10,7 +10,10 @@ Generate vector p needed for ODE() problem in DiffEq.jl package.
 - `simulate_isotopes::...`: TODO argument description.
 - `soil_output_depths`: vector of depths at which state variables should be extractable (negative numeric values [in meter])
 """
-function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr)
+# function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr)
+function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr, u0, u0_field_names, names_accum, u0_variable_names)
+    # states = NamedTuple{u0_field_names}(u0.x)
+
     ########
     ## Interpolate discretized root distribution
      p_RELDEN = LWFBrook90.interpolate_spaceDiscretized_root_density(;
@@ -352,13 +355,17 @@ function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr)
         FLAG_MualVanGen,
         continuous_SPAC.solver_options.compute_intermediate_quantities,
         continuous_SPAC.solver_options.simulate_isotopes,
-        row_idx_scalars = [],
-        row_idx_SWATI   = [],
-        row_idx_RWU     = [],
-        row_idx_accum   = [],
-        names_accum     = [],
-        col_idx_d18O    = [],
-        col_idx_d2H     = []) # Placeholders will be overwritten when defining u0
+        # row_idx_scalars = [], # TODO(bernharf): replace with keys(states) or states[:accum]
+        row_idx_scalars = [:GWAT, :INTS, :INTR, :SNOW, :CC, :SNOWLQ, :RWU, :XYLEM],
+        row_idx_SWATI   = [:SWATI],
+        row_idx_RWU     = [:RWU],
+        row_idx_accum   = [:accum],
+        names_accum     = names_accum,
+        col_idx_d18O    = 2,
+        col_idx_d2H     = 3,
+        u0_field_names  = u0_field_names,
+        u0_variable_names = u0_variable_names)
+        # @assert u0_variable_names == (d18O = 2, d2H = 3)
     p_cst = (p_cst_1, p_cst_2, p_cst_3, p_cst_4)
 
     # 2b) Time varying parameters (e.g. meteorological forcings)
