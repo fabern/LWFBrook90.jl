@@ -70,24 +70,6 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # u_SNOWLQ    = states[:SNOWLQ][1,1]
         u_SWATI     = states[:SWATI ][:,1]
 
-        # simulate_isotopes = p[1][4].simulate_isotopes
-        # if simulate_isotopes
-        #     u_δ18O_GWAT   = states[:GWAT ][1,p[1][4].col_idx_d18O]
-        #     u_δ2H_GWAT    = states[:GWAT ][1,p[1][4].col_idx_d2H ]
-        #     # u_δ18O_INTS = states[:INTS ][1,p[1][4].col_idx_d18O]
-        #     # u_δ2H_INTS  = states[:INTS ][1,p[1][4].col_idx_d2H ]
-        #     # u_δ18O_INTR = states[:INTR ][1,p[1][4].col_idx_d18O]
-        #     # u_δ2H_INTR  = states[:INTR ][1,p[1][4].col_idx_d2H ]
-        #     # u_δ18O_SNOW = states[:SNOW ][1,p[1][4].col_idx_d18O]
-        #     # u_δ2H_SNOW  = states[:SNOW ][1,p[1][4].col_idx_d2H ]
-        #     # u_δ18O_RWU  = states[:RWU  ][1,p[1][4].col_idx_d18O]
-        #     # u_δ2H_RWU   = states[:RWU  ][1,p[1][4].col_idx_d2H ]
-        #     # u_δ18O_XYL  = states[:XYLEM][1,p[1][4].col_idx_d18O]
-        #     # u_δ2H_XYL   = states[:XYLEM][1,p[1][4].col_idx_d2H ]
-        #     u_δ18O_SWATI  = states[:SWATI][:,p[1][4].col_idx_d18O]
-        #     u_δ2H_SWATI   = states[:SWATI][:,p[1][4].col_idx_d2H ]
-        # end
-
         LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, t)
 
         u_aux_θ_tminus1 .= u_aux_θ #TODO(bernhard): this does not seem to be correctly updated
@@ -183,7 +165,6 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
             # 1) Either set daily sum if rate is constant throughout precipitation interval: p_DTP*(...)
             # 2) or then set daily sum to zero and use ODE to accumulate flow.
-            rates[:accum][1]
             rates[:accum][ 1] = 0 # cum_d_prec ][:,was computed in callback
             rates[:accum][ 2] = 0 # cum_d_rfal ][:,was computed in callback
             rates[:accum][ 3] = 0 # cum_d_sfal ][:,was computed in callback

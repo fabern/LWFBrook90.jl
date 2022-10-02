@@ -76,17 +76,17 @@ end
 function get_auxiliary_variables(solution)
     p_soil = solution.prob.p[1][1]
     NLAYER = p_soil.NLAYER
-    u_SWATI = [solution.u[i][solution.prob.p[1][4].row_idx_SWATI, 1] for i = 1:length(solution.u)]
+    u_SWATI = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_SWATI][:,1] for i = eachindex(solution)])
     # (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
     #         LWFBrook90.KPT.derive_auxiliary_SOILVAR.(u_SWATI, Ref(p_soil)) # Ref fixes scalar argument for broadcasting "."
     u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK =
-        (fill(NaN, (size(u_SWATI, 1), size(u_SWATI[1], 1))) for i in 1:5)
-    for t in 1:length(u_SWATI)
-        (u_aux_WETNES[t, :], u_aux_PSIM[t, :], u_aux_PSITI[t, :], u_aux_θ[t, :], p_fu_KK[t, :]) =
-            LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI[t], p_soil)
+        (fill(NaN, size(u_SWATI)) for i in 1:5)
+    for t in 1:size(u_SWATI,2)
+        (u_aux_WETNES[:, t], u_aux_PSIM[:, t], u_aux_PSITI[:, t], u_aux_θ[:, t], p_fu_KK[:, t]) =
+            LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI[:,t], p_soil)
     end
     # returns arrays of dimenstion (t,z) where t is number of timesteps and z number of computational layers
-    return (transpose(hcat(u_SWATI...)), u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
+    return (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
 end
 
 function get_θ(depths_to_read_out_mm, solution)
@@ -95,7 +95,7 @@ function get_θ(depths_to_read_out_mm, solution)
 
     idx = find_indices(depths_to_read_out_mm, solution)
 
-    return u_aux_θ[:, idx]
+    return u_aux_θ[idx, :]
 end
 function get_ψ(depths_to_read_out_mm, solution)
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
@@ -103,7 +103,7 @@ function get_ψ(depths_to_read_out_mm, solution)
 
     idx = find_indices(depths_to_read_out_mm, solution)
 
-    return u_aux_PSIM[:, idx]
+    return u_aux_PSIM[idx, :]
 end
 
 function get_δ(solution)
@@ -114,21 +114,21 @@ function get_δ(solution)
     row_PREC_d18O = reshape(solution.prob.p[2][15].(solution.t), 1, :)
     row_PREC_d2H  = reshape(solution.prob.p[2][16].(solution.t), 1, :)
     # scalar quantities δ-values:
-    row_INTS_d18O = reshape(solution[solution.prob.p[1][4].row_idx_scalars.INTS, solution.prob.p[1][4].col_idx_d18O, :], 1, :)
-    row_INTR_d18O = reshape(solution[solution.prob.p[1][4].row_idx_scalars.INTR, solution.prob.p[1][4].col_idx_d18O, :], 1, :)
-    row_SNOW_d18O = reshape(solution[solution.prob.p[1][4].row_idx_scalars.SNOW, solution.prob.p[1][4].col_idx_d18O, :], 1, :)
-    row_GWAT_d18O = reshape(solution[solution.prob.p[1][4].row_idx_scalars.GWAT, solution.prob.p[1][4].col_idx_d18O, :], 1, :)
-    row_RWU_d18O  = reshape(solution[solution.prob.p[1][4].row_idx_scalars.totalRWU, solution.prob.p[1][4].col_idx_d18O, :], 1, :)
-    row_XYL_d18O  = reshape(solution[solution.prob.p[1][4].row_idx_scalars.XylemV,   solution.prob.p[1][4].col_idx_d18O, :], 1, :)
-    row_INTS_d2H  = reshape(solution[solution.prob.p[1][4].row_idx_scalars.INTS, solution.prob.p[1][4].col_idx_d2H, :], 1, :)
-    row_INTR_d2H  = reshape(solution[solution.prob.p[1][4].row_idx_scalars.INTR, solution.prob.p[1][4].col_idx_d2H, :], 1, :)
-    row_SNOW_d2H  = reshape(solution[solution.prob.p[1][4].row_idx_scalars.SNOW, solution.prob.p[1][4].col_idx_d2H, :], 1, :)
-    row_GWAT_d2H  = reshape(solution[solution.prob.p[1][4].row_idx_scalars.GWAT, solution.prob.p[1][4].col_idx_d2H, :], 1, :)
-    row_RWU_d2H   = reshape(solution[solution.prob.p[1][4].row_idx_scalars.totalRWU, solution.prob.p[1][4].col_idx_d2H, :], 1, :)
-    row_XYL_d2H   = reshape(solution[solution.prob.p[1][4].row_idx_scalars.XylemV,   solution.prob.p[1][4].col_idx_d2H, :], 1, :)
+    row_INTS_d18O = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.INTS][ 1, solution.prob.p[1][4].col_idx_d18O] for i = eachindex(solution)])
+    row_INTR_d18O = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.INTR][ 1, solution.prob.p[1][4].col_idx_d18O] for i = eachindex(solution)])
+    row_SNOW_d18O = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.SNOW][ 1, solution.prob.p[1][4].col_idx_d18O] for i = eachindex(solution)])
+    row_GWAT_d18O = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.GWAT][ 1, solution.prob.p[1][4].col_idx_d18O] for i = eachindex(solution)])
+    row_RWU_d18O  = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.RWU][  1, solution.prob.p[1][4].col_idx_d18O] for i = eachindex(solution)])
+    row_XYL_d18O  = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.XYLEM][1, solution.prob.p[1][4].col_idx_d18O] for i = eachindex(solution)])
+    row_INTS_d2H  = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.INTS][ 1, solution.prob.p[1][4].col_idx_d2H]  for i = eachindex(solution)])
+    row_INTR_d2H  = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.INTR][ 1, solution.prob.p[1][4].col_idx_d2H]  for i = eachindex(solution)])
+    row_SNOW_d2H  = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.SNOW][ 1, solution.prob.p[1][4].col_idx_d2H]  for i = eachindex(solution)])
+    row_GWAT_d2H  = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.GWAT][ 1, solution.prob.p[1][4].col_idx_d2H]  for i = eachindex(solution)])
+    row_RWU_d2H   = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.RWU][  1, solution.prob.p[1][4].col_idx_d2H]  for i = eachindex(solution)])
+    row_XYL_d2H   = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.XYLEM][1, solution.prob.p[1][4].col_idx_d2H]  for i = eachindex(solution)])
     # vector quantities δ-values:
-    rows_SWAT_d18O = solution[solution.prob.p[1][4].row_idx_SWATI, solution.prob.p[1][4].col_idx_d18O, :]
-    rows_SWAT_d2H  = solution[solution.prob.p[1][4].row_idx_SWATI, solution.prob.p[1][4].col_idx_d2H,  :]
+    rows_SWAT_d18O = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_SWATI][:, solution.prob.p[1][4].col_idx_d18O] for i = eachindex(solution)])
+    rows_SWAT_d2H  = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_SWATI][:, solution.prob.p[1][4].col_idx_d2H ] for i = eachindex(solution)])
 
 
     return (SWAT = (d18O = rows_SWAT_d18O, d2H = rows_SWAT_d2H),
@@ -144,8 +144,8 @@ end
 function get_δsoil(solution)
     u_δ = get_δ(solution)
 
-    return (d18O = transpose(u_δ.SWAT.d18O),
-            d2H  = transpose(u_δ.SWAT.d2H))
+    return (d18O = u_δ.SWAT.d18O,
+            d2H  = u_δ.SWAT.d2H)
 end
 
 function get_δsoil(depths_to_read_out_mm, solution)
@@ -153,8 +153,8 @@ function get_δsoil(depths_to_read_out_mm, solution)
 
     idx = find_indices(depths_to_read_out_mm, solution)
 
-    return (d18O = u_d18O[:, idx],
-            d2H  = u_d2H[:, idx])
+    return (d18O = u_d18O[idx, :],
+            d2H  = u_d2H[idx, :])
 end
 ############################################################################################
 ############################################################################################
@@ -205,16 +205,14 @@ end
     #     :] ./ sol.prob.p[1][1].p_THICK
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
         LWFBrook90.get_auxiliary_variables(sol)
-    rows_ψₘ = u_aux_PSIM'
-    rows_ψₘpF = log10.(u_aux_PSIM' .* -10) #(from kPa to log10(hPa))
+    rows_ψₘ = u_aux_PSIM
+    rows_ψₘpF = log10.(u_aux_PSIM .* -10) #(from kPa to log10(hPa))
 
-    rows_SWAT_amt0 = u_aux_θ'
-    rows_SWAT_amt1 = sol[7 .+ (0:sol.prob.p[1][1].NLAYER-1),
-        1,
-        :] ./ sol.prob.p[1][1].p_THICK # mm per mm of soil thickness
-    rows_SWAT_amt2 = sol[7 .+ (0:sol.prob.p[1][1].NLAYER-1),
-        1,
-        :] ./ sol.prob.p[1][1].p_THICK ./ (1 .- sol.prob.p[1][1].p_STONEF) # mm per mm of fine soil thickness (assuming gravel fraction contains no water)
+    rows_SWAT_amt0 = u_aux_θ
+    rows_SWAT_amt1 = reduce(hcat, [sol[t].x[7][:,1] for t = eachindex(sol.t)])./
+        sol.prob.p[1][1].p_THICK  # mm per mm of soil thickness
+    rows_SWAT_amt2 = reduce(hcat, [sol[t].x[7][:,1] for t = eachindex(sol.t)]
+        ) ./ sol.prob.p[1][1].p_THICK ./ (1 .- sol.prob.p[1][1].p_STONEF) # mm per mm of fine soil thickness (assuming gravel fraction contains no water)
 
     # row_NaN = fill(NaN, 1, length(x))
 
