@@ -55,53 +55,72 @@ function solve_LWFB90(ode::ODEProblem)
     # [compartment[:, 1] for compartment in ode.u0.x[1]] # compartments are ode.p[1][4].u0_field_names
     @assert ode.p[1][4].u0_variable_names == (d18O = 2, d2H = 3)
     # function unstable_check_function(dt,u,p,t) any(isnan, VectorOfArray([compartment[:, 1] for compartment in u.x])...) end # select only amounts in each compartment
-    function unstable_check_function1(dt,u,p,t) # select only amounts in each compartment, no concentrations
-        # any.(isnan.(VectorOfArray([compartment[:, 1] for compartment in u.x])))
-        # any(isnan, VectorOfArray([compartment[:, 1] for compartment in u.x])...)
-        return_value = false
-        x = [compartment[:, 1] for compartment in u.x]
-        for n in eachindex(x)
-            if any(isnan.(x[n]))
-                return_value = true
-                break
-            end
-        end
-        return return_value
+    # function unstable_check_function(dt,u::ArrayPartition,p,t) # select only amounts in the first 12 compartments, no concentrations
+    #     # any(isnan.([u[1,1], u[2,1], u[3,1], u[4,1], u[5,1], u[6,1], u[7,1], u[8,1], u[9,1], u[10,1], u[11,1], u[12,1]]))
+    #     any(isnan, u.x[1]) | any(isnan, u.x[2]) # 2 is for GWAT, which is not needed for stability
+    # end
+    function unstable_check_function(dt,u::ArrayPartition,p,t) # select only amounts in the first 12 compartments, no concentrations
+        # any(isnan.([u[1,1], u[2,1], u[3,1], u[4,1], u[5,1], u[6,1], u[7,1], u[8,1], u[9,1], u[10,1], u[11,1], u[12,1]]))
+        # any(isnan, u.x[1]) | any(isnan, u.x[2]) # 2 is for GWAT, which is not needed for stability
+        any(isnan, u.x[7]) # Do it for SWATI (both amt and concentration)
+        # any(isnan, reduce(vcat,[u.x[idx][:,1] for idx = 1:12]))
+        # any(isnan, reduce(vcat,[u.x[1][:,1],
+        #                     u.x[2][:,1],
+        #                     u.x[3][:,1],
+        #                     u.x[4][:,1],
+        #                     u.x[5][:,1],
+        #                     u.x[6][:,1],
+        #                     u.x[7][:,1],
+        #                     u.x[8][:,1],
+        #                     u.x[9][:,1],
+        #                     # 11 is missing on purpose
+        #                     u.x[10][:,1],
+        #                     u.x[12][:,1]]))
     end
-    function unstable_check_function2(dt,u,p,t) # select only amounts in the first 12 compartments, no concentrations
-        any(isnan.([u[1,1], u[2,1], u[3,1], u[4,1], u[5,1], u[6,1], u[7,1], u[8,1], u[9,1], u[10,1], u[11,1], u[12,1]]))
-    end
-    function unstable_check_function3(dt,u,p,t) # check all
-        any(isnan.(u[:]))
-    end
-    # @btime unstable_check_function1(0.1,u0,p,t0)
-    # @btime unstable_check_function2(0.1,u0,p,t0)
-    # @btime unstable_check_function3(0.1,u0,p,t0)
-
 
     # b) fix adaptivity by only using a norm that considers amounts (1st column of state array), but no concentrations (2nd and 3rd column of state array)
     # Problem: When adding transport of isotopes adaptive time stepping has difficulties and reduces dt below dtmin.
     # Solution: It turns out this is linked to the norm that the adaptivitiy algorithm uses. It can be overruled
     #           by only using a norm that considers amounts (1st column of state array), but no concentrations (2nd and 3rd column of state array)
     #           The norm needs to be defined once for scalar elements of u and once for the whole array of u (multiple dispatch).
-    function norm_to_use(u::Real,  t) norm(u) end
+    # for more background compare:
+    # a) https://diffeq.sciml.ai/stable/extras/timestepping/#timestepping and
+    # b) https://github.com/SciML/SimpleDiffEq.jl/blob/08decf2e22f49ab2aa9b2995759d60fad709e049/src/tsit5/atsit5.jl#L210
+
+    function norm_to_use(u::Real,           t) norm(u)                                end
+    # function norm_to_use(u::ArrayPartition, t) DiffEqBase.ODE_DEFAULT_NORM(u.x[1], t) end
+    # function norm_to_use(u::ArrayPartition, t) DiffEqBase.ODE_DEFAULT_NORM([u[1,1],u[2,1],u[3,1],u[4,1],u[5,1],u[6,1],u[7,1],u[8,1],u[9,1],u[10,1],u[11,1],u[12,1]], t) end
+    # function norm_to_use(u::ArrayPartition, t) DiffEqBase.ODE_DEFAULT_NORM([u[1,1],u[2,1],u[3,1],u[4,1],u[5,1],u[6,1],u[7,1],u[8,1],u[9,1],u[10,1],    #u[11,1], # Not for aux...
+    #                                                                         u[12,1]], t) end
+    function norm_to_use(u::ArrayPartition, t)
+        DiffEqBase.ODE_DEFAULT_NORM(reduce(vcat,[u.x[1][:,1],
+                                                u.x[2][:,1],
+                                                u.x[3][:,1],
+                                                u.x[4][:,1],
+                                                u.x[5][:,1],
+                                                u.x[6][:,1],
+                                                u.x[7][:,1],
+                                                u.x[8][:,1],
+                                                u.x[9][:,1],
+                                                u.x[10][:,1],
+                                                # 11 (:aux) is missing on purpose
+                                                u.x[12][:,1]]),
+                                    t)
+    end
     # function norm_to_use(u::Array, t) DiffEqBase.ODE_DEFAULT_NORM(u[:,1], t) end
-    # function norm_to_use(u::ArrayPartition, t) DiffEqBase.ODE_DEFAULT_NORM(VectorOfArray([compartment[:, 1] for compartment in u.x]), t) end
-    function norm_to_use(u::ArrayPartition, t) DiffEqBase.ODE_DEFAULT_NORM([u[1,1],u[2,1],u[3,1],u[4,1],u[5,1],u[6,1],u[7,1],u[8,1],u[9,1],u[10,1],u[11,1],u[12,1]], t) end
-        # TEST IT:
-        # norm_to_use(ode.u0, 1.0)
-        # methods(norm_to_use)
-        # methods(DiffEqBase.ODE_DEFAULT_NORM)
+
 
     # 2) Solve the system
     tspan = ode.tspan
     saveat = tspan[1]:tspan[2]
     @time sol_LWFBrook90 = solve(ode, Tsit5();
         progress       = true,
-        saveat         = saveat,
-        unstable_check = unstable_check_function2,
+        saveat         = saveat, save_everystep = true,
+        unstable_check = unstable_check_function,
+        # dt = 2/60/24, adaptive = false,
         dt             = 1e-3, # dt is initial dt, but can be changed adaptively
-        adaptive       = true, internalnorm = norm_to_use) # fix adaptivity norm for NAs
+        adaptive       = true, internalnorm = norm_to_use
+        ) # fix adaptivity norm for NAs
 
     # @info sol_LWFBrook90.destats
     @info "Time steps for solving: $(sol_LWFBrook90.destats.naccept) ($(sol_LWFBrook90.destats.naccept) accepted out of $(sol_LWFBrook90.destats.nreject + sol_LWFBrook90.destats.naccept) total)"

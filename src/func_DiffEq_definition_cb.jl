@@ -233,15 +233,15 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     ####################################################################
     # Return results from callback
     # update INTS
-    integrator.u[2] = u_INTS
+    states[:INTS ][1,1] = u_INTS
 
     # update INTR
-    integrator.u[3] = u_INTR # INTR
+    states[:INTR ][1,1] = u_INTR # INTR
 
     # update SNOW, CC, SNOWLQ
-    integrator.u[4] = u_SNOW # SNOW
-    integrator.u[5] = u_CC # CC
-    integrator.u[6] = u_SNOWLQ # SNOWLQ
+    states[:SNOW ][1,1] = u_SNOW # SNOW
+    states[:CC ][1,1] = u_CC # CC
+    states[:SNOWLQ ][1,1] = u_SNOWLQ # SNOWLQ
 
     # save intermediate results for use in ODE (function f()) or other callbacks
     # integrator.p[3][1] .= [δ18O_SLFL, δ2H_SLFL,

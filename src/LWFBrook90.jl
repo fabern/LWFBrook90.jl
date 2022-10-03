@@ -326,7 +326,8 @@ end
 function simulate!(s::DiscretizedSPAC)
     sol_SPAC = solve_LWFB90(s.ODEProblem)
     s.ODESolution = sol_SPAC
-    return sol_SPAC
+    # return sol_SPAC
+    return nothing
 end
 
 ############################################################################################
