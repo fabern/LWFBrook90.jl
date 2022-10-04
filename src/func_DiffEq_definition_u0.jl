@@ -85,15 +85,6 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
     # u0 = ArrayPartition(u0_NamedTuple...)
     # u0_field_names = keys(u0_NamedTuple) # and save names of u0 to parameter vector
 
-    # In f() or cb(): get back a NamedTuple for easy access/modification
-    # states = NamedTuple{p_u0Names}(u0_AP.x)
-    # # which allows then to modify it as
-    # u0_AP.x[1]
-    # states.GWAT[1] = 0.33
-    # states.GWAT[2] = -13
-    # states.GWAT[3] = -95
-    # u0_AP.x[1]
-
     # return
     return u0, u0_field_names, names_accum
 end
@@ -140,10 +131,10 @@ function init_LWFB90_u0!(;u0::ComponentArray, continuous_SPAC, soil_discr, p_soi
     if continuous_SPAC.solver_options.compute_intermediate_quantities
         # initialize terms for balance errors with initial values from u0
         new_SWAT       = sum(u_SWATIinit_mm) # total soil water in all layers, mm
-        new_totalWATER = u0.INTR[1] + u0.INTS[1] + u0.SNOW[1] + new_SWAT + u0.GWAT[1] # total water in all compartments, mm
+        new_totalWATER = u0.INTR.mm + u0.INTS.mm + u0.SNOW.mm + new_SWAT + u0.GWAT.mm # total water in all compartments, mm
 
-        u0.accum[28] = new_SWAT
-        u0.accum[29] = new_totalWATER
+        u0.accum.totalSWAT = new_SWAT
+        u0.accum.new_totalWATER = new_totalWATER
         # accums[:totalSWAT]       .= new_SWAT
         # accums[:new_totalWATER]  .= new_totalWATER
     end

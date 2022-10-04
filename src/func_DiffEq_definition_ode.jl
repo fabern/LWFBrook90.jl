@@ -67,17 +67,19 @@ function solve_LWFB90(ode::ODEProblem)
         # DiffEqBase.ODE_DEFAULT_NORM(u.SWATI, t)
         # NOTE: `aux`` is missing on purpose
         DiffEqBase.ODE_DEFAULT_NORM(reduce(vcat, [u.GWAT.mm,
-                                                u.INTS.mm,
-                                                u.INTR.mm,
-                                                u.SNOW.mm,
-                                                u.CC.mm,
-                                                u.SNOWLQ.mm,
-                                                u.SWATI.mm,
-                                                u.RWU.mm,
-                                                u.XYLEM.mm,
-                                                u.TRANI.mm,
-                                                u.accum]),
-        t)
+                                                  u.INTS.mm,
+                                                  u.INTR.mm,
+                                                  u.SNOW.mm,
+                                                  u.CC.mm,
+                                                  u.SNOWLQ.mm,
+                                                  u.SWATI.mm,
+                                                  u.RWU.mm,
+                                                  u.XYLEM.mm,
+                                                  u.TRANI.mm,
+                                                  u.aux.θ, #u.aux.ψ, u.aux.K,
+                                                  u.accum
+                ]),
+            t)
         # DiffEqBase.ODE_DEFAULT_NORM(vcat(u.GWAT.mm,
         #                                  u.INTS.mm,
         #                                  u.INTR.mm,
@@ -96,14 +98,27 @@ function solve_LWFB90(ode::ODEProblem)
     # 2) Solve the system
     tspan = ode.tspan
     saveat = tspan[1]:tspan[2]
-    @time sol_LWFBrook90 = solve(ode, Tsit5();
-        progress       = true,
-        saveat         = saveat, save_everystep = true,
+    @show saveat
+    @time sol_LWFBrook90 = solve(ode,
+        progress = true,
+        saveat = saveat, save_everystep = true,
+        # ImplicitEuler(autodiff=false);  # for stiff problems (~6.7s for 2.5days of Hammel_loam-NLayer-103)
+        # Rodas4P(autodiff=false);        # for stiff problems (~3.2s for 2.5days of Hammel_loam-NLayer-103)
+        # TRBDF2(autodiff=false);
+        # Rosenbrock23(autodiff=false);   # for stiff problems   (~2.3s for 2.5days of Hammel_loam-NLayer-103)
+        # Tsit5(); abstol = 1e-6, reltol = 1e-4, # Tsit5 recommended for non-stiff problems (~ 12.4s for 2.5days of Hammel_loam-NLayer-103)
+        # Tsit5(); abstol = 1e-6, reltol = 1e-5, # Tsit5 recommended for non-stiff problems (~ 20.9s for 2.5days of Hammel_loam-NLayer-103)
+        # Tsit5(); # Tsit5 recommended for non-stiff problems (~ 6.4s for 2.5days of Hammel_loam-NLayer-103)
+        # AutoTsit5(Rosenbrock23(autodiff=false)); reltol = 1e-5, # recommended for problems of unknown stiffnes: (~5.0s)
+        Tsit5(); reltol = 1e-5,
+        adaptive = true, internalnorm = norm_to_use, # fix adaptivity norm for NAs
         unstable_check = unstable_check_function,         # fix instability norm for NAs
-        # dt = 5/60/24, adaptive = false,
-        dt             = 1e-3,                            # dt is initial dt, but can be changed adaptively
-        adaptive       = true, internalnorm = norm_to_use # fix adaptivity norm for NAs
-        )
+        dt    = 1e-3,                            # dt is initial dt, but can be changed adaptively
+        dtmax = 60/60/24, # 60min max time step
+        # reltol = 1e-5, # abstol = 1e-6, # default: abstol = 1e-6, reltol = 1e-3
+        # tstops = sol_working.t, #[0.223, 0.4],
+        # tstops = tspan[1]:0.00001:tspan[2], adaptive = false
+    );
 
     # @info sol_LWFBrook90.destats
     @info "Time steps for solving: $(sol_LWFBrook90.destats.naccept) ($(sol_LWFBrook90.destats.naccept) accepted out of $(sol_LWFBrook90.destats.nreject + sol_LWFBrook90.destats.naccept) total)"

@@ -73,10 +73,32 @@ function find_indices(depths_to_read_out_mm, solution)
     return idx_to_read_out
 end
 
-function get_auxiliary_variables(solution)
+function get_aboveground(solution; saveat = nothing)
+    compartments_to_extract = [:GWAT, :INTS, :INTR, :SNOW, :CC, :SNOWLQ]
+
+    if isnothing(saveat)
+        u_aboveground = [solution[t_idx][compartment].mm  for t_idx = eachindex(solution), compartment in compartments_to_extract]
+        # [solution[t_idx][compartment].d18O  for t_idx = eachindex(solution), compartment in compartments_to_extract]
+        # [solution[t_idx][compartment].d2H  for t_idx = eachindex(solution), compartment in compartments_to_extract]
+    else
+        u_aboveground = [solution(t_days)[compartment].mm  for t_days = saveat, compartment in compartments_to_extract]
+        # [solution[t_idx][compartment].d18O  for t_idx = eachindex(solution), compartment in compartments_to_extract]
+        # [solution[t_idx][compartment].d2H  for t_idx = eachindex(solution), compartment in compartments_to_extract]
+    end
+
+    # returns DataFrame of dimenstion (t,6) where t is number of time steps and 6 number of aboveground compartments
+    return DataFrame(u_aboveground, string.(compartments_to_extract))
+end
+
+function get_auxiliary_variables(solution; saveat = nothing)
     p_soil = solution.prob.p[1][1]
     NLAYER = p_soil.NLAYER
-    u_SWATI = reduce(hcat, [solution[t].SWATI.mm for t = eachindex(solution)])
+    if isnothing(saveat)
+        u_SWATI = reduce(hcat, [solution[t_idx].SWATI.mm  for t_idx = eachindex(solution)])
+    else
+        u_SWATI = reduce(hcat, [solution(t_days).SWATI.mm for t_days = saveat])
+    end
+
     # (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
     #         LWFBrook90.KPT.derive_auxiliary_SOILVAR.(u_SWATI, Ref(p_soil)) # Ref fixes scalar argument for broadcasting "."
     u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK =
@@ -89,47 +111,69 @@ function get_auxiliary_variables(solution)
     return (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
 end
 
-function get_θ(depths_to_read_out_mm, solution)
+function get_θ(depths_to_read_out_mm, solution; saveat = nothing)
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-        get_auxiliary_variables(solution)
+        get_auxiliary_variables(solution; saveat = saveat)
 
     idx = find_indices(depths_to_read_out_mm, solution)
 
     return u_aux_θ[idx, :]
 end
-function get_ψ(depths_to_read_out_mm, solution)
+function get_ψ(depths_to_read_out_mm, solution; saveat = nothing)
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-        get_auxiliary_variables(solution)
+        get_auxiliary_variables(solution; saveat = saveat)
 
     idx = find_indices(depths_to_read_out_mm, solution)
 
     return u_aux_PSIM[idx, :]
 end
 
-function get_δ(solution)
+function get_δ(solution; saveat = nothing)
     @assert solution.prob.p[1][4].simulate_isotopes "Provided solution did not simulate isotopes"
 
-    # row_NaN       = fill(NaN, 1,length(x))
-    # input quantities δ-values:
-    row_PREC_d18O = reshape(solution.prob.p[2][15].(solution.t), 1, :)
-    row_PREC_d2H  = reshape(solution.prob.p[2][16].(solution.t), 1, :)
-    # scalar quantities δ-values:
-    row_INTS_d18O = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.INTS][ 1, solution.prob.p[1][4].col_idx_d18O] for i = eachindex(solution)])
-    row_INTR_d18O = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.INTR][ 1, solution.prob.p[1][4].col_idx_d18O] for i = eachindex(solution)])
-    row_SNOW_d18O = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.SNOW][ 1, solution.prob.p[1][4].col_idx_d18O] for i = eachindex(solution)])
-    row_GWAT_d18O = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.GWAT][ 1, solution.prob.p[1][4].col_idx_d18O] for i = eachindex(solution)])
-    row_RWU_d18O  = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.RWU][  1, solution.prob.p[1][4].col_idx_d18O] for i = eachindex(solution)])
-    row_XYL_d18O  = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.XYLEM][1, solution.prob.p[1][4].col_idx_d18O] for i = eachindex(solution)])
-    row_INTS_d2H  = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.INTS][ 1, solution.prob.p[1][4].col_idx_d2H]  for i = eachindex(solution)])
-    row_INTR_d2H  = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.INTR][ 1, solution.prob.p[1][4].col_idx_d2H]  for i = eachindex(solution)])
-    row_SNOW_d2H  = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.SNOW][ 1, solution.prob.p[1][4].col_idx_d2H]  for i = eachindex(solution)])
-    row_GWAT_d2H  = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.GWAT][ 1, solution.prob.p[1][4].col_idx_d2H]  for i = eachindex(solution)])
-    row_RWU_d2H   = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.RWU][  1, solution.prob.p[1][4].col_idx_d2H]  for i = eachindex(solution)])
-    row_XYL_d2H   = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_scalars.XYLEM][1, solution.prob.p[1][4].col_idx_d2H]  for i = eachindex(solution)])
-    # vector quantities δ-values:
-    rows_SWAT_d18O = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_SWATI][:, solution.prob.p[1][4].col_idx_d18O] for i = eachindex(solution)])
-    rows_SWAT_d2H  = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_SWATI][:, solution.prob.p[1][4].col_idx_d2H ] for i = eachindex(solution)])
-
+    if isnothing(saveat)
+        # row_NaN       = fill(NaN, 1,length(x))
+        # input quantities δ-values:
+        row_PREC_d18O = reshape(solution.prob.p[2][15].(solution.t), 1, :)
+        row_PREC_d2H  = reshape(solution.prob.p[2][16].(solution.t), 1, :)
+        # scalar quantities δ-values:
+        row_INTS_d18O = reduce(hcat, [solution[t_idx].INTS.d18O  for t_idx = eachindex(solution)])
+        row_INTR_d18O = reduce(hcat, [solution[t_idx].INTR.d18O  for t_idx = eachindex(solution)])
+        row_SNOW_d18O = reduce(hcat, [solution[t_idx].SNOW.d18O  for t_idx = eachindex(solution)])
+        row_GWAT_d18O = reduce(hcat, [solution[t_idx].GWAT.d18O  for t_idx = eachindex(solution)])
+        row_RWU_d18O  = reduce(hcat, [solution[t_idx].RWU.d18O   for t_idx = eachindex(solution)])
+        row_XYL_d18O  = reduce(hcat, [solution[t_idx].XYLEM.d18O for t_idx = eachindex(solution)])
+        row_INTS_d2H  = reduce(hcat, [solution[t_idx].INTS.d2H   for t_idx = eachindex(solution)])
+        row_INTR_d2H  = reduce(hcat, [solution[t_idx].INTR.d2H   for t_idx = eachindex(solution)])
+        row_SNOW_d2H  = reduce(hcat, [solution[t_idx].SNOW.d2H   for t_idx = eachindex(solution)])
+        row_GWAT_d2H  = reduce(hcat, [solution[t_idx].GWAT.d2H   for t_idx = eachindex(solution)])
+        row_RWU_d2H   = reduce(hcat, [solution[t_idx].RWU.d2H    for t_idx = eachindex(solution)])
+        row_XYL_d2H   = reduce(hcat, [solution[t_idx].XYLEM.d2H  for t_idx = eachindex(solution)])
+        # vector quantities δ-values:
+        rows_SWAT_d18O = reduce(hcat, [solution[t_idx].SWATI.d18O for t_idx = eachindex(solution)])
+        rows_SWAT_d2H  = reduce(hcat, [solution[t_idx].SWATI.d2H  for t_idx = eachindex(solution)])
+    else
+        # row_NaN       = fill(NaN, 1,length(x))
+        # input quantities δ-values:
+        row_PREC_d18O = reshape(solution.prob.p[2][15].(saveat), 1, :)
+        row_PREC_d2H  = reshape(solution.prob.p[2][16].(saveat), 1, :)
+        # scalar quantities δ-values:
+        row_INTS_d18O = reduce(hcat, [solution(t_days).INTS.d18O  for t_days = saveat])
+        row_INTR_d18O = reduce(hcat, [solution(t_days).INTR.d18O  for t_days = saveat])
+        row_SNOW_d18O = reduce(hcat, [solution(t_days).SNOW.d18O  for t_days = saveat])
+        row_GWAT_d18O = reduce(hcat, [solution(t_days).GWAT.d18O  for t_days = saveat])
+        row_RWU_d18O  = reduce(hcat, [solution(t_days).RWU.d18O   for t_days = saveat])
+        row_XYL_d18O  = reduce(hcat, [solution(t_days).XYLEM.d18O for t_days = saveat])
+        row_INTS_d2H  = reduce(hcat, [solution(t_days).INTS.d2H   for t_days = saveat])
+        row_INTR_d2H  = reduce(hcat, [solution(t_days).INTR.d2H   for t_days = saveat])
+        row_SNOW_d2H  = reduce(hcat, [solution(t_days).SNOW.d2H   for t_days = saveat])
+        row_GWAT_d2H  = reduce(hcat, [solution(t_days).GWAT.d2H   for t_days = saveat])
+        row_RWU_d2H   = reduce(hcat, [solution(t_days).RWU.d2H    for t_days = saveat])
+        row_XYL_d2H   = reduce(hcat, [solution(t_days).XYLEM.d2H  for t_days = saveat])
+        # vector quantities δ-values:
+        rows_SWAT_d18O = reduce(hcat, [solution(t_days).SWATI.d18O for t_days = saveat])
+        rows_SWAT_d2H  = reduce(hcat, [solution(t_days).SWATI.d2H  for t_days = saveat])
+    end
 
     return (SWAT = (d18O = rows_SWAT_d18O, d2H = rows_SWAT_d2H),
             PREC = (d18O = row_PREC_d18O,  d2H = row_PREC_d2H),
@@ -141,15 +185,15 @@ function get_δ(solution)
             XYL  = (d18O = row_XYL_d18O,   d2H = row_XYL_d2H))
 end
 
-function get_δsoil(solution)
-    u_δ = get_δ(solution)
+function get_δsoil(solution; saveat = nothing)
+    u_δ = get_δ(solution; saveat = saveat)
 
     return (d18O = u_δ.SWAT.d18O,
             d2H  = u_δ.SWAT.d2H)
 end
 
-function get_δsoil(depths_to_read_out_mm, solution)
-    u_d18O, u_d2H = LWFBrook90.get_δsoil(solution)
+function get_δsoil(depths_to_read_out_mm, solution; saveat = nothing)
+    u_d18O, u_d2H = LWFBrook90.get_δsoil(solution; saveat = saveat)
 
     idx = find_indices(depths_to_read_out_mm, solution)
 

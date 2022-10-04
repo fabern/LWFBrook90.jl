@@ -161,43 +161,42 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
             # 1) Either set daily sum if rate is constant throughout precipitation interval: p_DTP*(...)
             # 2) or then set daily sum to zero and use ODE to accumulate flow.
-            du.accum[ 1] = 0 # cum_d_prec ][:,was computed in callback
-            du.accum[ 2] = 0 # cum_d_rfal ][:,was computed in callback
-            du.accum[ 3] = 0 # cum_d_sfal ][:,was computed in callback
-            du.accum[ 4] = 0 # cum_d_rint ][:,was computed in callback
-            du.accum[ 5] = 0 # cum_d_sint ][:,was computed in callback
-            du.accum[ 6] = 0 # cum_d_rsno ][:,was computed in callback
-            du.accum[ 7] = 0 # cum_d_rnet ][:,was computed in callback
-            du.accum[ 8] = 0 # cum_d_smlt ][:,was computed in callback
+            du.accum.cum_d_prec     = 0 # was computed in callback
+            du.accum.cum_d_rfal     = 0 # was computed in callback
+            du.accum.cum_d_sfal     = 0 # was computed in callback
+            du.accum.cum_d_rint     = 0 # was computed in callback
+            du.accum.cum_d_sint     = 0 # was computed in callback
+            du.accum.cum_d_rsno     = 0 # was computed in callback
+            du.accum.cum_d_rnet     = 0 # was computed in callback
+            du.accum.cum_d_smlt     = 0 # was computed in callback
 
-            du.accum[ 9] = 0 # cum_d_evap ][:, was computed in callback
-            du.accum[10] = 0 # cum_d_tran ][:, was computed in callback
-            du.accum[11] = 0 # cum_d_irvp ][:, was computed in callback
-            du.accum[12] = 0 # cum_d_isvp ][:, was computed in callback
-            du.accum[13] = 0 # cum_d_slvp ][:, was computed in callback
-            du.accum[14] = 0 # cum_d_snvp ][:, was computed in callback
-            du.accum[15] = 0 # cum_d_pint ][:, was computed in callback
-            du.accum[16] = 0 # cum_d_ptran ][:,was computed in callback
-            du.accum[17] = 0 # cum_d_pslvp ][:,was computed in callback
+            du.accum.cum_d_evap     = 0 # was computed in callback
+            du.accum.cum_d_tran     = 0 # was computed in callback
+            du.accum.cum_d_irvp     = 0 # was computed in callback
+            du.accum.cum_d_isvp     = 0 # was computed in callback
+            du.accum.cum_d_slvp     = 0 # was computed in callback
+            du.accum.cum_d_snvp     = 0 # was computed in callback
+            du.accum.cum_d_pint     = 0 # was computed in callback
+            du.accum.cum_d_ptran    = 0 # was computed in callback
+            du.accum.cum_d_pslvp    = 0 # was computed in callback
 
-            du.accum[18] = p_fu_SRFL +
-                              sum(aux_du_BYFLI) +
-                              sum(aux_du_DSFLI) +
-                              du_GWFL # SRFLD + BYFLD + DSFLD + GWFLD # flow
-            du.accum[19] = du_SEEP                                 # seep
-            du.accum[20] = p_fu_SRFL                               # srfl
-            du.accum[21] = p_fu_SLFL                               # slfl
-            du.accum[22] = sum(aux_du_BYFLI)                       # byfl
-            du.accum[23] = sum(aux_du_DSFLI)                       # dsfl
-            du.accum[24] = du_GWFL                                 # gwfl
-            du.accum[25] = aux_du_VRFLI[NLAYER]                    # vrfln
-
-            # du.accum[26] = 0 # cum_d_rthr ][:,was computed in callback
-            # du.accum[27] = 0 # cum_d_sthr ][:,was computed in callback
-            du.accum[28] = 0 # new_SWAT ][:,is computed in callback
-            du.accum[29] = 0 # new_totalWATER ][:,is computed in callback
-            du.accum[30] = 0 # BALERD_SWAT ][:,is computed in callback
-            du.accum[31] = 0 # BALERD_total ][:,is computed in callback
+            du.accum.flow           = p_fu_SRFL +
+                                        sum(aux_du_BYFLI) +
+                                        sum(aux_du_DSFLI) +
+                                        du_GWFL
+            du.accum.seep           = du_SEEP
+            du.accum.srfl           = p_fu_SRFL
+            du.accum.slfl           = p_fu_SLFL
+            du.accum.byfl           = sum(aux_du_BYFLI)
+            du.accum.dsfl           = sum(aux_du_DSFLI)
+            du.accum.gwfl           = du_GWFL
+            du.accum.vrfln          = aux_du_VRFLI[NLAYER]
+            # du.accum.cum_d_rthr   = 0 # was computed in callback
+            # du.accum.cum_d_sthr   = 0 # was computed in callback
+            du.accum.totalSWAT      = 0 # is computed in callback
+            du.accum.new_totalWATER = 0 # is computed in callback
+            du.accum.BALERD_SWAT    = 0 # is computed in callback
+            du.accum.BALERD_total   = 0 # is computed in callback
 
             # TODO(bernhard): use SavingCallback() for all quantities that have du=0
             #                 only keep du=... for quantities for which we compute cumulative sums

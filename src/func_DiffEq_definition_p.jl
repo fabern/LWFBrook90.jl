@@ -11,8 +11,6 @@ Generate vector p needed for ODE() problem in DiffEq.jl package.
 - `soil_output_depths`: vector of depths at which state variables should be extractable (negative numeric values [in meter])
 """
 function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr, u0, u0_field_names, names_accum)
-    # states = NamedTuple{u0_field_names}(u0.x)
-
     ########
     ## Interpolate discretized root distribution
      p_RELDEN = LWFBrook90.interpolate_spaceDiscretized_root_density(;

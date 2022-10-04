@@ -3,6 +3,7 @@ using DataFrames
 using Test: @testset, @test, @test_throws, @test_broken, @test_skip
 using CSV: File
 using Random
+using Printf
 
 # A macro for timing that also prints out the git commit hash:
 macro githash_time(variable)
