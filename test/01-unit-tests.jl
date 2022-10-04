@@ -209,13 +209,13 @@ end
         p_WETINF = [1])
 end
 
-# @testset "pointers-to-elements-of-u0" begin
+# @testset "adding-soil-layers" begin
 Δz_m_data = [
             [fill(0.5, 4);],
             [fill(0.02, 100);],
             [fill(0.01, 200);]
         ]
-@testset "pointers-to-elements-of-u0 (Δz_m = $(first(Δz_m)))" for Δz_m in Δz_m_data # source: https://stackoverflow.com/a/63871951
+@testset "adding-soil-layers (Δz_m = $(first(Δz_m)))" for Δz_m in Δz_m_data # source: https://stackoverflow.com/a/63871951
     continuous_SPAC = SPAC("test-assets/Hammel-2001/input-files-ISO/",
                       "Hammel_loam-NLayer-103-RESET=FALSE";
                       simulate_isotopes = false);
@@ -229,6 +229,8 @@ end
         u_delta18O_init_permil = ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.),
         u_delta2H_init_permil  = ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.))
 
+    ####################
+    ## Discretize soil parameters and interpolate discretized root distribution
     # Define refinement of grid with soil_output_depths
     soil_output_depths = soil_output_depths = zeros(Float64, 0)
     soil_discr =
@@ -240,32 +242,27 @@ end
             continuous_SPAC.params[:QDEPTH_m],
             continuous_SPAC.params[:INITRDEP],
             continuous_SPAC.params[:RGRORATE])
+    ####################
+
+    ####################
+    # Define state vector u for DiffEq.jl
+    # a) allocation of u0
+    u0, u0_field_names, names_accum =
+        define_LWFB90_u0(;simulate_isotopes = continuous_SPAC.solver_options.simulate_isotopes,
+                         compute_intermediate_quantities = continuous_SPAC.solver_options.compute_intermediate_quantities,
+                         NLAYER = soil_discr["NLAYER"])
+    ####################
+
+    ####################
     # Define parameters for differential equation
-    p = define_LWFB90_p(continuous_SPAC, soil_discr)
+    p = define_LWFB90_p(continuous_SPAC, soil_discr, u0, u0_field_names, names_accum)
+    # using Plots
+    # hline([0; cumsum(p[1][1].p_THICK)], yflip = true, xticks = false,
+    #     title = "N_layer = "*string(p[1][1].NLAYER))
+   ####################
 
-    # Create u0 for DiffEq.jl
-    u0, p = define_LWFB90_u0(
-        p,
-        continuous_SPAC.continuousIC.scalar,
-        soil_discr["PSIM_init"], soil_discr["d18O_init"], soil_discr["d2H_init"],
-        continuous_SPAC.solver_options.compute_intermediate_quantities;
-        simulate_isotopes = continuous_SPAC.solver_options.simulate_isotopes);
-
-    # Assert that the pointers to the rows of u are correct and unique:
-    all_rows_defined = [collect(p[1][4].row_idx_scalars)
-        p[1][4].row_idx_SWATI
-        p[1][4].row_idx_RWU
-        p[1][4].row_idx_accum]
-    @test (length(unique(all_rows_defined)) == length(all_rows_defined)) # """
-    # There is a problem with the definition of the row indices.
-    # Multiple references to the same row exist.
-    # Please contact the developer.
-    # """
-    @test (size(u0,1) == length(all_rows_defined)) #"""
-    # There is a problem with the definition of the row indices.
-    # Their length is not equal to the rows in u0.
-    # Please contact the developer, unless you modified u0 yourself and know what you are doing.
-    # """
+    # Check if defined layers correspond to requested
+    @test p[1][1].NLAYER == length(Δz_m) + 1 # +1 because we needed to add one at 0.005 m for the IDEPTH_m
 end
 
 # TODO(bernhard): include unit tests of specific functions, e.g. during development of the Hammel-2001 infiltration test

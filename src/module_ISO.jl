@@ -240,21 +240,6 @@ end
     # 1a) extract data from solution object `sol`
     simulate_isotopes            = sol.prob.p[1][4].simulate_isotopes
     @assert simulate_isotopes "Provided solution did not simulate isotopes"
-    @assert sol.prob.p[1][4].u0_variable_names == (d18O = 2, d2H = 3)
-
-    # To get indices we could do:
-    # findfirst(isequal(:GWAT), sol.prob.p[1][4].u0_field_names)
-    # findfirst(isequal(:INTS), sol.prob.p[1][4].u0_field_names)
-    # findfirst(isequal(:INTR), sol.prob.p[1][4].u0_field_names)
-    # findfirst(isequal(:SNOW), sol.prob.p[1][4].u0_field_names)
-    # findfirst(isequal(:CC), sol.prob.p[1][4].u0_field_names)
-    # findfirst(isequal(:SNOWLQ), sol.prob.p[1][4].u0_field_names)
-    # findfirst(isequal(:SWATI), sol.prob.p[1][4].u0_field_names)
-    # findfirst(isequal(:RWU), sol.prob.p[1][4].u0_field_names)
-    # findfirst(isequal(:XYLEM), sol.prob.p[1][4].u0_field_names)
-    # findfirst(isequal(:TRANI), sol.prob.p[1][4].u0_field_names)
-    # findfirst(isequal(:aux), sol.prob.p[1][4].u0_field_names)
-    # findfirst(isequal(:accum), sol.prob.p[1][4].u0_field_names)
 
     t_ref = sol.prob.p[2][17]
     x = RelativeDaysFloat2DateTime.(sol.t, t_ref);
@@ -263,26 +248,27 @@ end
     row_PREC_amt = sol.prob.p[2][8].(sol.t)
 
     # rows_SWAT_amt = sol[sol.prob.p[1][4].row_idx_SWATI, 1, :]./sol.prob.p[1][1].p_THICK;
-    rows_SWAT_amt  = reduce(hcat, [sol[t].x[sol.prob.p[1][4].row_idx_SWATI][:,1                            ]./sol.prob.p[1][1].p_THICK for t in eachindex(sol)])
-    rows_SWAT_d18O = reduce(hcat, [sol[t].x[sol.prob.p[1][4].row_idx_SWATI][:,sol.prob.p[1][4].col_idx_d18O] for t in eachindex(sol)])
-    rows_SWAT_d2H  = reduce(hcat, [sol[t].x[sol.prob.p[1][4].row_idx_SWATI][:,sol.prob.p[1][4].col_idx_d2H ] for t in eachindex(sol)])
+
+    rows_SWAT_amt  = reduce(hcat, [sol[t].SWATI.mm   for t in eachindex(sol)]) ./ sol.prob.p[1][1].p_THICK
+    rows_SWAT_d18O = reduce(hcat, [sol[t].SWATI.d18O for t in eachindex(sol)])
+    rows_SWAT_d2H  = reduce(hcat, [sol[t].SWATI.d2H  for t in eachindex(sol)])
 
     row_NaN       = fill(NaN, 1,length(x))
     row_PREC_d18O = reshape(sol.prob.p[2][15].(sol.t), 1, :)
 
-    row_INTS_d18O = reduce(hcat, [sol[t].x[sol.prob.p[1][4].row_idx_scalars.INTS][ :,sol.prob.p[1][4].col_idx_d18O] for t in eachindex(sol)])
-    row_INTR_d18O = reduce(hcat, [sol[t].x[sol.prob.p[1][4].row_idx_scalars.INTR][ :,sol.prob.p[1][4].col_idx_d18O] for t in eachindex(sol)])
-    row_SNOW_d18O = reduce(hcat, [sol[t].x[sol.prob.p[1][4].row_idx_scalars.SNOW][ :,sol.prob.p[1][4].col_idx_d18O] for t in eachindex(sol)])
-    row_GWAT_d18O = reduce(hcat, [sol[t].x[sol.prob.p[1][4].row_idx_scalars.GWAT][ :,sol.prob.p[1][4].col_idx_d18O] for t in eachindex(sol)])
-    row_RWU_d18O  = reduce(hcat, [sol[t].x[sol.prob.p[1][4].row_idx_scalars.RWU][  :,sol.prob.p[1][4].col_idx_d18O] for t in eachindex(sol)])
-    row_XYL_d18O  = reduce(hcat, [sol[t].x[sol.prob.p[1][4].row_idx_scalars.XYLEM][:,sol.prob.p[1][4].col_idx_d18O] for t in eachindex(sol)])
+    row_INTS_d18O = reduce(hcat, [sol[t].INTS.d18O for t in eachindex(sol)])
+    row_INTR_d18O = reduce(hcat, [sol[t].INTR.d18O for t in eachindex(sol)])
+    row_SNOW_d18O = reduce(hcat, [sol[t].SNOW.d18O for t in eachindex(sol)])
+    row_GWAT_d18O = reduce(hcat, [sol[t].GWAT.d18O for t in eachindex(sol)])
+    row_RWU_d18O  = reduce(hcat, [sol[t].RWU.d18O for t in eachindex(sol)])
+    row_XYL_d18O  = reduce(hcat, [sol[t].XYLEM.d18O for t in eachindex(sol)])
     row_PREC_d2H  = reshape(sol.prob.p[2][16].(sol.t), 1, :)
-    row_INTS_d2H = reduce(hcat, [sol[t].x[sol.prob.p[1][4].row_idx_scalars.INTS][ :,sol.prob.p[1][4].col_idx_d2H] for t in eachindex(sol)])
-    row_INTR_d2H = reduce(hcat, [sol[t].x[sol.prob.p[1][4].row_idx_scalars.INTR][ :,sol.prob.p[1][4].col_idx_d2H] for t in eachindex(sol)])
-    row_SNOW_d2H = reduce(hcat, [sol[t].x[sol.prob.p[1][4].row_idx_scalars.SNOW][ :,sol.prob.p[1][4].col_idx_d2H] for t in eachindex(sol)])
-    row_GWAT_d2H = reduce(hcat, [sol[t].x[sol.prob.p[1][4].row_idx_scalars.GWAT][ :,sol.prob.p[1][4].col_idx_d2H] for t in eachindex(sol)])
-    row_RWU_d2H  = reduce(hcat, [sol[t].x[sol.prob.p[1][4].row_idx_scalars.RWU][  :,sol.prob.p[1][4].col_idx_d2H] for t in eachindex(sol)])
-    row_XYL_d2H  = reduce(hcat, [sol[t].x[sol.prob.p[1][4].row_idx_scalars.XYLEM][:,sol.prob.p[1][4].col_idx_d2H] for t in eachindex(sol)])
+    row_INTS_d2H = reduce(hcat, [sol[t].INTS.d2H for t in eachindex(sol)])
+    row_INTR_d2H = reduce(hcat, [sol[t].INTR.d2H for t in eachindex(sol)])
+    row_SNOW_d2H = reduce(hcat, [sol[t].SNOW.d2H for t in eachindex(sol)])
+    row_GWAT_d2H = reduce(hcat, [sol[t].GWAT.d2H for t in eachindex(sol)])
+    row_RWU_d2H  = reduce(hcat, [sol[t].RWU.d2H for t in eachindex(sol)])
+    row_XYL_d2H  = reduce(hcat, [sol[t].XYLEM.d2H for t in eachindex(sol)])
 
     # 1b) define some plot arguments based on the extracted data
     # color scheme:

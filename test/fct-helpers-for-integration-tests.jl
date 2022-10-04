@@ -141,19 +141,19 @@ function prepare_θψδ_from_sim_and_reference(;
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
             get_auxiliary_variables(sim_sol)
 
-    sim_θ = DataFrame(u_aux_θ[:,idx], :auto)
+    sim_θ = DataFrame(u_aux_θ[idx,:]', :auto)
     sim_θ.time = sim_sol.t
 
-    sim_ψ = DataFrame(u_aux_PSIM[:,idx], :auto)
+    sim_ψ = DataFrame(u_aux_PSIM[idx,:]', :auto)
     sim_ψ.time = sim_sol.t
 
     if (simulate_isotopes)
         (u_δ18O_soil, u_δ2H_soil) =
             get_δsoil(sim_sol)
 
-        sim_δ18O = DataFrame(u_δ18O_soil[:,idx], :auto)
+        sim_δ18O = DataFrame(u_δ18O_soil[idx,:]', :auto)
         sim_δ18O.time = sim_sol.t
-        sim_δ2H = DataFrame(u_δ2H_soil[:,idx], :auto)
+        sim_δ2H = DataFrame(u_δ2H_soil[idx,:]', :auto)
         sim_δ2H.time = sim_sol.t
     else
         sim_δ18O = allowmissing(copy(sim_ψ))
@@ -292,9 +292,9 @@ function prepare_sim_and_ref_for_BEA_2016(
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
             get_auxiliary_variables(sim_sol)
 
-    sim = (θ = insertcols!(DataFrame(u_aux_θ[:,idx_sim_sol], :auto),
+    sim = (θ = insertcols!(DataFrame(u_aux_θ[idx_sim_sol,:], :auto),
                 :time => sim_sol.t),
-           ψ = insertcols!(DataFrame(u_aux_PSIM[:,idx_sim_sol], :auto),
+           ψ = insertcols!(DataFrame(u_aux_PSIM[idx_sim_sol,:], :auto),
                 :time => sim_sol.t),
            above = insertcols!(DataFrame([sim_sol.u[t_idx][u_idx] for
                     t_idx in 1:length(sim_sol),

@@ -76,7 +76,7 @@ end
 function get_auxiliary_variables(solution)
     p_soil = solution.prob.p[1][1]
     NLAYER = p_soil.NLAYER
-    u_SWATI = reduce(hcat, [solution[i].x[solution.prob.p[1][4].row_idx_SWATI][:,1] for i = eachindex(solution)])
+    u_SWATI = reduce(hcat, [solution[t].SWATI.mm for t = eachindex(solution)])
     # (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
     #         LWFBrook90.KPT.derive_auxiliary_SOILVAR.(u_SWATI, Ref(p_soil)) # Ref fixes scalar argument for broadcasting "."
     u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK =

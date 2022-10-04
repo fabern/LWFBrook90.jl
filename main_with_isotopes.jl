@@ -60,7 +60,8 @@ function run_main_with_isotopes(;input_prefix, input_path)
         Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5)]; # grid spacing (heterogenous), meter (N=20)
     end
 
-    simulation = LWFBrook90.discretize(model; Δz = Δz_m);
+    simulation = LWFBrook90.discretize(model; Δz = Δz_m, tspan = (0,10));
+    # simulation = LWFBrook90.discretize(model; Δz = Δz_m, tspan = (0,300));
         # TODO: still to use:
         model.root_distribution # e.g. β_root
         model.continuousIC.soil
@@ -163,7 +164,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
         ifelse(length(Base.read(`git status --porcelain`, String))==0, "+gitclean","+gitdirty")*
         "-iso+"*string(simulate_isotopes))
 
-    # if simulate_isotopes
+    if simulate_isotopes
         optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
         # pl1 = LWFBrook90.ISO.plotisotopes(sol_LWFBrook90);
         pl2 = LWFBrook90.ISO.plotisotopes(

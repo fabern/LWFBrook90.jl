@@ -24,6 +24,21 @@ function discretize_soil(path_soil_discretization::String)
 
     return input_soil_discretization
 end
+# function discretize(soil_horizons::DataFrame, )
+#     # checks on structure
+#     @assert names(soil_horizons) == ["HorizonNr", "Upper_m", "Lower_m", "shp"]
+#     coltypes = [eltype(col) for col in eachcol(input_soil_horizons[1])]
+#     @assert coltypes[1] <: Integer
+#     @assert coltypes[2] <: Real
+#     @assert coltypes[3] <: Real
+#     @assert coltypes[4] <: LWFBrook90.AbstractSoilHydraulicParams
+
+#     # return DataFrame(Upper_m, Lower_m, Rootden_, ICs, shp)
+#     # where ICs is an Array{State}, and shp an Array{AbstractSoilHydraulicParams}
+#     # TODO(bernhard): define
+#     return DiscretizedSoilDomain(Upper_m, Lower_m, Rootden_, ICs, shp)
+# end
+
 
 """
 discretize_soil(;
@@ -152,6 +167,11 @@ function refine_soil_discretization(
 
     existing_interfaces = [0; input_soil_discretization[!,"Lower_m"]]
     to_add = all_needed_interfaces[(!).(all_needed_interfaces .∈ (existing_interfaces,))]
+    if length(to_add) != 0
+        @warn "Adding soil layers at depths $to_add, to allow for either requested IDEPTH/QDEPTH:  $IDEPTH_m/$QDEPTH_m, "*
+              "or to accomodate defined soil horizons: $(unique(vcat(input_soil_horizons[!,"Upper_m"], input_soil_horizons[!,"Lower_m"])))"*
+              ifelse(length(soil_output_depths)==0,".",", or `soil_output_depths`=$soil_output_depths.")
+    end
 
     # Add them to the DataFrame
     soil_discretization = copy(input_soil_discretization) # otherwise input argument is modified in-place

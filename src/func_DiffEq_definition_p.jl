@@ -10,8 +10,7 @@ Generate vector p needed for ODE() problem in DiffEq.jl package.
 - `simulate_isotopes::...`: TODO argument description.
 - `soil_output_depths`: vector of depths at which state variables should be extractable (negative numeric values [in meter])
 """
-# function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr)
-function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr, u0, u0_field_names, names_accum, u0_variable_names)
+function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr, u0, u0_field_names, names_accum)
     # states = NamedTuple{u0_field_names}(u0.x)
 
     ########
@@ -356,24 +355,22 @@ function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr, u0, u0_field_names, 
         continuous_SPAC.solver_options.compute_intermediate_quantities,
         continuous_SPAC.solver_options.simulate_isotopes,
         # row_idx_scalars = [], # TODO(bernharf): replace with keys(states) or states[:accum]
-        row_idx_scalars = (GWAT = findfirst(isequal(:GWAT),  u0_field_names),#:GWAT,
-                           INTS = findfirst(isequal(:INTS),  u0_field_names),#:INTS,
-                           INTR = findfirst(isequal(:INTR),  u0_field_names),#:INTR,
-                           SNOW = findfirst(isequal(:SNOW),  u0_field_names),#:SNOW,
-                           CC = findfirst(isequal(:CC),    u0_field_names),#:CC,
-                           SNOWLQ = findfirst(isequal(:SNOWLQ),u0_field_names),#:SNOWLQ,
-                           RWU = findfirst(isequal(:RWU),   u0_field_names),#:RWU,
-                           XYLEM = findfirst(isequal(:XYLEM), u0_field_names)),#:XYLEM],
-        row_idx_SWATI   = findfirst(isequal(:SWATI), u0_field_names),#:SWATI],
-        row_idx_TRANI   = findfirst(isequal(:TRANI), u0_field_names),#[:TRANI],
+        row_idx_scalars = (GWAT = nothing,#findfirst(isequal(:GWAT),  u0_field_names),#:GWAT,
+                           INTS = nothing,#findfirst(isequal(:INTS),  u0_field_names),#:INTS,
+                           INTR = nothing,#findfirst(isequal(:INTR),  u0_field_names),#:INTR,
+                           SNOW = nothing,#findfirst(isequal(:SNOW),  u0_field_names),#:SNOW,
+                           CC   = nothing,#findfirst(isequal(:CC),    u0_field_names),#:CC,
+                           SNOWLQ=nothing,#findfirst(isequal(:SNOWLQ),u0_field_names),#:SNOWLQ,
+                           RWU  = nothing,#findfirst(isequal(:RWU),   u0_field_names),#:RWU,
+                           XYLEM= nothing),#findfirst(isequal(:XYLEM), u0_field_names)),#:XYLEM],
+        row_idx_SWATI   = nothing,#findfirst(isequal(:SWATI), u0_field_names),#:SWATI],
+        row_idx_TRANI   = nothing,#findfirst(isequal(:TRANI), u0_field_names),#[:TRANI],
                         # findfirst(isequal(:aux),   u0_field_names)
-        row_idx_accum   = findfirst(isequal(:accum), u0_field_names),#[:accum],
+        row_idx_accum   = nothing,#findfirst(isequal(:accum), u0_field_names),#[:accum],
         names_accum     = names_accum,
         col_idx_d18O    = 2,
         col_idx_d2H     = 3,
-        u0_field_names  = u0_field_names,
-        u0_variable_names = u0_variable_names)
-        # @assert u0_variable_names == (d18O = 2, d2H = 3)
+        u0_field_names  = u0_field_names)
     p_cst = (p_cst_1, p_cst_2, p_cst_3, p_cst_4)
 
     # 2b) Time varying parameters (e.g. meteorological forcings)

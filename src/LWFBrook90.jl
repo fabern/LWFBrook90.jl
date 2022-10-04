@@ -5,7 +5,7 @@ using DiffEqCallbacks # instead of loading the full DifferentialEquations
 using RecipesBase
 using LinearAlgebra
 using StatsBase: mean, weights
-using RecursiveArrayTools: ArrayPartition, VectorOfArray#, vecarr_to_vectors # TODO(bernhard): replace this with ComponentArrays.jl see: https://docs.sciml.ai/dev/highlevels/abstractarray_libraries/
+using ComponentArrays
 
 using Dates: now
 # using Infiltrator
@@ -126,6 +126,60 @@ include("func_MSB_functions.jl")
 include("func_postprocess.jl")
 
 include("../examples/func_run_example.jl") # defines RelativeDaysFloat2DateTime
+
+struct DiscretizedSoilDomain{T <: AbstractVector}
+    # Input fields
+    # Geometry
+    "Vector of depths of upper interface [m]"
+    Upper_m::T
+    "Vector of depths of lower interface [m]"
+    Lower_m::T
+    # Soil Hydraulic properties
+    "Vecotr of soil hydraulic properties"
+    soil::Vector{AbstractSoilHydraulicParams} # containing p_STONEF, p_THSAT, etc...
+
+    # Derived fields
+    # Geometry
+    NLAYER::Int
+    p_THICK::T
+    p_SWATMAX::T # TODO(bernhard): should be replaced with θmax (i.e. actually θs)
+
+    # # Inner constructor:
+    # see constructor of KPT_SOILPAR_Ch1d
+end
+
+# struct SoilState
+#     head
+#     c18o
+#     c2h
+# end
+
+# struct SPACSimulation
+#     soil::DiscretizedSoilDomain
+#     params
+#     problem::ODEProblem
+#     solution::ODESolution?
+
+#     # Constructors
+#     function SPACSimulation(config = "conf.toml")
+#         params, u0  init_spac(config)
+    #         params = init_parameters(config)
+    #         u0 = init_state(config)
+    #         tspan = ...
+
+#         input("func_DiffEq_definition_cb.jl")
+#         #function compute_rhs!(du, u, p, t)
+#         #end
+#         input("func_DiffEq_definition_cb.jl")
+#         #function callbacks(du, u, p, t)
+#         #end
+
+#         problem = ODE(u0, tspan, )
+#     end
+# end
+# run(sim::SPACsimulation)
+#    sim.solution = solve(sim, )
+# end
 
 function LWFBrook90.discretize(continuous_SPAC::SPAC;
                                 Δz = nothing, tspan = nothing,
@@ -251,7 +305,7 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
     ####################
     # Define state vector u for DiffEq.jl
     # a) allocation of u0
-    u0, u0_field_names, u0_variable_names, names_accum =
+    u0, u0_field_names, names_accum =
         define_LWFB90_u0(;simulate_isotopes = continuous_SPAC.solver_options.simulate_isotopes,
                          compute_intermediate_quantities = continuous_SPAC.solver_options.compute_intermediate_quantities,
                          NLAYER = soil_discr["NLAYER"])
@@ -259,7 +313,7 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
 
     ####################
     # Define parameters for differential equation
-    p = define_LWFB90_p(continuous_SPAC, soil_discr, u0, u0_field_names, names_accum, u0_variable_names)
+    p = define_LWFB90_p(continuous_SPAC, soil_discr, u0, u0_field_names, names_accum)
     # using Plots
     # hline([0; cumsum(p[1][1].p_THICK)], yflip = true, xticks = false,
     #     title = "N_layer = "*string(p[1][1].NLAYER))
@@ -270,8 +324,7 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
     # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
     # Create u0 for DiffEq.jl
     # b) initialization of u0
-    init_LWFB90_u0!(;u0=u0, u0_field_names=u0_field_names, u0_variable_names=u0_variable_names,
-                 continuous_SPAC=continuous_SPAC, soil_discr=soil_discr, p_soil=p[1][1])
+    init_LWFB90_u0!(;u0=u0, continuous_SPAC=continuous_SPAC, soil_discr=soil_discr, p_soil=p[1][1])
     ####################
 
     ####################
@@ -324,8 +377,8 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
 end
 
 function simulate!(s::DiscretizedSPAC)
-    sol_SPAC = solve_LWFB90(s.ODEProblem)
-    s.ODESolution = sol_SPAC
+    sol_SPAC = solve_LWFB90(s.ODEProblem);
+    s.ODESolution = sol_SPAC;
     # return sol_SPAC
     return nothing
 end
