@@ -17,12 +17,6 @@ These files were created with an R script `generate_LWFBrook90jl_Input.R` that
 takes the same arguements as the R function `LWFBrook90R::run_LWFB90()` and generates
 the corresponding input files for LWFBrook90.jl.
 """
-input_prefix = "isoBEAdense2010-18-reset-FALSE";
-input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
-folder = input_path
-prefix = input_prefix
-suffix = ""; simulate_isotopes = true;
-
 function SPAC(folder::String, prefix::String;
     suffix::String = "",
     simulate_isotopes::Bool = true,

@@ -60,19 +60,19 @@ function run_main_with_isotopes(;input_prefix, input_path)
         Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5)]; # grid spacing (heterogenous), meter (N=20)
     end
 
-    simulation = LWFBrook90.discretize(model; Δz = Δz_m, tspan = (0,10));
-    # simulation = LWFBrook90.discretize(model; Δz = Δz_m, tspan = (0,300));
+    # simulation = LWFBrook90.discretize(model; Δz = Δz_m, tspan = (0,10));
+    simulation = LWFBrook90.discretize(model; Δz = Δz_m, tspan = (0,300));
         # TODO: still to use:
         model.root_distribution # e.g. β_root
         model.continuousIC.soil
 
     # Solve ODE:
-    simulate!(simulation)
+    simulate!(simulation);
     # plot(simulation.ODESolution)
-    sol_LWFBrook90 = simulation.ODESolution
+    sol_LWFBrook90 = simulation.ODESolution;
 
-    u_soil1_amt_d18_d2 = reduce(hcat, [sol_LWFBrook90[i].x[sol_LWFBrook90.prob.p[1][4].row_idx_SWATI][1,:] for i = eachindex(sol_LWFBrook90)])
-    u_soilX_amts       = reduce(hcat, [sol_LWFBrook90[i].x[sol_LWFBrook90.prob.p[1][4].row_idx_SWATI][:,1] for i = eachindex(sol_LWFBrook90)])
+    #u_soil1_amt_d18_d2 = reduce(hcat, [sol_LWFBrook90[i].x[sol_LWFBrook90.prob.p[1][4].row_idx_SWATI][1,:] for i = eachindex(sol_LWFBrook90)])
+    #u_soilX_amts       = reduce(hcat, [sol_LWFBrook90[i].x[sol_LWFBrook90.prob.p[1][4].row_idx_SWATI][:,1] for i = eachindex(sol_LWFBrook90)])
     ####################
 
     ####################
@@ -150,9 +150,9 @@ function run_main_with_isotopes(;input_prefix, input_path)
 
     ####################
     ## Plotting
-    p = sol_LWFBrook90.prob.p
-    θ_limits = (minimum(sol_LWFBrook90.prob.p[1][1].p_θr), maximum(sol_LWFBrook90.prob.p[1][1].p_THSAT))
-    ψ_pF_limits = (-2, 7)
+    p = sol_LWFBrook90.prob.p;
+    θ_limits = (minimum(sol_LWFBrook90.prob.p[1][1].p_θr), maximum(sol_LWFBrook90.prob.p[1][1].p_THSAT));
+    ψ_pF_limits = (-2, 7);
 
     # 0) defined in module_ISO.jl
     # using Plots, Measures
@@ -192,8 +192,10 @@ function run_main_with_isotopes(;input_prefix, input_path)
         # all states as matrix: reduce(hcat, [sol_LWFBrook90[t] for t = eachindex(sol_LWFBrook90)])
         # reduce(hcat, [sol_LWFBrook90[t].x[1][:,1] for t = eachindex(sol_LWFBrook90)])
         # reduce(hcat, [sol_LWFBrook90[t].x[2][:,1] for t = eachindex(sol_LWFBrook90)])
-        row_RWU_d18O = reduce(hcat, [sol_LWFBrook90[t].x[sol_LWFBrook90.prob.p[1][4].row_idx_scalars.RWU][:,sol_LWFBrook90.prob.p[1][4].col_idx_d18O] for t = eachindex(sol_LWFBrook90)])
-        row_XYL_d18O = reduce(hcat, [sol_LWFBrook90[t].x[sol_LWFBrook90.prob.p[1][4].row_idx_scalars.XYLEM][:,sol_LWFBrook90.prob.p[1][4].col_idx_d18O] for t = eachindex(sol_LWFBrook90)])
+        # row_RWU_d18O = reduce(hcat, [sol_LWFBrook90[t].x[sol_LWFBrook90.prob.p[1][4].row_idx_scalars.RWU][:,sol_LWFBrook90.prob.p[1][4].col_idx_d18O] for t = eachindex(sol_LWFBrook90)])
+        # row_XYL_d18O = reduce(hcat, [sol_LWFBrook90[t].x[sol_LWFBrook90.prob.p[1][4].row_idx_scalars.XYLEM][:,sol_LWFBrook90.prob.p[1][4].col_idx_d18O] for t = eachindex(sol_LWFBrook90)])
+        row_RWU_d18O  = reduce(hcat, [sol_LWFBrook90[t_idx].RWU.d18O   for t_idx = eachindex(sol_LWFBrook90)])
+        row_XYL_d18O  = reduce(hcat, [sol_LWFBrook90[t_idx].XYLEM.d18O for t_idx = eachindex(sol_LWFBrook90)])
         plot([transpose(row_RWU_d18O) transpose(row_XYL_d18O)], labels = ["δ_RWU" "δ_XylemV"])
     end
 
@@ -266,8 +268,10 @@ function run_main_with_isotopes(;input_prefix, input_path)
                 # data_days_to_plot = (input_meteoiso.days .> tspan[1] .&& input_meteoiso.days .< tspan[2])
                 # scatter!(LWFBrook90.RelativeDaysFloat2DateTime.(input_meteoiso.days[data_days_to_plot], simulation.continuous_SPAC.reference_date),
                 #         input_meteoiso.delta18O_permil[data_days_to_plot])
-            row_RWU_d18O = reduce(hcat, [sol_LWFBrook90[t].x[sol_LWFBrook90.prob.p[1][4].row_idx_scalars.RWU][:,sol_LWFBrook90.prob.p[1][4].col_idx_d18O] for t = eachindex(sol_LWFBrook90)])
-            row_XYL_d18O = reduce(hcat, [sol_LWFBrook90[t].x[sol_LWFBrook90.prob.p[1][4].row_idx_scalars.XYLEM][:,sol_LWFBrook90.prob.p[1][4].col_idx_d18O] for t = eachindex(sol_LWFBrook90)])
+            # row_RWU_d18O = reduce(hcat, [sol_LWFBrook90[t].x[sol_LWFBrook90.prob.p[1][4].row_idx_scalars.RWU][:,sol_LWFBrook90.prob.p[1][4].col_idx_d18O] for t = eachindex(sol_LWFBrook90)])
+            # row_XYL_d18O = reduce(hcat, [sol_LWFBrook90[t].x[sol_LWFBrook90.prob.p[1][4].row_idx_scalars.XYLEM][:,sol_LWFBrook90.prob.p[1][4].col_idx_d18O] for t = eachindex(sol_LWFBrook90)])
+            row_RWU_d18O  = reduce(hcat, [sol_LWFBrook90[t_idx].RWU.d18O   for t_idx = eachindex(sol_LWFBrook90)])
+            row_XYL_d18O  = reduce(hcat, [sol_LWFBrook90[t_idx].XYLEM.d18O for t_idx = eachindex(sol_LWFBrook90)])
             plot!(pl_δ18O, linestyle = :dash,
                 LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, simulation.continuous_SPAC.reference_date),
                 [transpose(row_RWU_d18O) transpose(row_XYL_d18O)], labels = ["δ_RWU" "δ_XylemV"])
@@ -298,7 +302,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
     aux_indices = sol_LWFBrook90.prob.p[1][4].row_idx_accum
     aux_names = sol_LWFBrook90.prob.p[1][4].names_accum
     plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, simulation.continuous_SPAC.reference_date),
-                transpose(reduce(hcat, [sol_LWFBrook90[t].x[aux_indices][30:31] for t = eachindex(sol_LWFBrook90)])),
+                transpose(reduce(hcat, [sol_LWFBrook90[t].aux[30:31] for t = eachindex(sol_LWFBrook90)])),
                 legend = :outerright, labels = aux_names[:, 30:31],
                 ylabel = "Water balance error [mm]")
     savefig(fname*"_plot-water-balance-error.png")
@@ -318,13 +322,13 @@ function run_main_with_isotopes(;input_prefix, input_path)
                         get_auxiliary_variables(sol_LWFBrook90)
         t_to_plot = 1:length(x)
         pl_θ = heatmap(x, y,
-                    u_aux_θ', colorbar_title = "θ [-]", clims = θ_limits, c=cgrad(:inferno, rev=true),
+                    u_aux_θ, colorbar_title = "θ [-]", clims = θ_limits, c=cgrad(:inferno, rev=true),
                     yflip = true,
                     xlabel = "",#"Date",
                     ylabel = "Depth [mm]");
         pl_ψ = heatmap(x, y,
                     # u_aux_PSIM', colorbar_title = "ψ_m [kPa]",
-                    log10.(-10 .* u_aux_PSIM'),  colorbar_title = "pF = log₁₀(-ψ hPa)", clims = ψ_pF_limits, c=cgrad(:inferno, rev=false),
+                    log10.(-10 .* u_aux_PSIM),  colorbar_title = "pF = log₁₀(-ψ hPa)", clims = ψ_pF_limits, c=cgrad(:inferno, rev=false),
                     yflip = true,
                     xlabel = "",#"Date",
                     ylabel = "Depth [mm]");
@@ -336,7 +340,9 @@ function run_main_with_isotopes(;input_prefix, input_path)
         # plot(pl_θ,pl_ψ,layout = (2,1))
         # b) for RWU
         # b1) RWU heatmap (depths vs time)
-        rows_RWU_mmDay = sol_LWFBrook90[sol_LWFBrook90.prob.p[1][4].row_idx_TRANI, 1, :]
+        rows_RWU_mmDay  = reduce(hcat, [sol_LWFBrook90[t_idx].TRANI.mm   for t_idx = eachindex(sol_LWFBrook90)])
+        # rows_RWU_mmDay  = reduce(hcat, [sol_LWFBrook90[t_idx].XYLEM.mm for t_idx = eachindex(sol_LWFBrook90)])
+        # rows_RWU_mmDay = sol_LWFBrook90[sol_LWFBrook90.prob.p[1][4].row_idx_TRANI, 1, :]
         rows_RWU = rows_RWU_mmDay ./ sol_LWFBrook90.prob.p[1][1].p_THICK
         pl_RWU = heatmap(x,y,rows_RWU; yticks = (y_ticks, y_labels),
                 yflip = true,
@@ -640,7 +646,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
                 marker = (0.3, :o), markerstrokewidth = 0)
         pl_ψ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, simulation.continuous_SPAC.reference_date),
             # -LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90) .+ 1, yaxis = :log, yflip = true,
-            LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90),  ylabel = "ψ\n[kPa]",
+            LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90)',  ylabel = "ψ\n[kPa]",
             # log10.(-10 .* LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
             labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
             xlabel = "Date", legend = :outerright, color_palette = col_palette,
@@ -657,7 +663,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
                 color_palette = col_palette,
                 marker = (0.3, :o), markerstrokewidth = 0)
         pl_ψ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, simulation.continuous_SPAC.reference_date),
-            log10.(-10 .* LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
+            log10.(-10 .* LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90))',  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
             labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
             xlabel = "Date", legend = :outerright, color_palette = col_palette,
             linewidth = 3)
@@ -682,7 +688,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
 
         pl_ψ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, simulation.continuous_SPAC.reference_date),
             # -LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90) .+ 1, yaxis = :log, yflip = true,
-            LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90),  ylabel = "ψ\n[kPa]",
+            LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90)',  ylabel = "ψ\n[kPa]",
             # log10.(-10 .* LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
             labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
             xlabel = "Date", legend = :outerright, color_palette = col_palette,
@@ -701,7 +707,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
                 color_palette = col_palette,
                 marker = (0.3, :o), markerstrokewidth = 0)
         pl_ψ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, simulation.continuous_SPAC.reference_date),
-            log10.(-10 .* LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
+            log10.(-10 .* LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90))',  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
             labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
             xlabel = "Date", legend = :outerright, color_palette = col_palette,
             linewidth = 3)
@@ -728,7 +734,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
                 marker = (0.3, :o), markerstrokewidth = 0)
         pl_ψ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, simulation.continuous_SPAC.reference_date),
             # log10.(-10 .* LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
-            LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90),  ylabel = "ψ [kPa]",
+            LWFBrook90.get_ψ(depth_to_read_out_mm, sol_LWFBrook90)',  ylabel = "ψ [kPa]",
             labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
             xlabel = "Date", legend = :outerright, color_palette = col_palette,
             linewidth = 3)
@@ -751,7 +757,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
                 color_palette = col_palette,
                 marker = (0.7, :o), markerstrokewidth = 0)
         pl_δsoil = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, simulation.continuous_SPAC.reference_date),
-            LWFBrook90.get_δsoil(depth_to_read_out_mm  .+ 0.01, sol_LWFBrook90).d18O,
+            LWFBrook90.get_δsoil(depth_to_read_out_mm  .+ 0.01, sol_LWFBrook90).d18O',
             ylabel = "δ18O [permil]",
             labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
             xlabel = "Date", legend = :outerright, color_palette = col_palette,
@@ -832,4 +838,4 @@ input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
 # input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/WaldLab/";
 input_prefix = "DAV_LW1_def";
 input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/DAV_LW1_def/";
-# run_main_with_isotopes(;input_prefix = input_prefix, input_path = input_path)
+run_main_with_isotopes(;input_prefix = input_prefix, input_path = input_path)

@@ -13,6 +13,107 @@ include("fct-helpers-for-integration-tests.jl")
 # NOTE: locally, i.e. not on CI system, one might need to do manually cd("test")
 if basename(pwd()) != "test"; cd("test"); end
 
+
+# NOTE: locally, i.e. not on CI system, one might need to do manually cd("test")
+
+# @testset "BEA-2016-θ-ψ-aboveground-states" begin
+# @testset "DAV-2020-θ-ψ-aboveground-states" begin
+# # source: https://stackoverflow.com/a/63871951
+@testset "trial1" begin
+    soil_horizons = LWFBrook90.init_soil("test-assets/DAV-2020/input-files/DAV_LW1_def_soil_horizons.csv")
+    @test soil_horizons isa DataFrame
+end
+@testset "trial2" begin
+    res = SPAC("test-assets/DAV-2020/input-files/", "DAV_LW1_def"; simulate_isotopes = false)
+    @test res isa SPAC
+end
+@testset "$site-θ-ψ-aboveground-states" for site in ["BEA-2016" "DAV-2020"]
+    out_figure_string = "test-assets/$site/out"
+    folder_with_sim_input_and_ref_output = "test-assets/$site"
+    input_prefix = ifelse(site == "BEA-2016", "BEA2016-reset-FALSE", "DAV_LW1_def")
+    NLAYERBASE = ifelse(site == "BEA-2016", 7, 5)
+
+    # # Check the RMSE of θ in simulations is below a limit
+    sim, ref_NLAYER7, ref_NLAYER14, ref_NLAYER21, ref_NLAYER70, depth_to_read_out_mm =
+        prepare_θψAboveground_from_sim_and_ref(folder_with_sim_input_and_ref_output,input_prefix; NLAYERBASE=NLAYERBASE);
+    # # Use sensible accuracy values to compare the two solutions (e.g. θ of 0.02, and ψ of 1 kPa)
+    # # (e.g. RMSE(reference, simulated) < [hardcoded_value])
+    # # Floating point accuracy is used by regression tests.
+    # # (Or could be used, once I compare with a very high-fidelity solution, of which I known
+    # #  that my code should converge to. E.g. a high-resolution Hydrus simulation.)
+
+    # Compare with LWFBrook90R as reference solution
+    # θ:
+    @test RMS_differences(sim.θ, ref_NLAYER7.θ) < 0.02
+    # ψ:
+    @test RMS_differences(sim.ψ, ref_NLAYER7.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.24,5)
+    # "GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)", (not done for: "CC (MJ/m2)" "SNOWLQ (mm)"]):
+    @test RMS_differences(sim.above[Not(1),[:time,:GWAT, :INTS, :INTR, :SNOW]],
+                            ref_NLAYER7.above[Not(end),[:time, :gwat,:ints,:intr,:snow]]) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.51,1.8)
+
+    # Note that below we compare a NLAYER7 LWFBrook90.jl solution, with finer resolved
+    # LWFBrook90R solutions. It is therefore normal, that the uncertainty can increase...
+    @test RMS_differences(sim.θ, ref_NLAYER14.θ) < 0.03
+    @test RMS_differences(sim.ψ, ref_NLAYER14.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.65,5.0)
+    @test RMS_differences(sim.above[Not(1),[:time,:GWAT,:INTS,:INTR,:SNOW]],
+                            ref_NLAYER14.above[Not(end),[:time,:gwat,:ints,:intr,:snow]]) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.51,1.8)
+    @test RMS_differences(sim.θ, ref_NLAYER21.θ) < 0.04
+    @test RMS_differences(sim.ψ, ref_NLAYER21.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.6,5.0)
+    @test RMS_differences(sim.above[Not(1),[:time,:GWAT,:INTS,:INTR,:SNOW]],
+                            ref_NLAYER21.above[Not(end),[:time,:gwat,:ints,:intr,:snow]]) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.51,1.8)
+    @test RMS_differences(sim.θ, ref_NLAYER70.θ) < 0.04
+    @test RMS_differences(sim.ψ, ref_NLAYER70.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.7,5.0)
+    @test RMS_differences(sim.above[Not(1),[:time,:GWAT,:INTS,:INTR,:SNOW]],
+                            ref_NLAYER70.above[Not(end),[:time,:gwat,:ints,:intr,:snow]]) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.51,1.8)
+
+    # TODO(bernhard): we could run multiple LWFBrook90.jl simulations and compare with the
+    # finest LWFBrook90R simulation only.
+
+    # if (false)
+    #     git_string = "git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
+    #     ifelse(length(Base.read(`git status --porcelain`, String))==0, "+clean","+dirty")
+
+    #     # if some error appears, the following code can be used to plot the solutions
+    #     using Plots
+    #     pl_θ = plot(sim.θ.time,
+    #             Matrix(sim.θ[:,Not(:time)]), line = :solid, labels = "LWFBrook90.jl:" .* string.(depth_to_read_out_mm) .* "mm",
+    #             ylabel = "θ (-)", legend_position = :bottomright)
+    #     plot!(Matrix(ref_NLAYER7.θ[:,Not(:time)]), line = :dash, color = :black,
+    #             labels = "LWFBrook90R_NLayer7:" .* string.(depth_to_read_out_mm) .* "mm")
+    #     # plot!(Matrix(ref_NLAYER14.θ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer14")
+    #     # plot!(Matrix(ref_NLAYER21.θ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer21")
+    #     # plot!(Matrix(ref_NLAYER70.θ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer70")
+    #     pl_ψ = plot(sim.ψ.time,
+    #             Matrix(sim.ψ[:,Not(:time)]), line = :solid, labels = "LWFBrook90.jl:" .* string.(depth_to_read_out_mm) .* "mm",
+    #             ylabel = "ψ (kPa)", legend_position = :bottomright)
+    #     plot!(Matrix(ref_NLAYER7.ψ[:,Not(:time)]), line = :dash, color = :black,
+    #             labels = "LWFBrook90R_NLayer7:" .* string.(depth_to_read_out_mm) .* "mm")
+    #     # plot!(Matrix(ref_NLAYER14.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer14")
+    #     # plot!(Matrix(ref_NLAYER21.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer21")
+    #     # plot!(Matrix(ref_NLAYER70.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer70")
+    #     pl_a = plot(sim.above.time,
+    #             Matrix(#sim.above[:,Not(:time)]),
+    #                    # label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"],
+    #                     sim.above[:,[:GWAT,:INTS,:INTR,:SNOW]]),
+    #                     label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"],
+    #                     line = :solid)
+    #     plot!(Matrix(ref_NLAYER7.above[:,[:intr,:ints,:snow,:gwat]]),
+    #             line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
+    #     # plot!(Matrix(ref_NLAYER14.above[:,[:intr,:ints,:snow,:gwat]]),
+    #     #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
+    #     # plot!(Matrix(ref_NLAYER21.above[:,[:intr,:ints,:snow,:gwat]]),
+    #     #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
+    #     # plot!(Matrix(ref_NLAYER70.above[:,[:intr,:ints,:snow,:gwat]]),
+    #     #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
+    #     plot(pl_θ, pl_ψ, pl_a, layout = (3,1), size = (600,800),
+    #         leftmargin = 5mm)
+    #     savefig(out_figure_string*git_string*".png")
+    # end
+end
+
+
+
+
 # prepare plotting functions for Hammel (with/without δ)
 function my_plot(df; args...)
     plot(df[:,:time], Matrix(df[:,Not(:time)]); args...)
@@ -157,27 +258,27 @@ end
 
     # 2) Plot (optional, not done when testing in CI)
     # Illustrate with a plot what will be compared in the tests below
-    if (false) # Do these manually outside of automatic testing in order not to require Plots pkg
-        git_string = "git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
-            ifelse(length(Base.read(`git status --porcelain`, String))==0, "+clean","+dirty")
-        # using Plots, Measures
-        depth_to_read_out_mm = [100 500 1000 1500 1900]
-        # Plot Loam simulations
-        plot_Hammel_Dense(sim1, ref1, hyd1, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900))
-        savefig("test-assets/Hammel-2001/out_Loam_sim1_"*git_string*".png")
-        plot_Hammel_Dense(sim2, ref2, hyd2, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900))
-        savefig("test-assets/Hammel-2001/out_Loam_sim2_"*git_string*".png")
-        plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900))
-        savefig("test-assets/Hammel-2001/out_Loam_sim3_"*git_string*".png")
+    # if (false) # Do these manually outside of automatic testing in order not to require Plots pkg
+    #     git_string = "git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
+    #         ifelse(length(Base.read(`git status --porcelain`, String))==0, "+clean","+dirty")
+    #     using Plots, Measures
+    #     depth_to_read_out_mm = [100 500 1000 1500 1900]
+    #     # Plot Loam simulations
+    #     plot_Hammel_Dense(sim1, ref1, hyd1, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900))
+    #     savefig("test-assets/Hammel-2001/out_Loam_sim1_"*git_string*".png")
+    #     plot_Hammel_Dense(sim2, ref2, hyd2, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900))
+    #     savefig("test-assets/Hammel-2001/out_Loam_sim2_"*git_string*".png")
+    #     plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900))
+    #     savefig("test-assets/Hammel-2001/out_Loam_sim3_"*git_string*".png")
 
-        # Plot Sand simulations
-        plot_Hammel_Dense(sim4, ref4, hyd4, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900))
-        savefig("test-assets/Hammel-2001/out_Sand_sim1_"*git_string*".png")
-        plot_Hammel_Dense(sim5, ref5, hyd5, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900))
-        savefig("test-assets/Hammel-2001/out_Sand_sim2_"*git_string*".png")
-        plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900))
-        savefig("test-assets/Hammel-2001/out_Sand_sim3_"*git_string*".png")
-    end
+    #     # Plot Sand simulations
+    #     plot_Hammel_Dense(sim4, ref4, hyd4, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900))
+    #     savefig("test-assets/Hammel-2001/out_Sand_sim1_"*git_string*".png")
+    #     plot_Hammel_Dense(sim5, ref5, hyd5, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900))
+    #     savefig("test-assets/Hammel-2001/out_Sand_sim2_"*git_string*".png")
+    #     plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900))
+    #     savefig("test-assets/Hammel-2001/out_Sand_sim3_"*git_string*".png")
+    # end
 
     # Use sensible accuracy values to compare the two solutions (e.g. θ of 0.02, and ψ of 1 kPa)
     # (e.g. RMSE(reference, simulated) < [hardcoded_value])
@@ -299,28 +400,28 @@ end
 
     # 2) Plot (optional, not done when testing in CI)
     # Illustrate with a plot what will be compared in the tests below
-    if (true) # Do these manually outside of automatic testing in order not to require Plots pkg
-        git_string = "git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
-        ifelse(length(Base.read(`git status --porcelain`, String))==0, "+clean","+dirty")
+    # if (false) # Do these manually outside of automatic testing in order not to require Plots pkg
+    #     git_string = "git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
+    #     ifelse(length(Base.read(`git status --porcelain`, String))==0, "+clean","+dirty")
 
-        using Plots, Measures
-        depth_to_read_out_mm = [100 500 1000 1500 1900]
-        # Plot Loam simulations
-        plot_Hammel_Dense(sim1, ref1, hyd1, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam", size=(900,900), legendfont=font(6))
-        savefig("test-assets/Hammel-2001/out_Iso-Loam_sim1_"*git_string*".png")
-        plot_Hammel_Dense(sim2, ref2, hyd2, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam", size=(900,900), legendfont=font(6))
-        savefig("test-assets/Hammel-2001/out_Iso-Loam_sim2_"*git_string*".png")
-        # plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam", size=(900,900), legendfont=font(6))
-        # savefig("test-assets/Hammel-2001/out_Iso-Loam_sim3_"*git_string*".png")
+    #     using Plots, Measures
+    #     depth_to_read_out_mm = [100 500 1000 1500 1900]
+    #     # Plot Loam simulations
+    #     plot_Hammel_Dense(sim1, ref1, hyd1, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam", size=(900,900), legendfont=font(6))
+    #     savefig("test-assets/Hammel-2001/out_Iso-Loam_sim1_"*git_string*".png")
+    #     plot_Hammel_Dense(sim2, ref2, hyd2, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam", size=(900,900), legendfont=font(6))
+    #     savefig("test-assets/Hammel-2001/out_Iso-Loam_sim2_"*git_string*".png")
+    #     # plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam", size=(900,900), legendfont=font(6))
+    #     # savefig("test-assets/Hammel-2001/out_Iso-Loam_sim3_"*git_string*".png")
 
-        # Plot Sand simulations
-        plot_Hammel_Dense(sim4, ref4, hyd4, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand", size=(900,900), legendfont=font(6))
-        savefig("test-assets/Hammel-2001/out_Iso-Sand_sim1_"*git_string*".png")
-        plot_Hammel_Dense(sim5, ref5, hyd5, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand", size=(900,900), legendfont=font(6))
-        savefig("test-assets/Hammel-2001/out_Iso-Sand_sim2_"*git_string*".png")
-        # plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand", size=(900,900), legendfont=font(6))
-        # savefig("test-assets/Hammel-2001/out_Iso-Sand_sim3_"*git_string*".png")
-    end
+    #     # Plot Sand simulations
+    #     plot_Hammel_Dense(sim4, ref4, hyd4, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand", size=(900,900), legendfont=font(6))
+    #     savefig("test-assets/Hammel-2001/out_Iso-Sand_sim1_"*git_string*".png")
+    #     plot_Hammel_Dense(sim5, ref5, hyd5, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand", size=(900,900), legendfont=font(6))
+    #     savefig("test-assets/Hammel-2001/out_Iso-Sand_sim2_"*git_string*".png")
+    #     # plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand", size=(900,900), legendfont=font(6))
+    #     # savefig("test-assets/Hammel-2001/out_Iso-Sand_sim3_"*git_string*".png")
+    # end
 
 
     # Use sensible accuracy values to compare the two solutions (e.g. θ of 0.02, and ψ of 1 kPa)
@@ -380,96 +481,4 @@ end
     # @test RMS_differences(sim6.δ2H[Not(end),:], hyd6.δ2H[Not(1),:]) < 3.7 # unit: ‰
 
 end
-
-
-# NOTE: locally, i.e. not on CI system, one might need to do manually cd("test")
-
-# @testset "BEA-2016-θ-ψ-aboveground-states" begin
-# @testset "DAV-2020-θ-ψ-aboveground-states" begin
-# # source: https://stackoverflow.com/a/63871951
-@testset "$site-θ-ψ-aboveground-states" for site in ["BEA-2016" "DAV-2020"]
-    out_figure_string = "test-assets/$site/out"
-    folder_with_sim_input_and_ref_output = "test-assets/$site"
-    input_prefix = ifelse(site == "BEA-2016", "BEA2016-reset-FALSE", "DAV_LW1_def")
-    NLAYERBASE = ifelse(site == "BEA-2016", 7, 5)
-
-    # # Check the RMSE of θ in simulations is below a limit
-    sim, ref_NLAYER7, ref_NLAYER14, ref_NLAYER21, ref_NLAYER70, depth_to_read_out_mm =
-        prepare_θψAboveground_from_sim_and_ref(folder_with_sim_input_and_ref_output,input_prefix; NLAYERBASE=NLAYERBASE);
-    # # Use sensible accuracy values to compare the two solutions (e.g. θ of 0.02, and ψ of 1 kPa)
-    # # (e.g. RMSE(reference, simulated) < [hardcoded_value])
-    # # Floating point accuracy is used by regression tests.
-    # # (Or could be used, once I compare with a very high-fidelity solution, of which I known
-    # #  that my code should converge to. E.g. a high-resolution Hydrus simulation.)
-
-    # Compare with LWFBrook90R as reference solution
-    # θ:
-    @test RMS_differences(sim.θ, ref_NLAYER7.θ) < 0.02
-    # ψ:
-    @test RMS_differences(sim.ψ, ref_NLAYER7.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.24,5)
-    # "GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)", (not done for: "CC (MJ/m2)" "SNOWLQ (mm)"]):
-    @test RMS_differences(sim.above[Not(1),[:time,:GWAT, :INTS, :INTR, :SNOW]],
-                            ref_NLAYER7.above[Not(end),[:time, :gwat,:ints,:intr,:snow]]) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.51,1.8)
-
-    # Note that below we compare a NLAYER7 LWFBrook90.jl solution, with finer resolved
-    # LWFBrook90R solutions. It is therefore normal, that the uncertainty can increase...
-    @test RMS_differences(sim.θ, ref_NLAYER14.θ) < 0.03
-    @test RMS_differences(sim.ψ, ref_NLAYER14.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.65,5.0)
-    @test RMS_differences(sim.above[Not(1),[:time,:GWAT,:INTS,:INTR,:SNOW]],
-                            ref_NLAYER14.above[Not(end),[:time,:gwat,:ints,:intr,:snow]]) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.51,1.8)
-    @test RMS_differences(sim.θ, ref_NLAYER21.θ) < 0.04
-    @test RMS_differences(sim.ψ, ref_NLAYER21.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.6,5.0)
-    @test RMS_differences(sim.above[Not(1),[:time,:GWAT,:INTS,:INTR,:SNOW]],
-                            ref_NLAYER21.above[Not(end),[:time,:gwat,:ints,:intr,:snow]]) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.51,1.8)
-    @test RMS_differences(sim.θ, ref_NLAYER70.θ) < 0.04
-    @test RMS_differences(sim.ψ, ref_NLAYER70.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.7,5.0)
-    @test RMS_differences(sim.above[Not(1),[:time,:GWAT,:INTS,:INTR,:SNOW]],
-                            ref_NLAYER70.above[Not(end),[:time,:gwat,:ints,:intr,:snow]]) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.51,1.8)
-
-    # TODO(bernhard): we could run multiple LWFBrook90.jl simulations and compare with the
-    # finest LWFBrook90R simulation only.
-
-    if (true)
-        git_string = "git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
-        ifelse(length(Base.read(`git status --porcelain`, String))==0, "+clean","+dirty")
-
-        # if some error appears, the following code can be used to plot the solutions
-        # using Plots
-        pl_θ = plot(sim.θ.time,
-                Matrix(sim.θ[:,Not(:time)]), line = :solid, labels = "LWFBrook90.jl:" .* string.(depth_to_read_out_mm) .* "mm",
-                ylabel = "θ (-)", legend_position = :bottomright)
-        plot!(Matrix(ref_NLAYER7.θ[:,Not(:time)]), line = :dash, color = :black,
-                labels = "LWFBrook90R_NLayer7:" .* string.(depth_to_read_out_mm) .* "mm")
-        # plot!(Matrix(ref_NLAYER14.θ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer14")
-        # plot!(Matrix(ref_NLAYER21.θ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer21")
-        # plot!(Matrix(ref_NLAYER70.θ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer70")
-        pl_ψ = plot(sim.ψ.time,
-                Matrix(sim.ψ[:,Not(:time)]), line = :solid, labels = "LWFBrook90.jl:" .* string.(depth_to_read_out_mm) .* "mm",
-                ylabel = "ψ (kPa)", legend_position = :bottomright)
-        plot!(Matrix(ref_NLAYER7.ψ[:,Not(:time)]), line = :dash, color = :black,
-                labels = "LWFBrook90R_NLayer7:" .* string.(depth_to_read_out_mm) .* "mm")
-        # plot!(Matrix(ref_NLAYER14.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer14")
-        # plot!(Matrix(ref_NLAYER21.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer21")
-        # plot!(Matrix(ref_NLAYER70.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer70")
-        pl_a = plot(sim.above.time,
-                Matrix(#sim.above[:,Not(:time)]),
-                       # label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"],
-                        sim.above[:,[:GWAT,:INTS,:INTR,:SNOW]]),
-                        label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"],
-                        line = :solid)
-        plot!(Matrix(ref_NLAYER7.above[:,[:intr,:ints,:snow,:gwat]]),
-                line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
-        # plot!(Matrix(ref_NLAYER14.above[:,[:intr,:ints,:snow,:gwat]]),
-        #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
-        # plot!(Matrix(ref_NLAYER21.above[:,[:intr,:ints,:snow,:gwat]]),
-        #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
-        # plot!(Matrix(ref_NLAYER70.above[:,[:intr,:ints,:snow,:gwat]]),
-        #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
-        plot(pl_θ, pl_ψ, pl_a, layout = (3,1), size = (600,800),
-            leftmargin = 5mm)
-        savefig(out_figure_string*git_string*".png")
-    end
-end
-
-
 

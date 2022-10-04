@@ -56,9 +56,25 @@ if basename(pwd()) != "test"; cd("test"); end
     idx_u_vector_amounts = example_result["solution"].prob.p[1][4].row_idx_SWATI;
     idx_u = [idx_u_scalar_amounts...; idx_u_vector_amounts];
 
-    u_ref = example_result["solution"][idx_u,1,:];
+    # u_ref = example_result["solution"][idx_u,1,:];
     # u_ref_d18O= example_result["solution"][idx_u,2,:]
     # u_ref_d2H = example_result["solution"][idx_u,3,:]
+    t_out = range(extrema(example_result["solution"].t)...)
+
+    u_ref = vcat(
+        reduce(hcat, [example_result["solution"](t_days).GWAT.mm   for t_days = t_out]),
+        reduce(hcat, [example_result["solution"](t_days).INTS.mm   for t_days = t_out]),
+        reduce(hcat, [example_result["solution"](t_days).INTR.mm   for t_days = t_out]),
+        reduce(hcat, [example_result["solution"](t_days).SNOW.mm   for t_days = t_out]),
+        reduce(hcat, [example_result["solution"](t_days).CC.mm     for t_days = t_out]),
+        reduce(hcat, [example_result["solution"](t_days).SNOWLQ.mm for t_days = t_out]),
+        reduce(hcat, [example_result["solution"](t_days).RWU.mm    for t_days = t_out]),
+        reduce(hcat, [example_result["solution"](t_days).XYLEM.mm  for t_days = t_out]),
+        reduce(hcat, [example_result["solution"](t_days).SWATI.mm  for t_days = t_out]),
+        # reduce(hcat, [example_result["solution"][t_idx].TRANI.mm  for t_idx = eachindex(example_result["solution"])]),
+        # reduce(hcat, [example_result["solution"][t_idx].aux.θ     for t_idx = eachindex(example_result["solution"])]),
+        # reduce(hcat, [example_result["solution"][t_idx].accum     for t_idx = eachindex(example_result["solution"])])
+    )
 
     # test or overwrite
     fname = "../examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_u_sol_reference.jld2"
@@ -73,16 +89,16 @@ if basename(pwd()) != "test"; cd("test"); end
         end
     elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
         jldsave(fname; u_ref);
-        if (false)
-            using Plots, Measures
-            optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
-            pl_final = LWFBrook90.plotlwfbrook90(example_result["solution"], optim_ticks)
-            git_status_string = "__git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
-                ifelse(length(Base.read(`git status --porcelain`, String))==0, "+gitclean","+gitdirty")*
-                "__"
-            savefig(plot(pl_final, size=(1000,1400), dpi=300, link=:x, rightmargin = 10mm),
-                    replace(fname, ".jld2"=>git_status_string*".png"))
-        end
+        # if (false)
+        #     using Plots, Measures
+        #     optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
+        #     pl_final = LWFBrook90.plotlwfbrook90(example_result["solution"], optim_ticks)
+        #     git_status_string = "__git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
+        #         ifelse(length(Base.read(`git status --porcelain`, String))==0, "+gitclean","+gitdirty")*
+        #         "__"
+        #     savefig(plot(pl_final, size=(1000,1400), dpi=300, link=:x, rightmargin = 10mm),
+        #             replace(fname, ".jld2"=>git_status_string*".png"))
+        # end
 
     else
         # do nothing
@@ -112,7 +128,7 @@ end
     #         get_auxiliary_variables(sol[1])
     # u_SWATI
     # u_aux_θ
-    u_δ = get_δ(sol[1]);
+    u_δ = get_δ(sol[1]; saveat = range(extrema(sol[1].t)...));
     SWAT_d18O_ref  = u_δ.SWAT.d18O[:, 1:30:end];
     SWAT_d2H_ref   = u_δ.SWAT.d2H[ :,  1:30:end];
     PREC_d18O_ref  = u_δ.PREC.d18O[1:30:end];
@@ -143,25 +159,25 @@ end
         jldsave(fname*"_OUTPUT-SWAT_d18O_reference.jld2"; SWAT_d18O_ref);
         jldsave(fname*"_OUTPUT-SWAT_d2H_reference.jld2"; SWAT_d2H_ref);
 
-        if (false)
-            using Plots, Measures
-            optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
-            pl1 = LWFBrook90.plotlwfbrook90(
-                sol[1], optim_ticks;
-                layout = grid(6,1, heights=[0.1, 0.18, 0.18, 0.18, 0.18, 0.18]),
-                size=(1000,700), dpi=300, leftmargin = 15mm);
-            pl2 = LWFBrook90.ISO.plotisotopes(
-                sol[1], optim_ticks;
-                layout = grid(4, 1, heights=[0.1 ,0.4, 0.1, 0.4]),
-                size=(1000,1400), dpi = 300, leftmargin = 15mm);
-            git_status_string = "__git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
-                ifelse(length(Base.read(`git status --porcelain`, String))==0, "+gitclean","+gitdirty")*
-                "__"
-            savefig(plot(pl1, size=(1000,700), dpi=300, link=:x),
-                    fname*git_status_string*"_theta-psi.png")
-            savefig(plot(pl2, size=(1000,1400), dpi=300, link=:x),
-                    fname*git_status_string*"_d18O-d2H.png") #"../examples/isoBEAdense2010-18-reset-FALSE-input/idoBEAdense2010-18-reset-FALSE_OUTPUT-simulated.png")
-        end
+        # if (false)
+        #     using Plots, Measures
+        #     optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
+        #     pl1 = LWFBrook90.plotlwfbrook90(
+        #         sol[1], optim_ticks;
+        #         layout = grid(6,1, heights=[0.1, 0.18, 0.18, 0.18, 0.18, 0.18]),
+        #         size=(1000,700), dpi=300, leftmargin = 15mm);
+        #     pl2 = LWFBrook90.ISO.plotisotopes(
+        #         sol[1], optim_ticks;
+        #         layout = grid(4, 1, heights=[0.1 ,0.4, 0.1, 0.4]),
+        #         size=(1000,1400), dpi = 300, leftmargin = 15mm);
+        #     git_status_string = "__git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
+        #         ifelse(length(Base.read(`git status --porcelain`, String))==0, "+gitclean","+gitdirty")*
+        #         "__"
+        #     savefig(plot(pl1, size=(1000,700), dpi=300, link=:x),
+        #             fname*git_status_string*"_theta-psi.png")
+        #     savefig(plot(pl2, size=(1000,1400), dpi=300, link=:x),
+        #             fname*git_status_string*"_d18O-d2H.png") #"../examples/isoBEAdense2010-18-reset-FALSE-input/idoBEAdense2010-18-reset-FALSE_OUTPUT-simulated.png")
+        # end
     else
         # do nothing
     end

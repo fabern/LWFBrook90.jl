@@ -219,9 +219,8 @@ end
 function prepare_θψAboveground_from_sim_and_ref(
     folder_with_sim_input_and_ref_output,
     input_prefix; NLAYERBASE = 7)
-    # folder_with_sim_input_and_ref_output = "test-assets/BEA-2016"
-    # input_prefix = "BEA2016-reset-FALSE"
-    # NLAYERBASE = 7
+    # folder_with_sim_input_and_ref_output = "test-assets/BEA-2016";input_prefix = "BEA2016-reset-FALSE";NLAYERBASE = 7
+    # folder_with_sim_input_and_ref_output = "test-assets/DAV-2020"; NLAYERBASE = 5; input_prefix = "DAV_LW1_def"
 
 
     # Load LWFbrook90R solution
