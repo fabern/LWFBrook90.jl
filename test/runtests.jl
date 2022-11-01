@@ -4,6 +4,7 @@ using Test: @testset, @test, @test_throws, @test_broken, @test_skip
 using CSV: File
 using Random
 using Printf
+using JLD2
 
 # A macro for timing that also prints out the git commit hash:
 macro githash_time(variable)
@@ -22,8 +23,8 @@ end
 Random.seed!(1234)
 
 # cd("test")
-include("01-unit-tests.jl")
+# include("01-unit-tests.jl")
 
-include("02-integration-tests.jl")
+# include("02-integration-tests.jl")
 
 include("03-regression-tests.jl")
