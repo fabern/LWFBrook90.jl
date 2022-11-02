@@ -1,5 +1,5 @@
 # Regression tests
-using JLD2
+using JLD2: jldsave, load
 
 # - _Unit testing_ asserts that individual pieces of a project work as expected. (developers
 #       perspective)
