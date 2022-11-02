@@ -37,7 +37,7 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             aux    = zeros(NLAYER, 3), # TODO: where to store θ, ψ and K(θ) ?
             accum  = zeros(N_accum_var,1))
     # Give ComponentArray as u0 to DiffEq.jl
-    name_variables = ifelse(simulate_isotopes, (:mm, :d2H, :d18O), (:mm,))
+    name_variables = ifelse(simulate_isotopes, (:mm, :d18O, :d2H), (:mm,))
     name_aux       = (:θ,:ψ,:K)
     name_accum     = (:cum_d_prec, :cum_d_rfal, :cum_d_sfal, :cum_d_rint,  :cum_d_sint, :cum_d_rsno,
                     :cum_d_rnet, :cum_d_smlt, :cum_d_evap, :cum_d_tran, :cum_d_irvp, :cum_d_isvp,
