@@ -120,7 +120,7 @@
 # # @time LWFBrook90.LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator) # 0.000048 seconds (119 allocations: 9.391 KiB)
 # # @enter LWFBrook90.LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
 #     # @time LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil) # 0.000010 seconds (10 allocations: 1.406 KiB)
-# # @time LWFBrook90.KPT.derive_auxiliary_SOILVAR(integrator.u[integrator.p[1][4].row_idx_SWATI], integrator.p[1][1]) # 0.000013 seconds (11 allocations: 1.547 KiB)
+# # @time LWFBrook90.KPT.derive_auxiliary_SOILVAR(integrator.u[integrator.p[1][4].row_idx_SWATI], integrator.p_soil) # 0.000013 seconds (11 allocations: 1.547 KiB)
 # ####################
 
 
@@ -128,8 +128,8 @@
 # ## Plotting and exporting to CSV
 # mkpath("out")
 
-# ref_date = sol_LWFBrook90.prob.p[2][15]
-# time_to_plot = RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, ref_date) # define simulation times as dates
+# REFERENCE_DATE = sol_LWFBrook90.prob.p.REFERENCE_DATE
+# time_to_plot = RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, REFERENCE_DATE) # define simulation times as dates
 
 # using Plots # Install plot package at first use with `]` and then `add Plots`
 
@@ -139,7 +139,7 @@
 
 # pl_final = LWFBrook90.plotlwfbrook90(sol_LWFBrook90, optim_ticks)
 # savefig(pl_final, joinpath("out", input_prefix *
-#     "_plotRecipe_NLAYER" * string(sol_LWFBrook90.prob.p[1][1].NLAYER) * ".png"))
+#     "_plotRecipe_NLAYER" * string(sol_LWFBrook90.prob.p.p_soil.NLAYER) * ".png"))
 
 # ##### Plot 1 very basic
 # # Plot a)
@@ -150,10 +150,10 @@
 # (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
 #     LWFBrook90.get_auxiliary_variables(sol_LWFBrook90)
 
-# n = sol_LWFBrook90.prob.p[1][1].NLAYER
+# n = sol_LWFBrook90.prob.p.p_soil.NLAYER
 # # time_to_plot = #(see above)
-# y_cell_centers = [0; cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK)[1:(n-1)]] + sol_LWFBrook90.prob.p[1][1].p_THICK / 2
-# z = sol_LWFBrook90[7 .+ (0:sol_LWFBrook90.prob.p[1][1].NLAYER-1), 1, :]./sol_LWFBrook90.prob.p[1][1].p_THICK
+# y_cell_centers = [0; cumsum(sol_LWFBrook90.prob.p.p_soil.p_THICK)[1:(n-1)]] + sol_LWFBrook90.prob.p.p_soil.p_THICK / 2
+# z = sol_LWFBrook90[7 .+ (0:sol_LWFBrook90.prob.p.p_soil.NLAYER-1), 1, :]./sol_LWFBrook90.prob.p.p_soil.p_THICK
 
 # heatmap(time_to_plot, y_cell_centers, u_aux_θ', yflip = true,
 #         xlabel = "Date",
@@ -185,7 +185,7 @@
 
 # # Variant 1: compute θ and correct with gravel fraction
 # θ_layers = u_aux_θ[:,layer_indices]
-# gravel_fraction_layers = sol_LWFBrook90.prob.p[1][1].p_STONEF[layer_indices]
+# gravel_fraction_layers = sol_LWFBrook90.prob.p.p_soil.p_STONEF[layer_indices]
 # θtotal_layers = θ_layers .* transpose(1 .- gravel_fraction_layers) # θtotal = θ*(1-gravelfrc) + 0.0*gravelfrc
 # pl_θ_totalVolume1 = plot(time_to_plot, θtotal_layers,
 #     labels = string.(depth_to_read_out_mm) .* "mm",
@@ -196,7 +196,7 @@
 
 # # Variant 1: compute SWATI and correct with thickness of cell/layer
 # # u_SWATI # alternatively u_SWATI = transpose(sol_LWFBrook90[7 .+ (0:n-1), 1, :])
-# θtotal = u_SWATI ./ transpose(sol_LWFBrook90.prob.p[1][1].p_THICK)
+# θtotal = u_SWATI ./ transpose(sol_LWFBrook90.prob.p.p_soil.p_THICK)
 # θtotal_layers2 = θtotal[:, layer_indices]
 # pl_θ_totalVolume2 = plot(time_to_plot, θtotal_layers2,
 #     labels = string.(depth_to_read_out_mm) .* "mm",
@@ -207,7 +207,7 @@
 
 # plot(pl_θ_fineSoil, pl_θ_totalVolume1, pl_θ_totalVolume2;
 #     layout=(3,1), size=(600,1200), left_margin = 10mm) # left_margin needed as soon as we use size
-# savefig(joinpath("out",input_prefix * "_different_θ_depths_NLAYER" * string(sol_LWFBrook90.prob.p[1][1].NLAYER) * ".png"))
+# savefig(joinpath("out",input_prefix * "_different_θ_depths_NLAYER" * string(sol_LWFBrook90.prob.p.p_soil.NLAYER) * ".png"))
 
 # ##### Illustration how to export certain depths into a *.csv
 # using CSV, DataFrames
@@ -216,6 +216,6 @@
 #     "θ_" .* string.(depth_to_read_out_mm[:]) .* "mm")
 # df_out.Date = time_to_plot
 # CSV.write(
-#     joinpath("out",input_prefix * "_θ_depths_NLAYER" * string(sol_LWFBrook90.prob.p[1][1].NLAYER) * ".csv"),
+#     joinpath("out",input_prefix * "_θ_depths_NLAYER" * string(sol_LWFBrook90.prob.p.p_soil.NLAYER) * ".csv"),
 #     df_out)
 # ####################

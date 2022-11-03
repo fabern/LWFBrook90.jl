@@ -10,7 +10,7 @@ Generate vector p needed for ODE() problem in DiffEq.jl package.
 - `simulate_isotopes::...`: TODO argument description.
 - `soil_output_depths`: vector of depths at which state variables should be extractable (negative numeric values [in meter])
 """
-function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr, u0, u0_field_names, names_accum)
+function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr)
     ########
     ## Interpolate discretized root distribution
      p_RELDEN = LWFBrook90.interpolate_spaceDiscretized_root_density(;
@@ -304,140 +304,309 @@ function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr, u0, u0_field_names, 
     # SWATQF - water storage at field capacity for layers 1 to ,mm, calculated parameter. [see WAT-SRFLFR] [see WAT-SRFPAR]
     # SWATQX - maximum water storage for layers 1 to QLAYER, mm, calculated parameter. [see WAT-SRFLFR] [see WAT-SRFPAR]
 
-    ########
+    # ########
+    # # 2) Define parameters for differential equation:
+    # # 2a) Constant parameters
+
+    # # p_cst_1 and p_cst_2 for both RHS and CallBack in DiffEq.jl
+    # p_cst_1 = p_soil
+    # p_cst_2 = (NLAYER, FLAG_MualVanGen, continuous_SPAC.solver_options.compute_intermediate_quantities, false, # Reset is hardcoded as false
+    #     p_DTP, p_NPINT,
+
+    #     # FOR MSBITERATE:
+    #     p_QLAYER, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC, p_IMPERV,
+    #     p_LENGTH_SLOPE, p_DSLOPE, LWFBrook90.CONSTANTS.p_RHOWG, p_DPSIMAX,
+    #     p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX,
+    #     p_GSC, p_GSP,
+
+    #     p_BYPAR)
+
+    # # p_cst_3 only for CallBack in DiffEq.jl
+    # p_cst_3 = (p_LAT, p_ESLOPE, p_L1, p_L2,
+    #     p_SNODEN, p_MXRTLN, p_MXKPL, p_CS,
+    #     p_Z0S, p_Z0G,
+    #     p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC,
+    #     p_RTRAD, p_FXYLEM,
+    #     p_WNDRAT, p_FETCH, p_Z0W, p_ZW,
+    #     p_RSTEMP,
+    #     LWFBrook90.CONSTANTS.p_CVICE,
+    #     p_LWIDTH, p_RHOTP, p_NN, p_KSNVP,
+    #     p_ALBSN, p_ALB,
+    #     p_RSSA, p_RSSB,
+    #     p_CCFAC, p_MELFAC, p_LAIMLT, p_SAIMLT,
+
+    #     LWFBrook90.CONSTANTS.p_WTOMJ, p_C1, p_C2, p_C3, p_CR,
+    #     p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_TL, p_T1, p_T2, p_TH,
+    #     p_PSICR, NOOUTF,
+
+    #     # for MSBPREINT:
+    #     p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS,
+    #     p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS,
+    #     p_DURATN, p_MAXLQF, p_GRDMLT,
+
+    #     # for isotope mixing:
+    #     p_VXYLEM, p_DISPERSIVITY)
+
+
+    # p_cst_4 = (
+    #     FLAG_MualVanGen,
+    #     continuous_SPAC.solver_options.compute_intermediate_quantities,
+    #     continuous_SPAC.solver_options.simulate_isotopes,
+    #     # row_idx_scalars = [], # TODO(bernharf): replace with keys(states) or states[:accum]
+    #     row_idx_scalars = (GWAT = nothing,#findfirst(isequal(:GWAT),  u0_field_names),#:GWAT,
+    #                        INTS = nothing,#findfirst(isequal(:INTS),  u0_field_names),#:INTS,
+    #                        INTR = nothing,#findfirst(isequal(:INTR),  u0_field_names),#:INTR,
+    #                        SNOW = nothing,#findfirst(isequal(:SNOW),  u0_field_names),#:SNOW,
+    #                        CC   = nothing,#findfirst(isequal(:CC),    u0_field_names),#:CC,
+    #                        SNOWLQ=nothing,#findfirst(isequal(:SNOWLQ),u0_field_names),#:SNOWLQ,
+    #                        RWU  = nothing,#findfirst(isequal(:RWU),   u0_field_names),#:RWU,
+    #                        XYLEM= nothing),#findfirst(isequal(:XYLEM), u0_field_names)),#:XYLEM],
+    #     row_idx_SWATI   = nothing,#findfirst(isequal(:SWATI), u0_field_names),#:SWATI],
+    #     row_idx_TRANI   = nothing,#findfirst(isequal(:TRANI), u0_field_names),#[:TRANI],
+    #                     # findfirst(isequal(:aux),   u0_field_names)
+    #     row_idx_accum   = nothing,#findfirst(isequal(:accum), u0_field_names),#[:accum],
+    #     col_idx_d18O    = 2,
+    #     col_idx_d2H     = 3)
+    # p_cst = (p_cst_1, p_cst_2, p_cst_3, p_cst_4)
+
+    # # 2b) Time varying parameters (e.g. meteorological forcings)
+    # p_fT = (p_DOY          = (t) -> LWFBrook90.p_DOY(t,    continuous_SPAC.reference_date),
+    #         p_MONTHN       = (t) -> LWFBrook90.p_MONTHN(t, continuous_SPAC.reference_date),
+    #         p_GLOBRAD      = continuous_SPAC.meteo_forcing.p_GLOBRAD,
+    #         p_TMAX         = continuous_SPAC.meteo_forcing.p_TMAX,
+    #         p_TMIN         = continuous_SPAC.meteo_forcing.p_TMIN,
+    #         p_VAPPRES      = continuous_SPAC.meteo_forcing.p_VAPPRES,
+    #         p_WIND         = continuous_SPAC.meteo_forcing.p_WIND,
+    #         p_PREC         = continuous_SPAC.meteo_forcing.p_PREC,
+
+    #         p_DENSEF       = continuous_SPAC.canopy_evolution.p_DENSEF, # canopy density multiplier between 0.05 and 1, dimensionless
+    #         p_HEIGHT       = continuous_SPAC.canopy_evolution.p_HEIGHT,
+    #         p_LAI          = continuous_SPAC.canopy_evolution.p_LAI,
+    #         p_SAI          = continuous_SPAC.canopy_evolution.p_SAI,
+    #         p_AGE          = continuous_SPAC.canopy_evolution.p_AGE,
+    #         p_RELDEN       = p_RELDEN,
+
+    #         p_d18OPREC     = continuous_SPAC.meteo_iso_forcing.p_d18OPREC,
+    #         p_d2HPREC      = continuous_SPAC.meteo_iso_forcing.p_d2HPREC,
+    #         REFERENCE_DATE = continuous_SPAC.reference_date)
+    # # Documentation from ecoshift:
+    # # DENSEF (Fixed parameter) - canopy density multiplier between 0.05 and 1, dimensionless. DENSEF is normally 1; it should be reduced below this ONLY to simulate thinning of the existing canopy by cutting. It multiplies MAXLAI, CS, MXRTLN, and MXKPL and thus proportionally reduces LAI, SAI, and RTLEN, and increases RPLANT. However it does NOT reduce canopy HEIGHT and thus will give erroneous aerodynamic resistances if it is less than about 0.05. It should NOT be set to 0 to simulate a clearcut. [see PET-CANOPY]
+
+
+    # # 2c) Time varying "parameters" (depending on state variables)
+    # #     These need to be exchanged between CallBack and RHS in DiffEq.jl which is why they
+    # #     can temporarily be saved in the parameter vector to avoid computing them twice
+
+    # # Initialize placeholder for parameters that depend on solution and are computed
+    # p_fu = ([NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN],
+    #         fill(NaN, NLAYER),     # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto
+    #         fill(NaN, (NLAYER,5)), # for du_NTFLI, aux_du_VRFLI, aux_du_DSFLI, aux_du_INFLI, u_aux_WETNES)
+    #         # TODO(bernhard): should we combine these caches to a matrix of (NLAYER,6)?
+    #         fill(NaN, 2))          # for du_GWFL du_SEEP
+    # #TODO(bernhard): what are the additional 3x NaNs needed for in isotope code???
+    # #Earlier it was simply: [NaN, NaN, NaN, NaN, NaN, NaN], fill(NaN, NLAYER)
+
+    # # Initialize further caches to hold computed quantities without need to allocate memory
+    # p_cache = ((
+    #     # chaches for flow equation
+    #     zeros(NLAYER), # u_aux_WETNES
+    #     zeros(NLAYER), # u_aux_PSIM
+    #     zeros(NLAYER), # u_aux_PSITI
+    #     zeros(NLAYER), # u_aux_θ
+    #     zeros(NLAYER), # u_aux_θ_tminus1
+    #     zeros(NLAYER), # p_fu_KK
+    #     zeros(NLAYER), # aux_du_DSFLI
+    #     zeros(NLAYER), # aux_du_VRFLI
+    #     zeros(NLAYER), # aux_du_VRFLI_1st_approx
+    #     zeros(NLAYER), # aux_du_INFLI
+    #     zeros(NLAYER), # aux_du_BYFLI
+    #     zeros(NLAYER), # du_NTFLI
+    #     zeros(NLAYER)), # p_fu_BYFRAC
+    #     # chaches for advection dispersion equation
+    #         # for quantities (all NLAYER long):
+    #         # 7 vectors: θᵏ⁺¹, θᵏ, C_¹⁸Oᵏ⁺¹, C_¹⁸Oᵏ, C_²Hᵏ⁺¹, C_²Hᵏ, q,
+    #         # 9 vectors: Tsoil_K, τw, Λ, D⁰_¹⁸O, D⁰_²H, D_¹⁸O_ᵏ⁺¹, D_²H_ᵏ⁺¹, C_¹⁸O_SLVP, C_²H_SLVP,
+    #         # 8 vectors: diff¹⁸O_upp, diff²H_upp, qCᵢ¹⁸O_upp, qCᵢ²H_upp,
+    #         #            diff¹⁸O_low, diff²H_low, qCᵢ¹⁸O_low, qCᵢ²H_low,
+    #         # 4 vectors: du_Cᵢ¹⁸_SWATI, du_Cᵢ²H_SWATI, du_δ18O_SWATI, du_δ2H_SWATI
+    #     Tuple(zeros(NLAYER) for i=1:28)#,
+    #         # 4 vectors: diff¹⁸O_interfaces, diff²H_interfaces, qCᵢ¹⁸O_interfaces, qCᵢ²H_interfaces,
+    #     # Tuple(zeros(NLAYER+1) for i=1:4)
+    #     )
+    # # 3) Return different types of parameters as a single object
+    # return (p_cst, p_fT, p_fu, p_cache)
+
+
     # 2) Define parameters for differential equation:
-    # 2a) Constant parameters
+    # 2a) Constant parameters: p_cst
+    # 2b) Time varying parameters (e.g. meteorological forcings): p_fT
+        # Documentation from ecoshift:
+        # DENSEF (Fixed parameter) - canopy density multiplier between 0.05 and 1, dimensionless. DENSEF is normally 1; it should be reduced below this ONLY to simulate thinning of the existing canopy by cutting. It multiplies MAXLAI, CS, MXRTLN, and MXKPL and thus proportionally reduces LAI, SAI, and RTLEN, and increases RPLANT. However it does NOT reduce canopy HEIGHT and thus will give erroneous aerodynamic resistances if it is less than about 0.05. It should NOT be set to 0 to simulate a clearcut. [see PET-CANOPY]
+    # 2c) Time varying "parameters" (depending on state variables): p_fu
+    #     These need to be exchanged between CallBack and RHS in DiffEq.jl which is why they
+    #     can temporarily be saved in the parameter vector to avoid computing them twice
 
     # p_cst_1 and p_cst_2 for both RHS and CallBack in DiffEq.jl
-    p_cst_1 = p_soil
-    p_cst_2 = (NLAYER, FLAG_MualVanGen, continuous_SPAC.solver_options.compute_intermediate_quantities, false, # Reset is hardcoded as false
-        p_DTP, p_NPINT,
-
-        # FOR MSBITERATE:
-        p_QLAYER, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC, p_IMPERV,
-        p_LENGTH_SLOPE, p_DSLOPE, LWFBrook90.CONSTANTS.p_RHOWG, p_DPSIMAX,
-        p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX,
-        p_GSC, p_GSP,
-
-        p_BYPAR)
-
     # p_cst_3 only for CallBack in DiffEq.jl
-    p_cst_3 = (p_LAT, p_ESLOPE, p_L1, p_L2,
-        p_SNODEN, p_MXRTLN, p_MXKPL, p_CS,
-        p_Z0S, p_Z0G,
-        p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC,
-        p_RTRAD, p_FXYLEM,
-        p_WNDRAT, p_FETCH, p_Z0W, p_ZW,
-        p_RSTEMP,
-        LWFBrook90.CONSTANTS.p_CVICE,
-        p_LWIDTH, p_RHOTP, p_NN, p_KSNVP,
-        p_ALBSN, p_ALB,
-        p_RSSA, p_RSSB,
-        p_CCFAC, p_MELFAC, p_LAIMLT, p_SAIMLT,
 
-        LWFBrook90.CONSTANTS.p_WTOMJ, p_C1, p_C2, p_C3, p_CR,
-        p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_TL, p_T1, p_T2, p_TH,
-        p_PSICR, NOOUTF,
+    parameter_single_tuple = (
+        # formerly p_cst1:
+        p_soil = p_soil,
 
+        # formerly p_cst2:
+        NLAYER = NLAYER,
+        FLAG_MualVanGen = FLAG_MualVanGen,
+        compute_intermediate_quantities = continuous_SPAC.solver_options.compute_intermediate_quantities,
+        Reset = false, # Reset is hardcoded as false
+        p_DTP         = p_DTP,         p_NPINT       = p_NPINT,       p_QLAYER      = p_QLAYER,
+        # FOR MSBITERATE:
+        p_SWATQX      = p_SWATQX,      p_QFPAR       = p_QFPAR,       p_SWATQF      = p_SWATQF,
+        p_QFFC        = p_QFFC,        p_IMPERV      = p_IMPERV,      p_LENGTH_SLOPE= p_LENGTH_SLOPE,
+        p_DSLOPE      = p_DSLOPE,      p_RHOWG       = LWFBrook90.CONSTANTS.p_RHOWG,
+        p_DPSIMAX     = p_DPSIMAX,     p_DRAIN       = p_DRAIN,       p_DTIMAX      = p_DTIMAX,
+        p_INFRAC      = p_INFRAC,      p_DSWMAX      = p_DSWMAX,      p_GSC         = p_GSC,
+        p_GSP         = p_GSP,         p_BYPAR       = p_BYPAR,
+
+        # formerly p_cst3:
+        p_LAT    = p_LAT,    p_ESLOPE = p_ESLOPE, p_L1     = p_L1,     p_L2     = p_L2,
+        p_SNODEN = p_SNODEN, p_MXRTLN = p_MXRTLN, p_MXKPL  = p_MXKPL,  p_CS     = p_CS,
+        p_Z0S    = p_Z0S,    p_Z0G    = p_Z0G,    p_ZMINH  = p_ZMINH,  p_CZS    = p_CZS,
+        p_CZR    = p_CZR,    p_HS     = p_HS,     p_HR     = p_HR,     p_LPC    = p_LPC,
+        p_RTRAD  = p_RTRAD,  p_FXYLEM = p_FXYLEM, p_WNDRAT = p_WNDRAT, p_FETCH  = p_FETCH,
+        p_Z0W    = p_Z0W,    p_ZW     = p_ZW,     p_RSTEMP = p_RSTEMP, p_LWIDTH = p_LWIDTH,
+        p_RHOTP  = p_RHOTP,  p_NN     = p_NN,     p_KSNVP  = p_KSNVP,  p_ALBSN  = p_ALBSN,
+        p_ALB    = p_ALB,    p_RSSA   = p_RSSA,   p_RSSB   = p_RSSB,   p_CCFAC  = p_CCFAC,
+        p_MELFAC = p_MELFAC, p_LAIMLT = p_LAIMLT, p_SAIMLT = p_SAIMLT, p_C1     = p_C1,
+        p_C2     = p_C2,     p_C3     = p_C3,     p_CR     = p_CR,     p_GLMIN  = p_GLMIN,
+        p_GLMAX  = p_GLMAX,  p_R5     = p_R5,     p_CVPD   = p_CVPD,   p_RM     = p_RM,
+        p_TL     = p_TL,     p_T1     = p_T1,     p_T2     = p_T2,     p_TH     = p_TH,
+        p_PSICR  = p_PSICR,  NOOUTF = NOOUTF,
+        p_CVICE  = LWFBrook90.CONSTANTS.p_CVICE,  p_WTOMJ  = LWFBrook90.CONSTANTS.p_WTOMJ,
         # for MSBPREINT:
-        p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS,
-        p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS,
-        p_DURATN, p_MAXLQF, p_GRDMLT,
-
+        p_FSINTL = p_FSINTL, p_FSINTS = p_FSINTS, p_CINTSL = p_CINTSL, p_CINTSS = p_CINTSS,
+        p_FRINTL = p_FRINTL, p_FRINTS = p_FRINTS, p_CINTRL = p_CINTRL, p_CINTRS = p_CINTRS,
+        p_DURATN = p_DURATN, p_MAXLQF = p_MAXLQF, p_GRDMLT = p_GRDMLT,
         # for isotope mixing:
-        p_VXYLEM, p_DISPERSIVITY)
+        p_VXYLEM = p_VXYLEM, p_DISPERSIVITY = p_DISPERSIVITY,
 
-
-    p_cst_4 = (
-        FLAG_MualVanGen,
-        continuous_SPAC.solver_options.compute_intermediate_quantities,
-        continuous_SPAC.solver_options.simulate_isotopes,
+        # formerly p_cst4:
+        simulate_isotopes = continuous_SPAC.solver_options.simulate_isotopes,
         # row_idx_scalars = [], # TODO(bernharf): replace with keys(states) or states[:accum]
         row_idx_scalars = (GWAT = nothing,#findfirst(isequal(:GWAT),  u0_field_names),#:GWAT,
-                           INTS = nothing,#findfirst(isequal(:INTS),  u0_field_names),#:INTS,
-                           INTR = nothing,#findfirst(isequal(:INTR),  u0_field_names),#:INTR,
-                           SNOW = nothing,#findfirst(isequal(:SNOW),  u0_field_names),#:SNOW,
-                           CC   = nothing,#findfirst(isequal(:CC),    u0_field_names),#:CC,
-                           SNOWLQ=nothing,#findfirst(isequal(:SNOWLQ),u0_field_names),#:SNOWLQ,
-                           RWU  = nothing,#findfirst(isequal(:RWU),   u0_field_names),#:RWU,
-                           XYLEM= nothing),#findfirst(isequal(:XYLEM), u0_field_names)),#:XYLEM],
+                            INTS = nothing,#findfirst(isequal(:INTS),  u0_field_names),#:INTS,
+                            INTR = nothing,#findfirst(isequal(:INTR),  u0_field_names),#:INTR,
+                            SNOW = nothing,#findfirst(isequal(:SNOW),  u0_field_names),#:SNOW,
+                            CC   = nothing,#findfirst(isequal(:CC),    u0_field_names),#:CC,
+                            SNOWLQ=nothing,#findfirst(isequal(:SNOWLQ),u0_field_names),#:SNOWLQ,
+                            RWU  = nothing,#findfirst(isequal(:RWU),   u0_field_names),#:RWU,
+                            XYLEM= nothing),#findfirst(isequal(:XYLEM), u0_field_names)),#:XYLEM],
         row_idx_SWATI   = nothing,#findfirst(isequal(:SWATI), u0_field_names),#:SWATI],
         row_idx_TRANI   = nothing,#findfirst(isequal(:TRANI), u0_field_names),#[:TRANI],
                         # findfirst(isequal(:aux),   u0_field_names)
         row_idx_accum   = nothing,#findfirst(isequal(:accum), u0_field_names),#[:accum],
-        names_accum     = names_accum,
         col_idx_d18O    = 2,
         col_idx_d2H     = 3,
-        u0_field_names  = u0_field_names)
-    p_cst = (p_cst_1, p_cst_2, p_cst_3, p_cst_4)
 
-    # 2b) Time varying parameters (e.g. meteorological forcings)
-    p_fT = (p_DOY          = (t) -> LWFBrook90.p_DOY(t,    continuous_SPAC.reference_date),
-            p_MONTHN       = (t) -> LWFBrook90.p_MONTHN(t, continuous_SPAC.reference_date),
-            p_GLOBRAD      = continuous_SPAC.meteo_forcing.p_GLOBRAD,
-            p_TMAX         = continuous_SPAC.meteo_forcing.p_TMAX,
-            p_TMIN         = continuous_SPAC.meteo_forcing.p_TMIN,
-            p_VAPPRES      = continuous_SPAC.meteo_forcing.p_VAPPRES,
-            p_WIND         = continuous_SPAC.meteo_forcing.p_WIND,
-            p_PREC         = continuous_SPAC.meteo_forcing.p_PREC,
+        # formerly p_fT:
+        p_DOY          = (t) -> LWFBrook90.p_DOY(t,    continuous_SPAC.reference_date),
+        p_MONTHN       = (t) -> LWFBrook90.p_MONTHN(t, continuous_SPAC.reference_date),
+        p_GLOBRAD      = continuous_SPAC.meteo_forcing.p_GLOBRAD,
+        p_TMAX         = continuous_SPAC.meteo_forcing.p_TMAX,
+        p_TMIN         = continuous_SPAC.meteo_forcing.p_TMIN,
+        p_VAPPRES      = continuous_SPAC.meteo_forcing.p_VAPPRES,
+        p_WIND         = continuous_SPAC.meteo_forcing.p_WIND,
+        p_PREC         = continuous_SPAC.meteo_forcing.p_PREC,
 
-            p_DENSEF       = continuous_SPAC.canopy_evolution.p_DENSEF, # canopy density multiplier between 0.05 and 1, dimensionless
-            p_HEIGHT       = continuous_SPAC.canopy_evolution.p_HEIGHT,
-            p_LAI          = continuous_SPAC.canopy_evolution.p_LAI,
-            p_SAI          = continuous_SPAC.canopy_evolution.p_SAI,
-            p_AGE          = continuous_SPAC.canopy_evolution.p_AGE,
-            p_RELDEN       = p_RELDEN,
+        p_DENSEF       = continuous_SPAC.canopy_evolution.p_DENSEF, # canopy density multiplier between 0.05 and 1, dimensionless
+        p_HEIGHT       = continuous_SPAC.canopy_evolution.p_HEIGHT,
+        p_LAI          = continuous_SPAC.canopy_evolution.p_LAI,
+        p_SAI          = continuous_SPAC.canopy_evolution.p_SAI,
+        p_AGE          = continuous_SPAC.canopy_evolution.p_AGE,
+        p_RELDEN       = p_RELDEN,
 
-            p_d18OPREC     = continuous_SPAC.meteo_iso_forcing.p_d18OPREC,
-            p_d2HPREC      = continuous_SPAC.meteo_iso_forcing.p_d2HPREC,
-            REFERENCE_DATE = continuous_SPAC.reference_date)
-    # Documentation from ecoshift:
-    # DENSEF (Fixed parameter) - canopy density multiplier between 0.05 and 1, dimensionless. DENSEF is normally 1; it should be reduced below this ONLY to simulate thinning of the existing canopy by cutting. It multiplies MAXLAI, CS, MXRTLN, and MXKPL and thus proportionally reduces LAI, SAI, and RTLEN, and increases RPLANT. However it does NOT reduce canopy HEIGHT and thus will give erroneous aerodynamic resistances if it is less than about 0.05. It should NOT be set to 0 to simulate a clearcut. [see PET-CANOPY]
+        p_δ18O_PREC     = continuous_SPAC.meteo_iso_forcing.p_d18OPREC,
+        p_δ2H_PREC      = continuous_SPAC.meteo_iso_forcing.p_d2HPREC,
+        REFERENCE_DATE = continuous_SPAC.reference_date,
 
+        # formerly p_fu:
+        # Initialize placeholder for parameters that depend on solution and are computed
+        # p_fu = ([NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN],
+        #         fill(NaN, NLAYER),     # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto
+        #         fill(NaN, (NLAYER,5)), # for du_NTFLI, aux_du_VRFLI, aux_du_DSFLI, aux_du_INFLI, u_aux_WETNES)
+        #         # TODO(bernhard): should we combine these caches to a matrix of (NLAYER,6)?
+        #         fill(NaN, 2)),         # for du_GWFL du_SEEP
+        # make them vectors to have them mutable:
+        p_fu_δ18O_SLFL = [NaN],
+        p_fu_δ2H_SLFL  = [NaN],
+        p_fT_TADTM     = [NaN],
+        p_fu_RNET      = [NaN],
+        aux_du_SMLT    = [NaN],
+        aux_du_SLVP    = [NaN],
+        p_fu_STHR      = [NaN],
+        aux_du_RSNO    = [NaN],
+        aux_du_SNVP    = [NaN],
+        aux_du_SINT    = [NaN],
+        aux_du_ISVP    = [NaN],
+        aux_du_RINT    = [NaN],
+        aux_du_IRVP    = [NaN],
+        u_SNOW_old     = [NaN],
 
-    # 2c) Time varying "parameters" (depending on state variables)
-    #     These need to be exchanged between CallBack and RHS in DiffEq.jl which is why they
-    #     can temporarily be saved in the parameter vector to avoid computing them twice
+        du_GWFL        = [NaN],
+        du_SEEP        = [NaN],
+        aux_du_TRANI   = fill(NaN, NLAYER), # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto
+        du_NTFLI       = fill(NaN, NLAYER), # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto
+        aux_du_VRFLI   = fill(NaN, NLAYER), # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto
+        aux_du_DSFLI   = fill(NaN, NLAYER), # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto
+        aux_du_INFLI   = fill(NaN, NLAYER), # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto
+        u_aux_WETNES   = fill(NaN, NLAYER), # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto
+        # formerly p_cache:
+        # Initialize further caches to hold computed quantities without need to allocate memory
+        # p_cache = ((
+        #     # chaches for flow equation
+        #     zeros(NLAYER), # u_aux_WETNES
+        #     zeros(NLAYER), # u_aux_PSIM
+        #     zeros(NLAYER), # u_aux_PSITI
+        #     zeros(NLAYER), # u_aux_θ
+        #     zeros(NLAYER), # u_aux_θ_tminus1
+        #     zeros(NLAYER), # p_fu_KK
+        #     zeros(NLAYER), # aux_du_DSFLI
+        #     zeros(NLAYER), # aux_du_VRFLI
+        #     zeros(NLAYER), # aux_du_VRFLI_1st_approx
+        #     zeros(NLAYER), # aux_du_INFLI
+        #     zeros(NLAYER), # aux_du_BYFLI
+        #     zeros(NLAYER), # du_NTFLI
+        #     zeros(NLAYER)), # p_fu_BYFRAC
+        #     # chaches for advection dispersion equation
+        #         # for quantities (all NLAYER long):
+        #         # 7 vectors: θᵏ⁺¹, θᵏ, C_¹⁸Oᵏ⁺¹, C_¹⁸Oᵏ, C_²Hᵏ⁺¹, C_²Hᵏ, q,
+        #         # 9 vectors: Tsoil_K, τw, Λ, D⁰_¹⁸O, D⁰_²H, D_¹⁸O_ᵏ⁺¹, D_²H_ᵏ⁺¹, C_¹⁸O_SLVP, C_²H_SLVP,
+        #         # 8 vectors: diff¹⁸O_upp, diff²H_upp, qCᵢ¹⁸O_upp, qCᵢ²H_upp,
+        #         #            diff¹⁸O_low, diff²H_low, qCᵢ¹⁸O_low, qCᵢ²H_low,
+        #         # 4 vectors: du_Cᵢ¹⁸_SWATI, du_Cᵢ²H_SWATI, du_δ18O_SWATI, du_δ2H_SWATI
+        #     Tuple(zeros(NLAYER) for i=1:28)#,
+        #         # 4 vectors: diff¹⁸O_interfaces, diff²H_interfaces, qCᵢ¹⁸O_interfaces, qCᵢ²H_interfaces,
+        #     # Tuple(zeros(NLAYER+1) for i=1:4)
+        #     ),
+        u_aux_PSIM              = fill(0., NLAYER), # TODO: test if also works when initialized as NaN
+        u_aux_PSITI             = fill(0., NLAYER), # TODO: test if also works when initialized as NaN
+        u_aux_θ                 = fill(0., NLAYER), # TODO: test if also works when initialized as NaN
+        u_aux_θ_tminus1         = fill(0., NLAYER), # TODO: test if also works when initialized as NaN
+        p_fu_KK                 = fill(0., NLAYER), # TODO: test if also works when initialized as NaN
+        aux_du_VRFLI_1st_approx = fill(0., NLAYER), # TODO: test if also works when initialized as NaN
+        aux_du_BYFLI            = fill(0., NLAYER), # TODO: test if also works when initialized as NaN
+        p_fu_BYFRAC             = fill(0., NLAYER), # TODO: test if also works when initialized as NaN
+        #     # chaches for advection dispersion equation
+        #         # for quantities (all NLAYER long):
+        #         # 7 vectors: θᵏ⁺¹, θᵏ, C_¹⁸Oᵏ⁺¹, C_¹⁸Oᵏ, C_²Hᵏ⁺¹, C_²Hᵏ, q,
+        #         # 9 vectors: Tsoil_K, τw, Λ, D⁰_¹⁸O, D⁰_²H, D_¹⁸O_ᵏ⁺¹, D_²H_ᵏ⁺¹, C_¹⁸O_SLVP, C_²H_SLVP,
+        #         # 8 vectors: diff¹⁸O_upp, diff²H_upp, qCᵢ¹⁸O_upp, qCᵢ²H_upp,
+        #         #            diff¹⁸O_low, diff²H_low, qCᵢ¹⁸O_low, qCᵢ²H_low,
+        #         # 4 vectors: du_Cᵢ¹⁸_SWATI, du_Cᵢ²H_SWATI, du_δ18O_SWATI, du_δ2H_SWATI
+        cache_for_ADE_28        = Tuple(zeros(NLAYER) for i=1:28),
+    )
 
-    # Initialize placeholder for parameters that depend on solution and are computed
-    p_fu = ([NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN],
-            fill(NaN, NLAYER),     # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto
-            fill(NaN, (NLAYER,5)), # for du_NTFLI, aux_du_VRFLI, aux_du_DSFLI, aux_du_INFLI, u_aux_WETNES)
-            # TODO(bernhard): should we combine these caches to a matrix of (NLAYER,6)?
-            fill(NaN, 2))          # for du_GWFL du_SEEP
-    #TODO(bernhard): what are the additional 3x NaNs needed for in isotope code???
-    #Earlier it was simply: [NaN, NaN, NaN, NaN, NaN, NaN], fill(NaN, NLAYER)
+    return parameter_single_tuple
 
-    # Initialize further caches to hold computed quantities without need to allocate memory
-    p_cache = ((
-        # chaches for flow equation
-        zeros(NLAYER), # u_aux_WETNES
-        zeros(NLAYER), # u_aux_PSIM
-        zeros(NLAYER), # u_aux_PSITI
-        zeros(NLAYER), # u_aux_θ
-        zeros(NLAYER), # u_aux_θ_tminus1
-        zeros(NLAYER), # p_fu_KK
-        zeros(NLAYER), # aux_du_DSFLI
-        zeros(NLAYER), # aux_du_VRFLI
-        zeros(NLAYER), # aux_du_VRFLI_1st_approx
-        zeros(NLAYER), # aux_du_INFLI
-        zeros(NLAYER), # aux_du_BYFLI
-        zeros(NLAYER), # du_NTFLI
-        zeros(NLAYER)), # p_fu_BYFRAC
-        # chaches for advection dispersion equation
-            # for quantities (all NLAYER long):
-            # 7 vectors: θᵏ⁺¹, θᵏ, C_¹⁸Oᵏ⁺¹, C_¹⁸Oᵏ, C_²Hᵏ⁺¹, C_²Hᵏ, q,
-            # 9 vectors: Tsoil_K, τw, Λ, D⁰_¹⁸O, D⁰_²H, D_¹⁸O_ᵏ⁺¹, D_²H_ᵏ⁺¹, C_¹⁸O_SLVP, C_²H_SLVP,
-            # 8 vectors: diff¹⁸O_upp, diff²H_upp, qCᵢ¹⁸O_upp, qCᵢ²H_upp,
-            #            diff¹⁸O_low, diff²H_low, qCᵢ¹⁸O_low, qCᵢ²H_low,
-            # 4 vectors: du_Cᵢ¹⁸_SWATI, du_Cᵢ²H_SWATI, du_δ18O_SWATI, du_δ2H_SWATI
-        Tuple(zeros(NLAYER) for i=1:28)#,
-            # 4 vectors: diff¹⁸O_interfaces, diff²H_interfaces, qCᵢ¹⁸O_interfaces, qCᵢ²H_interfaces,
-        # Tuple(zeros(NLAYER+1) for i=1:4)
-        )
-
-    # 3) Return different types of parameters as a single object
-    return (p_cst, p_fT, p_fu, p_cache)
 end
 
 
@@ -505,18 +674,18 @@ function interpolate_meteoveg(;
     # ### FOR DEVELOPMENT:
     # # Test interpolation based on regular grid:
     # # using Plots
-    # # time_range = range(minimum(input_meteoveg.days), maximum(input_meteoveg.days), length=length(input_meteoveg.days))
+    # # time_range = range(minimum(meteo_forcing.days), maximum(meteo_forcing.days), length=length(meteo_forcing.days))
     # # ts = 0:0.01:365
-    # # scatter(input_meteoveg.days[1:365], input_meteoveg.PRECIN[1:365])
-    # # plot!(ts, scale(interpolate(input_meteoveg.PRECIN, (BSpline(Constant{Previous}()))), time_range)(ts), label = "PRECIN {Previous}",  xlims=(0,30))
-    # # plot!(ts, scale(interpolate(input_meteoveg.PRECIN, (BSpline(Constant{Next}()))),     time_range)(ts), label = "PRECIN {Next}",      xlims=(0,30))
+    # # scatter(meteo_forcing.days[1:365], meteo_forcing.PRECIN[1:365])
+    # # plot!(ts, scale(interpolate(meteo_forcing.PRECIN, (BSpline(Constant{Previous}()))), time_range)(ts), label = "PRECIN {Previous}",  xlims=(0,30))
+    # # plot!(ts, scale(interpolate(meteo_forcing.PRECIN, (BSpline(Constant{Next}()))),     time_range)(ts), label = "PRECIN {Next}",      xlims=(0,30))
     # # plot!(ts .+ 1,
-    # #       scale(interpolate(input_meteoveg.PRECIN, (BSpline(Constant{Next}()))),     time_range)(ts), label = "PRECIN+1 {Previous}",      xlims=(0,30))
-    # # plot!(ts, scale(interpolate(input_meteoveg.PRECIN, (BSpline(Constant()))),           time_range)(ts), label = "PRECIN {Nearest}",   xlims=(0,30))
-    # # plot!(ts, scale(interpolate(input_meteoveg.PRECIN, (BSpline(Linear()))),             time_range)(ts), label = "PRECIN Linear",   xlims=(0,30))
+    # #       scale(interpolate(meteo_forcing.PRECIN, (BSpline(Constant{Next}()))),     time_range)(ts), label = "PRECIN+1 {Previous}",      xlims=(0,30))
+    # # plot!(ts, scale(interpolate(meteo_forcing.PRECIN, (BSpline(Constant()))),           time_range)(ts), label = "PRECIN {Nearest}",   xlims=(0,30))
+    # # plot!(ts, scale(interpolate(meteo_forcing.PRECIN, (BSpline(Linear()))),             time_range)(ts), label = "PRECIN Linear",   xlims=(0,30))
 
     # # Test interpolation based on irregular:
-    # test_ip_mv = input_meteoveg[[1:10...,15,17:19..., 25:4326...], :]
+    # test_ip_mv = meteo_forcing[[1:10...,15,17:19..., 25:4326...], :]
     # time_range = range(minimum(test_ip_mv.days), maximum(test_ip_mv.days), length=length(test_ip_mv.days))
     # ts = 0:0.01:365
     # scatter(test_ip_mv.days[1:365], test_ip_mv.PRECIN[1:365])
@@ -578,7 +747,6 @@ function interpolate_meteoveg(;
     p_VAPPRES = extrapolate(scale(interpolate(meteo_forcing.VAPPRES, (BSpline(Constant{Previous}()))), time_range) ,0)
     p_WIND    = extrapolate(scale(interpolate(meteo_forcing.WIND,    (BSpline(Constant{Previous}()))), time_range) ,0)
     p_PREC    = extrapolate(scale(interpolate(meteo_forcing.PRECIN,  (BSpline(Constant{Previous}()))), time_range) ,0)
-
     p_LAI     = extrapolate(scale(interpolate(canopy_evolution.LAI./100 .* p_MAXLAI,              (BSpline(Constant{Previous}()))), time_range) ,0)
     p_SAI     = extrapolate(scale(interpolate(canopy_evolution.SAI./100 .* p_SAI_baseline_,       (BSpline(Constant{Previous}()))), time_range) ,0)
     p_DENSEF  = extrapolate(scale(interpolate(canopy_evolution.DENSEF./100 .* p_DENSEF_baseline_, (BSpline(Constant{Previous}()))), time_range) ,0)

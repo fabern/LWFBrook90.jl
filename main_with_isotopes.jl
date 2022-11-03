@@ -151,7 +151,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
     ####################
     ## Plotting
     p = sol_LWFBrook90.prob.p;
-    θ_limits = (minimum(sol_LWFBrook90.prob.p[1][1].p_θr), maximum(sol_LWFBrook90.prob.p[1][1].p_THSAT));
+    θ_limits = (minimum(sol_LWFBrook90.prob.p.p_soil.p_θr), maximum(sol_LWFBrook90.prob.p.p_soil.p_THSAT));
     ψ_pF_limits = (-2, 7);
 
     # 0) defined in module_ISO.jl
@@ -159,7 +159,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
     mkpath("out")
     fname = joinpath(
         "out",
-        input_prefix*"_NLAYER+" * string(sol_LWFBrook90.prob.p[1][1].NLAYER)*
+        input_prefix*"_NLAYER+" * string(sol_LWFBrook90.prob.p.p_soil.NLAYER)*
         "-git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
         ifelse(length(Base.read(`git status --porcelain`, String))==0, "+gitclean","+gitdirty")*
         "-iso+"*string(simulate_isotopes))
@@ -310,11 +310,11 @@ function run_main_with_isotopes(;input_prefix, input_path)
     if (true)
         # Depth-vs-time heatmap plots of θ, ψ, RWU
         # For all heatmaps
-        t_ref = sol_LWFBrook90.prob.p[2][17]
+        t_ref = sol_LWFBrook90.prob.p.REFERENCE_DATE
         x = RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, t_ref);
-        y = cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK) - sol_LWFBrook90.prob.p[1][1].p_THICK/2
+        y = cumsum(sol_LWFBrook90.prob.p.p_soil.p_THICK) - sol_LWFBrook90.prob.p.p_soil.p_THICK/2
         optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
-        y_soil_ticks = optim_ticks(0., round(maximum(cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
+        y_soil_ticks = optim_ticks(0., round(maximum(cumsum(sol_LWFBrook90.prob.p.p_soil.p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
         y_ticks= y_soil_ticks
         y_labels=round.(y_soil_ticks; digits=0)
         # a) for θ and ψ:
@@ -343,7 +343,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
         rows_RWU_mmDay  = reduce(hcat, [sol_LWFBrook90[t_idx].TRANI.mm   for t_idx = eachindex(sol_LWFBrook90)])
         # rows_RWU_mmDay  = reduce(hcat, [sol_LWFBrook90[t_idx].XYLEM.mm for t_idx = eachindex(sol_LWFBrook90)])
         # rows_RWU_mmDay = sol_LWFBrook90[sol_LWFBrook90.prob.p[1][4].row_idx_TRANI, 1, :]
-        rows_RWU = rows_RWU_mmDay ./ sol_LWFBrook90.prob.p[1][1].p_THICK
+        rows_RWU = rows_RWU_mmDay ./ sol_LWFBrook90.prob.p.p_soil.p_THICK
         pl_RWU = heatmap(x,y,rows_RWU; yticks = (y_ticks, y_labels),
                 yflip = true,
                 c = :diverging_bwr_20_95_c54_n256, clim = maximum(abs.(rows_RWU)) .* (-1, 1),
@@ -357,7 +357,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
             legend = :bottomright
         )
         t_toPlot = range(extrema(sol_LWFBrook90.prob.tspan)..., length=5)
-        root_data_start_end = [sol_LWFBrook90.prob.p[2].p_RELDEN.(t, 1:sol_LWFBrook90.prob.p[1][1].NLAYER) for t in t_toPlot]
+        root_data_start_end = [sol_LWFBrook90.prob.p[2].p_RELDEN.(t, 1:sol_LWFBrook90.prob.p.p_soil.NLAYER) for t in t_toPlot]
         pl_roots = plot(root_data_start_end, y,
             labels = (Dates.format.(permutedims(RelativeDaysFloat2DateTime.(t_toPlot, t_ref)), "yyyy-mm")),
             linestyle = [:solid :solid :solid :solid :dash],
@@ -411,14 +411,14 @@ function run_main_with_isotopes(;input_prefix, input_path)
         # (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
         #                 LWFBrook90.get_auxiliary_variables(sol_LWFBrook90_2)
         # heatmap(RelativeDaysFloat2DateTime.(sol_LWFBrook90_2.t, t_ref),
-        #         cumsum(sol_LWFBrook90_2.prob.p[1][1].p_THICK) - sol_LWFBrook90_2.prob.p[1][1].p_THICK/2,
+        #         cumsum(sol_LWFBrook90_2.prob.p.p_soil.p_THICK) - sol_LWFBrook90_2.prob.p.p_soil.p_THICK/2,
         #         u_aux_θ, yflip = true)
     end
 
     # # # 1) very basic
     # # using Plots # Install plot package at first use with `]` and then `add Plots`
-    # # # plot(p[2][15](1:300))
-    # # # plot(p[2][16](1:300))
+    # # # plot(p.p_δ18O_PREC(1:300))
+    # # # plot(p.p_δ2H_PREC(1:300))
 
     # # # # # Plot 1
     # # plot(sol_LWFBrook90; vars = [1, 2, 3, 4, 5, 6],
@@ -435,32 +435,32 @@ function run_main_with_isotopes(;input_prefix, input_path)
     # # a = plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O,
     # #     ylabel = "δ18O [‰]",
     # #     label=["GWAT (‰)" "INTS (‰)" "INTR (‰)" "SNOW (‰)"])
-    # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (‰)")
+    # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p.p_δ18O_PREC.(sol_LWFBrook90.t), label = "PREC (‰)")
     # # # plot!(ylims = (-50,50))
 
     # # plot(plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O[2], ylabel = "δ18O [‰]", label=["INTS (‰)"]),
     # #     plot(sol_LWFBrook90; vars = [2],label=["INTS (mm)"]),
     # #     layout=(2,1))
-    # # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (‰)")
+    # # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p.p_δ18O_PREC.(sol_LWFBrook90.t), label = "PREC (‰)")
     # # plot(plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O[3], ylabel = "δ18O [‰]", label=["INTR (‰)"]),
     # #     plot(sol_LWFBrook90; vars = [3],label=["INTR (mm)"]),
     # #     layout=(2,1))
-    # # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (‰)")
+    # # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p.p_δ18O_PREC.(sol_LWFBrook90.t), label = "PREC (‰)")
     # # plot(plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O[4], ylabel = "δ18O [‰]", label=["SNOW (‰)"]),
     # #     plot(sol_LWFBrook90; vars = [4],label=["SNOW (mm)"]),#, ylims = (0,0.01)),
     # #     layout=(2,1))
-    # # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (‰)")
+    # # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p.p_δ18O_PREC.(sol_LWFBrook90.t), label = "PREC (‰)")
     # # plot(plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d18O[1], ylabel = "δ18O [‰]", label=["GWAT (‰)"]),
     # #     plot(sol_LWFBrook90; vars = [1],label=["GWAT (mm)"]),
     # #     layout=(2,1))
-    # # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), label = "PREC (‰)")
+    # # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p.p_δ18O_PREC.(sol_LWFBrook90.t), label = "PREC (‰)")
 
 
     # # # sol_LWFBrook90[26,1,1:10]
     # # plot(sol_LWFBrook90; vars = idx_u_scalar_isotopes_d2H,
     # #     ylabel = "δ2H [‰]",
     # #     label=["GWAT (‰)" "INTS (‰)" "INTR (‰)" "SNOW (‰)"])
-    # # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p[2][16].(sol_LWFBrook90.t), label = "PREC (‰)")
+    # # # plot!(sol_LWFBrook90.t, sol_LWFBrook90.prob.p.p_δ2H_PREC.(sol_LWFBrook90.t), label = "PREC (‰)")
     # # scatter([
     # #         (sol_LWFBrook90[13 + 1,:], sol_LWFBrook90[24 + 1,:]),
     # #         (sol_LWFBrook90[13 + 2,:], sol_LWFBrook90[24 + 2,:]),
@@ -470,19 +470,19 @@ function run_main_with_isotopes(;input_prefix, input_path)
     # #     xlabel = "δ18O [‰]", ylabel = "δ2H [‰]",
     # #     label = ["GWAT" "INTS" "INTR" "SNOW"])
     # # # plot!(ylims = (-100,-60), xlims = (-15, -8))
-    # # # plot!(sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t), sol_LWFBrook90.prob.p[2][16].(sol_LWFBrook90.t), label = "PREC")
+    # # # plot!(sol_LWFBrook90.prob.p.p_δ18O_PREC.(sol_LWFBrook90.t), sol_LWFBrook90.prob.p.p_δ2H_PREC.(sol_LWFBrook90.t), label = "PREC")
 
     # # # # Plot 2
     # # # # http://docs.juliaplots.org/latest/generated/gr/#gr-ref43
     # # x = LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, input_meteoveg_reference_date)
-    # # y = cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK)
-    # # n = sol_LWFBrook90.prob.p[1][1].NLAYER
-    # # y_centers = [ 0; cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK)[1:(n-1)] ] +
-    # #     sol_LWFBrook90.prob.p[1][1].p_THICK / 2
+    # # y = cumsum(sol_LWFBrook90.prob.p.p_soil.p_THICK)
+    # # n = sol_LWFBrook90.prob.p.p_soil.NLAYER
+    # # y_centers = [ 0; cumsum(sol_LWFBrook90.prob.p.p_soil.p_THICK)[1:(n-1)] ] +
+    # #     sol_LWFBrook90.prob.p.p_soil.p_THICK / 2
 
-    # # z = sol_LWFBrook90[7 .+ (0:sol_LWFBrook90.prob.p[1][1].NLAYER-1),
+    # # z = sol_LWFBrook90[7 .+ (0:sol_LWFBrook90.prob.p.p_soil.NLAYER-1),
     # #                     1,
-    # #                     :]./sol_LWFBrook90.prob.p[1][1].p_THICK;
+    # #                     :]./sol_LWFBrook90.prob.p.p_soil.p_THICK;
     # # z2 = sol_LWFBrook90[idx_u_vector_isotopes_d18O,1,:];
     # # z3 = sol_LWFBrook90[idx_u_vector_isotopes_d2H,1,:];
 
@@ -490,7 +490,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
     # #         xlabel = "Date",
     # #         ylabel = "Depth [mm]",
     # #         colorbar_title = "θ [-]")
-    # # hline!([0; cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK)], yflip = true, xticks = false,
+    # # hline!([0; cumsum(sol_LWFBrook90.prob.p.p_soil.p_THICK)], yflip = true, xticks = false,
     # #     color = :black, linestyle = :dot
     # #     #title = "N_layer = "*string(sol_LWFBrook90.prob.[1][1].NLAYER)
     # #     )
@@ -547,7 +547,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
     # #      xlabel = "Date",
     # #      ylabel = "θ [-]",
     # #      legend = :bottomright)
-    # # savefig(input_prefix*"_θ-feinUndSteinErde_depths_NLAYER"*string(sol_LWFBrook90.prob.p[1][1].NLAYER)*".png")
+    # # savefig(input_prefix*"_θ-feinUndSteinErde_depths_NLAYER"*string(sol_LWFBrook90.prob.p.p_soil.NLAYER)*".png")
 
 
 
@@ -764,7 +764,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
             linewidth = 3, alpha = 0.5)
         # add precipitation
         pl_δsoil = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, simulation.continuous_SPAC.reference_date),
-                        sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t),
+                        sol_LWFBrook90.prob.p.p_δ18O_PREC.(sol_LWFBrook90.t),
                         color = "grey", alpha = 0.5, labels = "Precipiation")
 
         # ylims!(-15,0)
@@ -808,7 +808,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
             linewidth = 3, alpha = 0.5)
         # add precipitation
         pl_δsoil = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, simulation.continuous_SPAC.reference_date),
-                        sol_LWFBrook90.prob.p[2][15].(sol_LWFBrook90.t),
+                        sol_LWFBrook90.prob.p.p_δ18O_PREC.(sol_LWFBrook90.t),
                         color = "grey", alpha = 0.5, labels = "Precipiation")
 
         # ylims!(-15,0)

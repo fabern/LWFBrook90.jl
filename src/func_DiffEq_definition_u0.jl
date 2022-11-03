@@ -79,14 +79,13 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             aux   = NamedTuple{name_aux, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:aux])...)),
             accum = NamedTuple{name_accum, NTuple{31, Float64}}((0. for i in eachindex(name_accum))))
     end
-    u0_field_names = nothing # TODO: unused
 
     # # Give ArrayPartition as u0 to DiffEq.jl
     # u0 = ArrayPartition(u0_NamedTuple...)
     # u0_field_names = keys(u0_NamedTuple) # and save names of u0 to parameter vector
 
     # return
-    return u0, u0_field_names, names_accum
+    return u0
 end
 
 function init_LWFB90_u0!(;u0::ComponentArray, continuous_SPAC, soil_discr, p_soil)

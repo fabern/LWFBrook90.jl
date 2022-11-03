@@ -63,45 +63,36 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     ############
     ### Compute parameters
     ## A) constant parameters:
-    p_soil = integrator.p[1][1]
-    (NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, Reset,
-    p_DTP, p_NPINT,
+    @unpack p_soil = integrator.p;
+    @unpack NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, Reset, p_DTP, p_NPINT = integrator.p;
+    @unpack p_LAT, p_ESLOPE, p_L1, p_L2,
+        p_SNODEN, p_MXRTLN, p_MXKPL, p_CS,
+        p_Z0S, p_Z0G,
+        p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC,
+        p_RTRAD, p_FXYLEM,
+        p_WNDRAT, p_FETCH, p_Z0W, p_ZW,
+        p_RSTEMP,
+        p_CVICE,
+        p_LWIDTH, p_RHOTP, p_NN, p_KSNVP,
+        p_ALBSN, p_ALB,
+        p_RSSA, p_RSSB,
+        p_CCFAC, p_MELFAC, p_LAIMLT, p_SAIMLT,
 
-    _, _, _, _, _, _,
-    _, _, _, _,
-    _, _, _, _,
-    _, _,
+        p_WTOMJ, p_C1, p_C2, p_C3, p_CR,
+        p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_TL, p_T1, p_T2, p_TH,
+        p_PSICR, NOOUTF,
 
-    _) = integrator.p[1][2]
+        # for MSBPREINT:
+        p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS,
+        p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS,
+        p_DURATN, p_MAXLQF, p_GRDMLT,
 
-    (p_LAT, p_ESLOPE, p_L1, p_L2,
-    p_SNODEN, p_MXRTLN, p_MXKPL, p_CS,
-    p_Z0S, p_Z0G,
-    p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC,
-    p_RTRAD, p_FXYLEM,
-    p_WNDRAT, p_FETCH, p_Z0W, p_ZW,
-    p_RSTEMP,
-    p_CVICE,
-    p_LWIDTH, p_RHOTP, p_NN, p_KSNVP,
-    p_ALBSN, p_ALB,
-    p_RSSA, p_RSSB,
-    p_CCFAC, p_MELFAC, p_LAIMLT, p_SAIMLT,
-
-    p_WTOMJ, p_C1, p_C2, p_C3, p_CR,
-    p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_TL, p_T1, p_T2, p_TH,
-    p_PSICR, NOOUTF,
-
-    # for MSBPREINT:
-    p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS,
-    p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS,
-    p_DURATN, p_MAXLQF, p_GRDMLT,
-
-    p_VXYLEM, p_DISPERSIVITY) = integrator.p[1][3]
+        p_VXYLEM, p_DISPERSIVITY = integrator.p;
 
     ## B) time dependent parameters
-    p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC,
+    @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
         p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE, p_RELDEN,
-        p_δ18O_PREC, p_δ2H_PREC, ref_date = integrator.p[2]
+        p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p;
 
     p_fT_DENSEF = max(0.050, p_DENSEF(integrator.t))
 
@@ -114,7 +105,13 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     #  - weather data depending on DOY and u_SNOW
     #  - fraction of precipitation as snowfall depending on DOY
     #  - snowpack temperature, potential snow evaporation and soil evaporation resistance depending on u_SNOW
+    @unpack p_fT_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
+        p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
+        aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old,
+        aux_du_TRANI = integrator.p;
+    @unpack p_fu_δ18O_SLFL, p_fu_δ2H_SLFL = integrator.p;
 
+    # integrator.p.aux_du_TRANI
     # Parse states
     u_INTS     = integrator.u.INTS.mm
     u_INTR     = integrator.u.INTR.mm
@@ -132,8 +129,8 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY, p_fu_HEIGHT, p_fu_LAI, p_fu_SAI, p_fT_RTLEN,
         p_fT_RPLANT,p_fu_Z0GS, p_fu_Z0C, p_fu_DISPC, p_fu_Z0, p_fu_DISP, p_fu_ZA,
       p_fT_RXYLEM, p_fT_RROOTI, p_fT_ALPHA,
-      p_fu_SHEAT,p_fu_SOLRADC, p_fu_TA, p_fu_TADTM, p_fu_TANTM, p_fu_UADTM, p_fu_UANTM,
-      p_fT_SNOFRC,p_fu_TSNOW,p_fu_PSNVP, p_fu_ALBEDO,p_fu_RSS, p_fu_SNOEN =
+      p_fu_SHEAT, p_fu_SOLRADC, p_fT_TA, p_fT_TADTM[1], p_fT_TANTM, p_fu_UADTM, p_fu_UANTM,
+      p_fT_SNOFRC, p_fu_TSNOW, p_fu_PSNVP, p_fu_ALBEDO,p_fu_RSS, p_fu_SNOEN =
       MSBSETVARS(FLAG_MualVanGen, NLAYER, p_soil,
                  # for SUNDS:
                  p_LAT, p_ESLOPE, p_DOY(integrator.t), p_L1, p_L2,
@@ -146,7 +143,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
                  # for PLNTRES:
                  p_RELDEN.(integrator.t, 1:NLAYER), p_RTRAD, p_FXYLEM,
                  # for WEATHER:
-                 p_TMAX(integrator.t), p_TMIN(integrator.t), p_EA(integrator.t), p_UW(integrator.t), p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_SOLRAD(integrator.t),
+                 p_TMAX(integrator.t), p_TMIN(integrator.t), p_VAPPRES(integrator.t), p_WIND(integrator.t), p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_GLOBRAD(integrator.t),
                  # for SNOFRAC:
                  p_RSTEMP,
                  #
@@ -168,39 +165,38 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     # Compute day and night rates
     (p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR, p_fu_ATRI, p_fu_PGER) =
         MSBDAYNIGHT(FLAG_MualVanGen,
-                    p_fT_SLFDAY, p_fu_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fu_TADTM, p_fu_UADTM, p_fu_TANTM, p_fu_UANTM,
+                    p_fT_SLFDAY, p_fu_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM[1], p_fu_UADTM, p_fT_TANTM, p_fu_UANTM,
                     p_fT_I0HDAY,
                     # for AVAILEN:
-                    p_fu_ALBEDO, p_C1, p_C2, p_C3, p_EA(integrator.t), p_fu_SHEAT, p_CR, p_fu_LAI, p_fu_SAI,
+                    p_fu_ALBEDO, p_C1, p_C2, p_C3, p_VAPPRES(integrator.t), p_fu_SHEAT, p_CR, p_fu_LAI, p_fu_SAI,
                     # for SWGRA:
                     p_fu_ZA, p_fu_HEIGHT, p_fu_Z0, p_fu_DISP, p_fu_Z0C, p_fu_DISPC, p_fu_Z0GS, p_LWIDTH, p_RHOTP, p_NN,
                     # for SRSC:
-                    p_fu_TA, p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_TL, p_T1, p_T2, p_TH,
+                    p_fT_TA, p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_TL, p_T1, p_T2, p_TH,
                     # for SWPE:
                     p_fu_RSS,
                     # for TBYLAYER:
                     p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, NLAYER, p_PSICR, NOOUTF)
                     # 0.000012 seconds (28 allocations: 1.938 KiB)
     # Combine day and night rates to average daily rate
-    (p_fu_PTRAN, p_fu_GEVP, p_fu_PINT, p_fu_GIVP, p_fu_PSLVP, aux_du_TRANI) = # TODO(bernhard): p_fu_PSLVP is unused
+    (p_fu_PTRAN, p_fu_GEVP, p_fu_PINT, p_fu_GIVP, p_fu_PSLVP, aux_du_TRANI[:]) = # TODO(bernhard): p_fu_PSLVP is unused
         MSBDAYNIGHT_postprocess(FLAG_MualVanGen, NLAYER, p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR, p_fu_ATRI, p_fT_DAYLEN, p_fu_PGER)
     #* * * * * * * *  E N D   D A Y - N I G H T   L O O P  * * * * * * * * * *
-
     ####################################################################
     # 1) Update snow accumulation/melt: u_SNOW, u_CC, u_SNOWLQ
     #    and compute fluxes to/from interception storage
-    u_SNOW_old = u_SNOW
+    u_SNOW_old[1] = u_SNOW
     (# compute some fluxes as intermediate results:
-    p_fT_SFAL, p_fT_RFAL, p_fu_RNET, p_fu_PTRAN,
+    p_fT_SFAL, p_fT_RFAL, p_fu_RNET[1], p_fu_PTRAN,
     # compute changes in soil water storage:
-    aux_du_TRANI, aux_du_SLVP,
+    aux_du_TRANI[:], aux_du_SLVP[1],
     # compute change in interception storage:
-    aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP,
+    aux_du_SINT[1], aux_du_ISVP[1], aux_du_RINT[1], aux_du_IRVP[1],
     # compute change in snow storage:
-    aux_du_RSNO, aux_du_SNVP, aux_du_SMLT, p_fu_STHR,
+    aux_du_RSNO[1], aux_du_SNVP[1], aux_du_SMLT[1], p_fu_STHR[1],
     # compute updated states:
     u_SNOW_MSBupdate, u_CC, u_SNOWLQ) =
-        MSBPREINT(p_PREC(integrator.t), p_DTP, p_fT_SNOFRC, p_NPINT, p_fu_PINT, p_fu_TA,
+        MSBPREINT(p_PREC(integrator.t), p_DTP, p_fT_SNOFRC, p_NPINT, p_fu_PINT, p_fT_TA,
                # for INTER (snow)
                u_INTS, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS,
                # for INTER (rain)
@@ -218,8 +214,8 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     ####################################################################
     # 2) Update states of interception storage over entire precipitation
     #    interval: u_INTS, u_INTR
-    u_INTS = u_INTS + (aux_du_SINT - aux_du_ISVP) * p_DTP
-    u_INTR = u_INTR + (aux_du_RINT - aux_du_IRVP) * p_DTP
+    u_INTS = u_INTS + (aux_du_SINT[1] - aux_du_ISVP[1]) * p_DTP
+    u_INTR = u_INTR + (aux_du_RINT[1] - aux_du_IRVP[1]) * p_DTP
     u_SNOW = u_SNOW_MSBupdate
 
     ####################################################################
@@ -241,17 +237,17 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     integrator.u.SNOWLQ.mm = u_SNOWLQ
 
     # save intermediate results for use in ODE (function f()) or other callbacks
-    # integrator.p[3][1] .= [δ18O_SLFL, δ2H_SLFL,
-    #                        p_fu_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
+    # integrator.p[3][1] .= [p_fu_δ18O_SLFL, p_fu_δ2H_SLFL,
+    #                        p_fT_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
     #                        p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
     #                        aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old]
-    integrator.p[3][1] .= [NaN, NaN,        # NaNs are directly after overwritten by callback for isotopes
-                            p_fu_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
-                            p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
-                            aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old]
-    integrator.p[3][2] .= aux_du_TRANI
-
-
+    # integrator.p[3][1] .= [NaN, NaN,        # NaNs are directly after overwritten by callback for isotopes
+    #                         p_fT_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
+    #                         p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
+    #                         aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old]
+    # integrator.p[3][2] .= aux_du_TRANI
+    integrator.p.p_fu_δ18O_SLFL .= NaN # NaNs are directly after overwritten by callback for isotopes
+    integrator.p.p_fu_δ2H_SLFL  .= NaN # NaNs are directly after overwritten by callback for isotopes
     ##########################################
     # Accumulate flows to compute daily sums
     # Note that below state variables serve only as accumulator but do not affect
@@ -264,17 +260,17 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         integrator.u.accum.cum_d_prec       = p_DTP * (p_fT_RFAL + p_fT_SFAL)                 # RFALD + SFALD        # cum_d_prec
         integrator.u.accum.cum_d_rfal       = p_DTP * (p_fT_RFAL)                                                    # cum_d_rfal
         integrator.u.accum.cum_d_sfal       = p_DTP * (p_fT_SFAL)                                                    # cum_d_sfal
-        integrator.u.accum.cum_d_rint       = p_DTP * (aux_du_RINT)                                                  # cum_d_rint
-        integrator.u.accum.cum_d_sint       = p_DTP * (aux_du_SINT)                                                  # cum_d_sint
-        integrator.u.accum.cum_d_rsno       = p_DTP * (aux_du_RSNO)                                                  # cum_d_rsno
-        integrator.u.accum.cum_d_rnet       = p_DTP * (p_fT_RFAL - aux_du_RINT - aux_du_RSNO) # cum_d_RTHR - RSNOD   # cum_d_rnet
-        integrator.u.accum.cum_d_smlt       = p_DTP * (aux_du_SMLT)                                                  # cum_d_smlt
-        integrator.u.accum.cum_d_evap       = p_DTP * (aux_du_IRVP + aux_du_ISVP + aux_du_SNVP + aux_du_SLVP + sum(aux_du_TRANI))  # cum_d_evap
+        integrator.u.accum.cum_d_rint       = p_DTP * (aux_du_RINT[1])                                                  # cum_d_rint
+        integrator.u.accum.cum_d_sint       = p_DTP * (aux_du_SINT[1])                                                  # cum_d_sint
+        integrator.u.accum.cum_d_rsno       = p_DTP * (aux_du_RSNO[1])                                                  # cum_d_rsno
+        integrator.u.accum.cum_d_rnet       = p_DTP * (p_fT_RFAL - aux_du_RINT[1] - aux_du_RSNO[1]) # cum_d_RTHR - RSNOD   # cum_d_rnet
+        integrator.u.accum.cum_d_smlt       = p_DTP * (aux_du_SMLT[1])                                                  # cum_d_smlt
+        integrator.u.accum.cum_d_evap       = p_DTP * (aux_du_IRVP[1] + aux_du_ISVP[1] + aux_du_SNVP[1] + aux_du_SLVP[1] + sum(aux_du_TRANI))  # cum_d_evap
         integrator.u.accum.cum_d_tran       = p_DTP * (sum(aux_du_TRANI))                                                          # cum_d_tran
-        integrator.u.accum.cum_d_irvp       = p_DTP * (aux_du_IRVP)                                                                # cum_d_irvp
-        integrator.u.accum.cum_d_isvp       = p_DTP * (aux_du_ISVP)                                                                # cum_d_isvp
-        integrator.u.accum.cum_d_slvp       = p_DTP * (aux_du_SLVP)                                                                # cum_d_slvp
-        integrator.u.accum.cum_d_snvp       = p_DTP * (aux_du_SNVP)                                                                # cum_d_snvp
+        integrator.u.accum.cum_d_irvp       = p_DTP * (aux_du_IRVP[1])                                                                # cum_d_irvp
+        integrator.u.accum.cum_d_isvp       = p_DTP * (aux_du_ISVP[1])                                                                # cum_d_isvp
+        integrator.u.accum.cum_d_slvp       = p_DTP * (aux_du_SLVP[1])                                                                # cum_d_slvp
+        integrator.u.accum.cum_d_snvp       = p_DTP * (aux_du_SNVP[1])                                                                # cum_d_snvp
         integrator.u.accum.cum_d_pint       = p_DTP * (p_fu_PINT)                                                                  # cum_d_pint
         integrator.u.accum.cum_d_ptran      = p_DTP * (p_fu_PTRAN)                                                                 # cum_d_ptran
         integrator.u.accum.cum_d_pslvp      = 0 # p_DTP * (p_fu_PSLVP)                                                             # cum_d_pslvp # Deactivated as p_fu_PSLVP is never used
@@ -304,7 +300,9 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
 end
 
 function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
-    simulate_isotopes = integrator.p[1][4].simulate_isotopes
+
+
+    @unpack simulate_isotopes = integrator.p
 
     if simulate_isotopes
         ## C) state dependent parameters:
@@ -332,28 +330,22 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         ############
         ### Compute parameters
         ## A) constant parameters:
-        (_, _, _, _,
-        p_DTP, _,
-
-        _, _, _, _, _, _,
-        _, _, _, _,
-        _, _, _, _,
-        _, _,
-
-        _) = integrator.p[1][2]
+        @unpack p_DTP = integrator.p # TODO: is p_DTP still used??
 
         ## B) time dependent parameters
-        p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC,
-            p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE, p_RELDEN,
-            p_δ18O_PREC, p_δ2H_PREC, ref_date = integrator.p[2]
+        # @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
+        #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE, p_RELDEN,
+        #     p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p
+        @unpack p_δ18O_PREC, p_δ2H_PREC = integrator.p
 
         ## C) state dependent parameters or intermediate results:
         # These were computed in the callback and are kept constant in between two
         # callbacks.
-        (_, _, p_fu_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
+        @unpack p_fT_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
             p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
-            aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old) = integrator.p[3][1]
-        aux_du_TRANI = integrator.p[3][2]
+            aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old = integrator.p
+        @unpack aux_du_TRANI = integrator.p
+        @unpack p_fu_δ18O_SLFL, p_fu_δ2H_SLFL = integrator.p;
 
         # u_δ18O_GWAT = integrator.u.GWAT.d18O
         # u_δ2H_GWAT  = integrator.u.GWAT.d2H
@@ -371,34 +363,34 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         # u_δ²H_Xylem  = integrator.u.XYLEM.d2H
 
         # Variant 1) works but really much slower
-        # δ18O_SLFL, δ2H_SLFL,
+        # p_fu_δ18O_SLFL, p_fu_δ2H_SLFL,
         # _,                u_δ18O_INTS, u_δ2H_INTS,
         # _,            u_δ18O_INTR, u_δ2H_INTR,
         # u_SNOW_iso_update, u_δ18O_SNOW, u_δ2H_SNOW =
         #     compute_isotope_U_of_INTS_INTR_SNOW_and_SLFL(
-        # (δ18O_SLFL, δ2H_SLFL,
+        # (p_fu_δ18O_SLFL, p_fu_δ2H_SLFL,
         # u_δ18O_INTS, u_δ2H_INTS,
         # u_δ18O_INTR, u_δ2H_INTR,
         # u_δ18O_SNOW, u_δ2H_SNOW) =
         #     compute_isotope_U_of_INTS_INTR_SNOW_and_SLFL(
         #         u_INTS, u_δ18O_INTS, u_δ2H_INTS, u_INTR, u_δ18O_INTR, u_δ2H_INTR, u_SNOW, u_δ18O_SNOW, u_δ2H_SNOW,
-        #         p_δ2H_PREC(integrator.t), p_δ18O_PREC(integrator.t), p_fu_TADTM, p_EA(integrator.t),
+        #         p_δ2H_PREC(integrator.t), p_δ18O_PREC(integrator.t), p_fT_TADTM[1], p_VAPPRES(integrator.t),
         #         # for INTS (in: SINT; out: ISVP):
-        #         aux_du_SINT, aux_du_ISVP, p_DTP,
+        #         aux_du_SINT[1], aux_du_ISVP[1], p_DTP,
         #         # for INTR (in: RINT; out: IRVP):
-        #         aux_du_RINT, aux_du_IRVP,
+        #         aux_du_RINT[1], aux_du_IRVP[1],
         #         # for SNOW (in: STHR, RSNO (both δ_PREC); out: SMLT, SNVP (δ_SNOW and fractionated)):
-        #         NaN, p_fu_STHR, aux_du_RSNO, aux_du_SMLT, aux_du_SNVP,
+        #         NaN, p_fu_STHR[1], aux_du_RSNO[1], aux_du_SMLT[1], aux_du_SNVP[1],
         #         # to compute isotopic signature of soil infiltration: SLFL
-        #         p_fu_RNET)
+        #         p_fu_RNET[1])
         # # END variant 1
 
         # Variant 2) resulting in no effect (but is fast, so not generating any allocation problems)
-        δ2H_SLFL   = p_δ2H_PREC(integrator.t)
+        p_fu_δ2H_SLFL[1]   = p_δ2H_PREC(integrator.t)
         u_δ2H_INTS = p_δ2H_PREC(integrator.t)
         u_δ2H_INTR = p_δ2H_PREC(integrator.t)
         u_δ2H_SNOW = p_δ2H_PREC(integrator.t)
-        δ18O_SLFL   = p_δ18O_PREC(integrator.t)
+        p_fu_δ18O_SLFL[1]   = p_δ18O_PREC(integrator.t)
         u_δ18O_INTS = p_δ18O_PREC(integrator.t)
         u_δ18O_INTR = p_δ18O_PREC(integrator.t)
         u_δ18O_SNOW = p_δ18O_PREC(integrator.t)
@@ -408,11 +400,11 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         # R_std_2H  = LWFBrook90.ISO.R_VSMOW²H
         # R_std_18O = LWFBrook90.ISO.R_VSMOW¹⁸O
         # # For SNOW ( do this before INTS as it uses u_δ2H_INTS as input)
-        # inflow = [p_fu_STHR; aux_du_RSNO]
-        # outflow = [aux_du_SMLT]
+        # inflow = [p_fu_STHR[1]; aux_du_RSNO[1]]
+        # outflow = [aux_du_SMLT[1]]
         # u⁺ = u_SNOW
         # u₀ = u_INTR - p_DTP * (sum(inflow) - sum(outflow)) # [mm]
-        # E  = aux_du_SNVP
+        # E  = aux_du_SNVP[1]
         # ## δ2H
         # δ₀ = u_δ2H_SNOW
         # x₀  = (δ₀/1000 + 1)*R_std_2H / (1 + (δ₀/1000 + 1)*R_std_2H)
@@ -447,11 +439,11 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         # u_δ18O_SNOW = 1000 * (x⁺/(1-x⁺)/R_std_18O - 1)
         # #TODO(bernhard): include fractionation due to evaporation
         # # For INTS
-        # inflow = [aux_du_SINT]
+        # inflow = [aux_du_SINT[1]]
         # outflow = [0]
         # u⁺ = u_INTS
         # u₀ = u_INTS - p_DTP * (sum(inflow) - sum(outflow)) # [mm]
-        # E  = aux_du_ISVP
+        # E  = aux_du_ISVP[1]
         # ## δ2H
         # δ₀ = u_δ2H_INTS
         # x₀  = (δ₀/1000 + 1)*R_std_2H / (1 + (δ₀/1000 + 1)*R_std_2H)
@@ -483,11 +475,11 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         # u_δ18O_INTS = 1000 * (x⁺/(1-x⁺)/R_std_18O - 1)
         # #TODO(bernhard): include fractionation due to evaporation
         # # For INTR
-        # inflow = [aux_du_RINT]
+        # inflow = [aux_du_RINT[1]]
         # outflow = [0]
         # u⁺ = u_INTR
         # u₀ = u_INTR - p_DTP * (sum(inflow) - sum(outflow)) # [mm]
-        # E  = aux_du_IRVP
+        # E  = aux_du_IRVP[1]
         # ## δ2H
         # δ₀ = u_δ2H_INTR
         # x₀  = (δ₀/1000 + 1)*R_std_2H / (1 + (δ₀/1000 + 1)*R_std_2H)
@@ -518,15 +510,16 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         # end
         # u_δ18O_INTR = 1000 * (x⁺/(1-x⁺)/R_std_18O - 1)
         # #TODO(bernhard): include fractionation due to evaporation
-        # δ2H_SLFL   = p_δ2H_PREC(integrator.t)
-        # δ18O_SLFL   = p_δ18O_PREC(integrator.t)
+        # p_fu_δ2H_SLFL   = p_δ2H_PREC(integrator.t)
+        # p_fu_δ18O_SLFL   = p_δ18O_PREC(integrator.t)
         # # END variant 1
 
         ####################################################################
         # Return results from callback
 
         # save intermediate results for use in ODE (function f()) or other callbacks
-        integrator.p[3][1][1:2] .= [δ18O_SLFL, δ2H_SLFL]
+        # integrator.p[3][1][1:2] .= [p_fu_δ18O_SLFL, p_fu_δ2H_SLFL]
+        # not needed with @unpack
 
         # update δ values of INTS, INTR, SNOW
         # do not update δ values of GWAT and SWATI (is done in f())
@@ -559,7 +552,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
     # The code below relating to "numerical_ForwardEuler" is redundant... the code relating
     # to analytical however might still be used.
 
-    simulate_isotopes = integrator.p[1][4].simulate_isotopes
+    @unpack simulate_isotopes = integrator.p
     if simulate_isotopes
         u_GWAT     = integrator.u.GWAT.mm
         # u_INTS     = integrator.u.INTS.mm
@@ -576,24 +569,35 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
         ############
         ### Compute parameters
         ## B) time dependent parameters
-        p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC,
+        # p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
+        #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE, p_RELDEN,
+        #     p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p[2]
+        @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
             p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE, p_RELDEN,
-            p_δ18O_PREC, p_δ2H_PREC, ref_date = integrator.p[2]
+            p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p
 
         ## C) state dependent parameters or intermediate results:
         # These were computed in the callback and are kept constant in between two
         # callbacks.
-        (δ18O_SLFL, δ2H_SLFL, p_fu_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
+        # TODO(bernharf): unpack these....
+        # (p_fu_δ18O_SLFL, p_fu_δ2H_SLFL, p_fT_TADTM[1], p_fu_RNET[1], aux_du_SMLT[1], aux_du_SLVP[1],
+        #     p_fu_STHR[1], aux_du_RSNO[1], aux_du_SNVP[1],
+        #     aux_du_SINT[1], aux_du_ISVP[1], aux_du_RINT[1], aux_du_IRVP[1], u_SNOW_old[1]) = integrator.p[3][1]
+        # aux_du_TRANI = integrator.p[3][2]
+        # du_NTFLI     = integrator.p[3][3][:,1]
+        # aux_du_VRFLI = integrator.p[3][3][:,2]
+        # aux_du_DSFLI = integrator.p[3][3][:,3]
+        # aux_du_INFLI = integrator.p[3][3][:,4]
+        # u_aux_WETNES = integrator.p[3][3][:,5]
+        # du_GWFL      = integrator.p[3][4][1]
+        # du_SEEP      = integrator.p[3][4][2]
+        @unpack p_fu_δ18O_SLFL, p_fu_δ2H_SLFL, p_fT_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
             p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
-            aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old) = integrator.p[3][1]
-        aux_du_TRANI = integrator.p[3][2]
-        du_NTFLI     = integrator.p[3][3][:,1]
-        aux_du_VRFLI = integrator.p[3][3][:,2]
-        aux_du_DSFLI = integrator.p[3][3][:,3]
-        aux_du_INFLI = integrator.p[3][3][:,4]
-        u_aux_WETNES = integrator.p[3][3][:,5]
-        du_GWFL      = integrator.p[3][4][1]
-        du_SEEP      = integrator.p[3][4][2]
+            aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old = integrator.p
+        @unpack aux_du_TRANI = integrator.p         # mm/day
+        @unpack aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, du_NTFLI = integrator.p # all in mm/day
+        @unpack u_aux_WETNES = integrator.p         # all in mm/day
+        @unpack du_GWFL, du_SEEP = integrator.p     # all in mm/day
 
         u_δ18O_GWAT  = integrator.u.GWAT.d18O
         u_δ2H_GWAT   = integrator.u.GWAT.d2H
@@ -602,8 +606,8 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
 
         EffectiveDiffusivity_18O = 0  # TODO(bernhard): compute correct values using eq 33 Zhou-2021-Environ_Model_Softw.pdf
         EffectiveDiffusivity_2H  = 0  # TODO(bernhard): compute correct values using eq 33 Zhou-2021-Environ_Model_Softw.pdf
-        δ18O_INFLI = δ18O_SLFL
-        δ2H_INFLI  = δ2H_SLFL
+        δ18O_INFLI = p_fu_δ18O_SLFL
+        δ2H_INFLI  = p_fu_δ2H_SLFL
 
         if use_method == "numerical_ForwardEuler"
             du_δ18O_GWAT, du_δ2H_GWAT, du_δ18O_SWATI, du_δ2H_SWATI =
@@ -612,7 +616,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
                     u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT,
                     # for SWATI:
                     du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI,  # (non-fractionating)
-                    aux_du_SLVP, p_fu_TADTM, p_EA(integrator.t), p_δ2H_PREC(integrator.t), p_δ18O_PREC(integrator.t), u_aux_WETNES, # (fractionating)
+                    aux_du_SLVP[1], p_fT_TADTM[1], p_VAPPRES(integrator.t), p_δ2H_PREC(integrator.t), p_δ18O_PREC(integrator.t), u_aux_WETNES, # (fractionating)
                     u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, 0, 0) #EffectiveDiffusivity_18O, EffectiveDiffusivity_2H)
 
             # update δ values of GWAT and SWATI
@@ -639,7 +643,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
                     u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT, du_GWFL, du_SEEP,
                     # for SWATI:
                     du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI,  # (non-fractionating)
-                    aux_du_SLVP, p_fu_TADTM, p_EA(integrator.t), p_δ2H_PREC(integrator.t), p_δ18O_PREC(integrator.t), u_aux_WETNES, # (fractionating)
+                    aux_du_SLVP[1], p_fT_TADTM[1], p_VAPPRES(integrator.t), p_δ2H_PREC(integrator.t), p_δ18O_PREC(integrator.t), u_aux_WETNES, # (fractionating)
                     u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, 0, 0) #EffectiveDiffusivity_18O, EffectiveDiffusivity_2H)
 
             integrator.u.GWAT.d18O   = u_δ18O_GWAT
@@ -669,15 +673,19 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
     #                   a) in each time step f and then cb_SWAT_GWAT_deltas
     #                   b) whenever a full day is over: finish f, finish cb_SWAT_GWAT_deltas, then the daily callbacks
 
-    simulate_isotopes = integrator.p[1][4].simulate_isotopes
+    @unpack simulate_isotopes = integrator.p
     if simulate_isotopes
         ##### This update could be done in a separate FunctionCallingCallback `update_auxiliaries`
         # Unpack pre-allocated caches and update them with the current u
         # Bind memory to variable names to avoid re-allocating.
         # Note that these values will be overwritten, this line is just about memory allocation.
-        (u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
-            aux_du_DSFLI,aux_du_VRFLI,aux_du_VRFLI_1st_approx,aux_du_INFLI,aux_du_BYFLI, du_NTFLI,
-            p_fu_BYFRAC) = integrator.p[4][1]
+        # (u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
+        #     aux_du_DSFLI,aux_du_VRFLI,aux_du_VRFLI_1st_approx,aux_du_INFLI,aux_du_BYFLI, du_NTFLI,
+        #     p_fu_BYFRAC) = integrator.p[4][1]
+        # @unpack(u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
+        #     aux_du_DSFLI,aux_du_VRFLI,aux_du_VRFLI_1st_approx,aux_du_INFLI,aux_du_BYFLI, du_NTFLI,
+        #     p_fu_BYFRAC) = integrator.p
+        @unpack aux_du_DSFLI,aux_du_VRFLI, aux_du_INFLI, du_NTFLI = integrator.p
         #TODO(bernhard): check that u_aux_θ_tminus1 and u_aux_θ are indeed different
         ##### END This update could be done in a separate FunctionCallingCallback
 
@@ -691,18 +699,19 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # diff¹⁸O_low, diff²H_low, qCᵢ¹⁸O_low, qCᵢ²H_low,
         # , ) =  integrator.p[4][2]
         # TODO(bernhard): above generates somehow still many allocations
+        @unpack cache_for_ADE_28 = integrator.p
         θᵏ⁺¹,θᵏ,C_¹⁸Oᵏ⁺¹,C_¹⁸Oᵏ,C_²Hᵏ⁺¹,C_²Hᵏ,q,
         D⁰_¹⁸O,D⁰_²H,D_¹⁸O_ᵏ⁺¹,D_²H_ᵏ⁺¹,
         C_¹⁸O_SLVP,C_²H_SLVP,
         diff¹⁸O_upp,diff²H_upp,qCᵢ¹⁸O_upp,qCᵢ²H_upp,
         diff¹⁸O_low,diff²H_low,qCᵢ¹⁸O_low,qCᵢ²H_low,
         du_Cᵢ¹⁸_SWATI,du_Cᵢ²H_SWATI,du_δ18O_SWATI,du_δ2H_SWATI,
-        Tsoil_K,τw,p_Λ = integrator.p[4][2]
+        Tsoil_K,τw,p_Λ = cache_for_ADE_28 #integrator.p[4][2]
         # diff¹⁸O_interfaces,diff²H_interfaces,qCᵢ¹⁸O_interfaces,qCᵢ²H_interfaces =
         #     integrator.p[4][3]
 
-        # unpack
-        p_soil   = integrator.p[1][1]
+        @unpack p_soil = integrator.p
+        # @unpack p_STONEF, p_THICK = integrator.p.p_soil;
         p_STONEF = p_soil.p_STONEF
         p_THICK  = p_soil.p_THICK
 
@@ -731,34 +740,29 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
 
         # unpack other needed quantities
         ## A) constant parameters:
-        NLAYER = integrator.p[1][2][1]
-        p_VXYLEM = integrator.p[1][3][64]
-        p_DISPERSIVITY = integrator.p[1][3][65]
+        @unpack NLAYER, p_VXYLEM, p_DISPERSIVITY = integrator.p
         # TODO(bernhard): Note to below:
         #                 Fluxes in integrator.p[3][:] might be just the values overwritten by the last call to f.
         #                 For a multi-stage method (Runge-Kutta) this might not be representative for the entire time step Δt
         #                 Nevertheless it is a good approximation. Gold standard would be to cumulate the fluxes over time step Δt
-        #                 and save into auxiliary states, but this would grow the state vector by at leas 5*NLAYER
-        aux_du_TRANI = integrator.p[3][2]        # mm/day
-        du_NTFLI     = @view integrator.p[3][3][:,1]   # mm/day
-        aux_du_VRFLI = @view integrator.p[3][3][:,2]   # mm/day
-        aux_du_DSFLI = @view integrator.p[3][3][:,3]   # mm/day
-        aux_du_INFLI = @view integrator.p[3][3][:,4]   # mm/day
-        # u_aux_WETNES = @view integrator.p[3][3][:,5] # mm/day
-        du_GWFL      = integrator.p[3][4][1]     # mm/day
-        du_SEEP      = integrator.p[3][4][2]     # mm/day
+        #                 and save into auxiliary states, but this would grow the state vector by at least 5*NLAYER
+        @unpack aux_du_TRANI = integrator.p         # mm/day
+        @unpack aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, du_NTFLI = integrator.p # all in mm/day
+        # @unpack u_aux_WETNES = integrator.p         # all in mm/day
+        @unpack du_GWFL, du_SEEP = integrator.p     # all in mm/day
 
         ## B) time dependent parameters
-        p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC,
-            p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE, p_RELDEN,
-            p_δ18O_PREC, p_δ2H_PREC, ref_date = integrator.p[2]
+        # @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
+        #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE, p_RELDEN,
+        #     p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p
+        @unpack p_δ18O_PREC, p_δ2H_PREC = integrator.p
 
         ## C) state dependent parameters or intermediate results:
         # These were computed in the callback and are kept constant in between two
         # callbacks.
-        (δ18O_SLFL, δ2H_SLFL, p_fu_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
+        @unpack p_fu_δ18O_SLFL, p_fu_δ2H_SLFL, p_fT_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
             p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
-            aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old) = integrator.p[3][1]
+            aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old = integrator.p
 
         # Define quantities needed for transport equation (advection dispersion/diffusion equation)
         δ¹⁸Oᵏ   = integrator.uprev.SWATI.d18O # @view integrator.uprev[integrator.p[1][4].row_idx_SWATI, integrator.p[1][4].col_idx_d18O]  # of time step before
@@ -794,8 +798,8 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
             # ##################
             # ##################
             # 0) Define conditions for isotope calculations:
-            Tc = p_fu_TADTM  # °C, average daytime air temperature
-            # h = min(1.0, p_EA) # -, relative humidity of the atmosphere (vappress_atm/1 atm)
+            Tc = p_fT_TADTM[1]  # °C, average daytime air temperature
+            # h = min(1.0, p_fT_VAPPRES / LWFBrook90.PET.ESAT(Tc)[1]) # -, relative humidity of the atmosphere (vappress_atm/1 atm)
             # γ = 1.0          # -, thermodynamic activity coefficient of evaporating water
             # # X_INTS = 0.5  # -, turbulence incex of the atmosphere above the evaporating water
             # # X_INTR = 0.5  # -, turbulence incex of the atmosphere above the evaporating water
@@ -823,7 +827,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
 
         # Define (constant) soil transport properties
         N = NLAYER
-        Tsoil_K .= (p_fu_TADTM + 273.15) .* ones(N) # °C, TODO: use solution from heat equation instead of approximation of p_fu_TADTM
+        Tsoil_K .= (p_fT_TADTM[1] + 273.15) .* ones(N) # °C, TODO: use solution from heat equation instead of approximation of p_fT_TADTM
         # τw = θᵏ⁺¹ .^ (7/3) ./ (θsat .^ 2)         # TODO: express tortuosity as function of θ, (Millington and Quirk 1961 as shown in Radcliffe et al. 2018, eq 6.6)
         τw .= 1.0 .* ones(N)   # -, tortuosity in liquid phase (w = water), using 1.0 will overestimate diffusion
         # τg = 1.0 .* ones(N) # -, tortuosity in vapor phase (g = gas), unused as no vapor transport is considered
@@ -838,8 +842,8 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # Define concentrations of source/sink terms in transport equation (TRANI, DSFLI, INFLI, SLVP)
         ### Define δ signature of in- and outflows
         # TODO(bernhard) for debugging:
-        δ18O_INFLI = p_δ18O_PREC(integrator.t)#TODO(bernhard): debug remove workaround and set again = δ18O_SLFL
-        δ2H_INFLI  = p_δ2H_PREC(integrator.t) #TODO(bernhard): debug remove workaround and set again = δ2H_SLFL
+        δ18O_INFLI = p_δ18O_PREC(integrator.t)#TODO(bernhard): debug remove workaround and set again = p_fu_δ18O_SLFL
+        δ2H_INFLI  = p_δ2H_PREC(integrator.t) #TODO(bernhard): debug remove workaround and set again = p_fu_δ2H_SLFL
 
         C_¹⁸O_INFLI = LWFBrook90.ISO.δ_to_C.(δ18O_INFLI, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O) # for debugging use: LWFBrook90.ISO.δ_to_C.(p_δ18O_PREC(integrator.tprev), LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O)
         # C_¹⁸O_TRANI = C_¹⁸Oᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
@@ -866,13 +870,13 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         C_²H_SLVP  .= 0
         C_¹⁸O_SLVP[1]  = LWFBrook90.ISO.δ_to_C(δ¹⁸O_SLVP, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O)
         C_²H_SLVP[1]   = LWFBrook90.ISO.δ_to_C(δ²H_SLVP,  LWFBrook90.ISO.R_VSMOW²H,  LWFBrook90.ISO.Mi_²H)
-        # E¹⁸O = C_¹⁸O_SLVP * aux_du_SLVP * 0.001 # kg/m3 * mm/day * 0.001 m/mm # (kg/m²/day¹)
-        # E²H  = C_²H_SLVP  * aux_du_SLVP * 0.001 # kg/m3 * mm/day * 0.001 m/mm # (kg/m²/day¹)
+        # E¹⁸O = C_¹⁸O_SLVP * aux_du_SLVP[1] * 0.001 # kg/m3 * mm/day * 0.001 m/mm # (kg/m²/day¹)
+        # E²H  = C_²H_SLVP  * aux_du_SLVP[1] * 0.001 # kg/m3 * mm/day * 0.001 m/mm # (kg/m²/day¹)
 
         ### Prepare terms to evaluate linear system to be solved
         Δt = integrator.t - integrator.tprev # days
         # TODO(bernhard): below dz and Δz can be computed once only when setting up the simulation
-        Δz = integrator.p[1][1].p_THICK / 1000 # m
+        Δz = integrator.p.p_soil.p_THICK / 1000 # m
         # z_center = (cumsum(Δz) .+ cumsum([0; Δz[1:NLAYER-1]]))/2 # m
         dz = diff((cumsum(Δz) .+ cumsum([0; Δz[1:NLAYER-1]]))/2)   # m
 
@@ -1160,12 +1164,12 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         du_Cᵢ²H_SWATI .= 0 # assert vector is zero
         du_Cᵢ¹⁸_SWATI .= -C_¹⁸Oᵏ./u_SWATIᵏ⁺¹ .* dVdt .+ 1 ./ u_SWATIᵏ⁺¹ .* (
                                 -diff¹⁸O_upp*1000 .+ diff¹⁸O_low*1000 .+ qCᵢ¹⁸O_upp .- qCᵢ¹⁸O_low .+
-                                aux_du_INFLI.*Cᵢ¹⁸O_INFLI .- aux_du_DSFLI.*Cᵢ¹⁸O_DSFL .- aux_du_SLVP.*C_¹⁸O_SLVP .-
+                                aux_du_INFLI.*Cᵢ¹⁸O_INFLI .- aux_du_DSFLI.*Cᵢ¹⁸O_DSFL .- aux_du_SLVP[1].*C_¹⁸O_SLVP .-
                                 aux_du_TRANI.*Cᵢ¹⁸O_TRANI
                             )
         du_Cᵢ²H_SWATI .= -C_²Hᵏ./u_SWATIᵏ⁺¹ .* dVdt .+ 1 ./ u_SWATIᵏ⁺¹ .* (
                                 -diff²H_upp*1000 .+ diff²H_low*1000 .+ qCᵢ²H_upp .- qCᵢ²H_low .+
-                                aux_du_INFLI.*Cᵢ²H_INFLI .- aux_du_DSFLI.*Cᵢ²H_DSFL .- aux_du_SLVP.*C_²H_SLVP .-
+                                aux_du_INFLI.*Cᵢ²H_INFLI .- aux_du_DSFLI.*Cᵢ²H_DSFL .- aux_du_SLVP[1].*C_²H_SLVP .-
                                 aux_du_TRANI.*Cᵢ²H_TRANI
                             )
 
@@ -1174,16 +1178,17 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # # NOTE: below max(0.001,u_SWATIᵏ⁺¹) makes the code more robust
         # du_Cᵢ¹⁸_SWATI = -C_¹⁸Oᵏ./max.(0.001,u_SWATIᵏ⁺¹) .* dVdt .+ 1 ./ max.(0.001,u_SWATIᵏ⁺¹) .* (
         #                         -diff¹⁸O_upp*1000 .+ diff¹⁸O_low*1000 .+ qCᵢ¹⁸O_upp .- qCᵢ¹⁸O_low .+
-        #                         aux_du_INFLI.*Cᵢ¹⁸O_INFLI .- aux_du_TRANI.*Cᵢ¹⁸O_TRANI .- aux_du_DSFLI.*Cᵢ¹⁸O_DSFL .- aux_du_SLVP.*C_¹⁸O_SLVP
+        #                         aux_du_INFLI.*Cᵢ¹⁸O_INFLI .- aux_du_TRANI.*Cᵢ¹⁸O_TRANI .- aux_du_DSFLI.*Cᵢ¹⁸O_DSFL .- aux_du_SLVP[1].*C_¹⁸O_SLVP
         #                     )
         # du_Cᵢ²H_SWATI = -C_²Hᵏ./max.(0.001,u_SWATIᵏ⁺¹) .* dVdt .+ 1 ./ max.(0.001,u_SWATIᵏ⁺¹) .* (
         #                         -diff²H_upp*1000 .+ diff²H_low*1000 .+ qCᵢ²H_upp .- qCᵢ²H_low .+
-        #                         aux_du_INFLI.*Cᵢ²H_INFLI .- aux_du_TRANI.*Cᵢ²H_TRANI .- aux_du_DSFLI.*Cᵢ²H_DSFL .- aux_du_SLVP.*C_²H_SLVP
+        #                         aux_du_INFLI.*Cᵢ²H_INFLI .- aux_du_TRANI.*Cᵢ²H_TRANI .- aux_du_DSFLI.*Cᵢ²H_DSFL .- aux_du_SLVP[1].*C_²H_SLVP
         #                     )
         # GROUND WATER (GWAT)
         δ18O_empty = NaN
         δ2H_empty  = NaN
-        @assert aux_du_VRFLI[NLAYER] >= 0 "aux_du_VRFLI[NLAYER] should not be negative"
+        @assert aux_du_VRFLI[NLAYER] >= 0 || isnan(aux_du_VRFLI[NLAYER]) "aux_du_VRFLI[NLAYER] should be positive" # First time this callback is called it can be NaN.
+        # @assert aux_du_VRFLI[NLAYER] >= 0 "aux_du_VRFLI[NLAYER] should be positive" # First time this callback is called it can be NaN.
 
         if ((u_GWATᵏ⁺¹ == 0) & (aux_du_VRFLI[NLAYER] == 0)) # initially no groundwater and no new is added
             du_δ18O_GWAT = δ18O_empty
@@ -1282,19 +1287,7 @@ end
 
 
 function LWFBrook90R_check_balance_errors!(integrator)
-
     # Compute daily water balance errors
-
-    (NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, Reset,
-    p_DTP, p_NPINT,
-
-    _, _, _, _, _, _,
-    _, _, _, _,
-    _, _, _, _,
-    _, _,
-
-    _) = integrator.p[1][2]
-
     u_GWAT     = integrator.u.GWAT.mm
     u_INTS     = integrator.u.INTS.mm
     u_INTR     = integrator.u.INTR.mm
@@ -1304,7 +1297,7 @@ function LWFBrook90R_check_balance_errors!(integrator)
     u_SWATI    = integrator.u.SWATI.mm
 
 
-    if compute_intermediate_quantities
+    if integrator.p.compute_intermediate_quantities
         # a) Get change in total storages
         # Get old total water volumes and compute new total water volumes
         old_SWAT       = integrator.uprev.accum.totalSWAT

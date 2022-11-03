@@ -12,13 +12,13 @@ E.g. `res = run_simulation(); plot_and_save_results(res...)``
 function plot_and_save_results(sol, input_prefix, input_path)
     # parse input_prefix and input_path
     png_filename = joinpath(input_path,
-        "output-" * input_prefix * "_plotRecipe_NLAYER" * string(sol.prob.p[1][1].NLAYER) * ".png")
+        "output-" * input_prefix * "_plotRecipe_NLAYER" * string(sol.prob.p.p_soil.NLAYER) * ".png")
     csv_filename1 = joinpath(input_path,
-        "output-" * input_prefix * "_θ-depths_NLAYER" * string(sol.prob.p[1][1].NLAYER) * ".csv")
+        "output-" * input_prefix * "_θ-depths_NLAYER" * string(sol.prob.p.p_soil.NLAYER) * ".csv")
     csv_filename2 = joinpath(input_path,
-        "output-" * input_prefix * "_ψ_kPa-full_NLAYER" * string(sol.prob.p[1][1].NLAYER) * ".csv")
+        "output-" * input_prefix * "_ψ_kPa-full_NLAYER" * string(sol.prob.p.p_soil.NLAYER) * ".csv")
     csv_filename3 = joinpath(input_path,
-        "output-" * input_prefix * "_θ-full_NLAYER" * string(sol.prob.p[1][1].NLAYER) * ".csv")
+        "output-" * input_prefix * "_θ-full_NLAYER" * string(sol.prob.p.p_soil.NLAYER) * ".csv")
 
     # 0) using plotting recipe defined in LWFBrook90.jl
     optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
@@ -30,7 +30,7 @@ function plot_and_save_results(sol, input_prefix, input_path)
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
         get_auxiliary_variables(sol)
     #### get metadata on layers
-    z_to_plot = -cumsum(sol.prob.p[1][1].p_THICK)./1000
+    z_to_plot = -cumsum(sol.prob.p.p_soil.p_THICK)./1000
     z_to_plot = round.(z_to_plot; digits=5)
 
     ### specific layers
@@ -43,7 +43,7 @@ function plot_and_save_results(sol, input_prefix, input_path)
     df_out3 = DataFrame(u_aux_θ,    "zLower=".*string.(z_to_plot))
 
     ## append time metadata
-    reference_date = sol.prob.p[2][17]
+    reference_date = sol.prob.p.REFERENCE_DATE
     time_to_plot = LWFBrook90.RelativeDaysFloat2DateTime.(sol.t, reference_date)
     df_out1.Date = time_to_plot
     df_out2.Date = time_to_plot
@@ -60,7 +60,7 @@ function find_indices(depths_to_read_out_mm, solution)
     # depths and lower_boundaries must all be positive numbers
     @assert all(depths_to_read_out_mm .> 0)
 
-    lower_boundaries = cumsum(solution.prob.p[1][1].p_THICK)
+    lower_boundaries = cumsum(solution.prob.p.p_soil.p_THICK)
 
     # Only read out values that are within the simulation domain
     depths_to_read_out_mm = depths_to_read_out_mm[depths_to_read_out_mm .<= maximum(lower_boundaries)]
@@ -91,7 +91,7 @@ function get_aboveground(solution; saveat = nothing)
 end
 
 function get_auxiliary_variables(solution; saveat = nothing)
-    p_soil = solution.prob.p[1][1]
+    p_soil = solution.prob.p.p_soil
     NLAYER = p_soil.NLAYER
     if isnothing(saveat)
         u_SWATI = reduce(hcat, [solution[t_idx].SWATI.mm  for t_idx = eachindex(solution)])
@@ -134,8 +134,8 @@ function get_δ(solution; saveat = nothing)
     if isnothing(saveat)
         # row_NaN       = fill(NaN, 1,length(x))
         # input quantities δ-values:
-        row_PREC_d18O = reshape(solution.prob.p[2][15].(solution.t), 1, :)
-        row_PREC_d2H  = reshape(solution.prob.p[2][16].(solution.t), 1, :)
+        row_PREC_d18O = reshape(solution.prob.p.p_δ18O_PREC.(solution.t), 1, :)
+        row_PREC_d2H  = reshape(solution.prob.p.p_δ2H_PREC.(solution.t), 1, :)
         # scalar quantities δ-values:
         row_INTS_d18O = reduce(hcat, [solution[t_idx].INTS.d18O  for t_idx = eachindex(solution)])
         row_INTR_d18O = reduce(hcat, [solution[t_idx].INTR.d18O  for t_idx = eachindex(solution)])
@@ -155,8 +155,8 @@ function get_δ(solution; saveat = nothing)
     else
         # row_NaN       = fill(NaN, 1,length(x))
         # input quantities δ-values:
-        row_PREC_d18O = reshape(solution.prob.p[2][15].(saveat), 1, :)
-        row_PREC_d2H  = reshape(solution.prob.p[2][16].(saveat), 1, :)
+        row_PREC_d18O = reshape(solution.prob.p.p_δ18O_PREC.(saveat), 1, :)
+        row_PREC_d2H  = reshape(solution.prob.p.p_δ2H_PREC.(saveat), 1, :)
         # scalar quantities δ-values:
         row_INTS_d18O = reduce(hcat, [solution(t_days).INTS.d18O  for t_days = saveat])
         row_INTR_d18O = reduce(hcat, [solution(t_days).INTR.d18O  for t_days = saveat])
@@ -233,20 +233,20 @@ end
     # 1) data to plot
 
     # 1a) extract data from solution object `sol`
-    t_ref = sol.prob.p[2][17]
+    t_ref = sol.prob.p.REFERENCE_DATE
     x = RelativeDaysFloat2DateTime.(sol.t, t_ref)
-    # y = cumsum(sol.prob.p[1][1].p_THICK) - sol.prob.p[1][1].p_THICK / 2
-    n = sol.prob.p[1][1].NLAYER
-    y_centers = [0; cumsum(sol.prob.p[1][1].p_THICK)[1:(n-1)]] +
-                sol.prob.p[1][1].p_THICK / 2
+    # y = cumsum(sol.prob.p.p_soil.p_THICK) - sol.prob.p.p_soil.p_THICK / 2
+    n = sol.prob.p.p_soil.NLAYER
+    y_centers = [0; cumsum(sol.prob.p.p_soil.p_THICK)[1:(n-1)]] +
+                sol.prob.p.p_soil.p_THICK / 2
     # y_extended = [y; (maximum(y) .+ [10, 200])]
-    y_soil_ticks = tick_function(0.0, round(maximum(cumsum(sol.prob.p[1][1].p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
+    y_soil_ticks = tick_function(0.0, round(maximum(cumsum(sol.prob.p.p_soil.p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
     # y_labels   = [round.(y_soil_ticks; digits=0)]
 
     # row_PREC_amt = sol.prob.p[2][8].(sol.t)
-    # rows_SWAT_amt_old = sol[7 .+ (0:sol.prob.p[1][1].NLAYER-1),
+    # rows_SWAT_amt_old = sol[7 .+ (0:sol.prob.p.p_soil.NLAYER-1),
     #     1,
-    #     :] ./ sol.prob.p[1][1].p_THICK
+    #     :] ./ sol.prob.p.p_soil.p_THICK
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
         LWFBrook90.get_auxiliary_variables(sol)
     rows_ψₘ = u_aux_PSIM
@@ -254,9 +254,9 @@ end
 
     rows_SWAT_amt0 = u_aux_θ
     rows_SWAT_amt1 = reduce(hcat, [sol[t].x[7][:,1] for t = eachindex(sol.t)])./
-        sol.prob.p[1][1].p_THICK  # mm per mm of soil thickness
+        sol.prob.p.p_soil.p_THICK  # mm per mm of soil thickness
     rows_SWAT_amt2 = reduce(hcat, [sol[t].x[7][:,1] for t = eachindex(sol.t)]
-        ) ./ sol.prob.p[1][1].p_THICK ./ (1 .- sol.prob.p[1][1].p_STONEF) # mm per mm of fine soil thickness (assuming gravel fraction contains no water)
+        ) ./ sol.prob.p.p_soil.p_THICK ./ (1 .- sol.prob.p.p_soil.p_STONEF) # mm per mm of fine soil thickness (assuming gravel fraction contains no water)
 
     # row_NaN = fill(NaN, 1, length(x))
 
@@ -296,11 +296,11 @@ end
 
     # # Plot 2
     # # http://docs.juliaplots.org/latest/generated/gr/#gr-ref43
-    # y = cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK)
+    # y = cumsum(sol_LWFBrook90.prob.p.p_soil.p_THICK)
     # y_extended = [y; (maximum(y) .+ [10, 200])]
-    # y_soil_ticks = tick_function(0.0, round(maximum(cumsum(sol_LWFBrook90.prob.p[1][1].p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
+    # y_soil_ticks = tick_function(0.0, round(maximum(cumsum(sol_LWFBrook90.prob.p.p_soil.p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
     # # y_labels   = [round.(y_soil_ticks; digits=0)]
-    # z = sol_LWFBrook90[7 .+ (0:sol_LWFBrook90.prob.p[1][1].NLAYER-1), 1, :] ./ sol_LWFBrook90.prob.p[1][1].p_THICK
+    # z = sol_LWFBrook90[7 .+ (0:sol_LWFBrook90.prob.p.p_soil.NLAYER-1), 1, :] ./ sol_LWFBrook90.prob.p.p_soil.p_THICK
 
     # pl2 = heatmap(x, y, z,
     #     yflip = true, yticks = y_soil_ticks,#(y_soil_ticks, y_labels),

@@ -14,24 +14,34 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
         ##################
         # Parse parameters
+
         ## A) constant parameters:
-        p_soil = p[1][1]
-        (NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, Reset,
-        p_DTP, p_NPINT,
+        @unpack p_soil = p;
+        @unpack NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, Reset, p_DTP,
+            # FOR MSBITERATE:
+            p_QLAYER, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC, p_IMPERV,
+            p_LENGTH_SLOPE, p_DSLOPE, p_RHOWG, p_DPSIMAX, #TODO(bernhard) p_RHOWG is a global constant
+            p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX, p_GSC, p_GSP, p_BYPAR = p;
+        # p_soil = .p_soil
+        # (NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, Reset,
+        # p_DTP, p_NPINT,
 
-        # FOR MSBITERATE:
-        p_QLAYER, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC, p_IMPERV,
-        p_LENGTH_SLOPE, p_DSLOPE, p_RHOWG, p_DPSIMAX, #TODO(bernhard) p_RHOWG is a global constant
-        p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX,
-        p_GSC, p_GSP,
+        # # FOR MSBITERATE:
+        # p_QLAYER, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC, p_IMPERV,
+        # p_LENGTH_SLOPE, p_DSLOPE, p_RHOWG, p_DPSIMAX, #TODO(bernhard) p_RHOWG is a global constant
+        # p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX,
+        # p_GSC, p_GSP,
 
-        p_BYPAR) = p[1][2]
-        # unused are the constant parameters saved in: = p[1][3]
+        # p_BYPAR) = p[1][2]
+        # # unused are the constant parameters saved in: = p[1][3]
 
         ## B) time dependent parameters
-        p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC,
+        # p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
+        #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE, p_RELDEN,
+        #     p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = p[2]
+        @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND,  p_PREC,
             p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE, p_RELDEN,
-            p_δ18O_PREC, p_δ2H_PREC, ref_date = p[2]
+            p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = p;
 
         ## C) state dependent parameters:
         # Calculate parameters:
@@ -45,16 +55,24 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
         # These were computed in the callback and are kept constant in between two
         # callbacks.
-        (δ18O_SLFL, δ2H_SLFL,
-            p_fu_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
-            p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
-            aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old) = p[3][1]
-        aux_du_TRANI = p[3][2]
+        # @unpack p_fu_RNET, aux_du_SMLT, aux_du_SLVP, aux_du_TRANI = p;
+        @unpack p_fu_δ18O_SLFL, p_fu_δ2H_SLFL,
+            p_fT_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP, p_fu_STHR,
+            aux_du_RSNO, aux_du_SNVP, aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP,
+            u_SNOW_old, aux_du_TRANI = p
+        # (p_fu_δ18O_SLFL, p_fu_δ2H_SLFL,
+        #     p_fT_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
+        #     p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
+        #     aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old) = p[3][1]
+        # aux_du_TRANI = p[3][2]
 
         # Pre-allocated caches to save memory allocations
-        (u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
-            aux_du_DSFLI,aux_du_VRFLI,aux_du_VRFLI_1st_approx,aux_du_INFLI,aux_du_BYFLI, du_NTFLI,
-            p_fu_BYFRAC) = p[4][1]
+        @unpack du_GWFL, du_SEEP, du_NTFLI, aux_du_VRFLI, aux_du_DSFLI, aux_du_INFLI, u_aux_WETNES = p;
+        # (u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
+        #     aux_du_DSFLI,aux_du_VRFLI,aux_du_VRFLI_1st_approx,aux_du_INFLI,aux_du_BYFLI, du_NTFLI,
+        #     p_fu_BYFRAC) = p[4][1]
+        @unpack u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
+            aux_du_VRFLI_1st_approx, aux_du_BYFLI, p_fu_BYFRAC = p;
 
         ##################
         # Parse states
@@ -71,6 +89,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         u_aux_θ_tminus1 .= u_aux_θ #TODO(bernhard): this does not seem to be correctly updated
         (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
             LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil) # 0.000007 seconds (7 allocations: 1008 bytes)
+        # LWFBrook90.KPT.derive_auxiliary_SOILVAR!(u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK, u_SWATI,  p_soil)
 
         ##################
         # Update soil limited boundary flows during iteration loop
@@ -86,13 +105,13 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
                       NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_soil) # 0.000002 seconds (1 allocation: 144 bytes)
 
         # Water movement through soil
-        (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, DTI, aux_du_INFLI, aux_du_BYFLI,
-        du_NTFLI, du_GWFL, du_SEEP) =
+        p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI[:], aux_du_VRFLI[:], DTI, aux_du_INFLI[:], aux_du_BYFLI[:],
+        du_NTFLI[:], du_GWFL, du_SEEP =
             MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
                     # for SRFLFR:
                     u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC,
                     #
-                    p_IMPERV, p_fu_RNET, aux_du_SMLT,
+                    p_IMPERV, p_fu_RNET[1], aux_du_SMLT[1],
                     p_LENGTH_SLOPE, p_DSLOPE,
                     # for DSLOP:
                     p_RHOWG, u_aux_PSIM, p_fu_KK,
@@ -101,7 +120,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
                     #
                     p_DRAIN, p_DTP, t, p_DTIMAX,
                     # for INFLOW:
-                    p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP,
+                    p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP[1],
                     # for FDPSIDW:
                     u_aux_WETNES,
                     # for ITER:
@@ -116,8 +135,8 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # if simulate_isotopes
         #     EffectiveDiffusivity_18O = 0  # TODO(bernhard): compute correct values using eq 33 Zhou-2021-Environ_Model_Softw.pdf
         #     EffectiveDiffusivity_2H  = 0  # TODO(bernhard): compute correct values using eq 33 Zhou-2021-Environ_Model_Softw.pdf
-        #     δ18O_INFLI = δ18O_SLFL
-        #     δ2H_INFLI  = δ2H_SLFL
+        #     δ18O_INFLI = p_fu_δ18O_SLFL
+        #     δ2H_INFLI  = p_fu_δ2H_SLFL
 
         #     du_δ18O_GWAT, du_δ2H_GWAT, du_δ18O_SWATI, du_δ2H_SWATI =
         #         compute_isotope_du_GWAT_SWATI(
@@ -125,7 +144,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         #             u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT,
         #             # for SWATI:
         #             du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI,  # (non-fractionating)
-        #             aux_du_SLVP, p_fu_TADTM, p_EA(t), p_δ2H_PREC(t), p_δ18O_PREC(t), u_aux_WETNES, # (fractionating)
+        #             aux_du_SLVP, p_fT_TADTM, p_VAPPRES(t), p_δ2H_PREC(t), p_δ18O_PREC(t), u_aux_WETNES, # (fractionating)
         #             u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, 0, 0) #EffectiveDiffusivity_18O, EffectiveDiffusivity_2H)
         # end
 
@@ -149,8 +168,19 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
         # save intermediate results from flow calculation into a cache
         # for efficient use in transport calculation (in callbacks)
-        p[3][3]      .=  [du_NTFLI  aux_du_VRFLI  aux_du_DSFLI  aux_du_INFLI  u_aux_WETNES]
-        p[3][4][1:2] .=  [du_GWFL, du_SEEP]
+        # p[3][3]      .=  [du_NTFLI  aux_du_VRFLI  aux_du_DSFLI  aux_du_INFLI  u_aux_WETNES]
+        # p[3][4][1:2] .=  [du_GWFL, du_SEEP]
+        # with the method @unpack this is automatically overwritten
+        # TODO(bernhard): it seems it is not automatically overwritten. As workaround check:
+        # p.aux_du_VRFLI === aux_du_VRFLI
+        # p.du_NTFLI     === du_NTFLI
+        # p.aux_du_VRFLI === aux_du_VRFLI
+        # p.aux_du_DSFLI === aux_du_DSFLI
+        # p.aux_du_INFLI === aux_du_INFLI
+        # p.u_aux_WETNES === u_aux_WETNES
+        # p.du_GWFL === du_GWFL
+        # p.du_SEEP === du_SEEP
+
 
         ##########################################
         # Accumulate flows to compute daily sums

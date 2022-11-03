@@ -6,6 +6,7 @@ using RecipesBase
 using LinearAlgebra
 using StatsBase: mean, weights
 using ComponentArrays
+using UnPack: @unpack
 
 using Dates: now
 # using Infiltrator
@@ -127,26 +128,26 @@ include("func_postprocess.jl")
 
 include("../examples/func_run_example.jl") # defines RelativeDaysFloat2DateTime
 
-struct DiscretizedSoilDomain{T <: AbstractVector}
-    # Input fields
-    # Geometry
-    "Vector of depths of upper interface [m]"
-    Upper_m::T
-    "Vector of depths of lower interface [m]"
-    Lower_m::T
-    # Soil Hydraulic properties
-    "Vecotr of soil hydraulic properties"
-    soil::Vector{AbstractSoilHydraulicParams} # containing p_STONEF, p_THSAT, etc...
+# struct DiscretizedSoilDomain{T <: AbstractVector}
+#     # Input fields
+#     # Geometry
+#     "Vector of depths of upper interface [m]"
+#     Upper_m::T
+#     "Vector of depths of lower interface [m]"
+#     Lower_m::T
+#     # Soil Hydraulic properties
+#     "Vector of soil hydraulic properties"
+#     soil::Vector{AbstractSoilHydraulicParams} # containing p_STONEF, p_THSAT, etc...
 
-    # Derived fields
-    # Geometry
-    NLAYER::Int
-    p_THICK::T
-    p_SWATMAX::T # TODO(bernhard): should be replaced with θmax (i.e. actually θs)
+#     # Derived fields
+#     # Geometry
+#     NLAYER::Int
+#     p_THICK::T
+#     p_SWATMAX::T # TODO(bernhard): should be replaced with θmax (i.e. actually θs)
 
-    # # Inner constructor:
-    # see constructor of KPT_SOILPAR_Ch1d
-end
+#     # # Inner constructor:
+#     # see constructor of KPT_SOILPAR_Ch1d
+# end
 
 # struct SoilState
 #     head
@@ -296,35 +297,34 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
             continuous_SPAC.soil_horizons,
             soil_discretization,
             soil_output_depths,
-            continuous_SPAC.params[:IDEPTH_m],
-            continuous_SPAC.params[:QDEPTH_m],
-            continuous_SPAC.params[:INITRDEP],
-            continuous_SPAC.params[:RGRORATE])
-    ####################
-
-    ####################
-    # Define state vector u for DiffEq.jl
-    # a) allocation of u0
-    u0, u0_field_names, names_accum =
-        define_LWFB90_u0(;simulate_isotopes = continuous_SPAC.solver_options.simulate_isotopes,
-                         compute_intermediate_quantities = continuous_SPAC.solver_options.compute_intermediate_quantities,
-                         NLAYER = soil_discr["NLAYER"])
+            continuous_SPAC.params[:IDEPTH_m], # :IDEPTH_m is unused later on
+            continuous_SPAC.params[:QDEPTH_m], # :QDEPTH_m is unused later on
+            continuous_SPAC.params[:INITRDEP], # :INITRDEP is unused later on
+            continuous_SPAC.params[:RGRORATE]) # :RGRORATE is unused later on
     ####################
 
     ####################
     # Define parameters for differential equation
-    p = define_LWFB90_p(continuous_SPAC, soil_discr, u0, u0_field_names, names_accum)
+    p = define_LWFB90_p(continuous_SPAC, soil_discr)
     # using Plots
-    # hline([0; cumsum(p[1][1].p_THICK)], yflip = true, xticks = false,
-    #     title = "N_layer = "*string(p[1][1].NLAYER))
+    # hline([0; cumsum(p.p_THICK)], yflip = true, xticks = false,
+    #     title = "N_layer = "*string(p.NLAYER))
    ####################
+
+    ####################
+    # Define state vector u for DiffEq.jl
+    # a) allocation of u0
+    u0 = define_LWFB90_u0(;simulate_isotopes = continuous_SPAC.solver_options.simulate_isotopes,
+                          compute_intermediate_quantities = continuous_SPAC.solver_options.compute_intermediate_quantities,
+                          NLAYER = soil_discr["NLAYER"])
+    ####################
 
     ####################
     # Define initial states of differential equation
     # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
     # Create u0 for DiffEq.jl
     # b) initialization of u0
-    init_LWFB90_u0!(;u0=u0, continuous_SPAC=continuous_SPAC, soil_discr=soil_discr, p_soil=p[1][1])
+    init_LWFB90_u0!(;u0=u0, continuous_SPAC=continuous_SPAC, soil_discr=soil_discr, p_soil=p.p_soil)
     ####################
 
     ####################
@@ -450,7 +450,7 @@ function run_simulation(args)
     # using Interpolations: interpolate, extrapolate, NoInterp, Gridded, Constant, Next, Previous, Flat, Throw, scale
     # scatter(input_meteoveg.days[1:10], input_meteoveg.PRECIN[1:10])
     # t_to_eval = 0:0.2:10
-    # plot!(t_to_eval, p[2].p_PREC(t_to_eval), xtick = 1:10)
+    # plot!(t_to_eval, p.p_PREC(t_to_eval), xtick = 1:10)
     # plot!(t_to_eval,extrapolate(interpolate((input_meteoveg.days .- 0.00001, ), input_meteoveg.PRECIN, Gridded(Constant{Previous}())), Throw())(t_to_eval))
     # sol_LWFBrook90 = solve_LWFB90(u0, tspan, p)
     @info sol_LWFBrook90.destats
