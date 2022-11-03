@@ -331,23 +331,36 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
             # using a nonlinear solver for: find θ such that: K(θ) - p_Kθfc = 0
             # Actually not finding θ but wetness = θ/porosity.
             # plot(-0.15:0.01:1.0, FK_MvG.(-0.15:0.01:1.0, p_KSAT[i], p_MvGl[i], p_MvGn[i]))
-            f_root(x) = - p_Kθfc[i] + FK_MvG(x, p_KSAT[i], p_MvGl[i], p_MvGn[i])
-            # print("\nNLAYER:$(NLAYER), $(p_Kθfc[i]), $(p_KSAT[i]), $(p_MvGl[i]), $(p_MvGn[i])")
-            if (f_root(0.0) * f_root(1.0) >= 0)
-                warn("\nTriggered error in find_zero with arguments: NLAYER:$(NLAYER), $(p_Kθfc[i]), $(p_KSAT[i]), $(p_MvGl[i]), $(p_MvGn[i])")
+            p_WETF[i] = try
+                f_root(x) = - p_Kθfc[i] + FK_MvG(x, p_KSAT[i], p_MvGl[i], p_MvGn[i])
+                find_zero(f_root, (0.0, 1.0), Bisection())  # find_zero((x) -> x, (0.1, 1.0), Bisection())
+                # In LWFBrook90R: this was done using FWETK()
+                # In LWFBrook90R: if p_WETF[i] == -99999. error("Computed invalid p_WETF by FWETK()") end
+            catch e
+                if e isa ArgumentError
+                    function θ(PSIM_toFind) p_θr[i] + (p_THSAT[i] - p_θr[i])*(1+(-p_MvGα[i]*PSIM_toFind/9.81)^p_MvGn[i])^(-(1-1/p_MvGn[i])) end
+                    # function ψ(TH_toFind) 9.81 .* (-1 ./ p_MvGα[i]) .* (max.((TH_toFind - p_θr[i])/(p_THSAT[i] .- p_θr[i]),  1.e-6) .^ (-1 ./ (1 .- 1 ./ p_MvGn[i])) .-1) .^ (1 ./ p_MvGn[i]) end
+                    # function θ2(PSIM_toFind) p_θr[i] + (p_THSAT[i] - p_θr[i]) * LWFBrook90.KPT.FWETNES(u_aux_PSIM, p_soil) end
+                    # function ψ2(TH_toFind) LWFBrook90.KPT.FPSIM_MvG((TH_toFind - p_θr[i])/(p_THSAT[i] .- p_θr[i]), p_MvGα[i], p_MvGn[i]) end
+                    # plot(    -1:-1:-100,      θ.(-1:-1:-100), xlabel = "PSIM (kPa)", ylabel = "θ (-)", label = "function θ")
+                    # plot!(ψ.(0.48:0.01:0.60), 0.48:0.01:0.60, xlabel = "PSIM (kPa)", ylabel = "θ (-)", label = "function ψ")
+                    # plot!(ψ2.(0.48:0.01:0.60), 0.48:0.01:0.60, xlabel = "PSIM (kPa)", ylabel = "θ (-)", label = "function ψ2")
+                    ψ_fc = -33
+                    @warn "When setting up soil hydr. parameters: $e"*
+                        "\n\n"*"Ignoring hardcoded p_Kθfc ($(p_Kθfc[i]) mm/day) and"*
+                        " using ψ = $ψ_fc kPa for field capacity\n\n "*
+                        " Layer:$(i), $(p_Kθfc[i]), $(p_KSAT[i]), $(p_MvGl[i]), $(p_MvGn[i])"
+                    θ(ψ_fc)/(p_THSAT[i] .- p_θr[i])
+                    # find_zero((θ_toFind) -> LWFBrook90.KPT.FPSIM_MvG((θ_toFind - p_θr[i])./(p_THSAT .- p_θr), p_MvGα[i], p_MvGn[i]), (0.0, 1.0), Bisection())
+                else
+                    stop("When setting up soil hydr. parameters: Computed invalid p_WETF in KPT_SOILPAR_Mvg1d")
+                end
             end
-            # To investigate:
-            # FK_MvG(0.0, p_KSAT[i], p_MvGl[i], p_MvGn[i])
-            # FK_MvG(1.0, p_KSAT[i], p_MvGl[i], p_MvGn[i])
-            # f(0.0)
-            # f(1.0)
-
-            p_WETF[i] = find_zero(f_root, (0.0, 1.0), Bisection())
-            # In LWFBrook90R: this was done using FWETK()
-            # In LWFBrook90R: if p_WETF[i] == -99999. error("Computed invalid p_WETF by FWETK()") end
         end
+
         p_PSIF   = FPSIM_MvG(p_WETF, p_MvGα, p_MvGn)  # matric potential at field capacity, kPa
         p_THETAF = FTheta_MvG(p_WETF, p_THSAT, p_θr)  # soil moisture θ at field capacity, m3/m3
+        p_Kθfc .= NaN                                 # p_Kθfc is only used as input parameter for setup, not for calculation
 
         # NOTE(bernhard): removed further tasks that were in SOILPAR() in LWFBrook90R
         #                  - computation of p_WETc = FWETNES_MvG.(1000 .* p_PSICR, p_MvGα, p_MvGn) # wetness at p_PSICR, dimensionless

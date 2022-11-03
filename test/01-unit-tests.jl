@@ -89,7 +89,7 @@ end
     @test p_soil1.p_THICK   ≈ [40, 40, 120]
     @test p_soil1.p_STONEF  ≈ [0.01, 0.175, 0.175]
     @test p_soil1.p_THSAT   ≈ [0.714, 0.668, 0.656]
-    @test p_soil1.p_Kθfc    ≈ [2.0, 2.0, 2.0]
+    # @test p_soil1.p_Kθfc    ≈ [2.0, 2.0, 2.0]
     @test p_soil1.p_KSAT    ≈ [24864, 12881, 10516]
     @test p_soil1.p_MvGα    ≈ [1147, 1274, 1215]
     @test p_soil1.p_MvGn    ≈ [1.051225, 1.051052, 1.051055]
@@ -117,6 +117,18 @@ end
         p_MvGn   = [1,1],
         p_MvGl   = [1,1],
         p_θr     = [1])
+
+    @test_logs (:warn, r"\[a,b\] is not a bracketing interval") min_level = Logging.Warn match_mode=:any KPT_SOILPAR_Mvg1d(;
+        p_THICK  = [40., 40., 120.],
+        p_STONEF = [0.010, 0.175, 0.175],
+        p_THSAT  = [0.714, 0.668, 0.656],
+        # p_Kθfc   = [2.0, 2.0, 2.0],
+        p_Kθfc   = [1000002.0, 1000002.0, 1000002.0],
+        p_KSAT   = [24864., 12881., 10516.],
+        p_MvGα   = [1147.,  1274.,  1215.],
+        p_MvGn   = [1.051225, 1.051052, 1.051055],
+        p_MvGl   = [4.6703, 4.4782, 4.5016],
+        p_θr     = [0.069, 0.069, 0.069])
 end
 
 @testset "discretization" begin
