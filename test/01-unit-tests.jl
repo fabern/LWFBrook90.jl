@@ -255,14 +255,14 @@ end
 
     ####################
     # Define parameters for differential equation
-    p = define_LWFB90_p(continuous_SPAC, soil_discr, u0, u0_field_names, names_accum)
+    p = define_LWFB90_p(continuous_SPAC, soil_discr)
     # using Plots
-    # hline([0; cumsum(p[1][1].p_THICK)], yflip = true, xticks = false,
-    #     title = "N_layer = "*string(p[1][1].NLAYER))
+    # hline([0; cumsum(.p_soil.p_THICK)], yflip = true, xticks = false,
+    #     title = "N_layer = "*string(.p_soil.NLAYER))
    ####################
 
     # Check if defined layers correspond to requested
-    @test p[1][1].NLAYER == length(Δz_m) + 1 # +1 because we needed to add one at 0.005 m for the IDEPTH_m
+    @test p.p_soil.NLAYER == length(Δz_m) + 1 # +1 because we needed to add one at 0.005 m for the IDEPTH_m
 end
 
 # TODO(bernhard): include unit tests of specific functions, e.g. during development of the Hammel-2001 infiltration test

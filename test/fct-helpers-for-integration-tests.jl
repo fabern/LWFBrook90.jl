@@ -107,7 +107,7 @@ function prepare_θψδ_from_sim_and_reference(;
     sim = (θ = sim_θ, ψ = sim_ψ, δ18O = sim_δ18O, δ2H = sim_δ2H)
 
     ### Ref
-    @assert sim_sol.prob.p[1][1].NLAYER == length(unique(referenceSolution_layer.nl)) """
+    @assert sim_sol.prob.p.p_soil.NLAYER == length(unique(referenceSolution_layer.nl)) """
         Discrtizations of simulated and reference solution are not equal, check arguments.
         """
     idx_ref = idx

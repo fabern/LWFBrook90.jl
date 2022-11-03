@@ -129,7 +129,7 @@ function get_ψ(depths_to_read_out_mm, solution; saveat = nothing)
 end
 
 function get_δ(solution; saveat = nothing)
-    @assert solution.prob.p[1][4].simulate_isotopes "Provided solution did not simulate isotopes"
+    @assert solution.prob.p.simulate_isotopes "Provided solution did not simulate isotopes"
 
     if isnothing(saveat)
         # row_NaN       = fill(NaN, 1,length(x))
@@ -243,7 +243,7 @@ end
     y_soil_ticks = tick_function(0.0, round(maximum(cumsum(sol.prob.p.p_soil.p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
     # y_labels   = [round.(y_soil_ticks; digits=0)]
 
-    # row_PREC_amt = sol.prob.p[2][8].(sol.t)
+    # row_PREC_amt = sol.prob.p.p_PREC.(sol.t)
     # rows_SWAT_amt_old = sol[7 .+ (0:sol.prob.p.p_soil.NLAYER-1),
     #     1,
     #     :] ./ sol.prob.p.p_soil.p_THICK

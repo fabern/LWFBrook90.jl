@@ -71,8 +71,8 @@ function run_main_with_isotopes(;input_prefix, input_path)
     # plot(simulation.ODESolution)
     sol_LWFBrook90 = simulation.ODESolution;
 
-    #u_soil1_amt_d18_d2 = reduce(hcat, [sol_LWFBrook90[i].x[sol_LWFBrook90.prob.p[1][4].row_idx_SWATI][1,:] for i = eachindex(sol_LWFBrook90)])
-    #u_soilX_amts       = reduce(hcat, [sol_LWFBrook90[i].x[sol_LWFBrook90.prob.p[1][4].row_idx_SWATI][:,1] for i = eachindex(sol_LWFBrook90)])
+    #u_soil1_amt_d18_d2 = reduce(hcat, [sol_LWFBrook90[i].x[sol_LWFBrook90.prob.p.row_idx_SWATI][1,:] for i = eachindex(sol_LWFBrook90)])
+    #u_soilX_amts       = reduce(hcat, [sol_LWFBrook90[i].x[sol_LWFBrook90.prob.p.row_idx_SWATI][:,1] for i = eachindex(sol_LWFBrook90)])
     ####################
 
     ####################
@@ -192,8 +192,8 @@ function run_main_with_isotopes(;input_prefix, input_path)
         # all states as matrix: reduce(hcat, [sol_LWFBrook90[t] for t = eachindex(sol_LWFBrook90)])
         # reduce(hcat, [sol_LWFBrook90[t].x[1][:,1] for t = eachindex(sol_LWFBrook90)])
         # reduce(hcat, [sol_LWFBrook90[t].x[2][:,1] for t = eachindex(sol_LWFBrook90)])
-        # row_RWU_d18O = reduce(hcat, [sol_LWFBrook90[t].x[sol_LWFBrook90.prob.p[1][4].row_idx_scalars.RWU][:,sol_LWFBrook90.prob.p[1][4].col_idx_d18O] for t = eachindex(sol_LWFBrook90)])
-        # row_XYL_d18O = reduce(hcat, [sol_LWFBrook90[t].x[sol_LWFBrook90.prob.p[1][4].row_idx_scalars.XYLEM][:,sol_LWFBrook90.prob.p[1][4].col_idx_d18O] for t = eachindex(sol_LWFBrook90)])
+        # row_RWU_d18O = reduce(hcat, [sol_LWFBrook90[t].x[sol_LWFBrook90.prob.p.row_idx_scalars.RWU][:,sol_LWFBrook90.prob.p.col_idx_d18O] for t = eachindex(sol_LWFBrook90)])
+        # row_XYL_d18O = reduce(hcat, [sol_LWFBrook90[t].x[sol_LWFBrook90.prob.p.row_idx_scalars.XYLEM][:,sol_LWFBrook90.prob.p.col_idx_d18O] for t = eachindex(sol_LWFBrook90)])
         row_RWU_d18O  = reduce(hcat, [sol_LWFBrook90[t_idx].RWU.d18O   for t_idx = eachindex(sol_LWFBrook90)])
         row_XYL_d18O  = reduce(hcat, [sol_LWFBrook90[t_idx].XYLEM.d18O for t_idx = eachindex(sol_LWFBrook90)])
         plot([transpose(row_RWU_d18O) transpose(row_XYL_d18O)], labels = ["δ_RWU" "δ_XylemV"])
@@ -268,8 +268,8 @@ function run_main_with_isotopes(;input_prefix, input_path)
                 # data_days_to_plot = (input_meteoiso.days .> tspan[1] .&& input_meteoiso.days .< tspan[2])
                 # scatter!(LWFBrook90.RelativeDaysFloat2DateTime.(input_meteoiso.days[data_days_to_plot], simulation.continuous_SPAC.reference_date),
                 #         input_meteoiso.delta18O_permil[data_days_to_plot])
-            # row_RWU_d18O = reduce(hcat, [sol_LWFBrook90[t].x[sol_LWFBrook90.prob.p[1][4].row_idx_scalars.RWU][:,sol_LWFBrook90.prob.p[1][4].col_idx_d18O] for t = eachindex(sol_LWFBrook90)])
-            # row_XYL_d18O = reduce(hcat, [sol_LWFBrook90[t].x[sol_LWFBrook90.prob.p[1][4].row_idx_scalars.XYLEM][:,sol_LWFBrook90.prob.p[1][4].col_idx_d18O] for t = eachindex(sol_LWFBrook90)])
+            # row_RWU_d18O = reduce(hcat, [sol_LWFBrook90[t].x[sol_LWFBrook90.prob.p.row_idx_scalars.RWU][:,sol_LWFBrook90.prob.p.col_idx_d18O] for t = eachindex(sol_LWFBrook90)])
+            # row_XYL_d18O = reduce(hcat, [sol_LWFBrook90[t].x[sol_LWFBrook90.prob.p.row_idx_scalars.XYLEM][:,sol_LWFBrook90.prob.p.col_idx_d18O] for t = eachindex(sol_LWFBrook90)])
             row_RWU_d18O  = reduce(hcat, [sol_LWFBrook90[t_idx].RWU.d18O   for t_idx = eachindex(sol_LWFBrook90)])
             row_XYL_d18O  = reduce(hcat, [sol_LWFBrook90[t_idx].XYLEM.d18O for t_idx = eachindex(sol_LWFBrook90)])
             plot!(pl_δ18O, linestyle = :dash,
@@ -281,7 +281,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
         end
         pl_PREC = plot(
             LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, simulation.continuous_SPAC.reference_date),
-            sol_LWFBrook90.prob.p[2][8].(sol_LWFBrook90.t),
+            sol_LWFBrook90.prob.p.p_PREC.(sol_LWFBrook90.t),
             t = :bar, color=PREC_color,
             legend = :outerright, labels = "PREC    ", # whitespace for hardcoded alignment of legend
             ylabel = "PREC\n[mm]");
@@ -299,8 +299,8 @@ function run_main_with_isotopes(;input_prefix, input_path)
 
 
 
-    aux_indices = sol_LWFBrook90.prob.p[1][4].row_idx_accum
-    aux_names = sol_LWFBrook90.prob.p[1][4].names_accum
+    aux_indices = sol_LWFBrook90.prob.p.row_idx_accum
+    aux_names = sol_LWFBrook90.prob.p.names_accum
     plot(LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, simulation.continuous_SPAC.reference_date),
                 transpose(reduce(hcat, [sol_LWFBrook90[t].aux[30:31] for t = eachindex(sol_LWFBrook90)])),
                 legend = :outerright, labels = aux_names[:, 30:31],
@@ -342,7 +342,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
         # b1) RWU heatmap (depths vs time)
         rows_RWU_mmDay  = reduce(hcat, [sol_LWFBrook90[t_idx].TRANI.mm   for t_idx = eachindex(sol_LWFBrook90)])
         # rows_RWU_mmDay  = reduce(hcat, [sol_LWFBrook90[t_idx].XYLEM.mm for t_idx = eachindex(sol_LWFBrook90)])
-        # rows_RWU_mmDay = sol_LWFBrook90[sol_LWFBrook90.prob.p[1][4].row_idx_TRANI, 1, :]
+        # rows_RWU_mmDay = sol_LWFBrook90[sol_LWFBrook90.prob.p.row_idx_TRANI, 1, :]
         rows_RWU = rows_RWU_mmDay ./ sol_LWFBrook90.prob.p.p_soil.p_THICK
         pl_RWU = heatmap(x,y,rows_RWU; yticks = (y_ticks, y_labels),
                 yflip = true,
@@ -357,7 +357,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
             legend = :bottomright
         )
         t_toPlot = range(extrema(sol_LWFBrook90.prob.tspan)..., length=5)
-        root_data_start_end = [sol_LWFBrook90.prob.p[2].p_RELDEN.(t, 1:sol_LWFBrook90.prob.p.p_soil.NLAYER) for t in t_toPlot]
+        root_data_start_end = [sol_LWFBrook90.prob.p.p_RELDEN.(t, 1:sol_LWFBrook90.prob.p.p_soil.NLAYER) for t in t_toPlot]
         pl_roots = plot(root_data_start_end, y,
             labels = (Dates.format.(permutedims(RelativeDaysFloat2DateTime.(t_toPlot, t_ref)), "yyyy-mm")),
             linestyle = [:solid :solid :solid :solid :dash],
@@ -424,10 +424,10 @@ function run_main_with_isotopes(;input_prefix, input_path)
     # # plot(sol_LWFBrook90; vars = [1, 2, 3, 4, 5, 6],
     # #      label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
 
-    # # idx_u_vector_amounts       = sol_LWFBrook90.prob.p[1][4].row_idx_SWATI
-    # # idx_u_scalar_isotopes_d18O = sol_LWFBrook90.prob.p[1][4].row_idx_accum
+    # # idx_u_vector_amounts       = sol_LWFBrook90.prob.p.row_idx_SWATI
+    # # idx_u_scalar_isotopes_d18O = sol_LWFBrook90.prob.p.row_idx_accum
     # # idx_u_vector_isotopes_d18O = sol_LWFBrook90.prob.p[1][4][6  ]
-    # # idx_u_scalar_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4].names_accum
+    # # idx_u_scalar_isotopes_d2H  = sol_LWFBrook90.prob.p.names_accum
     # # idx_u_vector_isotopes_d2H  = sol_LWFBrook90.prob.p[1][4][8  ]
     # # idx_u_vector_accumulators  = sol_LWFBrook90.prob.p[1][4][9  ]
 

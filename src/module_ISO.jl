@@ -247,7 +247,7 @@ end
 
     row_PREC_amt = sol.prob.p.p_PREC.(sol.t)
 
-    # rows_SWAT_amt = sol[sol.prob.p[1][4].row_idx_SWATI, 1, :]./sol.prob.p.p_soil.p_THICK;
+    # rows_SWAT_amt = sol[sol.prob.p.row_idx_SWATI, 1, :]./sol.prob.p.p_soil.p_THICK;
 
     rows_SWAT_amt  = reduce(hcat, [sol[t].SWATI.mm   for t in eachindex(sol)]) ./ sol.prob.p.p_soil.p_THICK
     rows_SWAT_d18O = reduce(hcat, [sol[t].SWATI.d18O for t in eachindex(sol)])

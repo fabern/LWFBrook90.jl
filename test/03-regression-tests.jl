@@ -52,8 +52,8 @@ if basename(pwd()) != "test"; cd("test"); end
     # amberMBP-git+61a19ed: 0.039381 seconds (117.87 k allocations: 11.615 MiB) 343 time steps
 
     # extract required data from solution object
-    idx_u_scalar_amounts = example_result["solution"].prob.p[1][4].row_idx_scalars;
-    idx_u_vector_amounts = example_result["solution"].prob.p[1][4].row_idx_SWATI;
+    idx_u_scalar_amounts = example_result["solution"].prob.p.row_idx_scalars;
+    idx_u_vector_amounts = example_result["solution"].prob.p.row_idx_SWATI;
     idx_u = [idx_u_scalar_amounts...; idx_u_vector_amounts];
 
     # u_ref = example_result["solution"][idx_u,1,:];

@@ -44,7 +44,7 @@ object of DifferentialEquations.jl) and other variables useful for plotting.
 
     pl_final = LWFBrook90.plotlwfbrook90(sol_LWFBrook90, optim_ticks)
     savefig(pl_final,
-        input_prefix * "_plotRecipe_NLAYER" * string(sol_LWFBrook90.prob.p[1][1].NLAYER) * ".png")
+        input_prefix * "_plotRecipe_NLAYER" * string(sol_LWFBrook90.prob.p.p_soil.NLAYER) * ".png")
 """
 function run_example()
 
@@ -90,7 +90,7 @@ function run_example()
 
     pl_final = LWFBrook90.plotlwfbrook90(sol_LWFBrook90, optim_ticks)
     savefig(pl_final,
-        input_prefix * "_plotRecipe_NLAYER" * string(sol_LWFBrook90.prob.p[1][1].NLAYER) * ".png")
+        input_prefix * "_plotRecipe_NLAYER" * string(sol_LWFBrook90.prob.p.p_soil.NLAYER) * ".png")
     """
 
     # 1a) Read in input data
@@ -121,8 +121,8 @@ function run_example()
         Dict(["solution" => sol_LWFBrook90,
         "solutionDates" => LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t,
             simulation.continuous_SPAC.reference_date),
-        "thickness" => sol_LWFBrook90.prob.p[1][1].p_THICK,
-        "NLAYER" => sol_LWFBrook90.prob.p[1][1].NLAYER])
+        "thickness" => sol_LWFBrook90.prob.p.p_soil.p_THICK,
+        "NLAYER" => sol_LWFBrook90.prob.p.p_soil.NLAYER])
     )
 
 end

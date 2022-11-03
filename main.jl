@@ -165,8 +165,8 @@
 #         colorbar_title = "ψ [kPa]")
 
 # ##### Plot 3
-# # aux_indices = sol_LWFBrook90.prob.p[1][4].row_idx_accum
-# # aux_names = sol_LWFBrook90.prob.p[1][4].names_accum
+# # aux_indices = sol_LWFBrook90.prob.p.row_idx_accum
+# # aux_names = sol_LWFBrook90.prob.p.names_accum
 # # plot(sol_LWFBrook90; vars = aux_indices, label = aux_names)
 # # plot(sol_LWFBrook90; vars = aux_indices[17:25], label = aux_names[:, 17:25])
 
