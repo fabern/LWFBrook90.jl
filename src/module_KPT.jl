@@ -331,8 +331,18 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
             # using a nonlinear solver for: find θ such that: K(θ) - p_Kθfc = 0
             # Actually not finding θ but wetness = θ/porosity.
             # plot(-0.15:0.01:1.0, FK_MvG.(-0.15:0.01:1.0, p_KSAT[i], p_MvGl[i], p_MvGn[i]))
-            f(x) = - p_Kθfc[i] + FK_MvG(x, p_KSAT[i], p_MvGl[i], p_MvGn[i])
-            p_WETF[i] = find_zero(f, (0.0, 1.0), Bisection())
+            f_root(x) = - p_Kθfc[i] + FK_MvG(x, p_KSAT[i], p_MvGl[i], p_MvGn[i])
+            # print("\nNLAYER:$(NLAYER), $(p_Kθfc[i]), $(p_KSAT[i]), $(p_MvGl[i]), $(p_MvGn[i])")
+            if (f_root(0.0) * f_root(1.0) >= 0)
+                warn("\nTriggered error in find_zero with arguments: NLAYER:$(NLAYER), $(p_Kθfc[i]), $(p_KSAT[i]), $(p_MvGl[i]), $(p_MvGn[i])")
+            end
+            # To investigate:
+            # FK_MvG(0.0, p_KSAT[i], p_MvGl[i], p_MvGn[i])
+            # FK_MvG(1.0, p_KSAT[i], p_MvGl[i], p_MvGn[i])
+            # f(0.0)
+            # f(1.0)
+
+            p_WETF[i] = find_zero(f_root, (0.0, 1.0), Bisection())
             # In LWFBrook90R: this was done using FWETK()
             # In LWFBrook90R: if p_WETF[i] == -99999. error("Computed invalid p_WETF by FWETK()") end
         end
@@ -386,6 +396,21 @@ function derive_auxiliary_SOILVAR(u_SWATI,  p::KPT_SOILPAR_Mvg1d)
     u_aux_PSITI  = u_aux_PSIM .+ p.p_PSIG
 
     return (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
+end
+
+function derive_auxiliary_SOILVAR!(u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK,
+                                   u_SWATI,  p::KPT_SOILPAR_Mvg1d)
+
+    u_aux_WETNES .= (p.p_THSAT .* u_SWATI ./ p.p_SWATMAX .- p.p_θr) ./ (p.p_THSAT .- p.p_θr)
+    u_aux_WETNES .= min.(1, u_aux_WETNES)
+
+    u_aux_PSIM   .= FPSIM(u_aux_WETNES, p)
+    u_aux_θ      .= FTheta(u_aux_WETNES, p)
+    p_fu_KK      .= FK_MvG(u_aux_WETNES, p.p_KSAT, p.p_MvGl, p.p_MvGn)
+
+    u_aux_PSITI  .= u_aux_PSIM .+ p.p_PSIG
+
+    return nothing
 end
 
 function derive_auxiliary_SOILVAR(u_SWATI,  p::KPT_SOILPAR_Ch1d)
@@ -480,8 +505,9 @@ end
 function FPSIM_MvG(u_aux_WETNES, p_MvGα, p_MvGn)
     eps = 1.e-6
     # MvGm = 1-1/MvGn
-    AWET = max.(u_aux_WETNES, eps)
-    ψM = 9.81 .* (-1 ./ p_MvGα) .* (AWET .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
+    # AWET = max.(u_aux_WETNES, eps)
+    # ψM = 9.81 .* (-1 ./ p_MvGα) .* (AWET .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
+    ψM = 9.81 .* (-1 ./ p_MvGα) .* (max.(u_aux_WETNES, eps) .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
     # 9.81 conversion from m to kPa #TODO define and use const
 end
 
