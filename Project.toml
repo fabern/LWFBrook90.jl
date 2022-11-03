@@ -25,6 +25,7 @@ UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 [compat]
 BenchmarkTools = "1"
 CSV = "0.8, 0.9, 0.10"
+ComponentArrays = "0.13"
 DataFrames = "0.22, 1.1"
 DataFramesMeta = "0.6, 0.7, 0.8, 0.9, 0.10, 0.11, 0.12"
 DiffEqCallbacks = "2"
@@ -33,6 +34,7 @@ OrdinaryDiffEq = "5, 6"
 RecipesBase = "1"
 Roots = "1, 2"
 StatsBase = "0.33"
+UnPack = "1"
 julia = "1"
 
 [extras]
