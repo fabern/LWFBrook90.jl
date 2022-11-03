@@ -14,24 +14,34 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
         ##################
         # Parse parameters
+
         ## A) constant parameters:
-        p_soil = p[1][1]
-        (NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, Reset,
-        p_DTP, p_NPINT,
+        @unpack p_soil = p;
+        @unpack NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, Reset, p_DTP,
+            # FOR MSBITERATE:
+            p_QLAYER, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC, p_IMPERV,
+            p_LENGTH_SLOPE, p_DSLOPE, p_RHOWG, p_DPSIMAX, #TODO(bernhard) p_RHOWG is a global constant
+            p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX, p_GSC, p_GSP, p_BYPAR = p;
+        # p_soil = .p_soil
+        # (NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, Reset,
+        # p_DTP, p_NPINT,
 
-        # FOR MSBITERATE:
-        p_QLAYER, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC, p_IMPERV,
-        p_LENGTH_SLOPE, p_DSLOPE, p_RHOWG, p_DPSIMAX, #TODO(bernhard) p_RHOWG is a global constant
-        p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX,
-        p_GSC, p_GSP,
+        # # FOR MSBITERATE:
+        # p_QLAYER, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC, p_IMPERV,
+        # p_LENGTH_SLOPE, p_DSLOPE, p_RHOWG, p_DPSIMAX, #TODO(bernhard) p_RHOWG is a global constant
+        # p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX,
+        # p_GSC, p_GSP,
 
-        p_BYPAR) = p[1][2]
-        # unused are the constant parameters saved in: = p[1][3]
+        # p_BYPAR) = p[1][2]
+        # # unused are the constant parameters saved in: = p[1][3]
 
         ## B) time dependent parameters
-        p_DOY, p_MONTHN, p_SOLRAD, p_TMAX, p_TMIN, p_EA, p_UW, p_PREC,
+        # p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
+        #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE, p_RELDEN,
+        #     p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = p[2]
+        @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND,  p_PREC,
             p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE, p_RELDEN,
-            p_δ18O_PREC, p_δ2H_PREC, ref_date = p[2]
+            p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = p;
 
         ## C) state dependent parameters:
         # Calculate parameters:
@@ -45,51 +55,41 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
         # These were computed in the callback and are kept constant in between two
         # callbacks.
-        (δ18O_SLFL, δ2H_SLFL,
-            p_fu_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
-            p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
-            aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old) = p[3][1]
-        aux_du_TRANI = p[3][2]
+        # @unpack p_fu_RNET, aux_du_SMLT, aux_du_SLVP, aux_du_TRANI = p;
+        @unpack p_fu_δ18O_SLFL, p_fu_δ2H_SLFL,
+            p_fT_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP, p_fu_STHR,
+            aux_du_RSNO, aux_du_SNVP, aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP,
+            u_SNOW_old, aux_du_TRANI = p
+        # (p_fu_δ18O_SLFL, p_fu_δ2H_SLFL,
+        #     p_fT_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
+        #     p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
+        #     aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old) = p[3][1]
+        # aux_du_TRANI = p[3][2]
 
         # Pre-allocated caches to save memory allocations
-        (u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
-            aux_du_DSFLI,aux_du_VRFLI,aux_du_VRFLI_1st_approx,aux_du_INFLI,aux_du_BYFLI, du_NTFLI,
-            p_fu_BYFRAC) = p[4][1]
+        @unpack du_GWFL, du_SEEP, du_NTFLI, aux_du_VRFLI, aux_du_DSFLI, aux_du_INFLI, u_aux_WETNES = p;
+        # (u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
+        #     aux_du_DSFLI,aux_du_VRFLI,aux_du_VRFLI_1st_approx,aux_du_INFLI,aux_du_BYFLI, du_NTFLI,
+        #     p_fu_BYFRAC) = p[4][1]
+        @unpack u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
+            aux_du_VRFLI_1st_approx, aux_du_BYFLI, p_fu_BYFRAC = p;
 
         ##################
         # Parse states
-        u_GWAT      = u[p[1][4].row_idx_scalars.GWAT, 1]
-        #u_INTS     = u[p[1][4].row_idx_scalars.INTS, 1]
-        #u_INTR     = u[p[1][4].row_idx_scalars.INTR, 1]
-        #u_SNOW     = u[p[1][4].row_idx_scalars.SNOW, 1]
-        #u_CC       = u[p[1][4].row_idx_scalars.CC, 1]
-        #u_SNOWLQ   = u[p[1][4].row_idx_scalars.SNOWLQ, 1]
-        u_SWATI     = u[p[1][4].row_idx_SWATI, 1] # 0.000002 seconds (1 allocation: 144 bytes)
-                    # NOTE: @view u[p[1][4].row_idx_SWATI, 1] seems to yield wrong results...
-
-        # simulate_isotopes = p[1][4].simulate_isotopes
-        # if simulate_isotopes
-        #     u_δ18O_GWAT   = u[p[1][4].row_idx_scalars.GWAT,     p[1][4].col_idx_d18O]
-        #     u_δ2H_GWAT    = u[p[1][4].row_idx_scalars.GWAT,     p[1][4].col_idx_d2H ]
-        #     # u_δ18O_INTS = u[p[1][4].row_idx_scalars.INTS,     p[1][4].col_idx_d18O]
-        #     # u_δ2H_INTS  = u[p[1][4].row_idx_scalars.INTS,     p[1][4].col_idx_d2H ]
-        #     # u_δ18O_INTR = u[p[1][4].row_idx_scalars.INTR,     p[1][4].col_idx_d18O]
-        #     # u_δ2H_INTR  = u[p[1][4].row_idx_scalars.INTR,     p[1][4].col_idx_d2H ]
-        #     # u_δ18O_SNOW = u[p[1][4].row_idx_scalars.SNOW,     p[1][4].col_idx_d18O]
-        #     # u_δ2H_SNOW  = u[p[1][4].row_idx_scalars.SNOW,     p[1][4].col_idx_d2H ]
-        #     # u_δ18O_RWU  = u[p[1][4].row_idx_scalars.totalRWU, p[1][4].col_idx_d18O]
-        #     # u_δ2H_RWU   = u[p[1][4].row_idx_scalars.totalRWU, p[1][4].col_idx_d2H ]
-        #     # u_δ18O_XYL  = u[p[1][4].row_idx_scalars.XylemV,   p[1][4].col_idx_d18O]
-        #     # u_δ2H_XYL   = u[p[1][4].row_idx_scalars.XylemV,   p[1][4].col_idx_d2H ]
-        #     u_δ18O_SWATI  = u[p[1][4].row_idx_SWATI,            p[1][4].col_idx_d18O]
-        #     u_δ2H_SWATI   = u[p[1][4].row_idx_SWATI,            p[1][4].col_idx_d2H ]
-        # end
+        u_GWAT      = u.GWAT.mm
+        # u_INTS      = u.INTS.mm
+        # u_INTR      = u.INTR.mm
+        # u_SNOW      = u.SNOW.mm
+        # u_CC        = u.CC.mm
+        # u_SNOWLQ    = u.SNOWLQ.mm
+        u_SWATI     = u.SWATI.mm
 
         LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, t)
 
         u_aux_θ_tminus1 .= u_aux_θ #TODO(bernhard): this does not seem to be correctly updated
         (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
             LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil) # 0.000007 seconds (7 allocations: 1008 bytes)
+        # LWFBrook90.KPT.derive_auxiliary_SOILVAR!(u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK, u_SWATI,  p_soil)
 
         ##################
         # Update soil limited boundary flows during iteration loop
@@ -105,13 +105,13 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
                       NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_soil) # 0.000002 seconds (1 allocation: 144 bytes)
 
         # Water movement through soil
-        (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, DTI, aux_du_INFLI, aux_du_BYFLI,
-        du_NTFLI, du_GWFL, du_SEEP) =
+        p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI[:], aux_du_VRFLI[:], DTI, aux_du_INFLI[:], aux_du_BYFLI[:],
+        du_NTFLI[:], du_GWFL, du_SEEP =
             MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
                     # for SRFLFR:
                     u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC,
                     #
-                    p_IMPERV, p_fu_RNET, aux_du_SMLT,
+                    p_IMPERV, p_fu_RNET[1], aux_du_SMLT[1],
                     p_LENGTH_SLOPE, p_DSLOPE,
                     # for DSLOP:
                     p_RHOWG, u_aux_PSIM, p_fu_KK,
@@ -120,7 +120,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
                     #
                     p_DRAIN, p_DTP, t, p_DTIMAX,
                     # for INFLOW:
-                    p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP,
+                    p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP[1],
                     # for FDPSIDW:
                     u_aux_WETNES,
                     # for ITER:
@@ -135,8 +135,8 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # if simulate_isotopes
         #     EffectiveDiffusivity_18O = 0  # TODO(bernhard): compute correct values using eq 33 Zhou-2021-Environ_Model_Softw.pdf
         #     EffectiveDiffusivity_2H  = 0  # TODO(bernhard): compute correct values using eq 33 Zhou-2021-Environ_Model_Softw.pdf
-        #     δ18O_INFLI = δ18O_SLFL
-        #     δ2H_INFLI  = δ2H_SLFL
+        #     δ18O_INFLI = p_fu_δ18O_SLFL
+        #     δ2H_INFLI  = p_fu_δ2H_SLFL
 
         #     du_δ18O_GWAT, du_δ2H_GWAT, du_δ18O_SWATI, du_δ2H_SWATI =
         #         compute_isotope_du_GWAT_SWATI(
@@ -144,7 +144,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         #             u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT,
         #             # for SWATI:
         #             du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI,  # (non-fractionating)
-        #             aux_du_SLVP, p_fu_TADTM, p_EA(t), p_δ2H_PREC(t), p_δ18O_PREC(t), u_aux_WETNES, # (fractionating)
+        #             aux_du_SLVP, p_fT_TADTM, p_VAPPRES(t), p_δ2H_PREC(t), p_δ18O_PREC(t), u_aux_WETNES, # (fractionating)
         #             u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, 0, 0) #EffectiveDiffusivity_18O, EffectiveDiffusivity_2H)
         # end
 
@@ -152,24 +152,35 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # Update solution:
         # u is a state vector with u[1] = S relative saturation (-)
         # Update GWAT:
-        du[p[1][4].row_idx_scalars.GWAT, 1] = aux_du_VRFLI[NLAYER] - du_GWFL - du_SEEP
+        du.GWAT.mm   = aux_du_VRFLI[NLAYER] - du_GWFL - du_SEEP
 
         # Do not modify INTS, INTR, SNOW, CC, SNOWLQ
         # as they are separately modified by the callback.
         # Therfore set their rate of change to 0
-        du[p[1][4].row_idx_scalars.INTS, 1]   = 0
-        du[p[1][4].row_idx_scalars.INTR, 1]   = 0
-        du[p[1][4].row_idx_scalars.SNOW, 1]   = 0
-        du[p[1][4].row_idx_scalars.CC, 1]     = 0
-        du[p[1][4].row_idx_scalars.SNOWLQ, 1] = 0
+        du.INTS.mm   = 0
+        du.INTR.mm   = 0
+        du.SNOW.mm   = 0
+        du.CC.mm     = 0
+        du.SNOWLQ.mm = 0
 
         # Update SWATI for each layer:
-        du[p[1][4].row_idx_SWATI, 1] .= du_NTFLI # 0.000002 seconds (3 allocations: 224 bytes)
+        du.SWATI.mm .= du_NTFLI
 
         # save intermediate results from flow calculation into a cache
         # for efficient use in transport calculation (in callbacks)
-        p[3][3] .=  [du_NTFLI  aux_du_VRFLI  aux_du_DSFLI  aux_du_INFLI  u_aux_WETNES]
-        p[3][4][1:2] .=  [du_GWFL, du_SEEP]
+        # p[3][3]      .=  [du_NTFLI  aux_du_VRFLI  aux_du_DSFLI  aux_du_INFLI  u_aux_WETNES]
+        # p[3][4][1:2] .=  [du_GWFL, du_SEEP]
+        # with the method @unpack this is automatically overwritten
+        # TODO(bernhard): it seems it is not automatically overwritten. As workaround check:
+        # p.aux_du_VRFLI === aux_du_VRFLI
+        # p.du_NTFLI     === du_NTFLI
+        # p.aux_du_VRFLI === aux_du_VRFLI
+        # p.aux_du_DSFLI === aux_du_DSFLI
+        # p.aux_du_INFLI === aux_du_INFLI
+        # p.u_aux_WETNES === u_aux_WETNES
+        # p.du_GWFL === du_GWFL
+        # p.du_SEEP === du_SEEP
+
 
         ##########################################
         # Accumulate flows to compute daily sums
@@ -180,43 +191,42 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
             # 1) Either set daily sum if rate is constant throughout precipitation interval: p_DTP*(...)
             # 2) or then set daily sum to zero and use ODE to accumulate flow.
-            du[p[1][4].row_idx_accum[ 1], 1] = 0 # cum_d_prec, was computed in callback
-            du[p[1][4].row_idx_accum[ 2], 1] = 0 # cum_d_rfal, was computed in callback
-            du[p[1][4].row_idx_accum[ 3], 1] = 0 # cum_d_sfal, was computed in callback
-            du[p[1][4].row_idx_accum[ 4], 1] = 0 # cum_d_rint, was computed in callback
-            du[p[1][4].row_idx_accum[ 5], 1] = 0 # cum_d_sint, was computed in callback
-            du[p[1][4].row_idx_accum[ 6], 1] = 0 # cum_d_rsno, was computed in callback
-            du[p[1][4].row_idx_accum[ 7], 1] = 0 # cum_d_rnet, was computed in callback
-            du[p[1][4].row_idx_accum[ 8], 1] = 0 # cum_d_smlt, was computed in callback
+            du.accum.cum_d_prec     = 0 # was computed in callback
+            du.accum.cum_d_rfal     = 0 # was computed in callback
+            du.accum.cum_d_sfal     = 0 # was computed in callback
+            du.accum.cum_d_rint     = 0 # was computed in callback
+            du.accum.cum_d_sint     = 0 # was computed in callback
+            du.accum.cum_d_rsno     = 0 # was computed in callback
+            du.accum.cum_d_rnet     = 0 # was computed in callback
+            du.accum.cum_d_smlt     = 0 # was computed in callback
 
-            du[p[1][4].row_idx_accum[ 9], 1] = 0 # cum_d_evap,  was computed in callback
-            du[p[1][4].row_idx_accum[10], 1] = 0 # cum_d_tran,  was computed in callback
-            du[p[1][4].row_idx_accum[11], 1] = 0 # cum_d_irvp,  was computed in callback
-            du[p[1][4].row_idx_accum[12], 1] = 0 # cum_d_isvp,  was computed in callback
-            du[p[1][4].row_idx_accum[13], 1] = 0 # cum_d_slvp,  was computed in callback
-            du[p[1][4].row_idx_accum[14], 1] = 0 # cum_d_snvp,  was computed in callback
-            du[p[1][4].row_idx_accum[15], 1] = 0 # cum_d_pint,  was computed in callback
-            du[p[1][4].row_idx_accum[16], 1] = 0 # cum_d_ptran, was computed in callback
-            du[p[1][4].row_idx_accum[17], 1] = 0 # cum_d_pslvp, was computed in callback
+            du.accum.cum_d_evap     = 0 # was computed in callback
+            du.accum.cum_d_tran     = 0 # was computed in callback
+            du.accum.cum_d_irvp     = 0 # was computed in callback
+            du.accum.cum_d_isvp     = 0 # was computed in callback
+            du.accum.cum_d_slvp     = 0 # was computed in callback
+            du.accum.cum_d_snvp     = 0 # was computed in callback
+            du.accum.cum_d_pint     = 0 # was computed in callback
+            du.accum.cum_d_ptran    = 0 # was computed in callback
+            du.accum.cum_d_pslvp    = 0 # was computed in callback
 
-            du[p[1][4].row_idx_accum[18], 1] = p_fu_SRFL +
-                              sum(aux_du_BYFLI) +
-                              sum(aux_du_DSFLI) +
-                              du_GWFL # SRFLD + BYFLD + DSFLD + GWFLD # flow
-            du[p[1][4].row_idx_accum[19], 1] = du_SEEP                                 # seep
-            du[p[1][4].row_idx_accum[20], 1] = p_fu_SRFL                               # srfl
-            du[p[1][4].row_idx_accum[21], 1] = p_fu_SLFL                               # slfl
-            du[p[1][4].row_idx_accum[22], 1] = sum(aux_du_BYFLI)                       # byfl
-            du[p[1][4].row_idx_accum[23], 1] = sum(aux_du_DSFLI)                       # dsfl
-            du[p[1][4].row_idx_accum[24], 1] = du_GWFL                                 # gwfl
-            du[p[1][4].row_idx_accum[25], 1] = aux_du_VRFLI[NLAYER]                    # vrfln
-
-            # du[p[1][4].row_idx_accum[26], 1] = 0 # cum_d_rthr, was computed in callback
-            # du[p[1][4].row_idx_accum[27], 1] = 0 # cum_d_sthr, was computed in callback
-            du[p[1][4].row_idx_accum[28], 1] = 0 # new_SWAT, is computed in callback
-            du[p[1][4].row_idx_accum[29], 1] = 0 # new_totalWATER, is computed in callback
-            du[p[1][4].row_idx_accum[30], 1] = 0 # BALERD_SWAT, is computed in callback
-            du[p[1][4].row_idx_accum[31], 1] = 0 # BALERD_total, is computed in callback
+            du.accum.flow           = p_fu_SRFL +
+                                        sum(aux_du_BYFLI) +
+                                        sum(aux_du_DSFLI) +
+                                        du_GWFL
+            du.accum.seep           = du_SEEP
+            du.accum.srfl           = p_fu_SRFL
+            du.accum.slfl           = p_fu_SLFL
+            du.accum.byfl           = sum(aux_du_BYFLI)
+            du.accum.dsfl           = sum(aux_du_DSFLI)
+            du.accum.gwfl           = du_GWFL
+            du.accum.vrfln          = aux_du_VRFLI[NLAYER]
+            # du.accum.cum_d_rthr   = 0 # was computed in callback
+            # du.accum.cum_d_sthr   = 0 # was computed in callback
+            du.accum.totalSWAT      = 0 # is computed in callback
+            du.accum.new_totalWATER = 0 # is computed in callback
+            du.accum.BALERD_SWAT    = 0 # is computed in callback
+            du.accum.BALERD_total   = 0 # is computed in callback
 
             # TODO(bernhard): use SavingCallback() for all quantities that have du=0
             #                 only keep du=... for quantities for which we compute cumulative sums

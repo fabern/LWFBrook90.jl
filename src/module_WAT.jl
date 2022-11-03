@@ -81,43 +81,42 @@ end
 
 
 
-
 """
-    LWFRootGrowth(frelden, tini, age, RGROPER, INITRDEP, INITRLEN, NLAYER)
+    LWFRootGrowth(;final_relden, tini_yrs, INITRDEP_m, INITRLEN_m_per_m2, RGROPER_yrs, age_yrs, NLAYER)
 
 Compute root growth according to LWF root growth model, (Hammel and Kennel 2000).
 
 # Arguments:
-    - `frelden[]`:  final relative values of root length per unit volume
-    - `tini[]`   :  initial time for root growth in layer
-    - `age`      :  age of vegetation
-    - `RGROPER`  :  period of root growth in layer, a
-    - `INITRDEP`  :  intial root depth, m
-    - `INITRLEN`  :  intial total root length, m m-2
-    - `NLAYER`   :  number of soil layers
+    - `final_relden[]`   :  final relative values of root length per unit volume
+    - `tini_yrs[]`       :  initial age for root growth in layer, yrs
+    - `INITRDEP_m`       :  intial root depth, m
+    - `INITRLEN_m_per_m2`:  initial water-absorbing root length per unit area, m m-2
+    - `RGROPER_yrs`      :  period of root growth in layer, yrs
+    - `age_yrs`          :  age of vegetation, yrs
+    - `NLAYER`           :  number of soil layers
 Returns:
-    - `RELDEN[]`  : current, age-dependent relative values of root length per unit volume
+    - `RELDEN[]`         : current, age-dependent relative values of root length per unit volume
 """
-function LWFRootGrowth(frelden, tini, age, RGROPER, INITRDEP, INITRLEN, NLAYER)
+function LWFRootGrowth(;final_relden, tini_yrs, INITRDEP_m, INITRLEN_m_per_m2, RGROPER_yrs, age_yrs, NLAYER)
 
     p_fT_RELDEN = fill(NaN, NLAYER)
-    if RGROPER > zero(RGROPER)
+    if RGROPER_yrs > zero(RGROPER_yrs)
         for i = 1:NLAYER
-            if age < tini[i]
+            if age_yrs < tini_yrs[i]                                              # stand age before tini: no roots
                 p_fT_RELDEN[i]=0.0
-            elseif age >= tini[i] && age <= tini[i] + RGROPER
+            elseif age_yrs >= tini_yrs[i] && age_yrs <= tini_yrs[i] + RGROPER_yrs # stand age from tini to tini+rgroper:
                 # rl0:  constant intial root length density, m m-3
-                rl0=INITRLEN/INITRDEP
-                p_fT_RELDEN[i]=rl0*(frelden[i]/rl0)^((age-tini[i])/RGROPER)
-            elseif age > tini[i] + RGROPER
-                p_fT_RELDEN[i]=frelden[i]
+                rl0=INITRLEN_m_per_m2/INITRDEP_m
+                p_fT_RELDEN[i]=rl0*(final_relden[i]/rl0)^((age_yrs-tini_yrs[i])/RGROPER_yrs)
+            elseif age_yrs > tini_yrs[i] + RGROPER_yrs                            # stand age after tini+rgroper:
+                p_fT_RELDEN[i]=final_relden[i]
             else
                 error("In RootGrowth() unexpected error occurred.")
             end
         end
     else
         for i = 1:NLAYER
-            p_fT_RELDEN[i]=frelden[i]
+            p_fT_RELDEN[i]=final_relden[i]
         end
     end
 

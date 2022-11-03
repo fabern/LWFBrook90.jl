@@ -21,7 +21,7 @@ function MSBSETVARS(# arguments
                     # for PLNTRES
                     p_fT_RELDEN, p_RTRAD, p_FXYLEM,
                     # for WEATHER
-                    p_fT_TMAX, p_fT_TMIN, p_fT_EA, p_fT_UW, p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_fT_SOLRAD,
+                    p_fT_TMAX, p_fT_TMIN, p_fT_VAPPRES, p_fT_UW, p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_fT_SOLRAD,
                     # for SNOFRAC
                     p_RSTEMP,
                     #
@@ -65,8 +65,8 @@ function MSBSETVARS(# arguments
 
     # calculated weather data
     p_fu_SHEAT = 0.
-    (p_fu_SOLRADC, p_fu_TA, p_fu_TADTM, p_fu_TANTM, UA, p_fu_UADTM, p_fu_UANTM) =
-        LWFBrook90.PET.WEATHER(p_fT_TMAX, p_fT_TMIN, p_fT_DAYLEN, p_fT_I0HDAY, p_fT_EA, p_fT_UW, p_fu_ZA, p_fu_DISP, p_fu_Z0, p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_fT_SOLRAD)
+    (p_fu_SOLRADC, p_fT_TA, p_fT_TADTM, p_fT_TANTM, UA, p_fu_UADTM, p_fu_UANTM) =
+        LWFBrook90.PET.WEATHER(p_fT_TMAX, p_fT_TMIN, p_fT_DAYLEN, p_fT_I0HDAY, p_fT_VAPPRES, p_fT_UW, p_fu_ZA, p_fu_DISP, p_fu_Z0, p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_fT_SOLRAD)
     # fraction of precipitation as p_fT_SFAL
     p_fT_SNOFRC= LWFBrook90.SNO.SNOFRAC(p_fT_TMAX, p_fT_TMIN, p_RSTEMP)
 
@@ -74,7 +74,7 @@ function MSBSETVARS(# arguments
         # snowpack temperature at beginning of day
         p_fu_TSNOW = -u_CC / (p_CVICE * u_SNOW)
         # potential snow evaporation PSNVP
-        p_fu_PSNVP=LWFBrook90.SNO.SNOVAP(p_fu_TSNOW, p_fu_TA, p_fT_EA, UA, p_fu_ZA, p_fu_HEIGHTeff, p_fu_Z0, p_fu_DISP, p_fu_Z0C, p_fu_DISPC, p_fu_Z0GS, p_LWIDTH, p_RHOTP, p_NN, p_fu_LAIeff, p_fT_SAIeff, p_KSNVP)
+        p_fu_PSNVP=LWFBrook90.SNO.SNOVAP(p_fu_TSNOW, p_fT_TA, p_fT_VAPPRES, UA, p_fu_ZA, p_fu_HEIGHTeff, p_fu_Z0, p_fu_DISP, p_fu_Z0C, p_fu_DISPC, p_fu_Z0GS, p_LWIDTH, p_RHOTP, p_NN, p_fu_LAIeff, p_fT_SAIeff, p_KSNVP)
         p_fu_ALBEDO = p_ALBSN
         p_fu_RSS = 0.
     else
@@ -91,14 +91,14 @@ function MSBSETVARS(# arguments
     end
 
     # snow surface energy balance (is performed even when SNOW=0 in case snow is added during day)
-    p_fu_SNOEN = LWFBrook90.SNO.SNOENRGY(p_fu_TSNOW, p_fu_TA, p_fT_DAYLEN, p_CCFAC, p_MELFAC, p_fT_SLFDAY, p_fu_LAIeff, p_fT_SAIeff, p_LAIMLT, p_SAIMLT)
+    p_fu_SNOEN = LWFBrook90.SNO.SNOENRGY(p_fu_TSNOW, p_fT_TA, p_fT_DAYLEN, p_CCFAC, p_MELFAC, p_fT_SLFDAY, p_fu_LAIeff, p_fT_SAIeff, p_LAIMLT, p_SAIMLT)
 
     return (p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY,
             p_fu_HEIGHTeff, p_fu_LAIeff, p_fT_SAIeff, p_fT_RTLEN, p_fT_RPLANT,
             p_fu_Z0GS, p_fu_Z0C, p_fu_DISPC, p_fu_Z0, p_fu_DISP, p_fu_ZA,
             p_fT_RXYLEM, p_fT_RROOTI, p_fT_ALPHA,
             p_fu_SHEAT,
-            p_fu_SOLRADC, p_fu_TA, p_fu_TADTM, p_fu_TANTM, p_fu_UADTM, p_fu_UANTM,
+            p_fu_SOLRADC, p_fT_TA, p_fT_TADTM, p_fT_TANTM, p_fu_UADTM, p_fu_UANTM,
             p_fT_SNOFRC,
             p_fu_TSNOW,p_fu_PSNVP, p_fu_ALBEDO,p_fu_RSS,
             p_fu_SNOEN)
@@ -137,14 +137,14 @@ GEVP, PINT, GIVP, and TRANI, which are used in later calculations.
 """
 function MSBDAYNIGHT(FLAG_MualVanGen,
                      # arguments
-                     p_fT_SLFDAY, p_fu_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fu_TADTM, p_fu_UADTM, p_fu_TANTM, p_fu_UANTM,
+                     p_fT_SLFDAY, p_fu_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM, p_fu_UADTM, p_fT_TANTM, p_fu_UANTM,
                      p_fT_I0HDAY,
                      # for AVAILEN:
-                     p_fu_ALBEDO, p_C1, p_C2, p_C3, p_fT_EA, p_fu_SHEAT, p_CR, p_fu_LAIeff, p_fT_SAIeff,
+                     p_fu_ALBEDO, p_C1, p_C2, p_C3, p_fT_VAPPRES, p_fu_SHEAT, p_CR, p_fu_LAIeff, p_fT_SAIeff,
                      # for SWGRA:
                      p_fu_ZA, p_fu_HEIGHTeff, p_fu_Z0, p_fu_DISP, p_fu_Z0C, p_fu_DISPC, p_fu_Z0GS, p_LWIDTH, p_RHOTP, p_NN,
                      # for SRSC:
-                     p_fu_TA, p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_TL, p_T1, p_T2, p_TH,
+                     p_fT_TA, p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_TL, p_T1, p_T2, p_TH,
                      # for SWPE:
                      p_fu_RSS,
                      # for TBYLAYER:
@@ -175,11 +175,11 @@ function MSBDAYNIGHT(FLAG_MualVanGen,
         # net radiation
         if (J ==1)
             SLRAD[J] = p_fT_SLFDAY * p_fu_SOLRADC / (p_WTOMJ * p_fT_DAYLEN)
-            TAJ = p_fu_TADTM
+            TAJ = p_fT_TADTM
             UAJ = p_fu_UADTM
         else
             SLRAD[J] = 0
-            TAJ = p_fu_TANTM
+            TAJ = p_fT_TANTM
             UAJ = p_fu_UANTM
         end
 
@@ -193,17 +193,17 @@ function MSBDAYNIGHT(FLAG_MualVanGen,
         # end
         # Available energy above canopy (AA) and at soil/substrate (ASUBS)
         AA, ASUBS =
-            LWFBrook90.SUN.AVAILEN(SLRAD[J], p_fu_ALBEDO, p_C1, p_C2, p_C3, TAJ, p_fT_EA,
+            LWFBrook90.SUN.AVAILEN(SLRAD[J], p_fu_ALBEDO, p_C1, p_C2, p_C3, TAJ, p_fT_VAPPRES,
                     cloud_fraction,
                     p_fu_SHEAT, p_CR, p_fu_LAIeff, p_fT_SAIeff)
 
         # vapor pressure deficit
         ES, DELTA = LWFBrook90.PET.ESAT(TAJ)
-        VPD = ES - p_fT_EA
+        VPD = ES - p_fT_VAPPRES
         # S.-W. resistances
         RAA, RAC, RAS = LWFBrook90.PET.SWGRA(UAJ, p_fu_ZA, p_fu_HEIGHTeff, p_fu_Z0, p_fu_DISP, p_fu_Z0C, p_fu_DISPC, p_fu_Z0GS, p_LWIDTH, p_RHOTP, p_NN, p_fu_LAIeff, p_fT_SAIeff)
         if (J == 1)
-            RSC=LWFBrook90.PET.SRSC(SLRAD[J], p_fu_TA, VPD, p_fu_LAIeff, p_fT_SAIeff, p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_CR, p_TL, p_T1, p_T2, p_TH)
+            RSC=LWFBrook90.PET.SRSC(SLRAD[J], p_fT_TA, VPD, p_fu_LAIeff, p_fT_SAIeff, p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_CR, p_TL, p_T1, p_T2, p_TH)
         else
             RSC = 1 / (p_GLMIN * p_fu_LAIeff)
         end
@@ -310,7 +310,7 @@ end
 
 
 function MSBPREINT(#arguments:
-                   p_fT_PREC, p_DTP, p_fT_SNOFRC, p_NPINT, p_fu_PINT, p_fu_TA,
+                   p_fT_PREC, p_DTP, p_fT_SNOFRC, p_NPINT, p_fu_PINT, p_fT_TA,
                    # for INTER (snow)
                    u_INTS, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS,
                    # for INTER (rain)
@@ -330,7 +330,7 @@ function MSBPREINT(#arguments:
         # more than one precip interval in day
         error("Case with multiple precipitation intervals (using PRECDAT and precip_interval != 1) is not implemented.")
         # # snow interception
-        # if (p_fu_PINT < 0 && p_fu_TA > 0)
+        # if (p_fu_PINT < 0 && p_fT_TA > 0)
         #     # prevent frost when too warm, carry negative p_fu_PINT to rain
         #     aux_du_SINT, aux_du_ISVP = LWFBrook90.EVP.INTER(p_fT_SFAL, 0, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DTP, u_INTS)
         # else
@@ -341,7 +341,7 @@ function MSBPREINT(#arguments:
     else
         # one precip interval in day, use storm p_DURATN and INTER24
         # snow interception
-        if (p_fu_PINT < 0 && p_fu_TA > 0)
+        if (p_fu_PINT < 0 && p_fT_TA > 0)
             # prevent frost when too warm, carry negative p_fu_PINT to rain
             aux_du_SINT, aux_du_ISVP = LWFBrook90.EVP.INTER24(p_fT_SFAL, 0, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DURATN, u_INTS, MONTHN)
         else
@@ -387,7 +387,7 @@ function MSBPREINT(#arguments:
           LWFBrook90.SNO.SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN,
                    # States that are overwritten:
                    u_CC, u_SNOW, u_SNOWLQ,
-                   p_DTP, p_fu_TA, p_MAXLQF, p_GRDMLT,
+                   p_DTP, p_fT_TA, p_MAXLQF, p_GRDMLT,
                    p_CVICE, p_LF, p_CVLQ)
 
         p_fu_RNET = p_fu_RTHR - aux_du_RSNO
@@ -536,7 +536,7 @@ end
 
 """
     compute_isotope_U_of_INTS_INTR_SNOW_and_SLFL(
-        p_δ2H_PREC, p_δ18O_PREC, p_fu_TADTM, p_EA,
+        p_δ2H_PREC, p_δ18O_PREC, p_fT_TADTM, p_fT_VAPPRES,
         # for INTS (in: SINT; out: ISVP):
         u_INTS, aux_du_SINT, aux_du_ISVP, p_DTP, u_δ2H_INTS, u_δ18O_INTS,
         # for INTR (in: RINT; out: IRVP):
@@ -548,11 +548,11 @@ end
 
 Computes updated values of states INTS, INTR, and SNOW as well as their isotopic composition.
 Compute mixing and evaporative fractionation, and also compute the isotopic composotion of
-the resulting flux that infiltrates into the soil: δ18O_SLFL, δ2H_SLFL
+the resulting flux that infiltrates into the soil: p_fu_δ18O_SLFL, p_fu_δ2H_SLFL
 
 The function is called in the daily callback.
 
-The function returns: δ18O_SLFL, δ2H_SLFL, as well as:
+The function returns: p_fu_δ18O_SLFL, p_fu_δ2H_SLFL, as well as:
     u_INTS
     u_δ18O_INTS
     u_δ2H_INTS
@@ -564,7 +564,7 @@ The function returns: δ18O_SLFL, δ2H_SLFL, as well as:
     u_δ2H_SNOW
 """
 function compute_isotope_U_of_INTS_INTR_SNOW_and_SLFL(
-    p_δ2H_PREC, p_δ18O_PREC, p_fu_TADTM, p_EA,
+    p_δ2H_PREC, p_δ18O_PREC, p_fT_TADTM, p_fT_VAPPRES,
     # for INTS (in: SINT; out: ISVP):
     u_INTS, aux_du_SINT, aux_du_ISVP, p_DTP, u_δ2H_INTS, u_δ18O_INTS,
     # for INTR (in: RINT; out: IRVP):
@@ -579,8 +579,8 @@ function compute_isotope_U_of_INTS_INTR_SNOW_and_SLFL(
     ##################
     ##################
     # Define conditions for isotope calculations:
-    Tc = p_fu_TADTM  # °C, average daytime air temperature
-    h = min(1.0,p_EA) # -, relative humidity of the atmosphere (vappress_atm/1 atm)
+    Tc = p_fT_TADTM  # °C, average daytime air temperature
+    h = min(1.0, p_fT_VAPPRES / LWFBrook90.PET.ESAT(Tc)[1]) # -, relative humidity of the atmosphere (vappress_atm/1 atm)
     γ = 1.0          # -, thermodynamic activity coefficient of evaporating water
     X_INTS = 0.5  # -, turbulence incex of the atmosphere above the evaporating water
     X_INTR = 0.5  # -, turbulence incex of the atmosphere above the evaporating water
@@ -721,23 +721,23 @@ function compute_isotope_U_of_INTS_INTR_SNOW_and_SLFL(
 
     # 3) also compute δ_SLFL as mix of δ_SMLT with δ_RNET (i.e. water that infiltrates)
     # if (aux_du_SMLT + p_fu_RNET == 0)
-    #     δ18O_SLFL = δ18O_empty
-    #     δ2H_SLFL  = δ2H_empty
+    #     p_fu_δ18O_SLFL = δ18O_empty
+    #     p_fu_δ2H_SLFL  = δ2H_empty
     # elseif (aux_du_SMLT == 0)
-    #     δ18O_SLFL = p_δ18O_PREC
-    #     δ2H_SLFL  = p_δ2H_PREC
+    #     p_fu_δ18O_SLFL = p_δ18O_PREC
+    #     p_fu_δ2H_SLFL  = p_δ2H_PREC
     # elseif (p_fu_RNET == 0)
-    #     δ18O_SLFL = u_δ18O_SNOW_final  # TODO(bernhard): using final is effectively operator splitting, (the isotope mass balance is not exact)
-    #     δ2H_SLFL  = u_δ2H_SNOW_final  # TODO(bernhard): using final is effectively operator splitting, (the isotope mass balance is not exact)
+    #     p_fu_δ18O_SLFL = u_δ18O_SNOW_final  # TODO(bernhard): using final is effectively operator splitting, (the isotope mass balance is not exact)
+    #     p_fu_δ2H_SLFL  = u_δ2H_SNOW_final  # TODO(bernhard): using final is effectively operator splitting, (the isotope mass balance is not exact)
     # else # both fluxes are non-null and we need to compute their mix
-    #     δ18O_SLFL = (u_δ18O_SNOW_final * aux_du_SMLT + p_δ18O_PREC * p_fu_RNET) / (aux_du_SMLT + p_fu_RNET)  # TODO(bernhard): using final is effectively operator splitting, (the isotope mass balance is not exact)
-    #     δ2H_SLFL  = (u_δ2H_SNOW_final * aux_du_SMLT  + p_δ2H_PREC * p_fu_RNET)  / (aux_du_SMLT + p_fu_RNET)  # TODO(bernhard): using final is effectively operator splitting, (the isotope mass balance is not exact)
+    #     p_fu_δ18O_SLFL = (u_δ18O_SNOW_final * aux_du_SMLT + p_δ18O_PREC * p_fu_RNET) / (aux_du_SMLT + p_fu_RNET)  # TODO(bernhard): using final is effectively operator splitting, (the isotope mass balance is not exact)
+    #     p_fu_δ2H_SLFL  = (u_δ2H_SNOW_final * aux_du_SMLT  + p_δ2H_PREC * p_fu_RNET)  / (aux_du_SMLT + p_fu_RNET)  # TODO(bernhard): using final is effectively operator splitting, (the isotope mass balance is not exact)
     # end
     # TODO(bernhard): deactivate the following workaround and activate above code
-    δ18O_SLFL = p_δ18O_PREC
-    δ2H_SLFL  = p_δ2H_PREC
+    p_fu_δ18O_SLFL = p_δ18O_PREC
+    p_fu_δ2H_SLFL  = p_δ2H_PREC
 
-    return (δ18O_SLFL, δ2H_SLFL,
+    return (p_fu_δ18O_SLFL, p_fu_δ2H_SLFL,
         u_INTS_final, u_δ18O_INTS_final, u_δ2H_INTS_final,
         u_INTR_final, u_δ18O_INTR_final, u_δ2H_INTR_final,
         u_SNOW_final, u_δ18O_SNOW_final, u_δ2H_SNOW_final)
@@ -760,7 +760,7 @@ end
         u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT,
         # for SWATI:
         du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI, # (non-fractionating)
-        aux_du_SLVP, p_fu_TADTM, p_EA, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
+        aux_du_SLVP, p_fT_TADTM, p_fT_VAPPRES, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
         u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, EffectiveDiffusivity_18O, EffectiveDiffusivity_2H,
         )
 
@@ -779,7 +779,7 @@ function compute_isotope_du_GWAT_SWATI(
     u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT,
     # for SWATI:
     du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI, # (non-fractionating)
-    aux_du_SLVP, p_fu_TADTM, p_EA, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
+    aux_du_SLVP, p_fT_TADTM, p_fT_VAPPRES, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
     u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, EffectiveDiffusivity_18O, EffectiveDiffusivity_2H,
     )
 
@@ -788,7 +788,7 @@ function compute_isotope_du_GWAT_SWATI(
         u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT,NaN,NaN,
         # for SWATI:
         du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI, # (non-fractionating)
-        aux_du_SLVP, p_fu_TADTM, p_EA, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
+        aux_du_SLVP, p_fT_TADTM, p_fT_VAPPRES, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
         u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, EffectiveDiffusivity_18O, EffectiveDiffusivity_2H,
         )
 end
@@ -799,7 +799,7 @@ end
         u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT, du_GWFL, du_SEEP,
         # for SWATI:
         du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI, # (non-fractionating)
-        aux_du_SLVP, p_fu_TADTM, p_EA, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
+        aux_du_SLVP, p_fT_TADTM, p_fT_VAPPRES, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
         u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, EffectiveDiffusivity_18O, EffectiveDiffusivity_2H,
         )
 
@@ -823,7 +823,7 @@ function compute_isotope_u_GWAT_SWATI(integrator,
     u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT, du_GWFL, du_SEEP,
     # for SWATI:
     du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI, # (non-fractionating)
-    aux_du_SLVP, p_fu_TADTM, p_EA, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
+    aux_du_SLVP, p_fT_TADTM, p_fT_VAPPRES, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
     u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, EffectiveDiffusivity_18O, EffectiveDiffusivity_2H,
     )
 
@@ -835,7 +835,7 @@ function compute_isotope_u_GWAT_SWATI(integrator,
         u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT, du_GWFL, du_SEEP,
         # for SWATI:
         du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI, # (non-fractionating)
-        aux_du_SLVP, p_fu_TADTM, p_EA, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
+        aux_du_SLVP, p_fT_TADTM, p_fT_VAPPRES, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
         u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, EffectiveDiffusivity_18O, EffectiveDiffusivity_2H,
         )
 end
@@ -846,7 +846,7 @@ function compute_isotope_GWAT_SWATI(solution_type, integrator,
         u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT, du_GWFL, du_SEEP,
         # for SWATI:
         du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI, # (non-fractionating)
-        aux_du_SLVP, p_fu_TADTM, p_EA, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
+        aux_du_SLVP, p_fT_TADTM, p_fT_VAPPRES, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
         u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, EffectiveDiffusivity_18O, EffectiveDiffusivity_2H,
         )
 
@@ -940,8 +940,8 @@ function compute_isotope_GWAT_SWATI(solution_type, integrator,
     ##################
     ##################
     # 0) Define conditions for isotope calculations:
-    Tc = p_fu_TADTM  # °C, average daytime air temperature
-    h = min(1.0, p_EA) # -, relative humidity of the atmosphere (vappress_atm/1 atm)
+    Tc = p_fT_TADTM  # °C, average daytime air temperature
+    h = min(1.0, p_fT_VAPPRES / LWFBrook90.PET.ESAT(Tc)[1]) # -, relative humidity of the atmosphere (vappress_atm/1 atm)
     γ = 1.0          # -, thermodynamic activity coefficient of evaporating water
     # X_INTS = 0.5  # -, turbulence incex of the atmosphere above the evaporating water
     # X_INTR = 0.5  # -, turbulence incex of the atmosphere above the evaporating water

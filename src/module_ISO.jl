@@ -238,33 +238,37 @@ end
     # 1) data to plot
 
     # 1a) extract data from solution object `sol`
-    simulate_isotopes            = sol.prob.p[1][4].simulate_isotopes
+    simulate_isotopes            = sol.prob.p.simulate_isotopes
     @assert simulate_isotopes "Provided solution did not simulate isotopes"
 
-    t_ref = sol.prob.p[2][17]
+    t_ref = sol.prob.p.REFERENCE_DATE
     x = RelativeDaysFloat2DateTime.(sol.t, t_ref);
-    y_center = cumsum(sol.prob.p[1][1].p_THICK) - sol.prob.p[1][1].p_THICK/2
+    y_center = cumsum(sol.prob.p.p_soil.p_THICK) - sol.prob.p.p_soil.p_THICK/2
 
-    row_PREC_amt = sol.prob.p[2][8].(sol.t)
-    rows_SWAT_amt = sol[sol.prob.p[1][4].row_idx_SWATI, 1, :]./sol.prob.p[1][1].p_THICK;
-    rows_SWAT_d18O = sol[sol.prob.p[1][4].row_idx_SWATI, sol.prob.p[1][4].col_idx_d18O, :]
-    rows_SWAT_d2H  = sol[sol.prob.p[1][4].row_idx_SWATI, sol.prob.p[1][4].col_idx_d2H,  :]
+    row_PREC_amt = sol.prob.p.p_PREC.(sol.t)
+
+    # rows_SWAT_amt = sol[sol.prob.p.row_idx_SWATI, 1, :]./sol.prob.p.p_soil.p_THICK;
+
+    rows_SWAT_amt  = reduce(hcat, [sol[t].SWATI.mm   for t in eachindex(sol)]) ./ sol.prob.p.p_soil.p_THICK
+    rows_SWAT_d18O = reduce(hcat, [sol[t].SWATI.d18O for t in eachindex(sol)])
+    rows_SWAT_d2H  = reduce(hcat, [sol[t].SWATI.d2H  for t in eachindex(sol)])
 
     row_NaN       = fill(NaN, 1,length(x))
-    row_PREC_d18O = reshape(sol.prob.p[2][15].(sol.t), 1, :)
-    row_INTS_d18O = reshape(sol[sol.prob.p[1][4].row_idx_scalars.INTS, sol.prob.p[1][4].col_idx_d18O, :], 1, :)
-    row_INTR_d18O = reshape(sol[sol.prob.p[1][4].row_idx_scalars.INTR, sol.prob.p[1][4].col_idx_d18O, :], 1, :)
-    row_SNOW_d18O = reshape(sol[sol.prob.p[1][4].row_idx_scalars.SNOW, sol.prob.p[1][4].col_idx_d18O, :], 1, :)
-    row_GWAT_d18O = reshape(sol[sol.prob.p[1][4].row_idx_scalars.GWAT, sol.prob.p[1][4].col_idx_d18O, :], 1, :)
-    row_RWU_d18O  = reshape(sol[sol.prob.p[1][4].row_idx_scalars.totalRWU, sol.prob.p[1][4].col_idx_d18O, :], 1, :)
-    row_XYL_d18O  = reshape(sol[sol.prob.p[1][4].row_idx_scalars.XylemV,   sol.prob.p[1][4].col_idx_d18O, :], 1, :)
-    row_PREC_d2H  = reshape(sol.prob.p[2][16].(sol.t), 1, :)
-    row_INTS_d2H = reshape(sol[sol.prob.p[1][4].row_idx_scalars.INTS, sol.prob.p[1][4].col_idx_d2H, :], 1, :)
-    row_INTR_d2H = reshape(sol[sol.prob.p[1][4].row_idx_scalars.INTR, sol.prob.p[1][4].col_idx_d2H, :], 1, :)
-    row_SNOW_d2H = reshape(sol[sol.prob.p[1][4].row_idx_scalars.SNOW, sol.prob.p[1][4].col_idx_d2H, :], 1, :)
-    row_GWAT_d2H = reshape(sol[sol.prob.p[1][4].row_idx_scalars.GWAT, sol.prob.p[1][4].col_idx_d2H, :], 1, :)
-    row_RWU_d2H  = reshape(sol[sol.prob.p[1][4].row_idx_scalars.totalRWU, sol.prob.p[1][4].col_idx_d2H, :], 1, :)
-    row_XYL_d2H  = reshape(sol[sol.prob.p[1][4].row_idx_scalars.XylemV,   sol.prob.p[1][4].col_idx_d2H, :], 1, :)
+    row_PREC_d18O = reshape(sol.prob.p.p_δ18O_PREC.(sol.t), 1, :)
+
+    row_INTS_d18O = reduce(hcat, [sol[t].INTS.d18O for t in eachindex(sol)])
+    row_INTR_d18O = reduce(hcat, [sol[t].INTR.d18O for t in eachindex(sol)])
+    row_SNOW_d18O = reduce(hcat, [sol[t].SNOW.d18O for t in eachindex(sol)])
+    row_GWAT_d18O = reduce(hcat, [sol[t].GWAT.d18O for t in eachindex(sol)])
+    row_RWU_d18O  = reduce(hcat, [sol[t].RWU.d18O for t in eachindex(sol)])
+    row_XYL_d18O  = reduce(hcat, [sol[t].XYLEM.d18O for t in eachindex(sol)])
+    row_PREC_d2H  = reshape(sol.prob.p.p_δ2H_PREC.(sol.t), 1, :)
+    row_INTS_d2H = reduce(hcat, [sol[t].INTS.d2H for t in eachindex(sol)])
+    row_INTR_d2H = reduce(hcat, [sol[t].INTR.d2H for t in eachindex(sol)])
+    row_SNOW_d2H = reduce(hcat, [sol[t].SNOW.d2H for t in eachindex(sol)])
+    row_GWAT_d2H = reduce(hcat, [sol[t].GWAT.d2H for t in eachindex(sol)])
+    row_RWU_d2H  = reduce(hcat, [sol[t].RWU.d2H for t in eachindex(sol)])
+    row_XYL_d2H  = reduce(hcat, [sol[t].XYLEM.d2H for t in eachindex(sol)])
 
     # 1b) define some plot arguments based on the extracted data
     # color scheme:
@@ -347,11 +351,11 @@ end
     # 3b) Heatmap (containing SWATI and other compartments)
     # y_labels   = ["INTS"; ""; "INTR"; ""; "SNOW"; ""; round.(y_center); "";             "GWAT"]
     # y_soil_ticks = optimize_ticks(extrema(y_center)...; k_min = 4)[1]
-    # y_soil_ticks = optimize_ticks(0., round(maximum(cumsum(sol.prob.p[1][1].p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
+    # y_soil_ticks = optimize_ticks(0., round(maximum(cumsum(sol.prob.p.p_soil.p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
 
-    y_extended = [-500; -350; -300; -250; -200; -150; -100; -50;         y_center;             (maximum(cumsum(sol.prob.p[1][1].p_THICK)) .+ [50; 100; 150; 250; 300;400])]
-    y_soil_ticks = tick_function(0., round(maximum(cumsum(sol.prob.p[1][1].p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
-    y_ticks    = [-500;       -300;       -200;       -100;          y_soil_ticks;             (maximum(cumsum(sol.prob.p[1][1].p_THICK)) .+ [    100;      250;     400])]
+    y_extended = [-500; -350; -300; -250; -200; -150; -100; -50;         y_center;             (maximum(cumsum(sol.prob.p.p_soil.p_THICK)) .+ [50; 100; 150; 250; 300;400])]
+    y_soil_ticks = tick_function(0., round(maximum(cumsum(sol.prob.p.p_soil.p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
+    y_ticks    = [-500;       -300;       -200;       -100;          y_soil_ticks;             (maximum(cumsum(sol.prob.p.p_soil.p_THICK)) .+ [    100;      250;     400])]
     y_labels   = ["PREC";   "INTS";     "INTR";     "SNOW";     round.(y_soil_ticks; digits=0);                                                "GWAT";    "RWU";     "XYLEM"]
     z2_extended = [row_PREC_d18O; row_NaN; row_INTS_d18O; row_NaN; row_INTR_d18O; row_NaN; row_SNOW_d18O; row_NaN; rows_SWAT_d18O; row_NaN; row_GWAT_d18O; row_NaN; row_RWU_d18O; row_NaN; row_XYL_d18O]
     z3_extended = [row_PREC_d2H;  row_NaN; row_INTS_d2H;  row_NaN; row_INTR_d2H;  row_NaN; row_SNOW_d2H;  row_NaN; rows_SWAT_d2H;  row_NaN; row_GWAT_d2H;  row_NaN; row_RWU_d2H;  row_NaN; row_XYL_d2H ]

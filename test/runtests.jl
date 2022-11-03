@@ -1,8 +1,10 @@
 using LWFBrook90
 using DataFrames
-using Test: @testset, @test, @test_throws, @test_broken, @test_skip
+using Test: @testset, @test, @test_throws, @test_broken, @test_skip, @test_logs
 using CSV: File
 using Random
+using Printf
+using Logging
 
 # A macro for timing that also prints out the git commit hash:
 macro githash_time(variable)
@@ -25,4 +27,4 @@ include("01-unit-tests.jl")
 
 include("02-integration-tests.jl")
 
-include("03-regression-tests.jl")
+# include("03-regression-tests.jl")

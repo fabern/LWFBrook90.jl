@@ -209,7 +209,7 @@ end
 
 
 """
-    AVAILEN(SLRAD, p_fu_ALBEDO, p_C1, p_C2, p_C3, p_fu_TA, p_fT_EA, RATIO, p_fu_SHEAT, p_CR,
+    AVAILEN(SLRAD, p_fu_ALBEDO, p_C1, p_C2, p_C3, p_fT_TA, p_fT_VAPPRES, RATIO, p_fu_SHEAT, p_CR,
     p_fu_LAI, p_fu_SAI)
 
 Estimate the available energy above and below the canopy.
@@ -321,7 +321,7 @@ this situation. Fortunately, the cloud cover correction, approximate as it is, b
 net longwave closer to zero and helps wash out the emissivity error.
 "
 """
-function AVAILEN(SLRAD, p_fu_ALBEDO, p_C1, p_C2, p_C3, p_fu_TA, p_fT_EA, RATIO, p_fu_SHEAT, p_CR, p_fu_LAI, p_fu_SAI)
+function AVAILEN(SLRAD, p_fu_ALBEDO, p_C1, p_C2, p_C3, p_fT_TA, p_fT_VAPPRES, RATIO, p_fu_SHEAT, p_CR, p_fu_LAI, p_fu_SAI)
 
     # SLRAD   ! solar radiation on slope, W/m2
     # ALBEDO  ! albedo
@@ -344,7 +344,7 @@ function AVAILEN(SLRAD, p_fu_ALBEDO, p_C1, p_C2, p_C3, p_fu_TA, p_fT_EA, RATIO, 
     # RN      !
 
     SOLNET = (1 - p_fu_ALBEDO) * SLRAD                           # net solar radiation, W/m2
-    EFFEM = 1.24 * (p_fT_EA * 10 / (p_fu_TA + 273.15)) ^ (1 / 7) # effective emissivity from clear sky
+    EFFEM = 1.24 * (p_fT_VAPPRES * 10 / (p_fT_TA + 273.15)) ^ (1 / 7) # effective emissivity from clear sky
     NOVERN = (RATIO - p_C1) / p_C2                               # sunshine duration fraction of daylength
     if (NOVERN > 1)
         NOVERN = 1
@@ -355,7 +355,7 @@ function AVAILEN(SLRAD, p_fu_ALBEDO, p_C1, p_C2, p_C3, p_fu_TA, p_fT_EA, RATIO, 
     CLDCOR = p_C3 + (1 - p_C3) * NOVERN # cloud cover correction to net longwave under clear sky
 
     # emissivity of the surface taken as 1.0 to also account for reflected
-    LNGNET = (EFFEM - 1) * CLDCOR * p_SIGMA * (p_fu_TA + 273.15) ^ 4   # net longwave radiation, W/m2
+    LNGNET = (EFFEM - 1) * CLDCOR * p_SIGMA * (p_fT_TA + 273.15) ^ 4   # net longwave radiation, W/m2
     RN = SOLNET + LNGNET                                               # net radiation, W/m2
 
     AA = RN - p_fu_SHEAT                                               # available energy, W/m2

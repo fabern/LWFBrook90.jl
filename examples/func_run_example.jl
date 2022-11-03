@@ -44,7 +44,7 @@ object of DifferentialEquations.jl) and other variables useful for plotting.
 
     pl_final = LWFBrook90.plotlwfbrook90(sol_LWFBrook90, optim_ticks)
     savefig(pl_final,
-        input_prefix * "_plotRecipe_NLAYER" * string(sol_LWFBrook90.prob.p[1][1].NLAYER) * ".png")
+        input_prefix * "_plotRecipe_NLAYER" * string(sol_LWFBrook90.prob.p.p_soil.NLAYER) * ".png")
 """
 function run_example()
 
@@ -90,82 +90,39 @@ function run_example()
 
     pl_final = LWFBrook90.plotlwfbrook90(sol_LWFBrook90, optim_ticks)
     savefig(pl_final,
-        input_prefix * "_plotRecipe_NLAYER" * string(sol_LWFBrook90.prob.p[1][1].NLAYER) * ".png")
+        input_prefix * "_plotRecipe_NLAYER" * string(sol_LWFBrook90.prob.p.p_soil.NLAYER) * ".png")
     """
 
     # 1a) Read in input data
     input_prefix = "BEA2016-reset-FALSE"
+    # input_prefix = "isoBEA2016-reset-FALSE"
     # input_path = "examples/"*input_prefix*"-input/"
-    input_path = @__DIR__ # https://stackoverflow.com/a/63021629
+    input_path = joinpath(@__DIR__, input_prefix*"-input/") # https://stackoverflow.com/a/63021629
 
     ####################
-    (input_meteoveg,
-        _input_meteoiso, # TODO possibly unused
-        input_meteoveg_reference_date,
-        input_param,
-        input_storm_durations,
-        input_initial_conditions,
-        input_soil_horizons,
-        simOption_FLAG_MualVanGen) = read_inputData(input_path, input_prefix)
-
-    input_soil_discretization = discretize_soil(input_path, input_prefix)
+    # Define simulation model by reading in system definition and input data
+    model = SPAC(input_path, input_prefix;
+                 simulate_isotopes = contains(input_prefix, "iso"));
     ####################
 
     ####################
-    # Define solver options
-    Reset = false                          # currently only Reset = 0 implemented
-    compute_intermediate_quantities = true # Flag whether ODE containes additional quantities than only states
+    !isnothing(model.meteo_iso_forcing)
+    # Prepare simulation by discretizing spatial domain
+    # soil_discretization = discretize_soil(model.continuousIC.soil)
+    simulation = LWFBrook90.discretize(model; tspan = (0,100));
 
-    # Override input file settings
-    # Here possibility to check and override dataframes input_[...] manually
-    # # E.g:
-    # # Soil hydraulic model
-    # input_param[1,"NOOUTF"] = true # `true` if outflow from roots prevented, `false` if allowed
+    # Solve ODE:
+    LWFBrook90.simulate!(simulation)
+    # plot(simulation.ODESolution)
+    sol_LWFBrook90 = simulation.ODESolution
     ####################
-
-    ####################
-    # Define parameters for differential equation
-    (ψM_initial, _δ18O_initial, _δ2H_initial), p = define_LWFB90_p(
-        input_meteoveg,
-        _input_meteoiso, # TODO: possibly unused
-        input_meteoveg_reference_date,
-        input_param,
-        input_storm_durations,
-        input_soil_horizons,
-        input_soil_discretization,
-        simOption_FLAG_MualVanGen;
-        Reset = Reset,
-        compute_intermediate_quantities = compute_intermediate_quantities,
-        simulate_isotopes = false)
-    ####################
-
-    ####################
-    # Define initial states of differential equation
-    # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
-    # Create u0 for DiffEq.jl
-    u0, p = define_LWFB90_u0(p, input_initial_conditions,
-        ψM_initial, _δ18O_initial, _δ2H_initial, # TODO: possibly unused
-        compute_intermediate_quantities;
-        simulate_isotopes = false)
-    ####################
-
-    ####################
-    # Define simulation time span:
-    tspan = (0.0, 100.0) # simulate 100 days
-    ####################
-
-    ####################
-    ## Solve ODE:
-    sol_LWFBrook90 = solve_LWFB90(u0, tspan, p);
-    ####################
-
 
     return (
         Dict(["solution" => sol_LWFBrook90,
         "solutionDates" => LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t,
-            input_meteoveg_reference_date),
-        "thickness" => sol_LWFBrook90.prob.p[1][1].p_THICK,
-        "NLAYER" => sol_LWFBrook90.prob.p[1][1].NLAYER])
+            simulation.continuous_SPAC.reference_date),
+        "thickness" => sol_LWFBrook90.prob.p.p_soil.p_THICK,
+        "NLAYER" => sol_LWFBrook90.prob.p.p_soil.NLAYER])
     )
 
 end

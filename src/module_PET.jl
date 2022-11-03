@@ -405,10 +405,10 @@ Subroutine WEATHER could be modified to do further adjustments to temperature, v
 pressure, and wind. For instance, an elevation adjustment to temperature could be added,
 using the average environmental lapse rate of -0.6°C / 100m.
 """
-function WEATHER(p_fT_TMAX, p_fT_TMIN, p_fT_DAYLEN, p_fT_I0HDAY, p_fT_EA, p_fT_UW, p_fu_ZA, p_fu_DISP, p_fu_Z0, p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_fT_SOLRAD)
+function WEATHER(p_fT_TMAX, p_fT_TMIN, p_fT_DAYLEN, p_fT_I0HDAY, p_fT_VAPPRES, p_fT_UW, p_fu_ZA, p_fu_DISP, p_fu_Z0, p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_fT_SOLRAD)
     # Hardcoded values: TODO(bernhard): make these input parameter
     p_RRD = 0.550       # US average of potential solar radiation # was frmmainB90.txtuw
-    p_UW_if0Input = 3.0 # wind speed in case 0 was input # was frmmainB90.txtgtrans
+    p_WIND_if0Input = 3.0 # wind speed in case 0 was input # was frmmainB90.txtgtrans
 
     # Get solar radiation
     if (p_fT_SOLRAD < 0.001)
@@ -423,20 +423,20 @@ function WEATHER(p_fT_TMAX, p_fT_TMIN, p_fT_DAYLEN, p_fT_I0HDAY, p_fT_EA, p_fT_U
         p_fu_SOLRADC = p_fT_SOLRAD
     end
 
-    p_fu_TA    = (p_fT_TMAX + p_fT_TMIN) / 2 # average temperature for day
+    p_fT_TA    = (p_fT_TMAX + p_fT_TMIN) / 2 # average temperature for day
     # daytime and nighttime average air temperature
-    p_fu_TADTM = p_fu_TA + ((p_fT_TMAX - p_fT_TMIN) / (2 * p_PI * p_fT_DAYLEN)) * sin(p_PI * p_fT_DAYLEN)
-    p_fu_TANTM = p_fu_TA - ((p_fT_TMAX - p_fT_TMIN) / (2 * p_PI * (1 - p_fT_DAYLEN))) * sin(p_PI * p_fT_DAYLEN)
+    p_fT_TADTM = p_fT_TA + ((p_fT_TMAX - p_fT_TMIN) / (2 * p_PI * p_fT_DAYLEN)) * sin(p_PI * p_fT_DAYLEN)
+    p_fT_TANTM = p_fT_TA - ((p_fT_TMAX - p_fT_TMIN) / (2 * p_PI * (1 - p_fT_DAYLEN))) * sin(p_PI * p_fT_DAYLEN)
     # if no vapor pressure data, use saturated vapor pressure at minimum temp.
-    if (p_fT_EA == 0)
-        p_fT_EA, dummy = ESAT(p_fT_TMIN)
+    if (p_fT_VAPPRES == 0)
+        p_fT_VAPPRES, dummy = ESAT(p_fT_TMIN)
     end
 
     #######
     # TODO(bernhard): make inputs of 0 possibly. Zero divide should be possible to avoid.
     # if no wind data, use value from frmmainb90 - Measured wind of zero must be input as 0.1
     if (p_fT_UW == 0)
-        p_fT_UW = p_UW_if0Input
+        p_fT_UW = p_WIND_if0Input
     end
     # if wind < 0.2 m/s, set to 0.2 to prevent zero divide
     p_fT_UW = max(p_fT_UW, 0.2)
@@ -450,35 +450,35 @@ function WEATHER(p_fT_TMAX, p_fT_TMIN, p_fT_DAYLEN, p_fT_I0HDAY, p_fT_EA, p_fT_U
     p_fu_UANTM =  p_WNDRAT * p_fu_UADTM
 
     return (p_fu_SOLRADC,
-            p_fu_TA,    # mean temperature for the day, C
-            p_fu_TADTM, # average daytime temperature, C
-            p_fu_TANTM, # average nighttime temperature, C
+            p_fT_TA,    # mean temperature for the day, C
+            p_fT_TADTM, # average daytime temperature, C
+            p_fT_TANTM, # average nighttime temperature, C
             UA,         # average wind speed for the day at reference height
             p_fu_UADTM, # average wind speed for daytime at ZA, m/s
             p_fu_UANTM) # average wind speed for nighttime at ZA, m/s
 end
 
 """
-    ESAT(p_fu_TA)
+    ESAT(TA)
 
 Calculate saturated vp (kPa) and DELTA=dES/dTA (kPa/K) from temperature based on
-Murray J Applied Meteorol 6:203 (Magnus-Tetens) using as input p_fu_TA (air temperature in °C).
+Murray J Applied Meteorol 6:203 (Magnus-Tetens) using as input TA (air temperature in °C).
 """
-function ESAT(p_fu_TA)
+function ESAT(TA)
     # Above water (if T >= 0 )
     # Eq. 6 (Murray 1967)
-    ES = 0.61078 * exp(17.26939 * p_fu_TA / (p_fu_TA + 237.3)) # T+273.16-35.86 = T+237.3
+    ES = 0.61078 * exp(17.26939 * TA / (TA + 237.3)) # T+273.16-35.86 = T+237.3
     # Derivative: dES/dTA = d/dTA c * exp(a*T/(b+T)) = c * exp(a*T/(b+T)) * d/dTA {a*T/(b+T)} =
     #                       c * exp(a*T/(b+T)) * a*b/(b+T)^2 = ES * a*b/(b+T)^2
-    # DELTA = 17.26939 * 237.3 * ES / (p_fu_TA + 237.3) ^ 2
-    DELTA = 4098 * ES / (p_fu_TA + 237.3) ^ 2
+    # DELTA = 17.26939 * 237.3 * ES / (TA + 237.3) ^ 2
+    DELTA = 4098 * ES / (TA + 237.3) ^ 2
 
     # Above ice (if T < 0 )
-    if (p_fu_TA < 0)
+    if (TA < 0)
       # Eq. 6 (Murray 1967)
-      ES = 0.61078 * exp(21.87456 * p_fu_TA / (p_fu_TA + 265.5)) # T+273.16-7.66 = T+265.5
-      # DELTA = 21.87456 * 265.5 * ES / (p_fu_TA + 265.5) ^ 2
-      DELTA = 5808 * ES / (p_fu_TA + 265.5) ^ 2
+      ES = 0.61078 * exp(21.87456 * TA / (TA + 265.5)) # T+273.16-7.66 = T+265.5
+      # DELTA = 21.87456 * 265.5 * ES / (TA + 265.5) ^ 2
+      DELTA = 5808 * ES / (TA + 265.5) ^ 2
     end
     return (ES, DELTA)
 end
@@ -990,7 +990,7 @@ which corresponds to Shuttleworth and Gurney (1990) and Saugier and Katerji (199
 0. The combination of (32) and (34) provides the value of rsc (RSC)
 "
 """
-function SRSC(RAD, p_fu_TA, VPD, p_fu_LAI, p_fu_SAI, p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_CR, p_TL, p_T1, p_T2, p_TH)
+function SRSC(RAD, p_fT_TA, VPD, p_fu_LAI, p_fu_SAI, p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_CR, p_TL, p_T1, p_T2, p_TH)
     # RAD     - solar radiation on canopy, W/m2
     # TA      - mean  temperature for the day at reference height, degC
     # VPD     - vapor pressure deficit, kPa
@@ -1019,14 +1019,14 @@ function SRSC(RAD, p_fu_TA, VPD, p_fu_LAI, p_fu_SAI, p_GLMIN, p_GLMAX, p_R5, p_C
     #vapor deficit limitation
     FD = 1 / (1 + VPD / p_CVPD)                         # dependence of leaf conductance on vpd, 0 to 1
     #temperature limitation
-    if (p_fu_TA <= p_TL)
+    if (p_fT_TA <= p_TL)
         FT = 0                                          # dependence of leaf conductance on temperature,0 to 1
-    elseif (p_fu_TA > p_TL && p_fu_TA < p_T1)
-        FT = 1 - ((p_T1 - p_fu_TA) / (p_T1 - p_TL)) ^ 2
-    elseif (p_fu_TA >= p_T1 && p_fu_TA <= p_T2)
+    elseif (p_fT_TA > p_TL && p_fT_TA < p_T1)
+        FT = 1 - ((p_T1 - p_fT_TA) / (p_T1 - p_TL)) ^ 2
+    elseif (p_fT_TA >= p_T1 && p_fT_TA <= p_T2)
         FT = 1
-    elseif (p_fu_TA > p_T2 && p_fu_TA < p_TH)
-        FT = 1 - ((p_fu_TA - p_T2) / (p_TH - p_T2)) ^ 2
+    elseif (p_fT_TA > p_T2 && p_fT_TA < p_TH)
+        FT = 1 - ((p_fT_TA - p_T2) / (p_TH - p_T2)) ^ 2
     else
         FT = 0
     end

@@ -107,7 +107,7 @@ function SNOFRAC(p_fT_TMAX, p_fT_TMIN, p_RSTEMP)
 end
 
 """
-    SNOVAP(p_fu_TSNOW, p_fu_TA, p_fT_EA, UA, p_fu_ZA, p_fu_HEIGHT, p_fu_Z0, p_fu_DISP,
+    SNOVAP(p_fu_TSNOW, p_fT_TA, p_fT_VAPPRES, UA, p_fu_ZA, p_fu_HEIGHT, p_fu_Z0, p_fu_DISP,
     p_fu_Z0C,p_fu_DISPC, p_fu_Z0GS, p_LWIDTH, p_RHOTP, p_NN, p_fu_LAI, p_fu_SAI, p_KSNVP)
 
 Compute potential snow evaporation (mm/d).
@@ -163,19 +163,19 @@ accompanying latent transfer is not simulated. The snow energy balance in subrou
 SNOENRGY is (unfortunately) decoupled from the snow evaporation-condensation process.
 "
 """
-function SNOVAP(p_fu_TSNOW, p_fu_TA, p_fT_EA, UA, p_fu_ZA, p_fu_HEIGHT, p_fu_Z0, p_fu_DISP,
+function SNOVAP(p_fu_TSNOW, p_fT_TA, p_fT_VAPPRES, UA, p_fu_ZA, p_fu_HEIGHT, p_fu_Z0, p_fu_DISP,
     p_fu_Z0C, p_fu_DISPC, p_fu_Z0GS, p_LWIDTH, p_RHOTP, p_NN, p_fu_LAI, p_fu_SAI, p_KSNVP)
     # ignores effect of interception on p_fu_PSNVP or of p_fu_PSNVP on p_fu_PTRAN
     if (p_fu_TSNOW > -0.1)
         ESNOW = 0.61
     else
-        # snow surface vapor pressure saturated at lower of p_fu_TA and p_fu_TSNOW
-        ESNOW, dummy = ESAT(min(p_fu_TA, p_fu_TSNOW))
+        # snow surface vapor pressure saturated at lower of p_fT_TA and p_fu_TSNOW
+        ESNOW, dummy = ESAT(min(p_fT_TA, p_fu_TSNOW))
     end
     RAA, RAC, RAS = SWGRA(UA, p_fu_ZA, p_fu_HEIGHT, p_fu_Z0, p_fu_DISP, p_fu_Z0C,
                           p_fu_DISPC, p_fu_Z0GS, p_LWIDTH, p_RHOTP, p_NN, p_fu_LAI, p_fu_SAI)
 
-    p_fu_PSNVP = (p_WTOMJ / p_LS) * (p_CPRHO / p_GAMMA) * (ESNOW - p_fT_EA) / (RAA + RAS)
+    p_fu_PSNVP = (p_WTOMJ / p_LS) * (p_CPRHO / p_GAMMA) * (ESNOW - p_fT_VAPPRES) / (RAA + RAS)
     # fix for PSNVP overestimate
     p_fu_PSNVP = p_KSNVP * p_fu_PSNVP
 
@@ -183,7 +183,7 @@ function SNOVAP(p_fu_TSNOW, p_fu_TA, p_fT_EA, UA, p_fu_ZA, p_fu_HEIGHT, p_fu_Z0,
 end
 
 """
-    SNOENRGY(p_fu_TSNOW, p_fu_TA, p_fT_DAYLEN, p_CCFAC, p_MELFAC, p_fT_SLFDAY, p_fu_LAI,
+    SNOENRGY(p_fu_TSNOW, p_fT_TA, p_fT_DAYLEN, p_CCFAC, p_MELFAC, p_fT_SLFDAY, p_fu_LAI,
     p_fu_SAI, p_LAIMLT, p_SAIMLT)
 
 Compute energy flux density to snow surface, MJ m-2 d-1.
@@ -220,14 +220,14 @@ omitted, and snowmelt would not depend on slope-aspect. The functional forms of 
 LAI dependencies are based on the somewhat arbitrary curves used by Federer and Lash (1978).
 "
 """
-function SNOENRGY(p_fu_TSNOW, p_fu_TA, p_fT_DAYLEN, p_CCFAC, p_MELFAC, p_fT_SLFDAY, p_fu_LAI, p_fu_SAI, p_LAIMLT, p_SAIMLT)
+function SNOENRGY(p_fu_TSNOW, p_fT_TA, p_fT_DAYLEN, p_CCFAC, p_MELFAC, p_fT_SLFDAY, p_fu_LAI, p_fu_SAI, p_LAIMLT, p_SAIMLT)
     # snow surface energy balance
-    if (p_fu_TA <= 0)
+    if (p_fT_TA <= 0)
         # snow warms or cools proportional to snow-air temperature difference
-        p_fu_SNOEN = p_CCFAC * 2.0 * p_fT_DAYLEN * (p_fu_TA - p_fu_TSNOW)
+        p_fu_SNOEN = p_CCFAC * 2.0 * p_fT_DAYLEN * (p_fT_TA - p_fu_TSNOW)
     else
         # energy input proportional to TA, modified by cover, slope-aspect, and daylength
-        p_fu_SNOEN = p_MELFAC * 2.0 * p_fT_DAYLEN * p_fu_TA * exp(-p_SAIMLT * p_fu_SAI) * exp(-p_LAIMLT * p_fu_LAI) * p_fT_SLFDAY
+        p_fu_SNOEN = p_MELFAC * 2.0 * p_fT_DAYLEN * p_fT_TA * exp(-p_SAIMLT * p_fu_SAI) * exp(-p_LAIMLT * p_fu_LAI) * p_fT_SLFDAY
     end
 
     return p_fu_SNOEN # energy flux density to snow surface, MJ m-2 d-1
@@ -235,7 +235,7 @@ end
 
 """
     SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN, u_CC, u_SNOW,
-    u_SNOWLQ, p_DTP, p_fu_TA, p_MAXLQF, p_GRDMLT,
+    u_SNOWLQ, p_DTP, p_fT_TA, p_MAXLQF, p_GRDMLT,
     p_CVICE, p_LF, p_CVLQ)
 
 Update status of snowpack. Generally it computes in terms of mass balance:
@@ -309,14 +309,14 @@ When SNOW exists at the beginning of the day, soil evaporation (SLVP) is zero.
 "
 """
 function SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN, u_CC, u_SNOW,
-                  u_SNOWLQ, p_DTP, p_fu_TA, p_MAXLQF, p_GRDMLT,
+                  u_SNOWLQ, p_DTP, p_fT_TA, p_MAXLQF, p_GRDMLT,
                   p_CVICE, p_LF, p_CVLQ)
 
     ####
     # Operator splitting: step 1: update u_SNOW and u_CC using snow throughfall:
     # Update snow amount and its cold content, while u_SNOWLQ remains unchanged
     du_SNOW_step1 = p_fu_STHR
-    du_CC_step1   = p_CVICE * max(-p_fu_TA, 0.) * p_fu_STHR
+    du_CC_step1   = p_CVICE * max(-p_fT_TA, 0.) * p_fu_STHR
     # Update u_SNOW, u_CC
     u_SNOW = u_SNOW + du_SNOW_step1 * p_DTP
     u_CC   = u_CC   + du_CC_step1   * p_DTP
@@ -377,7 +377,7 @@ function SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN, u_CC, u_SNOW,
     end
     if (u_SNOW > 0)
         # equivalent ice melted by energy input including warm rain (mm)
-        EQEN = p_DTP * (p_fu_SNOEN + p_fu_RTHR * max(p_fu_TA, 0) * p_CVLQ) / p_LF
+        EQEN = p_DTP * (p_fu_SNOEN + p_fu_RTHR * max(p_fT_TA, 0) * p_CVLQ) / p_LF
         if (EQEN <= 0)
             # case 1) snowpack cooling
             NMLT = -EQEN
@@ -391,16 +391,16 @@ function SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN, u_CC, u_SNOW,
                 NMLT = NMLT - u_SNOWLQ
                 u_SNOWLQ = 0.
                 u_CC = u_CC + NMLT * p_LF
-                # do not allow p_fu_TSNOW to cool below p_fu_TA
-                u_CC = min(u_CC, -p_fu_TA * u_SNOW * p_CVICE)
+                # do not allow p_fu_TSNOW to cool below p_fT_TA
+                u_CC = min(u_CC, -p_fT_TA * u_SNOW * p_CVICE)
             end
         else
             # case 2) snowpack warming  (cant have both u_CC and u_SNOWLQ)
-            if (EQEN * p_LF < u_CC || p_fu_TA < 0)
+            if (EQEN * p_LF < u_CC || p_fT_TA < 0)
                 # 2a) reduce but dont eliminate u_CC
-                if (p_fu_TA < 0)
-                    # do not allow p_fu_TSNOW to warm above p_fu_TA when p_fu_TA < 0
-                    u_CC = max(u_CC - EQEN * p_LF, -p_fu_TA * u_SNOW * p_CVICE)
+                if (p_fT_TA < 0)
+                    # do not allow p_fu_TSNOW to warm above p_fT_TA when p_fT_TA < 0
+                    u_CC = max(u_CC - EQEN * p_LF, -p_fT_TA * u_SNOW * p_CVICE)
                     u_SNOWLQ = 0.
                 else
                     u_CC = u_CC - EQEN * p_LF

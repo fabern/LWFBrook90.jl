@@ -8,6 +8,32 @@
 # - _Regression testing_ asserts that behavior is unchanged over time. Also known as
 #       _reference tests_.
 
+# NOTE: locally, i.e. not on CI system, one might need to do manually cd("test")
+if basename(pwd()) != "test"; cd("test"); end
+@testset "Soil Hydraulics" begin
+    # Test a single element of MualemVanGenuchtenSHP
+    shp = LWFBrook90.MualemVanGenuchtenSHP(; p_THSAT = 1.0, p_θr = 1.0, p_MvGα = 1.0, p_MvGn = 1.0, p_KSAT = 1.0,
+                                p_MvGl = 1.0, p_STONEF = 1.0)
+    @test shp.p_THSAT ≈ 1.0
+    @test shp.p_θr ≈ 1.0
+    @test shp.p_MvGα ≈ 1.0
+    @test shp.p_MvGn ≈ 1.0
+    @test shp.p_KSAT ≈ 1.0
+    @test shp.p_MvGl ≈ 1.0
+    @test shp.p_STONEF ≈ 1.0
+
+    # Test generating an array of MualemVanGenuchtenSHP'S
+    soil_horizons = LWFBrook90.read_path_soil_horizons(
+        "test-assets/DAV-2020/input-files/DAV_LW1_def_soil_horizons.csv");
+
+    @test [shp.p_THSAT  for shp in soil_horizons.shp] ≈ [0.3786, 0.3786, 0.3786]
+    @test [shp.p_θr     for shp in soil_horizons.shp] ≈ [0.0, 0.0, 0.0]
+    @test [shp.p_MvGα   for shp in soil_horizons.shp] ≈ [20.387, 20.387, 20.387]
+    @test [shp.p_MvGn   for shp in soil_horizons.shp] ≈ [1.2347, 1.2347, 1.2347]
+    @test [shp.p_KSAT   for shp in soil_horizons.shp] ≈ [2854.91, 2854.91, 2854.91]
+    @test [shp.p_MvGl   for shp in soil_horizons.shp] ≈ [-3.339, -3.339, -3.339]
+    @test [shp.p_STONEF for shp in soil_horizons.shp] ≈ [0.175, 0.375, 0.75]
+end
 
 # @testset "Module WAT" begin
 @testset "WAT.KKMEAN" begin
@@ -63,7 +89,7 @@ end
     @test p_soil1.p_THICK   ≈ [40, 40, 120]
     @test p_soil1.p_STONEF  ≈ [0.01, 0.175, 0.175]
     @test p_soil1.p_THSAT   ≈ [0.714, 0.668, 0.656]
-    @test p_soil1.p_Kθfc    ≈ [2.0, 2.0, 2.0]
+    # @test p_soil1.p_Kθfc    ≈ [2.0, 2.0, 2.0]
     @test p_soil1.p_KSAT    ≈ [24864, 12881, 10516]
     @test p_soil1.p_MvGα    ≈ [1147, 1274, 1215]
     @test p_soil1.p_MvGn    ≈ [1.051225, 1.051052, 1.051055]
@@ -91,17 +117,33 @@ end
         p_MvGn   = [1,1],
         p_MvGl   = [1,1],
         p_θr     = [1])
+
+    @test_logs (:warn, r"\[a,b\] is not a bracketing interval") min_level = Logging.Warn match_mode=:any KPT_SOILPAR_Mvg1d(;
+        p_THICK  = [40., 40., 120.],
+        p_STONEF = [0.010, 0.175, 0.175],
+        p_THSAT  = [0.714, 0.668, 0.656],
+        # p_Kθfc   = [2.0, 2.0, 2.0],
+        p_Kθfc   = [1000002.0, 1000002.0, 1000002.0],
+        p_KSAT   = [24864., 12881., 10516.],
+        p_MvGα   = [1147.,  1274.,  1215.],
+        p_MvGn   = [1.051225, 1.051052, 1.051055],
+        p_MvGl   = [4.6703, 4.4782, 4.5016],
+        p_θr     = [0.069, 0.069, 0.069])
 end
 
 @testset "discretization" begin
     input_soil_discretization = DataFrame(Upper_m = -(0.:8.), Lower_m = -(1.:9.),
                                 Rootden_ = (1:9) ./ 10, uAux_PSIM_init_kPa = -6.0,
                                 u_delta18O_init_permil = NaN, u_delta2H_init_permil = NaN)
-    input_soil_horizons = DataFrame(HorizonNr = 1:5, Upper_m = -[0.,3,8,10,15], Lower_m = -[3.,8,10,15,20],
-                    ths_volFrac = (11:15) ./ 20, thr_volFrac = 0.069,
-                    gravel_volFrac = 0.9:-0.1:0.5,
-                    ksat_mmDay = 50, alpha_perMeter = 10:14, npar_ = 0, tort_ = 0
-                    )
+    # input_soil_horizons = LWFBrook90.read_path_soil_horizons(
+    #     "test-assets/DAV-2020/input-files/DAV_LW1_def_soil_horizons.csv");
+    input_soil_horizons =
+        DataFrame(HorizonNr = 1:5, Upper_m = -[0.,3,8,10,15], Lower_m = -[3.,8,10,15,20],
+                    shp = LWFBrook90.MualemVanGenuchtenSHP(;
+                        p_THSAT = 0.55, p_θr = 0.069, p_MvGα = 12, p_MvGn = 0, p_KSAT = 50,
+                        p_MvGl = 0, p_STONEF = 0.7))
+                        # p_THSAT = (11:15) ./ 20, p_θr = 0.069, p_MvGα = 10:14, p_MvGn = 0, p_KSAT = 50,
+                        # p_MvGl = 0, p_STONEF = 0.9:-0.1:0.5))
     IDEPTH_m = 0.045 # m
     QDEPTH_m = 0.0  # m
     INITRDEP = 10
@@ -109,18 +151,20 @@ end
     FLAG_MualVanGen = 1
     # FLAG_MualVanGen = 0
 
-    soil_disc = LWFBrook90.discretize_soil_params(
-        input_soil_horizons, input_soil_discretization, [], IDEPTH_m, QDEPTH_m, INITRDEP, RGRORATE, FLAG_MualVanGen)
+    soil_disc = LWFBrook90.refine_soil_discretization(
+        input_soil_horizons, input_soil_discretization, [], IDEPTH_m, QDEPTH_m, INITRDEP, RGRORATE)
 
     @test soil_disc["NLAYER"] == 10
     @test soil_disc["THICK"]  ≈ [45.0, 955.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0]
-    @test soil_disc["STONEF"] ≈ [0.9, 0.9, 0.9, 0.9, 0.8, 0.8, 0.8, 0.8, 0.8, 0.7]
     @test soil_disc["PSIM_init"] ≈ [-6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0]
     @test soil_disc["frelden"] ≈ [0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
     @test soil_disc["QLAYER"] == 0
     @test soil_disc["ILAYER"] == 1
     #soil_disc["tini"] .= 0.0
-    @test soil_disc["PAR"][!,"θs"] ≈ [0.55, 0.55, 0.55, 0.55, 0.6, 0.6, 0.6, 0.6, 0.6, 0.65]
+    @test [shp.p_STONEF for shp in soil_disc["SHP"]] ≈ [0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7]
+    # @test [shp.p_STONEF for shp in soil_disc["SHP"]] ≈ [0.9, 0.9, 0.9, 0.9, 0.8, 0.8, 0.8, 0.8, 0.8, 0.7]
+    @test [shp.p_THSAT for shp in soil_disc["SHP"]] ≈ [0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55]
+    # @test [shp.p_THSAT for shp in soil_disc["SHP"]] ≈ [0.55, 0.55, 0.55, 0.55, 0.6, 0.6, 0.6, 0.6, 0.6, 0.65]
 end
 
 @testset "KPT.KPT_SOILPAR_Ch1d" begin
@@ -177,69 +221,60 @@ end
         p_WETINF = [1])
 end
 
-# @testset "pointers-to-elements-of-u0" begin
+# @testset "adding-soil-layers" begin
 Δz_m_data = [
             [fill(0.5, 4);],
             [fill(0.02, 100);],
             [fill(0.01, 200);]
         ]
-@testset "pointers-to-elements-of-u0 (Δz_m = $(first(Δz_m)))" for Δz_m in Δz_m_data # source: https://stackoverflow.com/a/63871951
-    simulate_isotopes = true
-    compute_intermediate_quantities = true; # Flag whether ODE containes additional quantities than only states
-
-    (input_meteoveg,
-        input_meteoiso,
-        input_meteoveg_reference_date,
-        input_param,
-        input_storm_durations,
-        input_initial_conditions,
-        input_soil_horizons,
-        simOption_FLAG_MualVanGen) = read_inputData("test-assets/Hammel-2001/input-files-ISO/",
-                                                    "Hammel_loam-NLayer-103-RESET=FALSE";
-                                                    simulate_isotopes = simulate_isotopes);
+@testset "adding-soil-layers (Δz_m = $(first(Δz_m)))" for Δz_m in Δz_m_data # source: https://stackoverflow.com/a/63871951
+    continuous_SPAC = SPAC("test-assets/Hammel-2001/input-files-ISO/",
+                      "Hammel_loam-NLayer-103-RESET=FALSE";
+                      simulate_isotopes = false);
     f1 = (Δz_m) -> LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)  # function for root density as f(Δz)
     f2 = (Δz_m) -> fill(-6.3, length(Δz_m))          # function for initial conditions as f(Δz)
 
-    input_soil_discretization = discretize_soil(;
+    soil_discretization = discretize_soil(;
         Δz_m = Δz_m,
         Rootden_ = f1,
         uAux_PSIM_init_kPa = f2,
         u_delta18O_init_permil = ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.),
         u_delta2H_init_permil  = ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.))
 
-    # Define parameters for differential equation
-    (ψM_initial,δ18O_initial,δ2H_initial), p = define_LWFB90_p(
-        input_meteoveg,
-        input_meteoiso,
-        input_meteoveg_reference_date,
-        input_param,
-        input_storm_durations,
-        input_soil_horizons,
-        input_soil_discretization,
-        simOption_FLAG_MualVanGen;
-        compute_intermediate_quantities = compute_intermediate_quantities,
-        simulate_isotopes = simulate_isotopes);
-    # Create u0 for DiffEq.jl
-    u0, p = define_LWFB90_u0(p, input_initial_conditions,
-        ψM_initial, δ18O_initial, δ2H_initial,
-        compute_intermediate_quantities;
-        simulate_isotopes = simulate_isotopes);
+    ####################
+    ## Discretize soil parameters and interpolate discretized root distribution
+    # Define refinement of grid with soil_output_depths
+    soil_output_depths = soil_output_depths = zeros(Float64, 0)
+    soil_discr =
+        LWFBrook90.refine_soil_discretization(
+            continuous_SPAC.soil_horizons,
+            soil_discretization,
+            soil_output_depths,
+            continuous_SPAC.params[:IDEPTH_m],
+            continuous_SPAC.params[:QDEPTH_m],
+            continuous_SPAC.params[:INITRDEP],
+            continuous_SPAC.params[:RGRORATE])
+    ####################
 
-    # Assert that the pointers to the rows of u are correct and unique:
-    all_rows_defined = [collect(p[1][4].row_idx_scalars)
-        p[1][4].row_idx_SWATI
-        p[1][4].row_idx_RWU
-        p[1][4].row_idx_accum]
-    @test (length(unique(all_rows_defined)) == length(all_rows_defined)) # """
-    # There is a problem with the definition of the row indices.
-    # Multiple references to the same row exist.
-    # Please contact the developer.
-    # """
-    @test (size(u0,1) == length(all_rows_defined)) #"""
-    # There is a problem with the definition of the row indices.
-    # Their length is not equal to the rows in u0.
-    # Please contact the developer, unless you modified u0 yourself and know what you are doing.
-    # """
+    ####################
+    # Define state vector u for DiffEq.jl
+    # a) allocation of u0
+    u0, u0_field_names, names_accum =
+        define_LWFB90_u0(;simulate_isotopes = continuous_SPAC.solver_options.simulate_isotopes,
+                         compute_intermediate_quantities = continuous_SPAC.solver_options.compute_intermediate_quantities,
+                         NLAYER = soil_discr["NLAYER"])
+    ####################
+
+    ####################
+    # Define parameters for differential equation
+    p = define_LWFB90_p(continuous_SPAC, soil_discr)
+    # using Plots
+    # hline([0; cumsum(.p_soil.p_THICK)], yflip = true, xticks = false,
+    #     title = "N_layer = "*string(.p_soil.NLAYER))
+   ####################
+
+    # Check if defined layers correspond to requested
+    @test p.p_soil.NLAYER == length(Δz_m) + 1 # +1 because we needed to add one at 0.005 m for the IDEPTH_m
 end
 
 # TODO(bernhard): include unit tests of specific functions, e.g. during development of the Hammel-2001 infiltration test

@@ -4,105 +4,105 @@ using DataFramesMeta#: @linq, transform, DataFramesMeta
 using Dates: DateTime, Millisecond, Second, Day, Month, month, value, dayofyear
 
 """
-    read_inputData(folder::String, prefix::String)
+    SPAC(folder::String, prefix::String)
 
-Load different input files for LWFBrook90:
+Define instance of SPAC model by loading different input files for LWFBrook90:
 - meteoveg.csv
 - param.csv
 - meteo_storm_durations.csv
 - initial_conditions.csv
 - soil_horizons.csv
-- soil_discretization.csv
 
 These files were created with an R script `generate_LWFBrook90jl_Input.R` that
 takes the same arguements as the R function `LWFBrook90R::run_LWFB90()` and generates
 the corresponding input files for LWFBrook90.jl.
 """
-# folder = input_path
-# prefix = input_prefix
-# suffix = ""
-function read_inputData(folder::String, prefix::String;
+function SPAC(folder::String, prefix::String;
     suffix::String = "",
-    simulate_isotopes::Bool = false)
-    # https://towardsdatascience.com/read-csv-to-data-frame-in-julia-programming-lang-77f3d0081c14
-    ## A) Define paths of all input files
-    path_meteoveg           = joinpath(folder, prefix*"_meteoveg"*suffix*".csv")
-    path_param              = joinpath(folder, prefix*"_param"*suffix*".csv")
-    # unused path_precdat=joinpath(folder, prefix*"_precdat"*suffix*".csv")
-    path_storm_durations    = joinpath(folder, prefix*"_meteo_storm_durations"*suffix*".csv")
-    path_initial_conditions = joinpath(folder, prefix*"_initial_conditions"*suffix*".csv")
-    path_soil_horizons      = joinpath(folder, prefix*"_soil_horizons"*suffix*".csv")
+    simulate_isotopes::Bool = true,
+    compute_intermediate_quantities::Bool = true)
 
-    if (simulate_isotopes)
-        path_meteoiso = joinpath(folder, prefix*"_meteoiso"*suffix*".csv")
+    ## Define solver options
+    solver_options =
+        (#Reset                           = false, # currently only Reset = 0 implemented
+         compute_intermediate_quantities = true,   # Flag whether ODE containes additional quantities than only states
+         simulate_isotopes               = simulate_isotopes
+        )
+
+    ## Define paths of all input files
+    input_file_XXXX = prefix*"_XXXX"*suffix*".csv"
+    path_meteoveg           = joinpath(folder, replace(input_file_XXXX, "XXXX" => "meteoveg"))
+    path_param              = joinpath(folder, replace(input_file_XXXX, "XXXX" => "param"))
+    # unused path_precdat   = joinpath(folder, replace(input_file_XXXX, "XXXX" => "precdat"))
+    path_storm_durations    = joinpath(folder, replace(input_file_XXXX, "XXXX" => "meteo_storm_durations"))
+    path_initial_conditions = joinpath(folder, replace(input_file_XXXX, "XXXX" => "initial_conditions"))
+    path_soil_horizons      = joinpath(folder, replace(input_file_XXXX, "XXXX" => "soil_horizons"))
+
+    ## Load time-varying atmospheric forcing
+    reference_date, tspan, input_meteoveg, meteo_iso_forcing, storm_durations =
+        init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes)
+
+    meteo_forcing = input_meteoveg[:, [:days, :GLOBRAD, :TMAX, :TMIN, :VAPPRES, :WIND, :PRECIN]]
+
+    ## Load space-varying soil data
+    soil_horizons = init_soil(path_soil_horizons)
+
+    ## Load time- and/or space-varying vegetation parameters
+    canopy_evolution, root_distribution = init_vegetation(joinpath(folder,input_file_XXXX)) #(reference_date, tspan, ...)
+    if (!isnothing(canopy_evolution))
+        @assert !("DENSEF" in names(input_meteoveg) ||
+                "HEIGHT" in names(input_meteoveg) ||
+                "LAI" in names(input_meteoveg) ||
+                "SAI" in names(input_meteoveg)) """
+                Input_meteoveg contains one or multiple of the columns: :DENSEF, :HEIGHT, :LAI, or :SAI, but
+                in that case we would expect canopy_evolution loaded with `init_vegetation` to be `nothing`.
+                Please check your input files and possibly contact the developer team if the error persists.
+                """
+        # TODO(bernharf): generate a canopy_evolution or canopy_evolution_cont
+    elseif (isnothing(canopy_evolution))
+        canopy_evolution = input_meteoveg[:, [:days, :DENSEF, :HEIGHT, :LAI, :SAI]]
     end
-    if (simulate_isotopes && prefix == "2021-09-23-DAV")
-        # TODO(bernhard): hardcoded overriding of Davos example data
-        path_meteoiso = joinpath("2021-09-23_onlyDavos2020/2021-09-23-DAV-isoInput", "2021-10-04-DAV_meteoIso"*suffix*".csv")
-            path_initial_conditions = joinpath("2021-09-23_onlyDavos2020/2021-09-23-DAV-isoInput",
-                                                "2021-09-23-DAV_initial_conditions_tracers.csv")
-            path_param              = joinpath("2021-09-23_onlyDavos2020/2021-09-23-DAV-isoInput",
-                                                "2021-09-23-DAV_paramIso.csv")
-    end
 
-    ## B) Load input data (time- and/or space-varying parameters)
-    input_meteoveg, input_meteoveg_reference_date = read_path_meteoveg(path_meteoveg)
+    ## Load initial conditions of scalar state variables
+    continuousIC = init_IC(path_initial_conditions; simulate_isotopes)
 
-    if (simulate_isotopes)
-        input_meteoiso, input_meteoveg = read_path_meteoiso(path_meteoiso,
-            input_meteoveg,
-            input_meteoveg_reference_date)
-    else
-        input_meteoiso = nothing
-    end
+    ## Load model input parameters
+    params, solver_opts = init_param(path_param; simulate_isotopes = simulate_isotopes)
 
-    ## C) Load other parameters
-    # Load model input parameters
-    #' @param param A numeric vector of model input parameters. Order:
-    input_param = read_path_param(path_param; simulate_isotopes = simulate_isotopes)
+    solver_options = merge(solver_options, solver_opts) # append to manually provided solver options
 
-    # Load initial conditions of scalar state variables
-    input_initial_conditions = read_path_initial_conditions(path_initial_conditions;
-                                    simulate_isotopes = simulate_isotopes)
+    ## Make time dependent input parameters continuous in time (interpolate)
+    (meteo_forcing_cont, meteo_iso_forcing_cont, canopy_evolution_cont) =
+        LWFBrook90.interpolate_meteoveg(;
+            meteo_forcing                 = meteo_forcing,
+            meteo_iso_forcing             = meteo_iso_forcing,
+            canopy_evolution              = canopy_evolution,
+            p_MAXLAI                      = params[:MAXLAI],
+            p_SAI_baseline_               = params[:SAI_baseline_],
+            p_DENSEF_baseline_            = params[:DENSEF_baseline_],
+            p_AGE_baseline_yrs            = params[:AGE_baseline_yrs],
+            p_HEIGHT_baseline_m           = params[:HEIGHT_baseline_m]);
+            # TODO: remove from params: :MAXLAI, :SAI_baseline_, :DENSEF_baseline_, :AGE_baseline_yrs, :HEIGHT_baseline_m
+            ## unused:
+            ## time_interpolated.REFERENCE_DATE # TODO(bernharf): remove references to REFERENCE_DATE
+    # Note that the continuous versions can easily be discretized again by doing:
+        # keys(model.meteo_forcing);     DataFrame(model.meteo_forcing)
+        # keys(model.meteo_iso_forcing); DataFrame(model.meteo_iso_forcing)
+        # keys(model.canopy_evolution);  DataFrame(model.canopy_evolution)
 
-    # Load soil data
-    input_soil_horizons, simOption_FLAG_MualVanGen = read_path_soil_horizons(path_soil_horizons)
-
-    # Load precipitation subdaily details
-    #' @param storm_durations a [1,12]-matrix of precipitation durations (hours) for each month.
-    input_storm_durations = read_path_storm_durations(path_storm_durations)
-    #' @param precdat A matrix of precipitation interval data with 5 columns:
-    #'                   year, month, day, interval-number (1:precint), prec.
-    # input_precdat = DataFrame(a = Nothing, b = Nothing)
-    # TODO(bernhard): currently not implemented.
-    #                 Only using PRECIN (resolution daily).
-    #                 PRECDAT would allow to have smaller resolution (would require changes).
-    # unused: input_precdat = read(path_precdat, DataFrame;
-    # unused:           missingstring = "-999",
-    # unused:           skipto=2, header=["year","month","day","interval_number","prec"], delim=',',
-    # unused:           ignorerepeated=true)
-
-    # Assert that no missing
-    # Impose type of Float64 instead of Float64?
-    disallowmissing!(input_meteoveg)
-    if (simulate_isotopes)
-        disallowmissing!(input_meteoiso, [:days, :delta18O_permil, :delta2H_permil])
-    end
-    disallowmissing!(input_param)
-    disallowmissing!(input_storm_durations, [:month, :storm_durations_h])
-    disallowmissing!(input_initial_conditions)
-    disallowmissing!(input_soil_horizons)
-
-    return (input_meteoveg,
-        input_meteoiso,
-        input_meteoveg_reference_date,
-        input_param,
-        input_storm_durations,
-        input_initial_conditions,
-        input_soil_horizons,
-        simOption_FLAG_MualVanGen)
+    return SPAC(;
+        reference_date    = reference_date,
+        tspan             = tspan,
+        meteo_forcing     = meteo_forcing_cont,
+        meteo_iso_forcing = meteo_iso_forcing_cont,
+        storm_durations   = storm_durations,
+        soil_horizons     = soil_horizons,
+        canopy_evolution  = canopy_evolution_cont,
+        root_distribution = root_distribution,
+        continuousIC      = continuousIC,
+        params            = params,
+        solver_options    = solver_options) # Note: unclear whether solver_options should be part of SPAC() or DiscretizedSPAC()
 end
-
 
 ######################
 # Define functions to handle DateTimes and convert into Days as Floats
@@ -157,6 +157,93 @@ end
 #     # Rename colum
 #     rename(Dict(:dates => :days))
 # end
+
+function init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes = true)
+    if (simulate_isotopes)
+        path_meteoiso = replace(path_meteoveg, "meteoveg" => "meteoiso")
+    end
+    # if (simulate_isotopes && prefix == "2021-09-23-DAV")
+    #     # TODO(bernhard): hardcoded overriding of Davos example data
+    #     path_meteoiso = joinpath("2021-09-23_onlyDavos2020/2021-09-23-DAV-isoInput", "2021-10-04-DAV_meteoIso"*suffix*".csv")
+    #         path_initial_conditions = joinpath("2021-09-23_onlyDavos2020/2021-09-23-DAV-isoInput",
+    #                                             "2021-09-23-DAV_initial_conditions_tracers.csv")
+    #         path_param              = joinpath("2021-09-23_onlyDavos2020/2021-09-23-DAV-isoInput",
+    #                                             "2021-09-23-DAV_paramIso.csv")
+    # end
+
+
+    meteo_forcing, reference_date = read_path_meteoveg(path_meteoveg)
+
+    if (simulate_isotopes)
+        meteo_iso_forcing, meteo_forcing = read_path_meteoiso(path_meteoiso,
+            meteo_forcing,
+            reference_date)
+    else
+        meteo_iso_forcing = nothing
+    end
+
+    tspan = extrema(meteo_forcing.days)
+    # tspan = convert.(Int64, extrema(meteo_forcing.days))
+
+    # Load precipitation subdaily details
+    #' @param storm_durations a [1,12]-matrix of precipitation durations (hours) for each month.
+    storm_durations = read_path_storm_durations(path_storm_durations)
+    #' @param precdat A matrix of precipitation interval data with 5 columns:
+    #'                   year, month, day, interval-number (1:precint), prec.
+    # input_precdat = DataFrame(a = Nothing, b = Nothing)
+    # TODO(bernhard): currently not implemented.
+    #                 Only using PRECIN (resolution daily).
+    #                 PRECDAT would allow to have smaller resolution (would require changes).
+    # unused: input_precdat = read(path_precdat, DataFrame;
+    # unused:           missingstring = "-999",
+    # unused:           skipto=2, header=["year","month","day","interval_number","prec"], delim=',',
+    # unused:           ignorerepeated=true)
+
+    # Assert that no missing
+    # Impose type of Float64 instead of Float64?
+    disallowmissing!(meteo_forcing)
+    if (simulate_isotopes)
+        disallowmissing!(meteo_iso_forcing, [:days, :delta18O_permil, :delta2H_permil])
+    end
+    disallowmissing!(storm_durations, [:month, :storm_durations_h])
+
+    return reference_date, tspan, meteo_forcing, meteo_iso_forcing, storm_durations
+end
+
+function init_vegetation(input_file_XXXX)
+    path_soil_discretization = replace(input_file_XXXX, "XXXX" => "soil_discretization")
+
+    canopy_evolution  = nothing                  # if set to nothing input_meteoveg will be used
+    root_distribution = path_soil_discretization # if set to a path, this will be loaded when discretizing the soil domain
+
+    return canopy_evolution, root_distribution
+end
+
+function init_IC(path_initial_conditions; simulate_isotopes = true)
+    scalar_initial_conditions = read_path_initial_conditions(path_initial_conditions;
+                                                                simulate_isotopes = simulate_isotopes)
+    # Assert that no missing
+    # Impose type of Float64 instead of Float64?
+    disallowmissing!(scalar_initial_conditions)
+
+    # Note: continuousIC.soil is used this if there is a definition of the initial conditions that is independent from the discretization
+    #       If there is no such definition of the ICs, set soil to the path of the soil_discretiztation file that will be
+    #       read definition of soil initial condition (uAux_PSIM_init_kPa, as well as u_delta18O_init_permil, u_delta2H_init_permil)
+    # path_soil_discretization = joinpath(folder, replace(input_file_XXXX, "XXXX" => "soil_discretization"))
+    path_soil_discretization = replace(path_initial_conditions, "initial_conditions" => "soil_discretization")
+
+    continuousIC = (soil   = path_soil_discretization,    # if set to a path, this will be loaded when discretizing the soil domain
+                    scalar = scalar_initial_conditions)
+    return continuousIC
+end
+
+function init_soil(path_soil_horizons)
+    read_path_soil_horizons(path_soil_horizons)
+end
+
+function init_param(path_param; simulate_isotopes = true)
+    input_param, solver_opts = read_path_param(path_param; simulate_isotopes = simulate_isotopes)
+end
 
 # path_meteoveg = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_meteoveg.csv"
 function read_path_meteoveg(path_meteoveg)
@@ -444,21 +531,27 @@ function read_path_param(path_param; simulate_isotopes::Bool = false)
     #     delete!(parsing_types, "TODO2")
     # end
 
-    input_param = DataFrame(File(path_param;
+    input_param_df = DataFrame(File(path_param;
         transpose=true, drop=[1], comment = "###",
         # Be strict about loading NA's -> error if NA present
         types = parsing_types, missingstring = nothing, strict=true))
 
     expected_names = [String(k) for k in keys(parsing_types)]
-    assert_colnames_as_expected(input_param, path_param, expected_names)
+    assert_colnames_as_expected(input_param_df, path_param, expected_names)
 
     # Set minimum/maximum values
     # from LWFBrook90R:PFILE.h
-    input_param[:,:FXYLEM]  = min.(input_param[:,:FXYLEM], 0.990)
-    input_param[:,:INITRLEN] = max.(input_param[:,:INITRLEN], 0.010)
-    input_param[:,:INITRDEP] = max.(input_param[:,:INITRDEP], 0.010)
+    input_param_df[:,:FXYLEM]  = min.(input_param_df[:,:FXYLEM], 0.990)
+    input_param_df[:,:INITRLEN] = max.(input_param_df[:,:INITRLEN], 0.010)
+    input_param_df[:,:INITRDEP] = max.(input_param_df[:,:INITRDEP], 0.010)
 
-    return input_param
+    # Impose type of Float64 instead of Float64?
+    disallowmissing!(input_param_df)
+    # Transform to NamedTuple
+    input_param    = NamedTuple(input_param_df[1, Not([:DTIMAX, :DSWMAX, :DPSIMAX])])
+    solver_opts    = NamedTuple(input_param_df[1, [:DTIMAX, :DSWMAX, :DPSIMAX]])
+
+    return input_param, solver_opts
 end
 
 # path_storm_durations = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_meteo_storm_durations.csv"
@@ -556,7 +649,16 @@ function read_path_soil_horizons(path_soil_horizons)
         Please check and correct the input file.
         """
 
-    return input_soil_horizons, FLAG_MualVanGen
+    # Assert that no missing values in
+    # Impose type of Float64 instead of Float64?
+    disallowmissing!(input_soil_horizons)
+
+    # Make dataframe representing physical horizons/layers in 1D domain
+    # soil_horizons = DataFrame()
+    soil_horizons = input_soil_horizons[:,["HorizonNr", "Upper_m", "Lower_m"]];
+    soil_horizons[!, :shp] = LWFBrook90.MualemVanGenuchtenSHP(input_soil_horizons);
+
+    return soil_horizons
 end
 
 # path_soil_discretization = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_soil_discretization.csv"

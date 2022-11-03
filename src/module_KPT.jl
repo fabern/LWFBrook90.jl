@@ -53,8 +53,10 @@ module KPT # SOIL WATER PROPERTIES
 
 export SOILPAR_CH, derive_auxiliary_SOILVAR
 export KPT_SOILPAR_Mvg1d, KPT_SOILPAR_Ch1d, FWETNES
+export AbstractSoilHydraulicParams, MualemVanGenuchtenSHP
 using Roots: find_zero, Bisection # to find wetness for a given hydraulic conductivity
 using ..CONSTANTS: p_ThCrit,p_RHOWG # https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
+using DataFrames: DataFrame
 
 ### ### Parameters
 ### #   Clapp and Hornberger (FLAG_MualVanGen=0)
@@ -100,6 +102,95 @@ using ..CONSTANTS: p_ThCrit,p_RHOWG # https://discourse.julialang.org/t/large-pr
 #     end
 # end
 # d(field1::T, field2::T) where {T<:Number} = d{T}(field1,field2) # see https://docs.julialang.org/en/v1/manual/constructors/#Parametric-Constructors
+
+"""
+    AbstractSoilHydraulicParams
+
+Represents an abstract parametrization of soil hydraulics.
+Examples of soil hydraulic parametrizations are:
+- Mualem-van Genuchten
+- Clapp-Hornberger
+
+A summary is available in
+Shao, Y. and Irannejad, P.: On the Choice of Soil Hydraulic Models in Land-Surface Schemes, Boundary Layer Meterol., 90, 83–115, https://doi.org/10.1023/A:1001786023282, 1999.
+"""
+abstract type AbstractSoilHydraulicParams end # The concrete types are defined in module KPT
+
+@doc raw"""
+    MualemVanGenuchtenSHP
+
+Mualem-van Genuchten parametrization of soil hydraulics
+
+```math
+\Theta    = \frac{\theta - \theta_r}{\theta_s - \theta_r} = \left( \frac{1}{1+(-\alpha \psi)^n} \right)^m \\
+n         = \frac{1}{m-1} \\
+K(\theta) = K_s \Theta^{1/2}\left[ 1 - (1 - \Theta^{1/m})^m \right ]^2 \\
+K(\psi)   = K_s\frac{\left[ 1- (-\alpha\psi)^{n-1} (1 + (-\alpha \psi)^n)^{-m} \right ]^2}{\left[ 1 + (-\alpha\psi)^n \right ]^{m/2}}
+```
+source: Shao, Y. and Irannejad, P.: On the Choice of Soil Hydraulic Models in Land-Surface Schemes, Boundary Layer Meterol., 90, 83–115, https://doi.org/10.1023/A:1001786023282, 1999.
+"""
+Base.@kwdef struct MualemVanGenuchtenSHP <: AbstractSoilHydraulicParams
+    # Soil hydraulic parameters: Mualem-van Genuchten
+    # Input fields
+    "Saturation volumetric soil water content [m³ m⁻³]"
+    p_THSAT::Real
+    "Residual volumetric soil water content [m³ m⁻³]"
+    p_θr::Real
+    "Mualem-van Genuchten α [m⁻¹]"
+    p_MvGα::Real
+    "Mualem-van Genuchten n [-]"
+    p_MvGn::Real
+    "Saturated hydraulic conductivity [mm day⁻¹]"
+    p_KSAT::Real
+    "Tortuosity [-]"
+    p_MvGl::Real
+    "Gravel/stone fraction [m³ m⁻³]"
+    p_STONEF::Real
+end
+
+function MualemVanGenuchtenSHP(df::DataFrame)
+    [MualemVanGenuchtenSHP(
+        p_THSAT  = dfrow.ths_volFrac,     p_θr     = dfrow.thr_volFrac,
+        p_MvGα   = dfrow.alpha_perMeter,  p_MvGn   = dfrow.npar_,
+        p_KSAT   = dfrow.ksat_mmDay,      p_MvGl   = dfrow.tort_,
+        p_STONEF = dfrow.gravel_volFrac)
+    for dfrow in eachrow(df)]
+end
+
+@doc raw"""
+    ClappHornbergerSHP
+
+Clapp-Hornberger parametrization of soil hydraulics
+
+```math
+\frac{\psi}{\psi_s} = w^{-1/\lambda} \qquad \textup{if: }\psi \leq \psi_i \\
+\psi                = -m(w-n)(w-1) \qquad \textup{if: }\psi_i \leq \psi \leq 0 \\
+K(\theta)           = K_s \left( \frac{\theta}{\theta_s} \right)^{(3+2/\lambda)} \\
+\\
+\textup{Parameters:} \\
+m = \frac{\psi_i}{(1-w_i)^2} - \frac{\psi_i}{w_i(1-w_i)\lambda} \\
+n = 2w_i - \frac{\psi_i}{mw_i\lambda} -1
+```
+source: Shao, Y. and Irannejad, P.: On the Choice of Soil Hydraulic Models in Land-Surface Schemes, Boundary Layer Meterol., 90, 83–115, https://doi.org/10.1023/A:1001786023282, 1999.
+"""
+struct ClappHornbergerSHP <: AbstractSoilHydraulicParams
+    # Input fields
+    p_THSAT::Real
+    p_THETAF::Real
+    p_KF::Real
+    p_PSIF::Real
+    p_BEXP::Real
+    p_WETINF::Real
+    p_STONEF::Real
+    # TODO: finalize by commenting (see also l.246 in "definition_p.jl")
+end
+# TODO(bernhard): Rewrite functions below for AbstractSoilHydraulicParams and specialize
+# derive_auxiliary_SOILVAR(shp::AbstractSoilHydraulicParams)
+# derive_auxiliary_SOILVAR(shp::MualemVanGenuchtenSHP)
+# derive_auxiliary_SOILVAR(shp::ClappHornbergerSHP)
+# FK(shp::AbstractSoilHydraulicParams, θ)
+# FK(shp::MualemVanGenuchtenSHP, θ)
+# FK(shp::ClappHornbergerSHP, θ)
 
 abstract type AbstractKptSoilpar end
 """
@@ -240,13 +331,36 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
             # using a nonlinear solver for: find θ such that: K(θ) - p_Kθfc = 0
             # Actually not finding θ but wetness = θ/porosity.
             # plot(-0.15:0.01:1.0, FK_MvG.(-0.15:0.01:1.0, p_KSAT[i], p_MvGl[i], p_MvGn[i]))
-            f(x) = - p_Kθfc[i] + FK_MvG(x, p_KSAT[i], p_MvGl[i], p_MvGn[i])
-            p_WETF[i] = find_zero(f, (0.0, 1.0), Bisection())
-            # In LWFBrook90R: this was done using FWETK()
-            # In LWFBrook90R: if p_WETF[i] == -99999. error("Computed invalid p_WETF by FWETK()") end
+            p_WETF[i] = try
+                f_root(x) = - p_Kθfc[i] + FK_MvG(x, p_KSAT[i], p_MvGl[i], p_MvGn[i])
+                find_zero(f_root, (0.0, 1.0), Bisection())  # find_zero((x) -> x, (0.1, 1.0), Bisection())
+                # In LWFBrook90R: this was done using FWETK()
+                # In LWFBrook90R: if p_WETF[i] == -99999. error("Computed invalid p_WETF by FWETK()") end
+            catch e
+                if e isa ArgumentError
+                    function θ(PSIM_toFind) p_θr[i] + (p_THSAT[i] - p_θr[i])*(1+(-p_MvGα[i]*PSIM_toFind/9.81)^p_MvGn[i])^(-(1-1/p_MvGn[i])) end
+                    # function ψ(TH_toFind) 9.81 .* (-1 ./ p_MvGα[i]) .* (max.((TH_toFind - p_θr[i])/(p_THSAT[i] .- p_θr[i]),  1.e-6) .^ (-1 ./ (1 .- 1 ./ p_MvGn[i])) .-1) .^ (1 ./ p_MvGn[i]) end
+                    # function θ2(PSIM_toFind) p_θr[i] + (p_THSAT[i] - p_θr[i]) * LWFBrook90.KPT.FWETNES(u_aux_PSIM, p_soil) end
+                    # function ψ2(TH_toFind) LWFBrook90.KPT.FPSIM_MvG((TH_toFind - p_θr[i])/(p_THSAT[i] .- p_θr[i]), p_MvGα[i], p_MvGn[i]) end
+                    # plot(    -1:-1:-100,      θ.(-1:-1:-100), xlabel = "PSIM (kPa)", ylabel = "θ (-)", label = "function θ")
+                    # plot!(ψ.(0.48:0.01:0.60), 0.48:0.01:0.60, xlabel = "PSIM (kPa)", ylabel = "θ (-)", label = "function ψ")
+                    # plot!(ψ2.(0.48:0.01:0.60), 0.48:0.01:0.60, xlabel = "PSIM (kPa)", ylabel = "θ (-)", label = "function ψ2")
+                    ψ_fc = -33
+                    @warn "When setting up soil hydr. parameters: $e"*
+                        "\n\n"*"Ignoring hardcoded p_Kθfc ($(p_Kθfc[i]) mm/day) and"*
+                        " using ψ = $ψ_fc kPa for field capacity\n\n "*
+                        " Layer:$(i), $(p_Kθfc[i]), $(p_KSAT[i]), $(p_MvGl[i]), $(p_MvGn[i])"
+                    θ(ψ_fc)/(p_THSAT[i] .- p_θr[i])
+                    # find_zero((θ_toFind) -> LWFBrook90.KPT.FPSIM_MvG((θ_toFind - p_θr[i])./(p_THSAT .- p_θr), p_MvGα[i], p_MvGn[i]), (0.0, 1.0), Bisection())
+                else
+                    stop("When setting up soil hydr. parameters: Computed invalid p_WETF in KPT_SOILPAR_Mvg1d")
+                end
+            end
         end
+
         p_PSIF   = FPSIM_MvG(p_WETF, p_MvGα, p_MvGn)  # matric potential at field capacity, kPa
         p_THETAF = FTheta_MvG(p_WETF, p_THSAT, p_θr)  # soil moisture θ at field capacity, m3/m3
+        p_Kθfc .= NaN                                 # p_Kθfc is only used as input parameter for setup, not for calculation
 
         # NOTE(bernhard): removed further tasks that were in SOILPAR() in LWFBrook90R
         #                  - computation of p_WETc = FWETNES_MvG.(1000 .* p_PSICR, p_MvGα, p_MvGn) # wetness at p_PSICR, dimensionless
@@ -295,6 +409,21 @@ function derive_auxiliary_SOILVAR(u_SWATI,  p::KPT_SOILPAR_Mvg1d)
     u_aux_PSITI  = u_aux_PSIM .+ p.p_PSIG
 
     return (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
+end
+
+function derive_auxiliary_SOILVAR!(u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK,
+                                   u_SWATI,  p::KPT_SOILPAR_Mvg1d)
+
+    u_aux_WETNES .= (p.p_THSAT .* u_SWATI ./ p.p_SWATMAX .- p.p_θr) ./ (p.p_THSAT .- p.p_θr)
+    u_aux_WETNES .= min.(1, u_aux_WETNES)
+
+    u_aux_PSIM   .= FPSIM(u_aux_WETNES, p)
+    u_aux_θ      .= FTheta(u_aux_WETNES, p)
+    p_fu_KK      .= FK_MvG(u_aux_WETNES, p.p_KSAT, p.p_MvGl, p.p_MvGn)
+
+    u_aux_PSITI  .= u_aux_PSIM .+ p.p_PSIG
+
+    return nothing
 end
 
 function derive_auxiliary_SOILVAR(u_SWATI,  p::KPT_SOILPAR_Ch1d)
@@ -389,8 +518,9 @@ end
 function FPSIM_MvG(u_aux_WETNES, p_MvGα, p_MvGn)
     eps = 1.e-6
     # MvGm = 1-1/MvGn
-    AWET = max.(u_aux_WETNES, eps)
-    ψM = 9.81 .* (-1 ./ p_MvGα) .* (AWET .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
+    # AWET = max.(u_aux_WETNES, eps)
+    # ψM = 9.81 .* (-1 ./ p_MvGα) .* (AWET .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
+    ψM = 9.81 .* (-1 ./ p_MvGα) .* (max.(u_aux_WETNES, eps) .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
     # 9.81 conversion from m to kPa #TODO define and use const
 end
 
