@@ -89,6 +89,7 @@ Base.@kwdef mutable struct DiscretizedSPAC
 	# derived fields:
 	ODEProblem
 	ODESolution
+    ODESolution_datetime
 end
 
 # input_prefix = "isoBEAdense2010-18-reset-FALSE";
@@ -385,7 +386,8 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
         continuous_SPAC     = continuous_SPAC,
         soil_discretization = soil_discretization,
         ODEProblem          = ode_LWFBrook90,
-        ODESolution         = nothing)
+        ODESolution         = nothing,
+        ODESolution_datetime= nothing)
 end
 
 function simulate!(s::DiscretizedSPAC)
