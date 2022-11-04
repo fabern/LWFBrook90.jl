@@ -486,7 +486,6 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
     #@debug "a) aux_du_VRFLI_1st_approx[1]: $(aux_du_VRFLI_1st_approx[1]), sum(aux_du_VRFLI_1st_approx): $(sum(aux_du_VRFLI_1st_approx))"
 
     # first approximation for iteration time step,time remaining or DTIMAX
-    p_DTP    # first approximation for iteration time step,time remaining or DTIMAX
     DTRI = p_DTP - (t % p_DTP) # Time remaining
     # DTRI = 1.0 - (t % 1.0)   # as p_DTP is 1.0 days in a default simulation
     DTI = min(DTRI, p_DTIMAX)

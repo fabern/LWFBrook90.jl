@@ -4,11 +4,11 @@
 # Task: Run LWFBrook90R using input files for LWFBrook90.jl
 # Description: This code defines an R function that takes as arguments a folder-
 #              path and a prefix, which define an input data set for LWFBrook90.jl.
-#              
+#
 #              It reads this input data set and simulates with LWFBrook90R instead
 #              of LWFBrook90.jl. This is useful for validation purposes.
 #
-#              Note that this is provided as-is for convenience. It is likely 
+#              Note that this is provided as-is for convenience. It is likely
 #              that the approach is not suited for edge cases.
 #
 ################# #
@@ -28,7 +28,7 @@ simulate_LWFBrook90.jl_input_folder_withLWFBrook90R <-
     require(LWFBrook90R)
     require(data.table)
     require(dplyr)
-    
+
     # read input files ###########################################################
     meteo_file              <- file.path(folder, paste0(prefix, "_meteoveg.csv"))
     soil_material_file      <- file.path(folder, paste0(prefix, "_soil_horizons.csv"))
@@ -36,7 +36,7 @@ simulate_LWFBrook90.jl_input_folder_withLWFBrook90R <-
     initial_conditions_file <- file.path(folder, paste0(prefix, "_initial_conditions.csv"))
     param_file              <- file.path(folder, paste0(prefix, "_param.csv"))
     storm_durations_file    <- file.path(folder, paste0(prefix, "_meteo_storm_durations.csv"))
-    
+
     # Define function to read in csv files with a secondary subheader (ignored)
     read_table_skip_subheader <- function(file, ...) {
       header <- read.table(file, nrows = 1, header = TRUE, stringsAsFactors = FALSE, ...)
@@ -44,24 +44,24 @@ simulate_LWFBrook90.jl_input_folder_withLWFBrook90R <-
       colnames( dat ) <- colnames(header)
       return(dat)
     }
-    
+
     # Read in 1) meteo
     meteo <- read_table_skip_subheader(
-      file = meteo_file, 
+      file = meteo_file,
       sep=",") %>%
-      rename(dates=dates, 
-             globrad=globrad_MJDayM2, 
-             tmax=tmax_degC, 
-             tmin=tmin_degC, 
-             vappres=vappres_kPa, 
-             windspeed=windspeed_ms, 
-             prec=prec_mmDay, 
-             densef=densef_percent, 
-             height=height_percent, 
-             lai=lai_percent, 
+      rename(dates=dates,
+             globrad=globrad_MJDayM2,
+             tmax=tmax_degC,
+             tmin=tmin_degC,
+             vappres=vappres_kPa,
+             windspeed=windspeed_ms,
+             prec=prec_mmDay,
+             densef=densef_percent,
+             height=height_percent,
+             lai=lai_percent,
              sai=sai_percent) %>%
       mutate(dates = as.Date(dates)) %>% tibble()
-    
+
     # Read in 2) soil
     soil_materials <- read_table_skip_subheader(file = soil_material_file, sep=",") %>%
       rename(ths=ths_volFrac,
@@ -71,30 +71,30 @@ simulate_LWFBrook90.jl_input_folder_withLWFBrook90R <-
              ksat = ksat_mmDay,
              tort = tort_,
              gravel = gravel_volFrac,
-             upper = Upper_m, 
+             upper = Upper_m,
              lower = Lower_m)
-    
+
     soil_layers = read_table_skip_subheader(file = soil_layers_file, sep=",")  %>%
-      rename(upper = Upper_m, 
+      rename(upper = Upper_m,
              lower = Lower_m) %>%
       mutate(thick = -(lower - upper)*1000) %>% # thickness in mm
       mutate(midpoint = upper - thick/2/1000) %>%
       mutate(#mat = 1:n(),  TODO: mat is not correct
              mat = NA,
              layer = 1:n()) %>%
-      select(layer, upper, lower, midpoint, thick, 
-             mat, 
-             psiini=uAux_PSIM_init_kPa, 
+      select(layer, upper, lower, midpoint, thick,
+             mat,
+             psiini=uAux_PSIM_init_kPa,
              rootden = Rootden_)
-    
+
     # define which material is in which layer
     for (mat in seq_len(nrow(soil_materials))) {
-      layers_in_current_material <- soil_layers$lower >= soil_materials[mat,]$lower & soil_layers$upper <= soil_materials[mat,]$upper  
+      layers_in_current_material <- soil_layers$lower >= soil_materials[mat,]$lower & soil_layers$upper <= soil_materials[mat,]$upper
       if (any(layers_in_current_material)){
         soil_layers[layers_in_current_material,]$mat <- mat
       }
     }
-    
+
     # 2a) Increase resolution of soil discretization
     soil_layers_increased <- soil_layers %>%
       arrange(desc(upper)) %>%
@@ -112,13 +112,13 @@ simulate_LWFBrook90.jl_input_folder_withLWFBrook90R <-
       select(layer,
              upper = new_upper, lower = new_lower, midpoint = new_midpoint, thick = new_thick,
              mat, psiini, rootden)
-    
-    
+
+
     soil_layers_increased <- soil_layers_increased %>%
       # select(-upper, -lower)
-      select(layer, midpoint, thick, 
+      select(layer, midpoint, thick,
              mat, psiini, rootden)
-    
+
     # Read in 3) site properties affecting model parameters
     IC <- read.table(initial_conditions_file, header = TRUE, sep = ",") %>%
       # get rid of Isotope information:
@@ -126,14 +126,14 @@ simulate_LWFBrook90.jl_input_folder_withLWFBrook90R <-
       # make input structure as named vector
       {structure(.$amount, .Names = .$param_id)} %>%
       as.list()
-    
+
     param <- read.table(param_file, header = TRUE, comment.char = "#", sep = ",") %>%
       {structure(.$x, .Names = .$param_id)} %>%
       as.list()
 
     storm_durat <- read.table(storm_durations_file, header = TRUE, sep = ",")
-    
-    
+
+
     # 4) Parse the parameters back into LWFBrook90R format
     # test_params <- set_paramLWFB90()
     # Parse the read in back into LWFBrook90R format
@@ -152,7 +152,7 @@ simulate_LWFBrook90.jl_input_folder_withLWFBrook90R <-
       lwidth = param$LWIDTH,
       z0s = param$Z0S,
       lpc = param$LPC,
-      cs =  param$CS,
+      cs =  0.0035,
       czs = param$CZS,
       czr = param$CZR,
       hs =  param$HS,
@@ -214,17 +214,17 @@ simulate_LWFBrook90.jl_input_folder_withLWFBrook90R <-
     # Parse further parameters
     test_params$obsheight = param$Z0G / test_params$czs
     test_params$radex <- param$CR
-    
+
     test_params$ilayer <- first(which(soil_materials$lower <= -param$IDEPTH_m))
-    test_params$qlayer <- ifelse(param$QDEPTH_m == 0, 
+    test_params$qlayer <- ifelse(param$QDEPTH_m == 0,
                                  0,
                                  first(which(soil_materials$lower <= -param$QDEPTH_m)))
-    
+
     test_params$intrainini <- IC$u_INTR_init_mm
     test_params$intsnowini <- IC$u_INTS_init_mm
-    
+
     test_params$ndays <- as.numeric(diff(range(meteo$dates))) + 1
-    
+
     # No need to have the actual materials and layers, just the nrow(.) should work
     test_params$soil_materials <- data.frame(rep(1,nrow(soil_materials)))
     test_params$soil_nodes <- data.frame(rep(1,nrow(soil_layers_increased)))
@@ -240,11 +240,11 @@ simulate_LWFBrook90.jl_input_folder_withLWFBrook90R <-
     # prepare simulation input
     sim_in <- list(siteparam = data.frame(as.integer(format(min(meteo2$dates),"%Y")),
                                          as.integer(format(min(meteo2$dates),"%j")),
-                                         param$LAT_DEG, 
+                                         param$LAT_DEG,
                                          IC$u_SNOW_init_mm,
                                          IC$u_GWAT_init_mm,
                                          1.), # hardcoded: options.b90$prec.interval
-                  climveg = 
+                  climveg =
                     meteo2 %>%
                     mutate(yr = as.integer(format(dates,"%Y")),
                            mo = as.integer(format(dates,"%m")),
@@ -269,11 +269,11 @@ simulate_LWFBrook90.jl_input_folder_withLWFBrook90R <-
                            output_log = verbose#,
                            # timelimit = Inf
     )
-    
+
     # postprocess simulation #####################################################
     # daily outputs
     sim_out$daily_output <- data.table::data.table(sim_out$daily_output)
-    data.table::setnames(sim_out$daily_output, 
+    data.table::setnames(sim_out$daily_output,
                          names(sim_out$daily_output),
                          c('yr','mo','da','doy','rfal','rint','sfal','sint','rthr','rsno',
                            'rnet','smlt','snow','swat','gwat','intr', 'ints','evap','tran','irvp',
@@ -288,10 +288,10 @@ simulate_LWFBrook90.jl_input_folder_withLWFBrook90R <-
     data.table::setnames(sim_out$layer_output, paste0("X", 1:16),
                          c('yr','mo','da','doy','swati','theta','wetnes','psimi','psiti','infl',
                            'byfl','tran','slvp','vrfl','dsfl','ntfl'))
-    
+
     sim_out$layer_output <- sim_out$layer_output[order(sim_out$layer_output$yr,
                                                      sim_out$layer_output$doy,
                                                      sim_out$layer_output$nl),]
-    
+
     return(list(simout=sim_out, simin=sim_in))
   }

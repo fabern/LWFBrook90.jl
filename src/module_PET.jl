@@ -221,12 +221,12 @@ function LWFBrook90_CANOPY(p_fT_HEIGHT,
     p_fT_RPLANT = 1 / KPL                     # plant resistivity to water flow, MPa d/mm
 
 
-    # Parameters depenedent on snow depth:
+    # Parameters dependent on snow depth:
 
     #     TREE
-    #  m   m   m     -------------- -                -
-    #  \B  |  /b        CANOPY      | p_fu_HSNO      |
-    #   \B | /b                     |                |
+    #  b   b   b     -------------- -                -
+    #  \b  |  /b        CANOPY      | p_fu_HSNO      |
+    #   \b | /b                     |                |
     #----\B|/B-----------------------                | p_fT_HNOSNO (at least 0.01)
     #      |   -         SNOW       | p_fu_SNODEP    |
     #      |                        |                |
@@ -238,7 +238,8 @@ function LWFBrook90_CANOPY(p_fT_HEIGHT,
 
     p_fT_HNOSNO = max(p_fT_HEIGHT, 0.01)            # height of canopy above soil (i.e. without snow)
     p_fu_HSNO   = max(p_fT_HNOSNO - p_fu_SNODEP, 0) # height of canopy above snow
-    p_fu_RATIO  = p_fu_HSNO / p_fT_HNOSNO           # fraction of canopy above snow
+    p_fu_RATIO  = p_fu_HSNO / p_fT_HNOSNO           # fraction of canopy above snow,
+                                                    # i.e. reducing LAI if leaves are within the snow (e.g. leaves denominated with B in above drawing)
 
     p_fu_HEIGHTeff = max(p_fu_HSNO,0.01)            # effective canopy height, i.e. above any snow, m, minimum of 0.01 m
 
