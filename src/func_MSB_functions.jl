@@ -17,7 +17,7 @@ function MSBSETVARS(# arguments
                     #
                     p_Z0S, p_Z0G,
                     # for ROUGH
-                    p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC, p_CS,
+                    p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC, #p_CS,
                     # for PLNTRES
                     p_fT_RELDEN, p_RTRAD, p_FXYLEM,
                     # for WEATHER
@@ -51,14 +51,9 @@ function MSBSETVARS(# arguments
                           p_fT_DENSEF)
 
     # roughness parameters depending on u_SNOW
-    if (u_SNOW > 0)
-        p_fu_Z0GS = p_Z0S
-    else
-        p_fu_Z0GS = p_Z0G
-    end
     p_fu_Z0GS, p_fu_Z0C, p_fu_DISPC, p_fu_Z0, p_fu_DISP, p_fu_ZA =
             LWFBrook90.PET.ROUGH(p_fu_HEIGHTeff, p_ZMINH, p_fu_LAIeff, p_fT_SAIeff,
-                                      p_CZS, p_CZR, p_HS, p_HR, p_LPC, p_CS, p_fu_Z0GS)
+                                 p_CZS, p_CZR, p_HS, p_HR, p_LPC, p_fT_DENSEF, ifelse(u_SNOW > 0, p_Z0S, p_Z0G))
 
     # plant resistance components
     p_fT_RXYLEM, p_fT_RROOTI, p_fT_ALPHA = LWFBrook90.EVP.PLNTRES(NLAYER, p_soil, p_fT_RTLEN, p_fT_RELDEN, p_RTRAD, p_fT_RPLANT, p_FXYLEM, LWFBrook90.CONSTANTS.p_PI, LWFBrook90.CONSTANTS.p_RHOWG)

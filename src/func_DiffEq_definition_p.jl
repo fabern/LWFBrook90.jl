@@ -134,8 +134,8 @@ function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr)
     p_KSNVP  = continuous_SPAC.params[:KSNVP]  # (Canopy parameter), reduction factor to reduce snow evaporation (SNVP), (0.05 - 1)
     p_ALBSN  = continuous_SPAC.params[:ALBSN]  # (Canopy parameter), albedo or surface reflectivity with snow on the ground, (typically 0.1-0.9)
     p_ALB    = continuous_SPAC.params[:ALB]    # (Canopy parameter), albedo or surface reflectivity without snow on the ground, (typically 0.1-0.3)
+    # p_CS     = continuous_SPAC.params[:CS]     # (Canopy parameter), ratio of projected stem area index (SAI) to HEIGHT when DENSEF = 1, (SAI = CS * HEIGHT * DENSEF)
     p_NN     = continuous_SPAC.params[:NN]     # (Fixed  parameter), Wind/diffusivity extinction coefficient, dimensionless (BROOK90: NN is fixed at 2.5 following Shuttleworth and Gurney (1990))
-    p_CS     = continuous_SPAC.params[:CS]     # (Canopy parameter), extinction coefficient for photosynthetically-active radiation in the canopy, (unit?)
     p_RM     = continuous_SPAC.params[:RM]     # (Fixed  parameter), Nominal maximum solar radiation possible on a leaf, W/m2 (BROOK90: RM is fixed at 1000 W/m2)
     ### Interception
     p_CINTRL = continuous_SPAC.params[:CINTRL] # (Fixed  parameter), Maximum interception storage of rain       per unit LAI, mm (BROOK90: CINTRL and CINTRS are both fixed at 0.15 mm)
@@ -469,7 +469,7 @@ function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr)
 
         # formerly p_cst3:
         p_LAT    = p_LAT,    p_ESLOPE = p_ESLOPE, p_L1     = p_L1,     p_L2     = p_L2,
-        p_SNODEN = p_SNODEN, p_MXRTLN = p_MXRTLN, p_MXKPL  = p_MXKPL,  p_CS     = p_CS,
+        p_SNODEN = p_SNODEN, p_MXRTLN = p_MXRTLN, p_MXKPL  = p_MXKPL,
         p_Z0S    = p_Z0S,    p_Z0G    = p_Z0G,    p_ZMINH  = p_ZMINH,  p_CZS    = p_CZS,
         p_CZR    = p_CZR,    p_HS     = p_HS,     p_HR     = p_HR,     p_LPC    = p_LPC,
         p_RTRAD  = p_RTRAD,  p_FXYLEM = p_FXYLEM, p_WNDRAT = p_WNDRAT, p_FETCH  = p_FETCH,

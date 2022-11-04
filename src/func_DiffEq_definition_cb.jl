@@ -66,7 +66,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     @unpack p_soil = integrator.p;
     @unpack NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, Reset, p_DTP, p_NPINT = integrator.p;
     @unpack p_LAT, p_ESLOPE, p_L1, p_L2,
-        p_SNODEN, p_MXRTLN, p_MXKPL, p_CS,
+        p_SNODEN, p_MXRTLN, p_MXKPL,
         p_Z0S, p_Z0G,
         p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC,
         p_RTRAD, p_FXYLEM,
@@ -139,7 +139,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
                  #
                  p_Z0S, p_Z0G,
                  # for ROUGH:
-                 p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC, p_CS,
+                 p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC,
                  # for PLNTRES:
                  p_RELDEN.(integrator.t, 1:NLAYER), p_RTRAD, p_FXYLEM,
                  # for WEATHER:

@@ -177,7 +177,6 @@ row containng the `NA` is assumed to be the start date of the first collection i
 | Z0G                                                          | 0.00325  |
 | Z0S                                                          | 0.001    |
 | LPC                                                          | 4        |
-| CS                                                           | 0.035    |
 | CZS                                                          | 0.13     |
 | CZR                                                          | 0.05     |
 | HS                                                           | 1        |

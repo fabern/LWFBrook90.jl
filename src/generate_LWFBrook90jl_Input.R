@@ -38,18 +38,18 @@ generate_LWFBrook90jl_Input <- function(Julia_target_dir = NA,
   lai_max         = max(veg_daily$lai)
   sai_baseline    = veg_daily$sai[1]
   age_baseline    = veg_daily$age[1]
-  
+
   veg_daily2 <- veg_daily %>% mutate(
     densef_percent = 100 * densef/densef_baseline,
     height_percent = 100 * height/height_baseline,
     lai_percent    = 100 * lai / lai_max,
     sai_percent    = 100 * sai / sai_baseline)
-  
+
   clim_daily  <- original_arguments$climate %>%
     select(dates, globrad, tmax, tmin, vappres, windspeed, prec) %>%
     filter(dates >= input_Data$options_b90$startdate) %>%
     filter(dates <= input_Data$options_b90$enddate)
-  
+
   out_csv_meteoveg <- clim_daily %>%
     dplyr::left_join(veg_daily2, by="dates") %>%
     select("dates",
@@ -145,7 +145,7 @@ generate_LWFBrook90jl_Input <- function(Julia_target_dir = NA,
                           "AGE_baseline_yrs"=age_baseline,
                           "HEIGHT_baseline_m"=height_baseline,
                           "LWIDTH"=lwidth,    "Z0G" = obsheight * czs,  "Z0S"=z0s,
-                          "LPC"=lpc,          "CS"=cs,                  "CZS"=czs,
+                          "LPC"=lpc,          "CZS"=czs,
                           "CZR"=czr,          "HS"=hs,                  "HR"=hr,
                           "ZMINH"=zminh,      "RHOTP"=rhotp,            "NN"=nn,
                           # Note: u_aux_PSIM_init is not defined here as it is a vector quantity

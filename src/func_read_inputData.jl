@@ -495,7 +495,7 @@ function read_path_param(path_param; simulate_isotopes::Bool = false)
             "AGE_baseline_yrs" => Float64,
             "HEIGHT_baseline_m" => Float64,
             "LWIDTH" => Float64,           "Z0G" => Float64,              "Z0S" => Float64,
-            "LPC" => Float64,              "CS" => Float64,               "CZS" => Float64,
+            "LPC" => Float64,              "CZS" => Float64,
             "CZR" => Float64,              "HS" => Float64,               "HR" => Float64,
             "ZMINH" => Float64,            "RHOTP" => Float64,            "NN" => Float64,
             # Interception parameters -------
