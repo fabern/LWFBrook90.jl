@@ -308,6 +308,7 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
         NLAYER = length(p_THICK)
         @assert size(p_THICK) == size(p_STONEF) == size(p_THSAT) == size(p_Kθfc) ==
                 size(p_KSAT) == size(p_MvGα) == size(p_MvGn) == size(p_MvGl) == size(p_θr)
+        @assert !any(isnan.(p_Kθfc))
 
         # Derive fields
         p_PsiCrit = FPSIM_MvG(p_ThCrit./(p_THSAT .- p_θr), p_MvGα, p_MvGn)
