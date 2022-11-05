@@ -11,11 +11,8 @@ using UnPack: @unpack
 using Dates: now
 # using Infiltrator
 
-export SPAC, DiscretizedSPAC, discretize, simulate, simulate!
-export read_inputData
+export SPAC, DiscretizedSPAC, discretize, simulate!
 export discretize_soil, Rootden_beta_
-export define_LWFB90_p, define_LWFB90_u0, solve_LWFB90
-export KPT_SOILPAR_Mvg1d, KPT_SOILPAR_Ch1d
 export RelativeDaysFloat2DateTime, plot_LWFBrook90
 
 export run_simulation, plot_and_save_results, find_indices

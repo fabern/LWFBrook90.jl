@@ -64,7 +64,7 @@ end
 end
 
 @testset "KPT.KPT_SOILPAR_Mvg1d" begin
-    p_soil1 = KPT_SOILPAR_Mvg1d(;
+    p_soil1 = LWFBrook90.KPT.KPT_SOILPAR_Mvg1d(;
         p_THICK  = [40., 40., 120.],
         p_STONEF = [0.010, 0.175, 0.175],
         p_THSAT  = [0.714, 0.668, 0.656],
@@ -75,7 +75,7 @@ end
         p_MvGl   = [4.6703, 4.4782, 4.5016],
         p_θr     = [0.069, 0.069, 0.069])
 
-    p_soil2 = KPT_SOILPAR_Mvg1d(;
+    p_soil2 = LWFBrook90.KPT.KPT_SOILPAR_Mvg1d(;
         p_THICK  = 3 .* [40., 40., 120.],
         p_STONEF = [0.010, 0.175, 0.175],
         p_THSAT  = [0.714, 0.668, 0.656],
@@ -118,7 +118,7 @@ end
         p_MvGl   = [1,1],
         p_θr     = [1])
 
-    @test_logs (:warn, r"\[a,b\] is not a bracketing interval") min_level = Logging.Warn match_mode=:any KPT_SOILPAR_Mvg1d(;
+    @test_logs (:warn, r"\[a,b\] is not a bracketing interval") min_level = Logging.Warn match_mode=:any LWFBrook90.KPT.KPT_SOILPAR_Mvg1d(;
         p_THICK  = [40., 40., 120.],
         p_STONEF = [0.010, 0.175, 0.175],
         p_THSAT  = [0.714, 0.668, 0.656],
@@ -169,7 +169,7 @@ end
 
 @testset "KPT.KPT_SOILPAR_Ch1d" begin
     # data from Ecoshift "b90v44data/SCsl.txt"
-    p_soil1 = KPT_SOILPAR_Ch1d(;
+    p_soil1 = LWFBrook90.KPT.KPT_SOILPAR_Ch1d(;
         p_THICK  = [100.,100.],
         p_STONEF = [0.,0.],
         p_THSAT  = [0.435,0.435],
@@ -179,7 +179,7 @@ end
         p_BEXP   = [4.90,4.90],
         p_WETINF = [0.920, 0.29])
 
-    p_soil2 = KPT_SOILPAR_Ch1d(;
+    p_soil2 = LWFBrook90.KPT.KPT_SOILPAR_Ch1d(;
         p_THICK  = 2 .* [100.,100.],
         p_STONEF = [0.,0.],
         p_THSAT  = [0.435,0.435],
@@ -271,7 +271,7 @@ end
 
     ####################
     # Define parameters for differential equation
-    p = define_LWFB90_p(continuous_SPAC, soil_discr, p_fT_RELDEN);
+    p = LWFBrook90.define_LWFB90_p(continuous_SPAC, soil_discr, p_fT_RELDEN);
     # using Plots
     # hline([0; cumsum(p.p_THICK)], yflip = true, xticks = false,
     #     title = "N_layer = "*string(p.NLAYER))
@@ -280,7 +280,7 @@ end
     ####################
     # Define state vector u for DiffEq.jl
     # a) allocation of u0
-    u0 = define_LWFB90_u0(;simulate_isotopes = continuous_SPAC.solver_options.simulate_isotopes,
+    u0 = LWFBrook90.define_LWFB90_u0(;simulate_isotopes = continuous_SPAC.solver_options.simulate_isotopes,
                           compute_intermediate_quantities = continuous_SPAC.solver_options.compute_intermediate_quantities,
                           NLAYER = soil_discr["NLAYER"]);
     ####################
