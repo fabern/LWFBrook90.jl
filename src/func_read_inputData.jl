@@ -269,6 +269,28 @@ function read_path_meteoveg(path_meteoveg)
     expected_names = [String(k) for k in keys(parsing_types)]
     assert_colnames_as_expected(input_meteoveg, path_meteoveg, expected_names)
 
+    # Assert units:
+    assert_unitsHeader_as_expected(path_meteoveg,
+        DataFrame(dates = "YYYY-MM-DD", globrad_MJDayM2 = "MJ/Day/m2",
+        tmax_degC = "degree C", tmin_degC = "degree C", vappres_kPa = "kPa",
+        windspeed_ms = "m per s", prec_mmDay = "mm per day",
+        densef_percent = "percent", height_percent = "percent",
+        lai_percent = "percent", sai_percent = "percent"))
+
+    # Assert validity of values
+    @assert all(input_meteoveg.densef_percent .> 5) """
+        Densef_percent in meteoveg.csv should not be set lower than 5% as it affects aerodynamics.
+    """
+
+    # Identify period of interest
+    # Starting date: latest among the input data
+    # Stopping date: earliest among the input data
+    starting_date = maximum(minimum,[input_meteoveg[:,"dates"]])
+    stopping_date = minimum(maximum,[input_meteoveg[:,"dates"]])
+
+    input_meteoveg = @linq input_meteoveg |>
+        where(:dates .>= starting_date, :dates .<= stopping_date)
+
     rename!(input_meteoveg,
         :globrad_MJDayM2 => :GLOBRAD,
         :tmax_degC       => :TMAX,
@@ -280,23 +302,6 @@ function read_path_meteoveg(path_meteoveg)
         :height_percent  => :HEIGHT,
         :lai_percent     => :LAI,
         :sai_percent     => :SAI)
-
-    # Assert units:
-    assert_unitsHeader_as_expected(path_meteoveg,
-        DataFrame(dates = "YYYY-MM-DD", globrad_MJDayM2 = "MJ/Day/m2",
-        tmax_degC = "degree C", tmin_degC = "degree C", vappres_kPa = "kPa",
-        windspeed_ms = "m per s", prec_mmDay = "mm per day",
-        densef_percent = "percent", height_percent = "percent",
-        lai_percent = "percent", sai_percent = "percent"))
-
-    # Identify period of interest
-    # Starting date: latest among the input data
-    # Stopping date: earliest among the input data
-    starting_date = maximum(minimum,[input_meteoveg[:,"dates"]])
-    stopping_date = minimum(maximum,[input_meteoveg[:,"dates"]])
-
-    input_meteoveg = @linq input_meteoveg |>
-        where(:dates .>= starting_date, :dates .<= stopping_date)
 
     # Transform times from DateTimes to simulation time (Float of Days)
     reference_date = starting_date
@@ -495,7 +500,7 @@ function read_path_param(path_param; simulate_isotopes::Bool = false)
             "AGE_baseline_yrs" => Float64,
             "HEIGHT_baseline_m" => Float64,
             "LWIDTH" => Float64,           "Z0G" => Float64,              "Z0S" => Float64,
-            "LPC" => Float64,              "CS" => Float64,               "CZS" => Float64,
+            "LPC" => Float64,              "CZS" => Float64,
             "CZR" => Float64,              "HS" => Float64,               "HR" => Float64,
             "ZMINH" => Float64,            "RHOTP" => Float64,            "NN" => Float64,
             # Interception parameters -------

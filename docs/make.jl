@@ -1,5 +1,4 @@
-using LWFBrook90
-using Documenter
+using Documenter, LWFBrook90
 
 DocMeta.setdocmeta!(LWFBrook90, :DocTestSetup, :(using LWFBrook90); recursive=true)
 

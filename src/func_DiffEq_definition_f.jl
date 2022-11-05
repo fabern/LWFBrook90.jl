@@ -37,10 +37,10 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
         ## B) time dependent parameters
         # p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
-        #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE, p_RELDEN,
+        #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_fT_RELDEN,
         #     p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = p[2]
         @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND,  p_PREC,
-            p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_AGE, p_RELDEN,
+            p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_fT_RELDEN,
             p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = p;
 
         ## C) state dependent parameters:

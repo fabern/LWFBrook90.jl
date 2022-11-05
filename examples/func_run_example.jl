@@ -106,9 +106,7 @@ function run_example()
     ####################
 
     ####################
-    !isnothing(model.meteo_iso_forcing)
     # Prepare simulation by discretizing spatial domain
-    # soil_discretization = discretize_soil(model.continuousIC.soil)
     simulation = LWFBrook90.discretize(model; tspan = (0,100));
 
     # Solve ODE:

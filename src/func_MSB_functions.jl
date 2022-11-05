@@ -17,7 +17,7 @@ function MSBSETVARS(# arguments
                     #
                     p_Z0S, p_Z0G,
                     # for ROUGH
-                    p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC, p_CS,
+                    p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC, #p_CS,
                     # for PLNTRES
                     p_fT_RELDEN, p_RTRAD, p_FXYLEM,
                     # for WEATHER
@@ -51,14 +51,9 @@ function MSBSETVARS(# arguments
                           p_fT_DENSEF)
 
     # roughness parameters depending on u_SNOW
-    if (u_SNOW > 0)
-        p_fu_Z0GS = p_Z0S
-    else
-        p_fu_Z0GS = p_Z0G
-    end
     p_fu_Z0GS, p_fu_Z0C, p_fu_DISPC, p_fu_Z0, p_fu_DISP, p_fu_ZA =
             LWFBrook90.PET.ROUGH(p_fu_HEIGHTeff, p_ZMINH, p_fu_LAIeff, p_fT_SAIeff,
-                                      p_CZS, p_CZR, p_HS, p_HR, p_LPC, p_CS, p_fu_Z0GS)
+                                 p_CZS, p_CZR, p_HS, p_HR, p_LPC, p_fT_DENSEF, ifelse(u_SNOW > 0, p_Z0S, p_Z0G))
 
     # plant resistance components
     p_fT_RXYLEM, p_fT_RROOTI, p_fT_ALPHA = LWFBrook90.EVP.PLNTRES(NLAYER, p_soil, p_fT_RTLEN, p_fT_RELDEN, p_RTRAD, p_fT_RPLANT, p_FXYLEM, LWFBrook90.CONSTANTS.p_PI, LWFBrook90.CONSTANTS.p_RHOWG)
@@ -491,7 +486,6 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
     #@debug "a) aux_du_VRFLI_1st_approx[1]: $(aux_du_VRFLI_1st_approx[1]), sum(aux_du_VRFLI_1st_approx): $(sum(aux_du_VRFLI_1st_approx))"
 
     # first approximation for iteration time step,time remaining or DTIMAX
-    p_DTP    # first approximation for iteration time step,time remaining or DTIMAX
     DTRI = p_DTP - (t % p_DTP) # Time remaining
     # DTRI = 1.0 - (t % 1.0)   # as p_DTP is 1.0 days in a default simulation
     DTI = min(DTRI, p_DTIMAX)

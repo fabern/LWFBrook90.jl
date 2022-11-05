@@ -3,7 +3,8 @@
 Example data from Beatenberg is located in subfolder `examples/`. WSL is acknowledged for providing the input data (see section [Acknowledgments](@ref)).
 
 ## Step-by-step instructions
-To run the example simulation simulation simply call LWFBrook90.run_example(). For more control either run the script `main.jl`or follow the step-by-step instructiosn below.
+To run the example simulation simulation simply call LWFBrook90.run_example().
+To run your own simulations: follow the step-by-step instructiosn below.
 
 Load packages:
 ```Julia
@@ -14,113 +15,29 @@ using OrdinaryDiffEq: solve, Tsit5
  Define and read in input data
  ```Julia
 # Read in input data
-input_prefix = "isoBEA2016-reset-FALSE"
+input_prefix = "isoBEA2010-18-reset-FALSE"
 input_path = "examples/"*input_prefix*"-input/"
 
 ####################
-(input_meteoveg,
-    _input_meteoiso, # TODO possibly unused
-    input_meteoveg_reference_date,
-    input_param,
-    input_storm_durations,
-    input_initial_conditions,
-    input_soil_horizons,
-    simOption_FLAG_MualVanGen) = read_inputData(input_path, input_prefix)
+# Define simulation model by reading in system definition and input data
+model = SPAC(input_path, input_prefix;
+                simulate_isotopes = contains(input_prefix, "iso"));
+####################
 
-input_soil_discretization = discretize_soil(input_path, input_prefix)
+
+####################
+# Prepare simulation by discretizing spatial domain
+simulation = LWFBrook90.discretize(model; tspan = (0,100));
+
+# Solve system of ODEs:
+LWFBrook90.simulate!(simulation)
+
+sol_LWFBrook90 = simulation.ODESolution
 ####################
 ```
 
-Then simulation parameters are defined. The user has the possibility to modify the input variables before continuing with the simulation. Further the user can select whether intermediate quantities such as e.g. evaporation fluxes should be stored during simulation (`compute_intermediate_quantities = true`) or whether processing steps during simulation should be kept to a minimum for performance reasons (`compute_intermediate_quantities = false`).
-
-```Julia
-####################
-# Define solver options
-Reset = false                          # currently only Reset = 0 implemented
-compute_intermediate_quantities = true # Flag whether ODE containes additional quantities than only states
-
-# Override input file settings
-# Here possibility to check and override dataframes input_[...] manually
-    # # E.g:
-    # # Soil hydraulic model
-    # input_param[1,"NOOUTF"] = true # `true` if outflow from roots prevented, `false` if allowed
-####################
-
-```
-
-Then functions from the package are used to define the problem that will be handed to the solver from DifferentialEquations.jl. That is we need to define `p`, `u0`, and `tspan`
-
-`p`:
-```Julia
-####################
-# Define parameters for differential equation
-(ψM_initial, _δ18O_initial, _δ2H_initial), p = define_LWFB90_p(
-    input_meteoveg,
-    _input_meteoiso, # TODO: possibly unused
-    input_meteoveg_reference_date,
-    input_param,
-    input_storm_durations,
-    input_soil_horizons,
-    input_soil_discretization,
-    simOption_FLAG_MualVanGen;
-    Reset = Reset,
-    compute_intermediate_quantities = compute_intermediate_quantities)
-####################
-```
-`u0`:
-```Julia
-####################
-# Define initial states of differential equation
-# state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
-
-######
-# Transform initial value of auxiliary state u_aux_PSIM_init into state u_SWATIinit:
-u_aux_PSIM_init = input_soil_discretization[:,"uAux_PSIM_init_kPa"]
-if any( u_aux_PSIM_init.> 0)
-    error("Initial matrix psi must be negative or zero")
-end
-######
-
-# Create u0 for DiffEq.jl
-u0, p = define_LWFB90_u0(p, input_initial_conditions,
-    ψM_initial, _δ18O_initial, _δ2H_initial, # TODO: possibly unused
-    compute_intermediate_quantities;
-    simulate_isotopes = false)
-####################
-```
-
-`tspan`:
-```Julia
-####################
-# Define ODE problem which consists of
-#   - definition of right-hand-side (RHS) function f
-#   - definition of callback function cb
-#   - u0:     initial condition of states
-#   - tspan:  definition of simulation time span
-#   - p:      parameters
-
-# Define simulation time span:
-tspan = (minimum(input_meteoveg[:,"days"]),
-         maximum(input_meteoveg[:,"days"])) # simulate all available days
-# Alternative definitions of tspan:
-# tspan = (0.,  5.) # simulate days 0 to 5 (in the reference frame of the input data)
-# Simulation specific period (provided it is within the input data):
-# tspan = (LWFBrook90.jl.DateTime2RelativeDaysFloat(DateTime(1980,1,1), reference_date),
-#          LWFBrook90.jl.DateTime2RelativeDaysFloat(DateTime(1985,1,1), reference_date))
-####################
-```
-
-
-Then the ODE problem can be solved:
-```Julia
-####################
-## Solve ODE:
-sol_LWFBrook90 = solve_LWFB90(u0, tspan, p);
-####################
-```
-
-
-Note to use a progress bar indicating advancement of the solving is possible. It is sufficient to load the package `using ProgressLogging`.
+TODO: rewrite this documentation: Then simulation parameters are defined. The user has the possibility to modify the input variables before continuing with the simulation. Further the user can select whether intermediate quantities such as e.g. evaporation fluxes should be stored during simulation (`compute_intermediate_quantities = true`) or whether processing steps during simulation should be kept to a minimum for performance reasons (`compute_intermediate_quantities = false`). TODO: define tspan... define Δz as additional input to SPAC()
+TODO: check if still true: Note to use a progress bar indicating advancement of the solving is possible. It is sufficient to load the package `using ProgressLogging`.
 
 The generated solution can be plotted using the in-built function `LWFBrook90.ISO.plotisotopes()`. Alternatively plots can be constructed using the plotting recipes of DifferentialEquations.jl for Plots.jl ([see instructions](https://diffeq.sciml.ai/stable/basics/plot/)). Examples of both approaches are provided below:
 

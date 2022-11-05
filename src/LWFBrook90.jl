@@ -11,11 +11,8 @@ using UnPack: @unpack
 using Dates: now
 # using Infiltrator
 
-export SPAC, DiscretizedSPAC, discretize, simulate, simulate!
-export read_inputData
+export SPAC, DiscretizedSPAC, discretize, simulate!
 export discretize_soil, Rootden_beta_
-export define_LWFB90_p, define_LWFB90_u0, solve_LWFB90
-export KPT_SOILPAR_Mvg1d, KPT_SOILPAR_Ch1d
 export RelativeDaysFloat2DateTime, plot_LWFBrook90
 
 export run_simulation, plot_and_save_results, find_indices
@@ -89,6 +86,7 @@ Base.@kwdef mutable struct DiscretizedSPAC
 	# derived fields:
 	ODEProblem
 	ODESolution
+    ODESolution_datetime
 end
 
 # input_prefix = "isoBEAdense2010-18-reset-FALSE";
@@ -298,14 +296,26 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
             soil_discretization,
             soil_output_depths,
             continuous_SPAC.params[:IDEPTH_m], # :IDEPTH_m is unused later on
-            continuous_SPAC.params[:QDEPTH_m], # :QDEPTH_m is unused later on
-            continuous_SPAC.params[:INITRDEP], # :INITRDEP is unused later on
-            continuous_SPAC.params[:RGRORATE]) # :RGRORATE is unused later on
+            continuous_SPAC.params[:QDEPTH_m]) # :QDEPTH_m is unused later on
+
+    # Interpolate discretized root distribution in time
+    p_fT_RELDEN = LWFBrook90.HammelKennel_transient_root_density(;
+        timepoints = continuous_SPAC.meteo_forcing.p_days,
+        p_AGE      = continuous_SPAC.canopy_evolution.p_AGE,
+        p_INITRDEP = continuous_SPAC.params[:INITRDEP],
+        p_INITRLEN = continuous_SPAC.params[:INITRLEN],
+        p_RGROPER_y  = continuous_SPAC.params[:RGROPER],
+        p_RGRORATE_m_per_y = continuous_SPAC.params[:RGRORATE],
+        p_THICK         = soil_discr["THICK"],
+        final_Rootden_profile = soil_discr["final_Rootden_"]);
+    # TODO(bernhard): document input parameters: INITRDEP, INITRLEN, RGROPER, tini, frelden, MAXLAI, HEIGHT_baseline_m
+    # TOOD(bernhard): remove from params: IDEPTH_m, QDEPTH_m, INITRDEP, RGRORATE, INITRDEP, INITRLEN, RGROPER
+    # display(heatmap(p_fT_RELDEN', ylabel = "SOIL LAYER", xlabel = "Time (days)", yflip=true, colorbar_title = "Root density"))
     ####################
 
     ####################
     # Define parameters for differential equation
-    p = define_LWFB90_p(continuous_SPAC, soil_discr)
+    p = define_LWFB90_p(continuous_SPAC, soil_discr, p_fT_RELDEN)
     # using Plots
     # hline([0; cumsum(p.p_THICK)], yflip = true, xticks = false,
     #     title = "N_layer = "*string(p.NLAYER))
@@ -373,13 +383,16 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
         continuous_SPAC     = continuous_SPAC,
         soil_discretization = soil_discretization,
         ODEProblem          = ode_LWFBrook90,
-        ODESolution         = nothing)
+        ODESolution         = nothing,
+        ODESolution_datetime= nothing)
 end
 
 function simulate!(s::DiscretizedSPAC)
     sol_SPAC = solve_LWFB90(s.ODEProblem);
     s.ODESolution = sol_SPAC;
-    # return sol_SPAC
+
+    # also save datetimes
+    s.ODESolution_datetime = LWFBrook90.RelativeDaysFloat2DateTime.(s.ODESolution.t, s.continuous_SPAC.reference_date)
     return nothing
 end
 

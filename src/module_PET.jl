@@ -221,12 +221,12 @@ function LWFBrook90_CANOPY(p_fT_HEIGHT,
     p_fT_RPLANT = 1 / KPL                     # plant resistivity to water flow, MPa d/mm
 
 
-    # Parameters depenedent on snow depth:
+    # Parameters dependent on snow depth:
 
     #     TREE
-    #  m   m   m     -------------- -                -
-    #  \B  |  /b        CANOPY      | p_fu_HSNO      |
-    #   \B | /b                     |                |
+    #  b   b   b     -------------- -                -
+    #  \b  |  /b        CANOPY      | p_fu_HSNO      |
+    #   \b | /b                     |                |
     #----\B|/B-----------------------                | p_fT_HNOSNO (at least 0.01)
     #      |   -         SNOW       | p_fu_SNODEP    |
     #      |                        |                |
@@ -238,7 +238,8 @@ function LWFBrook90_CANOPY(p_fT_HEIGHT,
 
     p_fT_HNOSNO = max(p_fT_HEIGHT, 0.01)            # height of canopy above soil (i.e. without snow)
     p_fu_HSNO   = max(p_fT_HNOSNO - p_fu_SNODEP, 0) # height of canopy above snow
-    p_fu_RATIO  = p_fu_HSNO / p_fT_HNOSNO           # fraction of canopy above snow
+    p_fu_RATIO  = p_fu_HSNO / p_fT_HNOSNO           # fraction of canopy above snow,
+                                                    # i.e. reducing LAI if leaves are within the snow (e.g. leaves denominated with B in above drawing)
 
     p_fu_HEIGHTeff = max(p_fu_HSNO,0.01)            # effective canopy height, i.e. above any snow, m, minimum of 0.01 m
 
@@ -314,20 +315,33 @@ value of z0g is replaced by the parameter Z0S before ROUGH is entered.
 The reference height at which weather variables are known, za (ZA), is set to a fixed amount
 (ZMINH) above h. It thus is assumed to move up and down if h changes through the year.
 """
-function ROUGH(p_fu_HEIGHT, p_ZMINH, p_fu_LAI, p_fu_SAI, p_CZS, p_CZR, p_HS, p_HR, p_LPC, p_CS, p_fu_Z0GS)
-    if (p_fu_HEIGHT >= p_HR)
-        p_fu_Z0C = p_CZR * p_fu_HEIGHT
-    elseif (p_fu_HEIGHT <= p_HS)
-        p_fu_Z0C = p_CZS * p_fu_HEIGHT
+function ROUGH(p_fu_HEIGHTeff, p_ZMINH, p_fu_LAIeff, p_fT_SAIeff, p_CZS, p_CZR, p_HS, p_HR, p_LPC, p_fT_DENSEF, p_fu_Z0GS)
+    if (p_fu_HEIGHTeff >= p_HR)
+        p_fu_Z0C = p_CZR * p_fu_HEIGHTeff
+    elseif (p_fu_HEIGHTeff <= p_HS)
+        p_fu_Z0C = p_CZS * p_fu_HEIGHTeff
     else
-        p_fu_Z0C = p_CZS * p_HS + (p_CZR * p_HR - p_CZS * p_HS) * (p_fu_HEIGHT - p_HS) / (p_HR - p_HS)
+        p_fu_Z0C = p_CZS * p_HS + (p_CZR * p_HR - p_CZS * p_HS) * (p_fu_HEIGHTeff - p_HS) / (p_HR - p_HS)
     end
 
-    p_fu_DISPC = p_fu_HEIGHT - p_fu_Z0C / 0.3
+    p_fu_DISPC = p_fu_HEIGHTeff - p_fu_Z0C / 0.3
     if (p_fu_Z0GS > p_fu_Z0C)
         p_fu_Z0GS = p_fu_Z0C
     end
-    RATIO = (p_fu_LAI + p_fu_SAI) / (p_LPC + p_CS * p_fu_HEIGHT)
+
+    # Determine if canopy is closed or open
+    # variant BROOK90:
+    # RATIO = (p_fu_LAIeff + p_fT_SAIeff) / (p_LPC + p_CS * p_fu_HEIGHTeff) # old expression in BROOK90 using CS
+    # NOTE: first (BROOK90) definition of RATIO uses: p_SPC = p_CS * p_fu_HEIGHTeff
+    #                                            i.e: p_SPC = p_CS * (p_fT_HEIGHT - SNOWDEPTH)
+    #                                            i.e: p_SPC = p_fT_SAI/p_fT_DENSEF - p_CS*SNOWDEPTH    # we assume p_CS*SNOWDEPTH is small for LWF.jl
+    # variant LWFBrook90.jl
+    # NOTE: second (LWF.jl) definition of RATIO uses: p_SPC = p_fT_SAIeff
+    #                   with the definition of p_CS:                p_CS = p_fT_SAI / (p_fT_HEIGHT * p_fT_DENSEF).
+    #                                                           and p_fT_SAIeff = p_fT_SAI * p_fT_DENSEF
+    #                                            -->  p_SPC = p_fT_SAI * p_fT_DENSEF
+    # RATIO   = (p_fu_LAIeff + p_fT_SAIeff) / (p_LPC + p_fT_SAIeff)
+    RATIO   = (p_fu_LAIeff + p_fT_SAIeff) / (p_LPC + 0.035 * p_fu_HEIGHTeff) # hardcoding p_CS = 0.035, to be closer to old expression in BROOK90
 
     if (RATIO >= 1)
         # closed canopy
@@ -335,11 +349,11 @@ function ROUGH(p_fu_HEIGHT, p_ZMINH, p_fu_LAI, p_fu_SAI, p_CZS, p_CZR, p_HS, p_H
         p_fu_DISP = p_fu_DISPC
     else
         # sparse canopy modified from Shuttleworth and Gurney (1990)
-        XX = RATIO * (-1 + exp(0.909 - 3.03 * p_fu_Z0C / p_fu_HEIGHT)) ^ 4
-        p_fu_DISP = 1.1 * p_fu_HEIGHT * log(1.0 + XX ^ 0.25)
-        p_fu_Z0 = min(0.3 * (p_fu_HEIGHT - p_fu_DISP), p_fu_Z0GS + 0.3 * p_fu_HEIGHT * XX ^ 0.5)
+        XX = RATIO * (-1 + exp(0.909 - 3.03 * p_fu_Z0C / p_fu_HEIGHTeff)) ^ 4
+        p_fu_DISP = 1.1 * p_fu_HEIGHTeff * log(1.0 + XX ^ 0.25)
+        p_fu_Z0 = min(0.3 * (p_fu_HEIGHTeff - p_fu_DISP), p_fu_Z0GS + 0.3 * p_fu_HEIGHTeff * XX ^ 0.5)
     end
-    p_fu_ZA = p_fu_HEIGHT + p_ZMINH
+    p_fu_ZA = p_fu_HEIGHTeff + p_ZMINH
 
     return (p_fu_Z0GS, p_fu_Z0C, p_fu_DISPC, p_fu_Z0, p_fu_DISP, p_fu_ZA)
 end

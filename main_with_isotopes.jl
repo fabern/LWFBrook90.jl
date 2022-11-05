@@ -62,6 +62,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
 
     # simulation = LWFBrook90.discretize(model; Δz = Δz_m, tspan = (0,10));
     simulation = LWFBrook90.discretize(model; Δz = Δz_m, tspan = (0,300));
+    display(heatmap(p_fT_RELDEN', ylabel = "SOIL LAYER", xlabel = "Time (days)", yflip=true, colorbar_title = "Root density"))
         # TODO: still to use:
         model.root_distribution # e.g. β_root
         model.continuousIC.soil
@@ -357,7 +358,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
             legend = :bottomright
         )
         t_toPlot = range(extrema(sol_LWFBrook90.prob.tspan)..., length=5)
-        root_data_start_end = [sol_LWFBrook90.prob.p.p_RELDEN.(t, 1:sol_LWFBrook90.prob.p.p_soil.NLAYER) for t in t_toPlot]
+        root_data_start_end = [sol_LWFBrook90.prob.p.p_fT_RELDEN.(t, 1:sol_LWFBrook90.prob.p.p_soil.NLAYER) for t in t_toPlot]
         pl_roots = plot(root_data_start_end, y,
             labels = (Dates.format.(permutedims(RelativeDaysFloat2DateTime.(t_toPlot, t_ref)), "yyyy-mm")),
             linestyle = [:solid :solid :solid :solid :dash],

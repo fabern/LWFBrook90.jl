@@ -91,9 +91,7 @@ end
         input_soil_discretization,
         soil_output_depths,
         IDEPTH_m,
-        QDEPTH_m,
-        INITRDEP,
-        RGRORATE)
+        QDEPTH_m)
 
 Discretize soil domain into computational layers and attribute soil parameters based on the defined horizons.
 Densify discretization whenever an interface or an additional layer is needed. This is the case for interfaces
@@ -105,9 +103,7 @@ function refine_soil_discretization(
     input_soil_discretization,
     soil_output_depths,
     IDEPTH_m,
-    QDEPTH_m,
-    INITRDEP,
-    RGRORATE)
+    QDEPTH_m)
 
     # input_soil_horizons =  LWFBrook90.read_path_soil_horizons(
     #     "test/test-assets/DAV-2020/input-files/DAV_LW1_def_soil_horizons.csv");
@@ -134,6 +130,11 @@ function refine_soil_discretization(
     # ε = 0.001 # thickness of layer to be inserted, [m]
     # ε = 0.025 # thickness of layer to be inserted, [m]
     ε = 0.050 # thickness of layer to be inserted, [m]
+    @assert all(abs.(diff(soil_output_depths)) .>= ε) """
+        Requested soil_output_depths (additional layers) must be further away than $ε m.∇
+        Requested were: $(soil_output_depths)
+    """
+
 
     needed_interfaces_for_additional_layers = zeros(Float64, 0)
     for layer in layers_to_insert
@@ -334,36 +335,6 @@ function refine_soil_discretization(
     #             )
     # end
 
-    # find thickness of maximum root zone
-    # frelden: relative values of final root density per unit volume
-    frelden = soil_discretization[!,"Rootden_"]            # root density
-    dep     = soil_discretization[!,"Upper_m"] - THICK/1000/2 # soil depth [m] (midpoint, i.e. average depth of layer)
-    depmax  = dep[1] - THICK[1] / 1000.
-
-    i1 = findfirst(frelden .> 1.e-6) # first layer where frelden[i] is >=1.e-6
-    i2 = findlast(frelden .> 1.e-6)  # last layer (in 1:NLAYER) where frelden[i] is >=1.e-6
-    if !isnothing(i1) && isnothing(i2)
-        i2 = NLAYER
-    end
-
-    tini = fill(NaN, NLAYER)
-    for i = 1:NLAYER
-        tini[i] = 1.e+20 # initial time for root growth in layer
-        if i >= i1 && i <= i2
-            frelden[i] = max( frelden[i], 1.01e-6)
-        end
-        if frelden[i] >= 1.e-6 && (depmax-dep[i]) <= INITRDEP
-            tini[i] = 0.
-        end
-        if frelden[i] >= 1.e-6 && (depmax-dep[i]) > INITRDEP
-            if RGRORATE > 0
-                tini[i] = (depmax-dep[i]-INITRDEP)/RGRORATE
-            end
-        end
-        # write(*,*)'dep= ',dep[i],' tini= ',tini[i]
-    end
-
-
     # heat flow -------
     # nmat   = nrow(input_soil_horizons)
     if (HEAT != 0) @error "HEAT must be set to zero, as heat balance is not implemented." end
@@ -416,12 +387,10 @@ function refine_soil_discretization(
                 ("PSIM_init",PSIM_init),
                 ("d18O_init",d18O_soil_init),
                 ("d2H_init",d2H_soil_init),
-                ("frelden",frelden),
                 ("SHP", soil_discretization.shp),
+                ("final_Rootden_", soil_discretization[!,"Rootden_"])])
                 # ("PAR",PAR),
                 # ("STONEF",STONEF),
-                ("tini",tini)])#,
-                #
                 #("HeatCapOld",HeatCapOld),
                 #("TopInfT", TopInfT)])
 end

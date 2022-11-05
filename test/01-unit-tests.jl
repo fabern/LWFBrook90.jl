@@ -64,7 +64,7 @@ end
 end
 
 @testset "KPT.KPT_SOILPAR_Mvg1d" begin
-    p_soil1 = KPT_SOILPAR_Mvg1d(;
+    p_soil1 = LWFBrook90.KPT.KPT_SOILPAR_Mvg1d(;
         p_THICK  = [40., 40., 120.],
         p_STONEF = [0.010, 0.175, 0.175],
         p_THSAT  = [0.714, 0.668, 0.656],
@@ -75,7 +75,7 @@ end
         p_MvGl   = [4.6703, 4.4782, 4.5016],
         p_θr     = [0.069, 0.069, 0.069])
 
-    p_soil2 = KPT_SOILPAR_Mvg1d(;
+    p_soil2 = LWFBrook90.KPT.KPT_SOILPAR_Mvg1d(;
         p_THICK  = 3 .* [40., 40., 120.],
         p_STONEF = [0.010, 0.175, 0.175],
         p_THSAT  = [0.714, 0.668, 0.656],
@@ -118,7 +118,7 @@ end
         p_MvGl   = [1,1],
         p_θr     = [1])
 
-    @test_logs (:warn, r"\[a,b\] is not a bracketing interval") min_level = Logging.Warn match_mode=:any KPT_SOILPAR_Mvg1d(;
+    @test_logs (:warn, r"\[a,b\] is not a bracketing interval") min_level = Logging.Warn match_mode=:any LWFBrook90.KPT.KPT_SOILPAR_Mvg1d(;
         p_THICK  = [40., 40., 120.],
         p_STONEF = [0.010, 0.175, 0.175],
         p_THSAT  = [0.714, 0.668, 0.656],
@@ -152,15 +152,15 @@ end
     # FLAG_MualVanGen = 0
 
     soil_disc = LWFBrook90.refine_soil_discretization(
-        input_soil_horizons, input_soil_discretization, [], IDEPTH_m, QDEPTH_m, INITRDEP, RGRORATE)
+        input_soil_horizons, input_soil_discretization, [], IDEPTH_m, QDEPTH_m)
 
     @test soil_disc["NLAYER"] == 10
     @test soil_disc["THICK"]  ≈ [45.0, 955.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0]
     @test soil_disc["PSIM_init"] ≈ [-6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0]
-    @test soil_disc["frelden"] ≈ [0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    keys(soil_disc)
+    @test soil_disc["final_Rootden_"] ≈ [0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
     @test soil_disc["QLAYER"] == 0
     @test soil_disc["ILAYER"] == 1
-    #soil_disc["tini"] .= 0.0
     @test [shp.p_STONEF for shp in soil_disc["SHP"]] ≈ [0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7]
     # @test [shp.p_STONEF for shp in soil_disc["SHP"]] ≈ [0.9, 0.9, 0.9, 0.9, 0.8, 0.8, 0.8, 0.8, 0.8, 0.7]
     @test [shp.p_THSAT for shp in soil_disc["SHP"]] ≈ [0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55]
@@ -169,7 +169,7 @@ end
 
 @testset "KPT.KPT_SOILPAR_Ch1d" begin
     # data from Ecoshift "b90v44data/SCsl.txt"
-    p_soil1 = KPT_SOILPAR_Ch1d(;
+    p_soil1 = LWFBrook90.KPT.KPT_SOILPAR_Ch1d(;
         p_THICK  = [100.,100.],
         p_STONEF = [0.,0.],
         p_THSAT  = [0.435,0.435],
@@ -179,7 +179,7 @@ end
         p_BEXP   = [4.90,4.90],
         p_WETINF = [0.920, 0.29])
 
-    p_soil2 = KPT_SOILPAR_Ch1d(;
+    p_soil2 = LWFBrook90.KPT.KPT_SOILPAR_Ch1d(;
         p_THICK  = 2 .* [100.,100.],
         p_STONEF = [0.,0.],
         p_THSAT  = [0.435,0.435],
@@ -244,37 +244,49 @@ end
     ####################
     ## Discretize soil parameters and interpolate discretized root distribution
     # Define refinement of grid with soil_output_depths
-    soil_output_depths = soil_output_depths = zeros(Float64, 0)
+    if length(Δz_m) == 4
+        soil_output_depths = [-0.91, -1.01, -1.11, -1.21, -1.31]
+    else
+        soil_output_depths = soil_output_depths = zeros(Float64, 0)
+    end
     soil_discr =
         LWFBrook90.refine_soil_discretization(
             continuous_SPAC.soil_horizons,
             soil_discretization,
             soil_output_depths,
             continuous_SPAC.params[:IDEPTH_m],
-            continuous_SPAC.params[:QDEPTH_m],
-            continuous_SPAC.params[:INITRDEP],
-            continuous_SPAC.params[:RGRORATE])
-    ####################
+            continuous_SPAC.params[:QDEPTH_m])
 
-    ####################
-    # Define state vector u for DiffEq.jl
-    # a) allocation of u0
-    u0, u0_field_names, names_accum =
-        define_LWFB90_u0(;simulate_isotopes = continuous_SPAC.solver_options.simulate_isotopes,
-                         compute_intermediate_quantities = continuous_SPAC.solver_options.compute_intermediate_quantities,
-                         NLAYER = soil_discr["NLAYER"])
+    # Interpolate discretized root distribution in time
+    p_fT_RELDEN = LWFBrook90.HammelKennel_transient_root_density(;
+        timepoints = continuous_SPAC.meteo_forcing.p_days,
+        p_AGE      = continuous_SPAC.canopy_evolution.p_AGE,
+        p_INITRDEP = continuous_SPAC.params[:INITRDEP],
+        p_INITRLEN = continuous_SPAC.params[:INITRLEN],
+        p_RGROPER_y  = continuous_SPAC.params[:RGROPER],
+        p_RGRORATE_m_per_y = continuous_SPAC.params[:RGRORATE],
+        p_THICK         = soil_discr["THICK"],
+        final_Rootden_profile = soil_discr["final_Rootden_"]);
     ####################
 
     ####################
     # Define parameters for differential equation
-    p = define_LWFB90_p(continuous_SPAC, soil_discr)
+    p = LWFBrook90.define_LWFB90_p(continuous_SPAC, soil_discr, p_fT_RELDEN);
     # using Plots
-    # hline([0; cumsum(.p_soil.p_THICK)], yflip = true, xticks = false,
-    #     title = "N_layer = "*string(.p_soil.NLAYER))
+    # hline([0; cumsum(p.p_THICK)], yflip = true, xticks = false,
+    #     title = "N_layer = "*string(p.NLAYER))
    ####################
 
+    ####################
+    # Define state vector u for DiffEq.jl
+    # a) allocation of u0
+    u0 = LWFBrook90.define_LWFB90_u0(;simulate_isotopes = continuous_SPAC.solver_options.simulate_isotopes,
+                          compute_intermediate_quantities = continuous_SPAC.solver_options.compute_intermediate_quantities,
+                          NLAYER = soil_discr["NLAYER"]);
+    ####################
+
     # Check if defined layers correspond to requested
-    @test p.p_soil.NLAYER == length(Δz_m) + 1 # +1 because we needed to add one at 0.005 m for the IDEPTH_m
+    @test p.p_soil.NLAYER == length(Δz_m) + 2*length(soil_output_depths) + 1 # +1 because we needed to add one at 0.005 m for the IDEPTH_m
 end
 
 # TODO(bernhard): include unit tests of specific functions, e.g. during development of the Hammel-2001 infiltration test

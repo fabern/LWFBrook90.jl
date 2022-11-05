@@ -43,7 +43,7 @@ In this section a subscript i is used to indicate individual layers.
 """
 module WAT # WATER MOVEMENT IN SOIL
 
-export INFPAR, LWFRootGrowth, ITER
+export INFPAR, ITER
 using ..KPT
 
 """
@@ -78,51 +78,6 @@ function INFPAR(p_INFEXP, p_ILAYER, p_soil, NLAYER)
 
     return p_INFRAC
 end
-
-
-
-"""
-    LWFRootGrowth(;final_relden, tini_yrs, INITRDEP_m, INITRLEN_m_per_m2, RGROPER_yrs, age_yrs, NLAYER)
-
-Compute root growth according to LWF root growth model, (Hammel and Kennel 2000).
-
-# Arguments:
-    - `final_relden[]`   :  final relative values of root length per unit volume
-    - `tini_yrs[]`       :  initial age for root growth in layer, yrs
-    - `INITRDEP_m`       :  intial root depth, m
-    - `INITRLEN_m_per_m2`:  initial water-absorbing root length per unit area, m m-2
-    - `RGROPER_yrs`      :  period of root growth in layer, yrs
-    - `age_yrs`          :  age of vegetation, yrs
-    - `NLAYER`           :  number of soil layers
-Returns:
-    - `RELDEN[]`         : current, age-dependent relative values of root length per unit volume
-"""
-function LWFRootGrowth(;final_relden, tini_yrs, INITRDEP_m, INITRLEN_m_per_m2, RGROPER_yrs, age_yrs, NLAYER)
-
-    p_fT_RELDEN = fill(NaN, NLAYER)
-    if RGROPER_yrs > zero(RGROPER_yrs)
-        for i = 1:NLAYER
-            if age_yrs < tini_yrs[i]                                              # stand age before tini: no roots
-                p_fT_RELDEN[i]=0.0
-            elseif age_yrs >= tini_yrs[i] && age_yrs <= tini_yrs[i] + RGROPER_yrs # stand age from tini to tini+rgroper:
-                # rl0:  constant intial root length density, m m-3
-                rl0=INITRLEN_m_per_m2/INITRDEP_m
-                p_fT_RELDEN[i]=rl0*(final_relden[i]/rl0)^((age_yrs-tini_yrs[i])/RGROPER_yrs)
-            elseif age_yrs > tini_yrs[i] + RGROPER_yrs                            # stand age after tini+rgroper:
-                p_fT_RELDEN[i]=final_relden[i]
-            else
-                error("In RootGrowth() unexpected error occurred.")
-            end
-        end
-    else
-        for i = 1:NLAYER
-            p_fT_RELDEN[i]=final_relden[i]
-        end
-    end
-
-    return p_fT_RELDEN
-end
-
 
 """
     BYFLFR(NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_WETF)

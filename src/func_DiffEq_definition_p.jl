@@ -10,20 +10,7 @@ Generate vector p needed for ODE() problem in DiffEq.jl package.
 - `simulate_isotopes::...`: TODO argument description.
 - `soil_output_depths`: vector of depths at which state variables should be extractable (negative numeric values [in meter])
 """
-function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr)
-    ########
-    ## Interpolate discretized root distribution
-     p_RELDEN = LWFBrook90.interpolate_spaceDiscretized_root_density(;
-        timepoints = continuous_SPAC.meteo_forcing.p_days,
-        p_AGE      = continuous_SPAC.canopy_evolution.p_AGE,
-        p_INITRDEP = continuous_SPAC.params[:INITRDEP],
-        p_INITRLEN = continuous_SPAC.params[:INITRLEN],
-        p_RGROPER  = continuous_SPAC.params[:RGROPER],
-        p_tini     = soil_discr["tini"],
-        p_frelden  = soil_discr["frelden"]);
-    # TODO(bernhard): document input parameters: INITRDEP, INITRLEN, RGROPER, tini, frelden, MAXLAI, HEIGHT_baseline_m
-    # TOOD(bernhard): remove from params: IDEPTH_m, QDEPTH_m, INITRDEP, RGRORATE, INITRDEP, INITRLEN, RGROPER
-    ########
+function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr, p_fT_RELDEN)
 
     ########
     ## Solver algorithm options
@@ -126,22 +113,22 @@ function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr)
 
     ## Vegetation (canopy)
     ### Vegetation dimensions
-    p_CR     = continuous_SPAC.params[:CR]     # (Canopy parameter), ratio of projected stem area index (SAI) to HEIGHT when DENSEF = 1, (SAI = CS * HEIGHT * DENSEF)
-    p_RHOTP  = continuous_SPAC.params[:RHOTP]  # (Fixed  parameter), Ratio of total leaf area to projected area, dimensionless (BROOK90: RHOTP is fixed at 2)
+    p_CR     = continuous_SPAC.params[:CR]     # (Canopy parameter), extinction coefficient for photosynthetically-active radiation in the canopy, Values usually range from 0.5 to 0.7.
     p_LWIDTH = continuous_SPAC.params[:LWIDTH] # (Canopy parameter), average leaf width, m
+    p_RHOTP  = continuous_SPAC.params[:RHOTP]  # (Fixed  parameter), Ratio of total leaf area to projected area, dimensionless (BROOK90: RHOTP is fixed at 2)
     p_LPC    = continuous_SPAC.params[:LPC]    # (Fixed  parameter), Minimum LAI defining a closed canopy, dimensionless (BROOK90: LPC is fixed at 4.0)
     ### Vegetation influence on atmosphere and meteorology
     p_KSNVP  = continuous_SPAC.params[:KSNVP]  # (Canopy parameter), reduction factor to reduce snow evaporation (SNVP), (0.05 - 1)
     p_ALBSN  = continuous_SPAC.params[:ALBSN]  # (Canopy parameter), albedo or surface reflectivity with snow on the ground, (typically 0.1-0.9)
     p_ALB    = continuous_SPAC.params[:ALB]    # (Canopy parameter), albedo or surface reflectivity without snow on the ground, (typically 0.1-0.3)
+    # p_CS     = continuous_SPAC.params[:CS]     # (Canopy parameter), ratio of projected stem area index (SAI) to HEIGHT when DENSEF = 1, (SAI = CS * HEIGHT * DENSEF)
     p_NN     = continuous_SPAC.params[:NN]     # (Fixed  parameter), Wind/diffusivity extinction coefficient, dimensionless (BROOK90: NN is fixed at 2.5 following Shuttleworth and Gurney (1990))
-    p_CS     = continuous_SPAC.params[:CS]     # (Canopy parameter), extinction coefficient for photosynthetically-active radiation in the canopy, (unit?)
     p_RM     = continuous_SPAC.params[:RM]     # (Fixed  parameter), Nominal maximum solar radiation possible on a leaf, W/m2 (BROOK90: RM is fixed at 1000 W/m2)
     ### Interception
-    p_CINTRL = continuous_SPAC.params[:CINTRL] # (Fixed  parameter), Maximum interception storage of rain       per unit LAI, mm (BROOK90: CINTRL and CINTRS are both fixed at 0.15 mm)
-    p_CINTRS = continuous_SPAC.params[:CINTRS] # (Fixed  parameter), Maximum interception storage of rain       per unit SAI, mm (BROOK90: CINTRL and CINTRS are both fixed at 0.15 mm)
-    p_CINTSL = continuous_SPAC.params[:CINTSL] # (Fixed  parameter), Maximum interception storage of snow water per unit LAI, mm (BROOK90: CINTSL and CINTSS are both fixed at 0.6 mm)
-    p_CINTSS = continuous_SPAC.params[:CINTSS] # (Fixed  parameter), Maximum interception storage of snow water per unit SAI, mm (BROOK90: CINTSL and CINTSS are both fixed at 0.6 mm)
+    p_CINTRL = continuous_SPAC.params[:CINTRL]   # (Fixed  parameter), Maximum interception storage of rain       per unit LAI, mm (BROOK90: CINTRL and CINTRS are both fixed at 0.15 mm)
+    p_CINTRS = continuous_SPAC.params[:CINTRS]   # (Fixed  parameter), Maximum interception storage of rain       per unit SAI, mm (BROOK90: CINTRL and CINTRS are both fixed at 0.15 mm)
+    p_CINTSL = continuous_SPAC.params[:CINTSL]   # (Fixed  parameter), Maximum interception storage of snow water per unit LAI, mm (BROOK90: CINTSL and CINTSS are both fixed at 0.6 mm)
+    p_CINTSS = continuous_SPAC.params[:CINTSS]   # (Fixed  parameter), Maximum interception storage of snow water per unit SAI, mm (BROOK90: CINTSL and CINTSS are both fixed at 0.6 mm)
     p_FRINTL = continuous_SPAC.params[:FRINTLAI] # (Fixed  parameter), Intercepted fraction of rain per unit LAI, dimensionless (BROOK90: FRINTLAI and FRINTSAI are both fixed at 0.06)
     p_FRINTS = continuous_SPAC.params[:FRINTSAI] # (Fixed  parameter), Intercepted fraction of rain per unit SAI, dimensionless (BROOK90: FRINTLAI and FRINTSAI are both fixed at 0.06)
     p_FSINTL = continuous_SPAC.params[:FSINTLAI] # (Fixed  parameter), Intercepted fraction of snow per unit LAI, dimensionless (BROOK90: FSINTLAI and FSINTSAI are both fixed at 0.04)
@@ -156,9 +143,9 @@ function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr)
     p_T1     = continuous_SPAC.params[:T1]     # (Canopy parameter), temperature controlling closing of stomates,°C
     p_T2     = continuous_SPAC.params[:T2]     # (Canopy parameter), temperature controlling closing of stomates,°C
     p_TL     = continuous_SPAC.params[:TL]     # (Canopy parameter), temperature controlling closing of stomates,°C
+    p_PSICR  = continuous_SPAC.params[:PSICR]  # (Canopy parameter), minimum plant leaf water potential, MPa.
     p_CVPD   = continuous_SPAC.params[:CVPD]   # (Fixed  parameter), Vapor pressure deficit at which stomatal conductance is halved, kPa (BROOK90: CVPD is fixed at 2 kPa for all cover types)
     p_R5     = continuous_SPAC.params[:R5]     # (Fixed  parameter), Solar radiation at which stomatal conductance is half of its value at RM, W/m2 (BROOK90: BROOK90 fixes R5 = 100 W/m2 as the default for all cover types)
-    p_PSICR  = continuous_SPAC.params[:PSICR]  # (Canopy parameter), minimum plant leaf water potential, MPa.
     # Documentation from ecoshift:
     # MXKPL The internal resistance to water flow through the plants RPLANT = 1 / (MXKPL * RELHT * DENSEF). MXKPL is the main controller of soil-water availability and is a property of all of the plants on a unit area, not of any one plant. When the canopy is at its maximum seasonal LAI and height, and when soil is wet so that soil water potential is effectively zero, and when the leaf water potential is at its critical value, PSICR, then MXKPL is the transpiration rate divided by PSICR. Abdul-Jabbar et al. (1988) found that MXKPL ranges only from 7 to 30 mm d-1 MPa-1 over a wide range of vegetations, a surprisingly constant parameter. A transpiration rate of 0.5 mm/hr at a gradient of -1.5 MPa is typical, giving MXKPL of 8 mm d-1 MPa-1 (Hunt et al. 1991). MXKPL controls the rate of water supply to the leaves and thus the transpiration when soil water supply is limiting. Decreasing MXKPL makes soil water less available and thus reduces actual transpiration below potential transpiration at higher soil water content. [see PET-CANOPY] [see EVP-PLNTRES]
     # CR (Canopy parameter) - extinction coefficient for photosynthetically-active radiation in the canopy. Values usually range from 0.5 to 0.7. Values outside this range should be used very cautiously. The extinction coefficient can be determined from the canopy transmissivity, t, as CR = - (ln t) / (Lp + Sp). For a canopy of Lp = 6 and Sp = 0.7, PAR penetration at the ground of 1, 3, and 5% gives CR = 0.69, 0.52, and 0.45 respectively. I use CR values of 0.5 for conifer forest, 0.6 for broadleaved forest, and 0.7 for short vegetation covers. CR is also used to calculate the extinction of net radiation, though this is theoretically incorrect. [see PET-SRSC] [see SUN-AVAILEN]
@@ -323,7 +310,7 @@ function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr)
 
     # # p_cst_3 only for CallBack in DiffEq.jl
     # p_cst_3 = (p_LAT, p_ESLOPE, p_L1, p_L2,
-    #     p_SNODEN, p_MXRTLN, p_MXKPL, p_CS,
+    #     p_SNODEN, p_MXRTLN, p_MXKPL, #p_CS,
     #     p_Z0S, p_Z0G,
     #     p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC,
     #     p_RTRAD, p_FXYLEM,
@@ -384,7 +371,7 @@ function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr)
     #         p_LAI          = continuous_SPAC.canopy_evolution.p_LAI,
     #         p_SAI          = continuous_SPAC.canopy_evolution.p_SAI,
     #         p_AGE          = continuous_SPAC.canopy_evolution.p_AGE,
-    #         p_RELDEN       = p_RELDEN,
+    #         p_fT_RELDEN       = p_fT_RELDEN,
 
     #         p_d18OPREC     = continuous_SPAC.meteo_iso_forcing.p_d18OPREC,
     #         p_d2HPREC      = continuous_SPAC.meteo_iso_forcing.p_d2HPREC,
@@ -469,7 +456,7 @@ function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr)
 
         # formerly p_cst3:
         p_LAT    = p_LAT,    p_ESLOPE = p_ESLOPE, p_L1     = p_L1,     p_L2     = p_L2,
-        p_SNODEN = p_SNODEN, p_MXRTLN = p_MXRTLN, p_MXKPL  = p_MXKPL,  p_CS     = p_CS,
+        p_SNODEN = p_SNODEN, p_MXRTLN = p_MXRTLN, p_MXKPL  = p_MXKPL,
         p_Z0S    = p_Z0S,    p_Z0G    = p_Z0G,    p_ZMINH  = p_ZMINH,  p_CZS    = p_CZS,
         p_CZR    = p_CZR,    p_HS     = p_HS,     p_HR     = p_HR,     p_LPC    = p_LPC,
         p_RTRAD  = p_RTRAD,  p_FXYLEM = p_FXYLEM, p_WNDRAT = p_WNDRAT, p_FETCH  = p_FETCH,
@@ -522,7 +509,7 @@ function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr)
         p_LAI          = continuous_SPAC.canopy_evolution.p_LAI,
         p_SAI          = continuous_SPAC.canopy_evolution.p_SAI,
         p_AGE          = continuous_SPAC.canopy_evolution.p_AGE,
-        p_RELDEN       = p_RELDEN,
+        p_fT_RELDEN       = p_fT_RELDEN,
 
         p_δ18O_PREC     = continuous_SPAC.meteo_iso_forcing.p_d18OPREC,
         p_δ2H_PREC      = continuous_SPAC.meteo_iso_forcing.p_d2HPREC,
@@ -613,40 +600,120 @@ end
 
 
 """
-    interpolate_spaceDiscretized_root_density()
+    HammelKennel_lateral_rootgrowth(;final_relden, tini_yrs, INITRDEP_m, INITRLEN_m_per_m2, RGROPER_yrs, age_yrs)
+
+Compute root growth according to LWF Bayern root growth model, (Hammel and Kennel 2000).
+
+# Arguments:
+    - `final_relden[i]`  :  final relative values of root length per unit volume in a specific layer i
+    - `INITRDEP_m`       :  intial root depth, m
+    - `INITRLEN_m_per_m2`:  initial water-absorbing root length per unit area, m m-2
+    - `t_y`              :  current age of vegetation, yrs
+    - `tstart_y[i]`      :  initial age for root growth in a specific layer i, yrs
+    - `RGROPER_yrs`      :  period of root growth in layer, yrs
+Returns:
+    - `RELDEN[]`         : current, age-dependent relative values of root length per unit volume
+"""
+function HammelKennel_lateral_rootgrowth(;final_Rootden_profile, INITRDEP_m, INITRLEN_m_per_m2, t_y, tstart_y, RGROPER_yrs)
+    NLAYER = length(final_Rootden_profile)
+    p_fT_RELDEN = fill(NaN, NLAYER)
+    if RGROPER_yrs > zero(RGROPER_yrs)
+        for i = 1:NLAYER
+            if t_y < tstart_y[i]                                          # stand age younger than tstart: no roots
+                p_fT_RELDEN[i]=0.0
+            elseif t_y >= tstart_y[i] && t_y <= tstart_y[i] + RGROPER_yrs # stand age between tstart and tstart+rgroper:
+                # rl0:  constant intial root length density, m m-3
+                rl0=INITRLEN_m_per_m2/INITRDEP_m
+                p_fT_RELDEN[i]=rl0*(final_Rootden_profile[i]/rl0)^((t_y - tstart_y[i])/RGROPER_yrs)
+            elseif t_y > tstart_y[i] + RGROPER_yrs                        # stand age after tstart+rgroper:
+                p_fT_RELDEN[i]=final_Rootden_profile[i]
+            else
+                error("In RootGrowth() unexpected error occurred.")
+            end
+        end
+    else
+        for i = 1:NLAYER
+            p_fT_RELDEN[i]=final_Rootden_profile[i]
+        end
+    end
+
+    return p_fT_RELDEN
+end
+
+"""
+    HammelKennel_transient_root_density()
 
 Take root density distribution parameters and generates root density in time (t) and space (z, negative downward).
 """
+function HammelKennel_transient_root_density(;
+        timepoints,   p_AGE,
+        p_INITRDEP,   p_INITRLEN,
+        p_RGROPER_y,  p_RGRORATE_m_per_y, # vertical root growth rate in m per y (accessing new soil layers)
+        p_THICK,      final_Rootden_profile)
 
-function interpolate_spaceDiscretized_root_density(;
-        timepoints,
-        p_AGE,
-        p_INITRDEP,
-        p_INITRLEN,
-        p_RGROPER,
-        p_tini,
-        p_frelden)
+    NLAYER = length(p_THICK)
+    # Hammel and Kennel 2001:
 
-    NLAYER = length(p_frelden)
+    # 0) preprocess final equilibrium state: (final_Rootden_profile)
+    # final_Rootden_profile: relative values of final root density per unit volume
+    # make root density continuous between first and last layer
+    i1 = findfirst(final_Rootden_profile .> 1.e-6) # first layer where final_Rootden_profile[i] is >=1.e-6
+    i2 = findlast(final_Rootden_profile .> 1.e-6)  # last layer (in 1:NLAYER) where final_Rootden_profile[i] is >=1.e-6
+    if !isnothing(i1) && isnothing(i2)
+        i2 = NLAYER
+    end
+    for i = i1:i2 # set final_Rootden_profile to minimum of 1.e-6 within the root zone (between i1 and i2)
+        final_Rootden_profile[i] = max( final_Rootden_profile[i], 1.01e-6)
+    end
 
-    # 2a Compute time dependent root density parameters
-    # Which is a vector quantity that is dependent on time:
+    # 1) Define age at which root growth arrives in a specific depth and lateral root growth commences
+    # z_center     = soil_discretization[!,"Upper_m"] - soil_discr["THICK"]/1000/2 # soil depth [m] (midpoint, i.e. average depth of layer)
+    z_center_m     = -(cumsum(p_THICK) - p_THICK/2)/1000
+    depfirst_m  = z_center_m[1] - p_THICK[1] / 1000.
+    # Here z_center_m and depfirst_m are negative values in the soil. (z axis upward)
+
+    # 1a) compute arrival times tini
+    vᵣ = p_RGRORATE_m_per_y # growth rate (m/y)
+    zᵣ₀ = p_INITRDEP # initial depth of root
+    # zᵣ =  # maximal depth of root
+    # root_arrival_time = (zᵣ - zᵣ₀)/vᵣ
+    # tᵣ =  # time period of lateral growth (after first vertical arrival)
+    # rₗ₀ = #
+    # # t_ini(z) : arrival time of roots at depth z, then starts lateral growth
+
+    t_ini = fill(NaN, NLAYER)
+    for i = 1:NLAYER
+        t_ini[i] = 1.e+20               # start out with "never"
+        z = depfirst_m - z_center_m[i]
+        roots_present = final_Rootden_profile[i] >= 1.e-6
+        if roots_present
+            if z <= zᵣ₀
+                t_ini[i] = 0.
+            elseif z > zᵣ₀
+                if vᵣ > 0
+                    t_ini[i] = (z - zᵣ₀)/vᵣ
+                end
+            end
+        end
+    end
+
+    # 2) lateral growth per layer starts at t_ini and ends at t_ini + tᵣ
+    # Time dependent root density parameters is a vector quantity that is dependent on time (i.e. 2D array):
     p_RELDEN_2Darray = fill(NaN, length(timepoints), NLAYER)
     for i in eachindex(timepoints)
         p_RELDEN_2Darray[i,:] =
-            LWFBrook90.WAT.LWFRootGrowth(;
-                final_relden      = p_frelden,
-                tini_yrs          = p_tini,
+            HammelKennel_lateral_rootgrowth(;
+                final_Rootden_profile = final_Rootden_profile,
                 INITRDEP_m        = p_INITRDEP,
                 INITRLEN_m_per_m2 = p_INITRLEN,
-                RGROPER_yrs       = p_RGROPER,
-                age_yrs           = p_AGE(timepoints[i]),
-                NLAYER            = NLAYER)
+                t_y               = p_AGE(timepoints[i]),
+                tstart_y          = t_ini,
+                RGROPER_yrs       = p_RGROPER_y)
     end
-    p_RELDEN =  extrapolate(interpolate((timepoints, 1:NLAYER), p_RELDEN_2Darray,
+    p_fT_RELDEN =  extrapolate(interpolate((timepoints, 1:NLAYER), p_RELDEN_2Darray,
                                         (Gridded(Constant{Next}()), NoInterp()), # 1st dimension: ..., 2nd dimension NoInterp()
                                         ), Flat()) # extrapolate flat, alternative: Throw()
-    return p_RELDEN
+    return p_fT_RELDEN
 end
 
 """

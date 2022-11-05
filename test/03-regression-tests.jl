@@ -1,5 +1,5 @@
 # Regression tests
-# using JLD2: jldsave, load # TODO: comment in again as soon  https://github.com/JuliaIO/JLD2.jl/issues/428 is fixed
+using JLD2: jldsave, load # TODO: comment in again as soon  https://github.com/JuliaIO/JLD2.jl/issues/428 is fixed
 
 # - _Unit testing_ asserts that individual pieces of a project work as expected. (developers
 #       perspective)
@@ -50,6 +50,7 @@ if basename(pwd()) != "test"; cd("test"); end
     # amberMBP-git-eae940b: 0.028672 seconds (93.92 k allocations: 12.045 MiB)
     # amberMBP-git-eae940b: @btime: 14.003 ms (93919 allocations: 12.05 MiB)
     # amberMBP-git+61a19ed: 0.039381 seconds (117.87 k allocations: 11.615 MiB) 343 time steps
+    # amberMBP-git+013a35e: 0.212826 seconds (684.81 k allocations: 70.468 MiB) 2997 time steps
 
     # extract required data from solution object
     idx_u_scalar_amounts = example_result["solution"].prob.p.row_idx_scalars;
@@ -118,6 +119,8 @@ end
     # amberMBP-git-da150a8: 44.940979 seconds (176.47 M allocations: 33.808 GiB, 15.84% gc time)
     # amberMBP-git-a1872dd: 50.785075 seconds (83.43 M allocations: 4.962 GiB, 2.99% gc time, 96.61% compilation time) 10244 time steps
     # amberMBP-git-a1872dd: 1.800597 seconds (5.00 M allocations: 875.086 MiB, 18.01% gc time) 10244 time steps
+    # amberMBP-git-013a35e: 18.315647 seconds (38.78 M allocations: 4.644 GiB, 4.00% gc time, 30.45% compilation time) 57445 time steps
+    # amberMBP-git-f67b99f: 9.415075 seconds (32.11 M allocations: 4.335 GiB, 13.87% gc time) 57445 time steps
 
     # sol[1] # solution
     # sol[2] # input_prefix
