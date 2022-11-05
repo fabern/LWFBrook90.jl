@@ -120,6 +120,7 @@ end
     # amberMBP-git-a1872dd: 50.785075 seconds (83.43 M allocations: 4.962 GiB, 2.99% gc time, 96.61% compilation time) 10244 time steps
     # amberMBP-git-a1872dd: 1.800597 seconds (5.00 M allocations: 875.086 MiB, 18.01% gc time) 10244 time steps
     # amberMBP-git-013a35e: 18.315647 seconds (38.78 M allocations: 4.644 GiB, 4.00% gc time, 30.45% compilation time) 57445 time steps
+    # amberMBP-git-f67b99f: 9.415075 seconds (32.11 M allocations: 4.335 GiB, 13.87% gc time) 57445 time steps
 
     # sol[1] # solution
     # sol[2] # input_prefix
