@@ -7,7 +7,7 @@ CurrentModule = LWFBrook90
 ## Functions from file `examples/BEA2016...-input/func_run_example.jl`
 ```@autodocs
 Modules = [LWFBrook90]
-Pages   = ["examples/BEA2016-reset-FALSE-input/func_run_example.jl"]
+Pages   = ["examples/func_run_example.jl"]
 ```
 
 ## Functions from file `LWFBrook90.jl`
@@ -16,10 +16,12 @@ Modules = [LWFBrook90]
 Pages   = ["LWFBrook90.jl"]
 ```
 
-## Functions from file `func_read_inputData.jl`
+## Functions from files `func_read_inputData.jl`, `func_discretize_soil_domain.jl`, or `func_postprocess.jl`
 ```@autodocs
 Modules = [LWFBrook90]
-Pages   = ["func_read_inputData.jl"]
+Pages   = ["func_read_inputData.jl",
+           "func_discretize_soil_domain.jl",
+           "func_postprocess.jl"]
 ```
 
 ## Functions defining the DiffEq.jl system of ODE (p, u0, f, callbacks, ...)
@@ -34,7 +36,7 @@ Pages   = ["func_DiffEq_definition_u0.jl",
            ]
 ```
 
-## Functions from the different modules defining LWF-BROOK90
+## Functions from the different modules defining LWFBrook90
 ```@autodocs
 Modules = [LWFBrook90.CONSTANTS,
            LWFBrook90.KPT,
@@ -42,7 +44,8 @@ Modules = [LWFBrook90.CONSTANTS,
            LWFBrook90.SUN,
            LWFBrook90.PET,
            LWFBrook90.SNO,
-           LWFBrook90.EVP
+           LWFBrook90.EVP,
+           LWFBrook90.ISO,
            ]
 Pages   = ["module_CONSTANTS.jl",
            "module_KPT.jl",
@@ -50,7 +53,8 @@ Pages   = ["module_CONSTANTS.jl",
            "module_SUN.jl",
            "module_PET.jl",
            "module_SNO.jl",
-           "module_EVP.jl"
+           "module_EVP.jl",
+           "module_ISO.jl"
            ]
 Order = [:constant, :type, :function, :macro]
 ```
