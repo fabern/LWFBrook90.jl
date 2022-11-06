@@ -57,15 +57,13 @@ function run_main_with_isotopes(;input_prefix, input_path)
     if (input_prefix == "isoBEAdense2010-18-reset-FALSE")
         Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5); 0.1]; # grid spacing (heterogenous), meter (N=21)
     elseif (input_prefix == "DAV_LW1_def")
-        Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5)]; # grid spacing (heterogenous), meter (N=20)
+        # Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5)]; # grid spacing (heterogenous), meter (N=20)
+        Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 11)]; # grid spacing (heterogenous), meter (N=20)
     end
 
     # simulation = LWFBrook90.discretize(model; Δz = Δz_m, tspan = (0,10));
     simulation = LWFBrook90.discretize(model; Δz = Δz_m, tspan = (0,300));
-    display(heatmap(p_fT_RELDEN', ylabel = "SOIL LAYER", xlabel = "Time (days)", yflip=true, colorbar_title = "Root density"))
-        # TODO: still to use:
-        model.root_distribution # e.g. β_root
-        model.continuousIC.soil
+    # display(heatmap(simulation.ODEProblem.p.p_fT_RELDEN', ylabel = "SOIL LAYER", xlabel = "Time (days)", yflip=true, colorbar_title = "Root density"))
 
     # Solve ODE:
     simulate!(simulation);

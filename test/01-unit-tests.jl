@@ -232,14 +232,16 @@ end
                       "Hammel_loam-NLayer-103-RESET=FALSE";
                       simulate_isotopes = false);
     f1 = (Δz_m) -> LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)  # function for root density as f(Δz)
-    f2 = (Δz_m) -> fill(-6.3, length(Δz_m))          # function for initial conditions as f(Δz)
+    f2 = (Δz_m) -> fill(-6.3, length(Δz_m))                     # function for initial conditions as f(Δz)
+    f3 = (Δz_m) -> ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.)    # function for initial conditions as f(Δz)
+    f4 = (Δz_m) -> ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.)    # function for initial conditions as f(Δz)
 
     soil_discretization = discretize_soil(;
         Δz_m = Δz_m,
         Rootden_ = f1,
         uAux_PSIM_init_kPa = f2,
-        u_delta18O_init_permil = ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.),
-        u_delta2H_init_permil  = ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.))
+        u_delta18O_init_permil = f3,
+        u_delta2H_init_permil  = f4)
 
     ####################
     ## Discretize soil parameters and interpolate discretized root distribution
