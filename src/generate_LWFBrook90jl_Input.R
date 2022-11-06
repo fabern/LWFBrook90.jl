@@ -10,7 +10,8 @@
 #              files for comparison with LWFBrook90.
 #################
 
-# Note that currently only basic functions are supported by LWFBrook90.
+# Note that LWFBrook90.jl does not cover all the use cases of LWFBrook90R and vice versa.
+# Please use this translation function with caution and manually check the generated output.
 
 
 ####### Define function
@@ -128,6 +129,10 @@ generate_LWFBrook90jl_Input <- function(Julia_target_dir = NA,
     qdepth = -1*out_csv_soil_discretization[[input_Data$param_b90$qlayer,"Lower_m"]] # in m (positive depth)
   }
   # Save all parameters
+  if (input_Data$param_b90$cs != 0.035) {
+    warning(sprintf("Note that LWFBrook90R simulation to transform used a aprameter 'cs' (ratio of height to SAI) of %s. LWFBrook90.jl uses a hardcoded default value of 0.035.",
+                    as.character(input_Data$param_b90$cs)))
+  }
   out_param <- with(input_Data$param_b90,
                         c("### Isotope transport parameters  -------" = NA,
                           "### TODO" = 42.000,
