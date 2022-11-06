@@ -7,11 +7,11 @@ using Dates: DateTime, Millisecond, Second, Day, Month, month, value, dayofyear
     SPAC(folder::String, prefix::String)
 
 Define instance of SPAC model by loading different input files for LWFBrook90:
-- meteoveg.csv
-- param.csv
-- meteo\_storm_durations.csv
-- initial\_conditions.csv
-- soil\_horizons.csv
+- `meteoveg.csv`
+- `param.csv`
+- `meteo_storm_durations.csv`
+- `initial_conditions.csv`
+- `soil_horizons.csv`
 
 These files were created with an R script `generate_LWFBrook90jl_Input.R` that
 takes the same arguements as the R function `LWFBrook90R::run_LWFB90()` and generates
