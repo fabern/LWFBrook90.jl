@@ -51,6 +51,7 @@ if basename(pwd()) != "test"; cd("test"); end
     # amberMBP-git-eae940b: @btime: 14.003 ms (93919 allocations: 12.05 MiB)
     # amberMBP-git+61a19ed: 0.039381 seconds (117.87 k allocations: 11.615 MiB) 343 time steps
     # amberMBP-git+013a35e: 0.212826 seconds (684.81 k allocations: 70.468 MiB) 2997 time steps
+    # amberMBP-git-ed6bed2: 0.103988 seconds (666.88 k allocations: 69.062 MiB) 2997 time steps
 
     # extract required data from solution object
     idx_u_scalar_amounts = example_result["solution"].prob.p.row_idx_scalars;
@@ -121,7 +122,7 @@ end
     # amberMBP-git-a1872dd: 1.800597 seconds (5.00 M allocations: 875.086 MiB, 18.01% gc time) 10244 time steps
     # amberMBP-git-013a35e: 18.315647 seconds (38.78 M allocations: 4.644 GiB, 4.00% gc time, 30.45% compilation time) 57445 time steps
     # amberMBP-git-f67b99f: 9.415075 seconds (32.11 M allocations: 4.335 GiB, 13.87% gc time) 57445 time steps
-
+    # amberMBP-git-ed6bed2: 9.290332 seconds (32.11 M allocations: 4.335 GiB, 9.71% gc time)  57445 time steps
     # sol[1] # solution
     # sol[2] # input_prefix
     # sol[3] # input_path

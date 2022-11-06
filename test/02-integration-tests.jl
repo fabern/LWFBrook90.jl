@@ -69,12 +69,12 @@ end
     # TODO(bernhard): we could run multiple LWFBrook90.jl simulations and compare with the
     # finest LWFBrook90R simulation only.
 
-    # if (false)
+    # if (true)
     #     git_string = "git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
     #     ifelse(length(Base.read(`git status --porcelain`, String))==0, "+clean","+dirty")
 
     #     # if some error appears, the following code can be used to plot the solutions
-    #     using Plots
+    #     using Plots, Measures
     #     pl_θ = plot(sim.θ.time,
     #             Matrix(sim.θ[:,Not(:time)]), line = :solid, labels = "LWFBrook90.jl:" .* string.(depth_to_read_out_mm) .* "mm",
     #             ylabel = "θ (-)", legend_position = :bottomright)
@@ -185,6 +185,7 @@ end
         # amberMBP-git-f94f0a3 TRBDF2(): 0.410966 seconds (528.38 k allocations: 109.498 MiB) 90 Time steps
         # amberMBP-git-f94f0a3 Rodas4P(): 0.734048 seconds (853.51 k allocations: 217.404 MiB) [ Info: Time steps for solving: 146
         # amberMBP-git-f94f0a3 Tsit5(); reltol = 1e-5: 2.450327 seconds (2.55 M allocations: 601.890 MiB, 49.53% gc time) 11466 Time steps
+        # amberMBP-git-ed6bed2: 0.994531 seconds (2.34 M allocations: 502.295 MiB) 11466 time steps
     @githash_time sim5, ref5, hyd5 = prepare_θψδ_from_sim_and_reference(;
         path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_sand-NLayer-103-RESET=FALSE",
         path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-103-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
@@ -200,6 +201,7 @@ end
         # amberMBP-git-f94f0a3 TRBDF2(): 11.271603 seconds (4.08 M allocations: 3.026 GiB, 9.36% gc time) 232 time steps
         # amberMBP-git-f94f0a3 Rodas4P(): 11.553674 seconds (5.04 M allocations: 4.167 GiB, 8.95% gc time) [ Info: Time steps for solving: 277
         # amberMBP-git-f94f0a3 Tsit5(); reltol = 1e-5: 5.862678 seconds (2.54 M allocations: 1.809 GiB, 11.54% gc time) 11425
+        # amberMBP-git-ed6bed2: 3.474783 seconds (2.33 M allocations: 1.473 GiB, 7.34% gc time) 11425 time steps
     # @githash_time sim6, ref6, hyd6 = prepare_θψδ_from_sim_and_reference(;
     #     path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_sand-NLayer-400-RESET=FALSE",
     #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
@@ -212,6 +214,7 @@ end
     #     # amberMBP-git-f94f0a3 TRBDF2()
     #     # amberMBP-git-f94f0a3 Rodas4P(): 212.835287 seconds (37.48 M allocations: 75.163 GiB, 6.17% gc time, 4.17% compilation time) [ Info: Time steps for solving: 410
     #     # amberMBP-git-f94f0a3 Tsit5(); reltol = 1e-5: 92.727500 seconds (14.08 M allocations: 18.600 GiB, 28.56% gc time, 8.44% compilation time) 31907
+    #     # amberMBP-git-ed6bed2: 35.243902 seconds (6.51 M allocations: 14.777 GiB, 6.47% gc time) 31907 Time Steps
 
     @githash_time sim1, ref1, hyd1 = prepare_θψδ_from_sim_and_reference(;
         path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_loam-NLayer-27-RESET=FALSE",
@@ -228,6 +231,7 @@ end
         # amberMBP-git-f94f0a3 TRBDF2()
         # amberMBP-git-f94f0a3 Rodas4P(): 5.013004 seconds (6.10 M allocations: 1.512 GiB, 9.69% gc time) [ Info: Time steps for solving: 828
         # amberMBP-git-f94f0a3 Tsit5(); reltol = 1e-5: 11.977669 seconds (20.29 M allocations: 4.677 GiB, 9.69% gc time) 81248
+        # amberMBP-git-ed6bed2: 9.474695 seconds (18.65 M allocations: 3.900 GiB, 15.40% gc time) 81248 time steps
     @githash_time sim2, ref2, hyd2 = prepare_θψδ_from_sim_and_reference(;
         path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_loam-NLayer-103-RESET=FALSE",
         path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_loam-NLayer-103-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
@@ -243,6 +247,7 @@ end
         # amberMBP-git-f94f0a3 TRBDF2()
         # amberMBP-git-f94f0a3 Rodas4P():
         # amberMBP-git-f94f0a3 Tsit5(); reltol = 1e-5: 31.497258 seconds (18.67 M allocations: 13.284 GiB, 8.82% gc time) 75200 Time Steps
+        # amberMBP-git-ed6bed2: 25.142349 seconds (17.15 M allocations: 10.808 GiB, 8.44% gc time), Ignoring NaN for fzero(), 75200 time steps
     # @githash_time sim3, ref3, hyd3 = prepare_θψδ_from_sim_and_reference(;
     #     path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_loam-NLayer-400-RESET=FALSE",
     #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_loam-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
@@ -255,10 +260,11 @@ end
     #     # amberMBP-git-f94f0a3 TRBDF2(): 141.509080 seconds (12.71 M allocations: 36.789 GiB, 4.16% gc time) 250
     #     # amberMBP-git-f94f0a3 Rodas4P():
     #     # amberMBP-git-f94f0a3 Tsit5(); reltol = 1e-5: 124.500841 seconds (20.05 M allocations: 51.612 GiB, 15.12% gc time) 83352
+    #     # amberMBP-git-ed6bed2: 104.234792 seconds (18.42 M allocations: 41.744 GiB, 9.21% gc time) 83352
 
     # 2) Plot (optional, not done when testing in CI)
     # Illustrate with a plot what will be compared in the tests below
-    # if (false) # Do these manually outside of automatic testing in order not to require Plots pkg
+    # if (true) # Do these manually outside of automatic testing in order not to require Plots pkg
     #     git_string = "git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
     #         ifelse(length(Base.read(`git status --porcelain`, String))==0, "+clean","+dirty")
     #     using Plots, Measures
@@ -341,6 +347,7 @@ end
         # amberMBP-git+356c4d6: 1.584915 seconds (6.83 M allocations: 892.419 MiB, 15.79% gc time) 11292 time steps
         # amberMBP-git-ce1fd2a: 1.895484 seconds (6.83 M allocations: 892.421 MiB, 15.90% gc time) 11292
         # amberMBP-git-f94f0a3 Tsit5(); reltol = 1e-5: 17.148244 seconds (15.65 M allocations: 1.339 GiB, 54.79% compilation time) 11466
+        # amberMBP-git-ed6bed2: 2.690979 seconds (5.02 M allocations: 823.388 MiB, 4.83% gc time) 11466 time steps
     @githash_time sim5, ref5, hyd5 = prepare_θψδ_from_sim_and_reference(;
         path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_sand-NLayer-103-RESET=FALSE",
         path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-103-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
@@ -352,6 +359,7 @@ end
         # amberMBP-git+356c4d6: 4.037970 seconds (14.20 M allocations: 2.656 GiB, 16.00% gc time) 11102 time steps
         # amberMBP-git-ce1fd2a: 4.264644 seconds (13.49 M allocations: 2.634 GiB, 15.07% gc time) 11120
         # amberMBP-git-f94f0a3 Tsit5(); reltol = 1e-5:  17.535086 seconds (22.57 M allocations: 3.206 GiB, 5.77% gc time, 44.25% compilation time) 11425
+        # amberMBP-git-ed6bed2: 5.088062 seconds (5.01 M allocations: 2.316 GiB, 6.92% gc time) 11425
     # @githash_time sim6, ref6, hyd6 = prepare_θψδ_from_sim_and_reference(;
     #     path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_sand-NLayer-400-RESET=FALSE",
     #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
@@ -361,6 +369,7 @@ end
     #     # amberMBP-git+356c4d6:46.806037 seconds (114.21 M allocations: 27.069 GiB, 16.70% gc time) 31536 time steps
     #     # amberMBP-git-ce1fd2a: 50.951525 seconds (113.15 M allocations: 27.023 GiB, 17.87% gc time) 31527
     #     # amberMBP-git-f94f0a3 Tsit5(): 63.332243 seconds (130.71 M allocations: 28.506 GiB, 10.02% gc time, 15.88% compilation time) 31901 time steps
+    #     # amberMBP-git-ed6bed2: 53.701377 seconds (26.34 M allocations: 23.542 GiB, 7.12% gc time, 13.83% compilation time) 31907
 
     @githash_time sim1, ref1, hyd1 = prepare_θψδ_from_sim_and_reference(;
         path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_loam-NLayer-27-RESET=FALSE",
@@ -374,6 +383,7 @@ end
         # amberMBP-git+356c4d6: 6.942920 seconds (31.24 M allocations: 4.048 GiB, 13.73% gc time) 50969 time steps
         # amberMBP-git-ce1fd2a: 7.501874 seconds (31.24 M allocations: 4.050 GiB, 13.77% gc time) 50942
         # amberMBP-git-f94f0a3 Tsit5(); reltol = 1e-5: 15.217210 seconds (57.18 M allocations: 7.344 GiB, 12.28% gc time) 81248
+        # amberMBP-git-ed6bed2: 18.685461 seconds (37.66 M allocations: 6.121 GiB, 15.20% gc time) 81248
     @githash_time sim2, ref2, hyd2 = prepare_θψδ_from_sim_and_reference(;
         path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_loam-NLayer-103-RESET=FALSE",
         path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_loam-NLayer-103-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
@@ -386,6 +396,7 @@ end
         # amberMBP-git+356c4d6: 22.144986 seconds (63.34 M allocations: 12.572 GiB, 14.51% gc time) 51980 time steps
         # amberMBP-git-ce1fd2a: 19.811971 seconds (63.28 M allocations: 12.569 GiB, 14.88% gc time) 51916
         # amberMBP-git-f94f0a3 Tsit5(); reltol = 1e-5: 37.237972 seconds (98.53 M allocations: 20.010 GiB, 10.34% gc time) 75200
+        # amberMBP-git-ed6bed2: 34.159066 seconds (34.75 M allocations: 16.353 GiB, 9.60% gc time) 75200
 
     # @githash_time sim3, ref3, hyd3 = prepare_θψδ_from_sim_and_reference(;
     #     path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_loam-NLayer-400-RESET=FALSE",
@@ -397,31 +408,32 @@ end
     #     # amberMBP-git+356c4d6:97.071439 seconds (263.17 M allocations: 63.688 GiB, 17.62% gc time) 73252 time steps
     #     # amberMBP-git-ce1fd2a: 108.155253 seconds (263.41 M allocations: 63.749 GiB, 17.42% gc time) 73318
     #     # amberMBP-git-f94f0a3 Tsit5(): 102.889782 seconds (212.54 M allocations: 52.711 GiB, 14.05% gc time) 57915
+    #     # amberMBP-git-ed6bed2: 130.906236 seconds (38.01 M allocations: 62.973 GiB, 8.38% gc time) 83352
 
     # 2) Plot (optional, not done when testing in CI)
     # Illustrate with a plot what will be compared in the tests below
-    # if (false) # Do these manually outside of automatic testing in order not to require Plots pkg
-    #     git_string = "git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
-    #     ifelse(length(Base.read(`git status --porcelain`, String))==0, "+clean","+dirty")
+    if (true) # Do these manually outside of automatic testing in order not to require Plots pkg
+        git_string = "git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
+        ifelse(length(Base.read(`git status --porcelain`, String))==0, "+clean","+dirty")
 
-    #     using Plots, Measures
-    #     depth_to_read_out_mm = [100 500 1000 1500 1900]
-    #     # Plot Loam simulations
-    #     plot_Hammel_Dense(sim1, ref1, hyd1, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam", size=(900,900), legendfont=font(6))
-    #     savefig("test-assets/Hammel-2001/out_Iso-Loam_sim1_"*git_string*".png")
-    #     plot_Hammel_Dense(sim2, ref2, hyd2, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam", size=(900,900), legendfont=font(6))
-    #     savefig("test-assets/Hammel-2001/out_Iso-Loam_sim2_"*git_string*".png")
-    #     # plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam", size=(900,900), legendfont=font(6))
-    #     # savefig("test-assets/Hammel-2001/out_Iso-Loam_sim3_"*git_string*".png")
+        using Plots, Measures
+        depth_to_read_out_mm = [100 500 1000 1500 1900]
+        # Plot Loam simulations
+        plot_Hammel_Dense(sim1, ref1, hyd1, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam", size=(900,900), legendfont=font(6))
+        savefig("test-assets/Hammel-2001/out_Iso-Loam_sim1_"*git_string*".png")
+        plot_Hammel_Dense(sim2, ref2, hyd2, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam", size=(900,900), legendfont=font(6))
+        savefig("test-assets/Hammel-2001/out_Iso-Loam_sim2_"*git_string*".png")
+        plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam", size=(900,900), legendfont=font(6))
+        savefig("test-assets/Hammel-2001/out_Iso-Loam_sim3_"*git_string*".png")
 
-    #     # Plot Sand simulations
-    #     plot_Hammel_Dense(sim4, ref4, hyd4, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand", size=(900,900), legendfont=font(6))
-    #     savefig("test-assets/Hammel-2001/out_Iso-Sand_sim1_"*git_string*".png")
-    #     plot_Hammel_Dense(sim5, ref5, hyd5, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand", size=(900,900), legendfont=font(6))
-    #     savefig("test-assets/Hammel-2001/out_Iso-Sand_sim2_"*git_string*".png")
-    #     # plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand", size=(900,900), legendfont=font(6))
-    #     # savefig("test-assets/Hammel-2001/out_Iso-Sand_sim3_"*git_string*".png")
-    # end
+        # Plot Sand simulations
+        plot_Hammel_Dense(sim4, ref4, hyd4, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand", size=(900,900), legendfont=font(6))
+        savefig("test-assets/Hammel-2001/out_Iso-Sand_sim1_"*git_string*".png")
+        plot_Hammel_Dense(sim5, ref5, hyd5, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand", size=(900,900), legendfont=font(6))
+        savefig("test-assets/Hammel-2001/out_Iso-Sand_sim2_"*git_string*".png")
+        plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand", size=(900,900), legendfont=font(6))
+        savefig("test-assets/Hammel-2001/out_Iso-Sand_sim3_"*git_string*".png")
+    end
 
 
     # Use sensible accuracy values to compare the two solutions (e.g. θ of 0.02, and ψ of 1 kPa)
