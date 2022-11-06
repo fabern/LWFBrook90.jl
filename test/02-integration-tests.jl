@@ -412,28 +412,28 @@ end
 
     # 2) Plot (optional, not done when testing in CI)
     # Illustrate with a plot what will be compared in the tests below
-    if (true) # Do these manually outside of automatic testing in order not to require Plots pkg
-        git_string = "git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
-        ifelse(length(Base.read(`git status --porcelain`, String))==0, "+clean","+dirty")
+    # if (true) # Do these manually outside of automatic testing in order not to require Plots pkg
+    #     git_string = "git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
+    #     ifelse(length(Base.read(`git status --porcelain`, String))==0, "+clean","+dirty")
 
-        using Plots, Measures
-        depth_to_read_out_mm = [100 500 1000 1500 1900]
-        # Plot Loam simulations
-        plot_Hammel_Dense(sim1, ref1, hyd1, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam", size=(900,900), legendfont=font(6))
-        savefig("test-assets/Hammel-2001/out_Iso-Loam_sim1_"*git_string*".png")
-        plot_Hammel_Dense(sim2, ref2, hyd2, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam", size=(900,900), legendfont=font(6))
-        savefig("test-assets/Hammel-2001/out_Iso-Loam_sim2_"*git_string*".png")
-        plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam", size=(900,900), legendfont=font(6))
-        savefig("test-assets/Hammel-2001/out_Iso-Loam_sim3_"*git_string*".png")
+    #     using Plots, Measures
+    #     depth_to_read_out_mm = [100 500 1000 1500 1900]
+    #     # Plot Loam simulations
+    #     plot_Hammel_Dense(sim1, ref1, hyd1, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam", size=(900,900), legendfont=font(6))
+    #     savefig("test-assets/Hammel-2001/out_Iso-Loam_sim1_"*git_string*".png")
+    #     plot_Hammel_Dense(sim2, ref2, hyd2, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam", size=(900,900), legendfont=font(6))
+    #     savefig("test-assets/Hammel-2001/out_Iso-Loam_sim2_"*git_string*".png")
+    #     plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam", size=(900,900), legendfont=font(6))
+    #     savefig("test-assets/Hammel-2001/out_Iso-Loam_sim3_"*git_string*".png")
 
-        # Plot Sand simulations
-        plot_Hammel_Dense(sim4, ref4, hyd4, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand", size=(900,900), legendfont=font(6))
-        savefig("test-assets/Hammel-2001/out_Iso-Sand_sim1_"*git_string*".png")
-        plot_Hammel_Dense(sim5, ref5, hyd5, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand", size=(900,900), legendfont=font(6))
-        savefig("test-assets/Hammel-2001/out_Iso-Sand_sim2_"*git_string*".png")
-        plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand", size=(900,900), legendfont=font(6))
-        savefig("test-assets/Hammel-2001/out_Iso-Sand_sim3_"*git_string*".png")
-    end
+    #     # Plot Sand simulations
+    #     plot_Hammel_Dense(sim4, ref4, hyd4, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand", size=(900,900), legendfont=font(6))
+    #     savefig("test-assets/Hammel-2001/out_Iso-Sand_sim1_"*git_string*".png")
+    #     plot_Hammel_Dense(sim5, ref5, hyd5, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand", size=(900,900), legendfont=font(6))
+    #     savefig("test-assets/Hammel-2001/out_Iso-Sand_sim2_"*git_string*".png")
+    #     plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand", size=(900,900), legendfont=font(6))
+    #     savefig("test-assets/Hammel-2001/out_Iso-Sand_sim3_"*git_string*".png")
+    # end
 
 
     # Use sensible accuracy values to compare the two solutions (e.g. θ of 0.02, and ψ of 1 kPa)
