@@ -464,7 +464,7 @@ function read_path_initial_conditions(path_initial_conditions; simulate_isotopes
 end
 
 # path_param = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_param.csv"
-
+# TODO: check why read_path_param does not appear in the docs...
 """
     read_path_param(path_param; simulate_isotopes::Bool = false)
 
