@@ -1,8 +1,5 @@
 # TODO: maybe move this into a module? on soil discretization?
 
-#using DataFrames: DataFrame, rename# ,select
-#using DataFramesMeta#: @linq, transform, DataFramesMeta
-
 """
     discretize_soil(folder::String, prefix::String; suffix::String = "")
 
@@ -13,17 +10,52 @@ The file `soil_discretization.csv` was created with an R script
 `LWFBrook90R::run_LWFB90()` and generates the corresponding input files for
     LWFBrook90.jl.
 """
-function discretize_soil(folder::String, prefix::String; suffix::String = "")
-    # Load pre-defined discretization
-    path_soil_discretization = joinpath(folder, prefix * "_soil_discretization" * suffix * ".csv")
-    discretize_soil(path_soil_discretization)
-end
 function discretize_soil(path_soil_discretization::String)
     # Load pre-defined discretization
     input_soil_discretization = LWFBrook90.read_path_soil_discretization(path_soil_discretization)
 
     return input_soil_discretization
 end
+"""
+discretize_soil(;
+    Δz_m::Vector{T},
+    Rootden_::Function,
+    uAux_PSIM_init_kPa::Function,
+    u_delta18O_init_permil::Function = ((Δz_m) -> missing),
+    u_delta2H_init_permil::Function = ((Δz_m) -> missing))
+
+Manually generate a soil- and root-discretization for LWFBrook90.jl. This function can be
+used as alternative to loading an input file `soil_discretization.csv`.
+
+Reqired arguments are a vector with thickness of the discretization cells/layers in meter
+`Δ_m`, and functions `Rootden_(Δ_m)` that generates the root density, a function
+`uAux_PSIM_init_kPa(Δ_m)` that generates the initial values of ψ (kPa)
+for all cells as a function of `Δ_m`.
+
+Optinal arguments are functions initial conditions of the two isotopic
+signatures based on `Δ_m`.
+"""
+function discretize_soil(;
+    Δz_m::Vector{T},
+    Rootden_::Function,
+    uAux_PSIM_init_kPa::Function,
+    u_delta18O_init_permil::Function = ((Δz_m) -> missing),
+    u_delta2H_init_permil::Function = ((Δz_m) -> missing)) where {T<:Number}
+
+    # Derive cell interfaces based on the cell spacing Δz_m
+    z_cell_interfaces = -[0; cumsum(Δz_m)]
+    z_cell_interfaces = round.(z_cell_interfaces; digits=6)
+
+    # Output required DataFrame
+    DataFrame(
+        Upper_m = z_cell_interfaces[Not(end)],
+        Lower_m = z_cell_interfaces[Not(1)],
+        Rootden_ = Rootden_(Δz_m),
+        uAux_PSIM_init_kPa = uAux_PSIM_init_kPa(Δz_m),
+        u_delta18O_init_permil = u_delta18O_init_permil(Δz_m),
+        u_delta2H_init_permil = u_delta2H_init_permil(Δz_m))
+end
+
 # function discretize(soil_horizons::DataFrame, )
 #     # checks on structure
 #     @assert names(soil_horizons) == ["HorizonNr", "Upper_m", "Lower_m", "shp"]
@@ -38,49 +70,6 @@ end
 #     # TODO(bernhard): define
 #     return DiscretizedSoilDomain(Upper_m, Lower_m, Rootden_, ICs, shp)
 # end
-
-
-"""
-discretize_soil(;
-    Δz_m::Vector{T},
-    Rootden_::Function,
-    uAux_PSIM_init_kPa::Function,
-    u_delta18O_init_permil = missing,
-    u_delta2H_init_permil = missing)
-
-Manually generate a soil- and root-discretization for LWFBrook90.jl. This function can be
-used as alternative to loading an input file `soil_discretization.csv`.
-
-Reqired arguments are a vector with thickness of the discretization cells/layers in meter
-`Δ_m`, a function `Rootden_(Δ_m)` that generates the root density based on `Δ_m`, a function
-`uAux_PSIM_init_kPa(Δ_m)` that generates the initial values of ψ (kPa) for all cell.
-
-Optinal arguments are the scalar values for initial conditions of the two isotopic
-signatures.
-"""
-function discretize_soil(;
-    Δz_m::Vector{T},
-    Rootden_::Function,
-    uAux_PSIM_init_kPa::Function,
-    u_delta18O_init_permil = missing,
-    u_delta2H_init_permil = missing) where {T<:Number}
-
-    # Derive cell interfaces based on the cell spacing Δz_m
-    z_cell_interfaces = -[0; cumsum(Δz_m)]
-    z_cell_interfaces = round.(z_cell_interfaces; digits=6)
-
-    # Output required DataFrame
-    DataFrame(
-        Upper_m = z_cell_interfaces[Not(end)],
-        Lower_m = z_cell_interfaces[Not(1)],
-        Rootden_ = Rootden_(Δz_m),
-        uAux_PSIM_init_kPa = uAux_PSIM_init_kPa(Δz_m),
-        u_delta18O_init_permil = u_delta18O_init_permil,
-        u_delta2H_init_permil = u_delta2H_init_permil)
-
-end
-
-
 
 
 
@@ -264,13 +253,11 @@ function refine_soil_discretization(
     ############
 
     ############
+    HEAT = 0 # flag for heat balance; not implemented; continuous_SPAC.params[:HEAT], @ hardcoded
 
-    # hardcoded:
-    HEAT = 0 # flag for heat balance; not implemented; continuous_SPAC.params[:HEAT],
-
-    THICK_m   = soil_discretization[!,"Upper_m"] - soil_discretization[!,"Lower_m"] # thickness of soil layer [m]
-    THICK     = 1000*(THICK_m)                                    # thickness of soil layer [mm]
-    PSIM_init = soil_discretization[!,"uAux_PSIM_init_kPa"]       # initial condition PSIM [kPa]
+    THICK_m        = soil_discretization[!,"Upper_m"] - soil_discretization[!,"Lower_m"] # thickness of soil layer [m]
+    THICK          = 1000*(THICK_m)                                    # thickness of soil layer [mm]
+    PSIM_init      = soil_discretization[!,"uAux_PSIM_init_kPa"]       # initial condition PSIM [kPa]
     d18O_soil_init = soil_discretization[!,"u_delta18O_init_permil"] # initial condition soil water δ18O [‰]
     d2H_soil_init  = soil_discretization[!,"u_delta2H_init_permil"]  # initial condition soil water δ2H [‰]
 
@@ -278,6 +265,22 @@ function refine_soil_discretization(
 
     NLAYER = nrow(soil_discretization)
 
+    return Dict([
+                ("NLAYER",NLAYER),
+                ("ILAYER",ILAYER),
+                ("QLAYER",QLAYER),
+                ("THICK",THICK),
+                ("PSIM_init",PSIM_init),
+                ("d18O_init",d18O_soil_init),
+                ("d2H_init",d2H_soil_init),
+                ("SHP", soil_discretization.shp),
+                ("final_Rootden_", soil_discretization[!,"Rootden_"])])
+                # ("PAR",PAR),
+                # ("STONEF",STONEF),
+                #("HeatCapOld",HeatCapOld),
+                #("TopInfT", TopInfT)])
+
+    # BELOW IS ONLY UNUSED CODE:...
     for i = 1:NLAYER
         if (HEAT != 0)
             @error "HEAT must be set to zero, as heat balance is not implemented."
@@ -298,42 +301,6 @@ function refine_soil_discretization(
 
     # ############
     # # 3) Bring to simple vector and matrix form
-
-    # # Parse the stonefraction and hydraulic parameters for each layer
-    # # depending on wheter we use FLAG_MualVanGen ==1 or ==2
-    # # STONEF = [shp.p_STONEF for shp in soil_discretization.shp] # soil_discretization[:,"gravel_volFrac"]
-    # # [shp.p_THSAT  for shp in soil_discretization.shp] # ths_volFrac
-    # # [shp.p_θr     for shp in soil_discretization.shp] # thr_volFrac
-    # # [shp.p_MvGα   for shp in soil_discretization.shp] # alpha_perMeter
-    # # [shp.p_MvGn   for shp in soil_discretization.shp] # npar_
-    # # [shp.p_KSAT   for shp in soil_discretization.shp] # ksat_mmDay
-    # # [shp.p_MvGl   for shp in soil_discretization.shp] # tort_
-    # # [shp.p_STONEF for shp in soil_discretization.shp] # gravel_volFrac)
-    # if FLAG_MualVanGen == 1
-    #     # Mualem-van Genuchten
-    #     PAR = select(soil_discretization,
-    #             :ths_volFrac    => :θs,
-    #             :ksat_mmDay     => :Ksat,
-    #             :alpha_perMeter => :α,
-    #             :npar_          => :n,
-    #             :tort_          => :tort,
-    #             :thr_volFrac    => :θr
-    #             )
-    #     # ..it's a sin......
-    #     # Hard default of 2 [mm d-1] for saturated hydraulic conductivity at field capacity K(θ_fc)
-    #     PAR[:,"K(θ_fc)"] .= 2. #insertcols!(copy(soil_discretization), ("K(θ_fc)" => 2.)),
-    # end
-    # if FLAG_MualVanGen == 0
-    #     # Clapp-Hornberger
-    #     PAR = select(soil_discretization,
-    #             :thsat    => :θs,
-    #             :thetaf   => :θf,
-    #             :kf_mmD   => :kf,
-    #             :psif_kPa => :ψf,
-    #             :bexp     => :bexp,
-    #             :wetinf   => :wetinf
-    #             )
-    # end
 
     # heat flow -------
     # nmat   = nrow(input_soil_horizons)
@@ -378,21 +345,6 @@ function refine_soil_discretization(
     #                 # TPar[2,mat[i])+TPar[9,mat[i])*SWATI[i]/THICK[i]
     # end
     ###
-
-    return Dict([
-                ("NLAYER",NLAYER),
-                ("ILAYER",ILAYER),
-                ("QLAYER",QLAYER),
-                ("THICK",THICK),
-                ("PSIM_init",PSIM_init),
-                ("d18O_init",d18O_soil_init),
-                ("d2H_init",d2H_soil_init),
-                ("SHP", soil_discretization.shp),
-                ("final_Rootden_", soil_discretization[!,"Rootden_"])])
-                # ("PAR",PAR),
-                # ("STONEF",STONEF),
-                #("HeatCapOld",HeatCapOld),
-                #("TopInfT", TopInfT)])
 end
 
 
@@ -514,3 +466,80 @@ end
 #     cumsum(Δz_m * 100), seriestype = [:path], label = "maxRoot: $(-0.9)m")
 # plot!(Rootden_beta_(0.97, Δz_m = Δz_m, z_rootMax_m = -0.5),
 #     cumsum(Δz_m * 100), seriestype = [:path], label = "maxRoot: $(-0.5)m",)
+
+
+"""
+    HammelKennel_transient_root_density()
+
+Take root density distribution parameters and generates root density in time (t) and space (z, negative downward).
+"""
+function HammelKennel_transient_root_density(;
+        timepoints,   p_AGE,
+        p_INITRDEP,   p_INITRLEN,
+        p_RGROPER_y,  p_RGRORATE_m_per_y, # vertical root growth rate in m per y (accessing new soil layers)
+        p_THICK,      final_Rootden_profile)
+
+    NLAYER = length(p_THICK)
+    # Hammel and Kennel 2001:
+
+    # 0) preprocess final equilibrium state: (final_Rootden_profile)
+    # final_Rootden_profile: relative values of final root density per unit volume
+    # make root density continuous between first and last layer
+    i1 = findfirst(final_Rootden_profile .> 1.e-6) # first layer where final_Rootden_profile[i] is >=1.e-6
+    i2 = findlast(final_Rootden_profile .> 1.e-6)  # last layer (in 1:NLAYER) where final_Rootden_profile[i] is >=1.e-6
+    if !isnothing(i1) && isnothing(i2)
+        i2 = NLAYER
+    end
+    for i = i1:i2 # set final_Rootden_profile to minimum of 1.e-6 within the root zone (between i1 and i2)
+        final_Rootden_profile[i] = max( final_Rootden_profile[i], 1.01e-6)
+    end
+
+    # 1) Define age at which root growth arrives in a specific depth and lateral root growth commences
+    # z_center     = soil_discretization[!,"Upper_m"] - soil_discr["THICK"]/1000/2 # soil depth [m] (midpoint, i.e. average depth of layer)
+    z_center_m     = -(cumsum(p_THICK) - p_THICK/2)/1000
+    depfirst_m  = z_center_m[1] - p_THICK[1] / 1000.
+    # Here z_center_m and depfirst_m are negative values in the soil. (z axis upward)
+
+    # 1a) compute arrival times tini
+    vᵣ = p_RGRORATE_m_per_y # growth rate (m/y)
+    zᵣ₀ = p_INITRDEP # initial depth of root
+    # zᵣ =  # maximal depth of root
+    # root_arrival_time = (zᵣ - zᵣ₀)/vᵣ
+    # tᵣ =  # time period of lateral growth (after first vertical arrival)
+    # rₗ₀ = #
+    # # t_ini(z) : arrival time of roots at depth z, then starts lateral growth
+
+    t_ini = fill(NaN, NLAYER)
+    for i = 1:NLAYER
+        t_ini[i] = 1.e+20               # start out with "never"
+        z = depfirst_m - z_center_m[i]
+        roots_present = final_Rootden_profile[i] >= 1.e-6
+        if roots_present
+            if z <= zᵣ₀
+                t_ini[i] = 0.
+            elseif z > zᵣ₀
+                if vᵣ > 0
+                    t_ini[i] = (z - zᵣ₀)/vᵣ
+                end
+            end
+        end
+    end
+
+    # 2) lateral growth per layer starts at t_ini and ends at t_ini + tᵣ
+    # Time dependent root density parameters is a vector quantity that is dependent on time (i.e. 2D array):
+    p_RELDEN_2Darray = fill(NaN, length(timepoints), NLAYER)
+    for i in eachindex(timepoints)
+        p_RELDEN_2Darray[i,:] =
+            HammelKennel_lateral_rootgrowth(;
+                final_Rootden_profile = final_Rootden_profile,
+                INITRDEP_m        = p_INITRDEP,
+                INITRLEN_m_per_m2 = p_INITRLEN,
+                t_y               = p_AGE(timepoints[i]),
+                tstart_y          = t_ini,
+                RGROPER_yrs       = p_RGROPER_y)
+    end
+    p_fT_RELDEN =  extrapolate(interpolate((timepoints, 1:NLAYER), p_RELDEN_2Darray,
+                                        (Gridded(Constant{Next}()), NoInterp()), # 1st dimension: ..., 2nd dimension NoInterp()
+                                        ), Flat()) # extrapolate flat, alternative: Throw()
+    return p_fT_RELDEN
+end

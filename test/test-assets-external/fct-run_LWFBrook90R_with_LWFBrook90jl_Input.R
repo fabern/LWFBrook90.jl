@@ -104,7 +104,7 @@ simulate_LWFBrook90.jl_input_folder_withLWFBrook90R <-
       group_by(layer) %>%
       mutate(new_thick = thick/refine_discr_factor) %>%
       mutate(new_upper    = upper - new_thick/1000 * ((row_number())-1),
-             new_midpoint = upper - new_thick/1000 * ((row_number())-1) - new_thick/1000,
+             new_midpoint = upper - new_thick/1000 * ((row_number())-1) - new_thick/2/1000,
              new_lower    = upper - new_thick/1000 * ((row_number())) ) %>%
       # cleanup
       ungroup() %>%

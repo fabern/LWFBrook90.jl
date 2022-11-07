@@ -7,11 +7,11 @@ using Dates: DateTime, Millisecond, Second, Day, Month, month, value, dayofyear
     SPAC(folder::String, prefix::String)
 
 Define instance of SPAC model by loading different input files for LWFBrook90:
-- meteoveg.csv
-- param.csv
-- meteo_storm_durations.csv
-- initial_conditions.csv
-- soil_horizons.csv
+- `meteoveg.csv`
+- `param.csv`
+- `meteo_storm_durations.csv`
+- `initial_conditions.csv`
+- `soil_horizons.csv`
 
 These files were created with an R script `generate_LWFBrook90jl_Input.R` that
 takes the same arguements as the R function `LWFBrook90R::run_LWFB90()` and generates
@@ -141,22 +141,6 @@ Get Month from simulation time
 function p_MONTHN(t::Float64, reference::DateTime)
     month(reference + Day(floor(t)))
 end
-
-# Subset input data and transform dates into floats relative to reference_date
-# """
-#    subset_standardize(data::DataFrame, start::DateTime, stop::DateTime, reference::DateTime)
-#
-# Returns DataFrame `data` that is subset between `start` and `stop` and colum `dates` transformed to simulation time.
-# """
-# function subset_standardize(data::DataFrame, start::DateTime, stop::DateTime, reference::DateTime)
-#     @linq data |>
-#     # Subset
-#     where(:dates .>= start, :dates .<= stop) |>
-#     # Compute time relative to reference date
-#     transform(:dates = DateTime2RelativeDaysFloat.(:dates, reference)) |>
-#     # Rename colum
-#     rename(Dict(:dates => :days))
-# end
 
 function init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes = true)
     if (simulate_isotopes)
@@ -480,6 +464,13 @@ function read_path_initial_conditions(path_initial_conditions; simulate_isotopes
 end
 
 # path_param = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_param.csv"
+# TODO: check why read_path_param does not appear in the docs...
+"""
+    read_path_param(path_param; simulate_isotopes::Bool = false)
+
+Reads in the `param.csv` based on a provided path. The `param.csv` has a structure shown in
+the documentation (User Guide -> Input data). [Structure of input data](@ref)
+"""
 function read_path_param(path_param; simulate_isotopes::Bool = false)
     parsing_types =
         Dict(### Isotope transport parameters  -------,NA
