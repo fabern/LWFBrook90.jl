@@ -238,14 +238,35 @@ end
     # 1) data to plot
 
     # 1a) extract data from solution object `sol`
+        # # Two ways to extract data from soil object: using `[]` or `()`
+        # u_SWATI = reduce(hcat, [sol[t_idx].SWATI.mm  for t_idx = eachindex(sol)])
+        # u_SWATI = reduce(hcat, [sol(t_days).SWATI.mm for t_days = saveat])
+
+        # saveat decides which points to use:
+        # saveat = nothing # read out all simulation steps
+        saveat = :daily  # read out only daily values
+        # saveat = 0.:1.
+        if isnothing(saveat)
+            saveat = sol.t # warning this can
+            @error "Too many output times requested. This easily freezes the program..."
+        elseif saveat == :daily
+            saveat = unique(round.(sol.t))
+        end
+
     simulate_isotopes            = sol.prob.p.simulate_isotopes
     @assert simulate_isotopes "Provided solution did not simulate isotopes"
 
+    all_d18O_values = [rows_SWAT_d18O; row_PREC_d18O; row_INTS_d18O; row_INTR_d18O; row_SNOW_d18O; row_GWAT_d18O; row_RWU_d18O][:]
+    all_d2H_values  = [rows_SWAT_d2H ; row_PREC_d2H ; row_INTS_d2H ; row_INTR_d2H ; row_SNOW_d2H ; row_GWAT_d2H ; row_RWU_d2H ][:]
+    clims_d18O = (-16, -6)
+    clims_d2H  = (-125, -40)
+    true_to_check_colorbar = true; # set this flag to false for final plot, true for debugging.
+
     t_ref = sol.prob.p.REFERENCE_DATE
-    x = RelativeDaysFloat2DateTime.(sol.t, t_ref);
     y_center = cumsum(sol.prob.p.p_soil.p_THICK) - sol.prob.p.p_soil.p_THICK/2
 
-    row_PREC_amt = sol.prob.p.p_PREC.(sol.t)
+    x = RelativeDaysFloat2DateTime.(saveat, t_ref);
+    row_PREC_amt = sol.prob.p.p_PREC.(saveat)
 
     # rows_SWAT_amt = sol[sol.prob.p.row_idx_SWATI, 1, :]./sol.prob.p.p_soil.p_THICK;
 
@@ -256,19 +277,26 @@ end
     row_NaN       = fill(NaN, 1,length(x))
     row_PREC_d18O = reshape(sol.prob.p.p_δ18O_PREC.(sol.t), 1, :)
 
-    row_INTS_d18O = reduce(hcat, [sol[t].INTS.d18O for t in eachindex(sol)])
-    row_INTR_d18O = reduce(hcat, [sol[t].INTR.d18O for t in eachindex(sol)])
-    row_SNOW_d18O = reduce(hcat, [sol[t].SNOW.d18O for t in eachindex(sol)])
-    row_GWAT_d18O = reduce(hcat, [sol[t].GWAT.d18O for t in eachindex(sol)])
-    row_RWU_d18O  = reduce(hcat, [sol[t].RWU.d18O for t in eachindex(sol)])
-    row_XYL_d18O  = reduce(hcat, [sol[t].XYLEM.d18O for t in eachindex(sol)])
-    row_PREC_d2H  = reshape(sol.prob.p.p_δ2H_PREC.(sol.t), 1, :)
-    row_INTS_d2H = reduce(hcat, [sol[t].INTS.d2H for t in eachindex(sol)])
-    row_INTR_d2H = reduce(hcat, [sol[t].INTR.d2H for t in eachindex(sol)])
-    row_SNOW_d2H = reduce(hcat, [sol[t].SNOW.d2H for t in eachindex(sol)])
-    row_GWAT_d2H = reduce(hcat, [sol[t].GWAT.d2H for t in eachindex(sol)])
-    row_RWU_d2H  = reduce(hcat, [sol[t].RWU.d2H for t in eachindex(sol)])
-    row_XYL_d2H  = reduce(hcat, [sol[t].XYLEM.d2H for t in eachindex(sol)])
+    # rows_SWAT_amt = sol[sol.prob.p.row_idx_SWATI, 1, :]./sol.prob.p.p_soil.p_THICK;
+    rows_SWAT_amt  = reduce(hcat, [sol(t).SWATI.mm   for t in saveat]) ./ sol.prob.p.p_soil.p_THICK
+    rows_SWAT_d18O = reduce(hcat, [sol(t).SWATI.d18O for t in saveat])
+    rows_SWAT_d2H  = reduce(hcat, [sol(t).SWATI.d2H  for t in saveat])
+    row_NaN       = fill(NaN, 1,length(x))
+
+    row_PREC_d18O = reshape(sol.prob.p.p_δ18O_PREC.(saveat), 1, :)
+    row_INTS_d18O = reduce(hcat, [sol(t).INTS.d18O for t in saveat])
+    row_INTR_d18O = reduce(hcat, [sol(t).INTR.d18O for t in saveat])
+    row_SNOW_d18O = reduce(hcat, [sol(t).SNOW.d18O for t in saveat])
+    row_GWAT_d18O = reduce(hcat, [sol(t).GWAT.d18O for t in saveat])
+    row_RWU_d18O  = reduce(hcat, [sol(t).RWU.d18O for t in saveat])
+    row_XYL_d18O  = reduce(hcat, [sol(t).XYLEM.d18O for t in saveat])
+    row_PREC_d2H  = reshape(sol.prob.p.p_δ2H_PREC.(saveat), 1, :)
+    row_INTS_d2H = reduce(hcat, [sol(t).INTS.d2H for t in saveat])
+    row_INTR_d2H = reduce(hcat, [sol(t).INTR.d2H for t in saveat])
+    row_SNOW_d2H = reduce(hcat, [sol(t).SNOW.d2H for t in saveat])
+    row_GWAT_d2H = reduce(hcat, [sol(t).GWAT.d2H for t in saveat])
+    row_RWU_d2H  = reduce(hcat, [sol(t).RWU.d2H for t in saveat])
+    row_XYL_d2H  = reduce(hcat, [sol(t).XYLEM.d2H for t in saveat])
 
     # 1b) define some plot arguments based on the extracted data
     # color scheme:
