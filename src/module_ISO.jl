@@ -256,8 +256,6 @@ end
     simulate_isotopes            = sol.prob.p.simulate_isotopes
     @assert simulate_isotopes "Provided solution did not simulate isotopes"
 
-    all_d18O_values = [rows_SWAT_d18O; row_PREC_d18O; row_INTS_d18O; row_INTR_d18O; row_SNOW_d18O; row_GWAT_d18O; row_RWU_d18O][:]
-    all_d2H_values  = [rows_SWAT_d2H ; row_PREC_d2H ; row_INTS_d2H ; row_INTR_d2H ; row_SNOW_d2H ; row_GWAT_d2H ; row_RWU_d2H ][:]
     clims_d18O = (-16, -6)
     clims_d2H  = (-125, -40)
     true_to_check_colorbar = true; # set this flag to false for final plot, true for debugging.
