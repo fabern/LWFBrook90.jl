@@ -26,8 +26,8 @@ Enrichment of xylem water due to evaporation from the stomatas is not modelled.
 """
 module ISO # ISOTOPIC MIXING AND FRACTIONATION
 
-using RecipesBase
-using ..LWFBrook90: RelativeDaysFloat2DateTime
+using RecipesBase, PlotUtils, Measures
+using ..LWFBrook90: RelativeDaysFloat2DateTime, DiscretizedSPAC
 
 export α¹⁸O_dif, α²H_dif, α¹⁸O_eq, α²H_eq, δ_CraigGordon, update_δ_with_mixing_and_evaporation
 export R_VSMOW¹⁸O, R_VSMOW²H, Mi_¹⁸O, Mi_²H, Mw
@@ -209,33 +209,29 @@ function update_δ_with_mixing_and_evaporation(dt, u₀, δ₀, inflow, δin, ou
     return (u⁺⁺, δ⁺⁺)
 end
 
-
+# defines mutable struct `PlotIsotopes` and sets shorthands `plotisotopes` and `plotisotopes!`
 @userplot PlotIsotopes
+@recipe function f(pliso::PlotIsotopes)
 
-@recipe function f(h::PlotIsotopes)
     # 0) parse input arguments
-    # if length(h.args) != 1 # || !(typeof(h.args[1]) <: SciMLBase.ODESolution)
-    #     error("Plot Isotopes should be given two arguments of type ODESolution.  Got: $(typeof(h.args))")
-    # end
-    if length(h.args) == 1 # || !(typeof(h.args[1]) <: SciMLBase.ODESolution)
-        # all okay, use default tick_function
-        sol = h.args[1]
-        tick_function = (x1,x2) -> [range(x1, x2; length=10)][1]
-    elseif length(h.args) == 2
-        # all okay, tick_function was provided
-        # check that second argument is indeed a function
-        if isempty(methods(h.args[2]))
-            error("Plot Isotopes' second argument should be a function for the ticks.")
-        end
-        sol = h.args[1]
-        tick_function = h.args[2]
-    else
-        error("Plot Isotopes should be given two arguments of type ODESolution.  Got: $(typeof(h.args))")
+    # @show typeof.(pliso.args)
+    # @show length(pliso.args) != 1
+
+    if length(pliso.args) != 1
+        error("plotisotopes requires a single argument of type DiscretizedSPAC. Other arguments to plot() should be separated by `;`,")
     end
 
+    simulation = pliso.args[1]
+    if !(simulation isa DiscretizedSPAC)
+        error("plotisotopes should be given a first argument of type DiscretizedSPAC. Got: $(typeof(simulation))")
+    end
+    if isnothing(simulation.ODESolution)
+        error("plotisotopes requires a solved system. Please `simulate!()` the DiscretizedSPAC first.")
+    end
+    sol = simulation.ODESolution
 
 
-    # 1) data to plot
+    # 1) prepare data to plot
 
     # 1a) extract data from solution object `sol`
         # # Two ways to extract data from soil object: using `[]` or `()`
@@ -245,42 +241,38 @@ end
         # saveat decides which points to use:
         # saveat = nothing # read out all simulation steps
         saveat = :daily  # read out only daily values
-        # saveat = 0.:1.
         if isnothing(saveat)
             saveat = sol.t # warning this can
-            @error "Too many output times requested. This easily freezes the program..."
+            error("Too many output times requested. This easily freezes the program...")
         elseif saveat == :daily
             saveat = unique(round.(sol.t))
         end
+        t_ref = sol.prob.p.REFERENCE_DATE
+        x = RelativeDaysFloat2DateTime.(saveat, t_ref);
+        y_center = cumsum(sol.prob.p.p_soil.p_THICK) - sol.prob.p.p_soil.p_THICK/2
 
-    simulate_isotopes            = sol.prob.p.simulate_isotopes
-    @assert simulate_isotopes "Provided solution did not simulate isotopes"
+    simulate_isotopes = sol.prob.p.simulate_isotopes
+    @assert simulate_isotopes "Provided DiscretizedSPAC() did not simulate isotopes"
+
+    # Some hardcoded options:
+    xlimits = RelativeDaysFloat2DateTime.(sol.prob.tspan, t_ref)
 
     clims_d18O = (-16, -6)
     clims_d2H  = (-125, -40)
     true_to_check_colorbar = true; # set this flag to false for final plot, true for debugging.
+    tick_function = (x1, x2) -> PlotUtils.optimize_ticks(x1, x2; k_min = 4)
 
-    t_ref = sol.prob.p.REFERENCE_DATE
-    y_center = cumsum(sol.prob.p.p_soil.p_THICK) - sol.prob.p.p_soil.p_THICK/2
-
-    x = RelativeDaysFloat2DateTime.(saveat, t_ref);
+    # Results
     row_PREC_amt = sol.prob.p.p_PREC.(saveat)
-
-    # rows_SWAT_amt = sol[sol.prob.p.row_idx_SWATI, 1, :]./sol.prob.p.p_soil.p_THICK;
-
     rows_SWAT_amt  = reduce(hcat, [sol[t].SWATI.mm   for t in eachindex(sol)]) ./ sol.prob.p.p_soil.p_THICK
     rows_SWAT_d18O = reduce(hcat, [sol[t].SWATI.d18O for t in eachindex(sol)])
     rows_SWAT_d2H  = reduce(hcat, [sol[t].SWATI.d2H  for t in eachindex(sol)])
-
-    row_NaN       = fill(NaN, 1,length(x))
-    row_PREC_d18O = reshape(sol.prob.p.p_δ18O_PREC.(sol.t), 1, :)
 
     # rows_SWAT_amt = sol[sol.prob.p.row_idx_SWATI, 1, :]./sol.prob.p.p_soil.p_THICK;
     rows_SWAT_amt  = reduce(hcat, [sol(t).SWATI.mm   for t in saveat]) ./ sol.prob.p.p_soil.p_THICK
     rows_SWAT_d18O = reduce(hcat, [sol(t).SWATI.d18O for t in saveat])
     rows_SWAT_d2H  = reduce(hcat, [sol(t).SWATI.d2H  for t in saveat])
     row_NaN       = fill(NaN, 1,length(x))
-
     row_PREC_d18O = reshape(sol.prob.p.p_δ18O_PREC.(saveat), 1, :)
     row_INTS_d18O = reduce(hcat, [sol(t).INTS.d18O for t in saveat])
     row_INTR_d18O = reduce(hcat, [sol(t).INTR.d18O for t in saveat])
@@ -289,19 +281,17 @@ end
     row_RWU_d18O  = reduce(hcat, [sol(t).RWU.d18O for t in saveat])
     row_XYL_d18O  = reduce(hcat, [sol(t).XYLEM.d18O for t in saveat])
     row_PREC_d2H  = reshape(sol.prob.p.p_δ2H_PREC.(saveat), 1, :)
-    row_INTS_d2H = reduce(hcat, [sol(t).INTS.d2H for t in saveat])
-    row_INTR_d2H = reduce(hcat, [sol(t).INTR.d2H for t in saveat])
-    row_SNOW_d2H = reduce(hcat, [sol(t).SNOW.d2H for t in saveat])
-    row_GWAT_d2H = reduce(hcat, [sol(t).GWAT.d2H for t in saveat])
-    row_RWU_d2H  = reduce(hcat, [sol(t).RWU.d2H for t in saveat])
-    row_XYL_d2H  = reduce(hcat, [sol(t).XYLEM.d2H for t in saveat])
+    row_INTS_d2H  = reduce(hcat, [sol(t).INTS.d2H for t in saveat])
+    row_INTR_d2H  = reduce(hcat, [sol(t).INTR.d2H for t in saveat])
+    row_SNOW_d2H  = reduce(hcat, [sol(t).SNOW.d2H for t in saveat])
+    row_GWAT_d2H  = reduce(hcat, [sol(t).GWAT.d2H for t in saveat])
+    row_RWU_d2H   = reduce(hcat, [sol(t).RWU.d2H for t in saveat])
+    row_XYL_d2H   = reduce(hcat, [sol(t).XYLEM.d2H for t in saveat])
 
-    # 1b) define some plot arguments based on the extracted data
-    # color scheme:
-    all_d18O_values = [rows_SWAT_d18O; row_PREC_d18O; row_INTS_d18O; row_INTR_d18O; row_SNOW_d18O; row_GWAT_d18O; row_RWU_d18O][:]
-    all_d2H_values  = [rows_SWAT_d2H ; row_PREC_d2H ; row_INTS_d2H ; row_INTR_d2H ; row_SNOW_d2H ; row_GWAT_d2H ; row_RWU_d2H ][:]
-    clims_d18O = (-16, -6)
-    clims_d2H  = (-125, -40)
+    # # 1b) define some plot arguments based on the extracted data
+    # # color scheme:
+    # all_d18O_values = [rows_SWAT_d18O; row_PREC_d18O; row_INTS_d18O; row_INTR_d18O; row_SNOW_d18O; row_GWAT_d18O; row_RWU_d18O][:]
+    # all_d2H_values  = [rows_SWAT_d2H ; row_PREC_d2H ; row_INTS_d2H ; row_INTR_d2H ; row_SNOW_d2H ; row_GWAT_d2H ; row_RWU_d2H ][:]
     # if clims_d18O == :auto
     #     clims_d18O = extrema(filter(!isnan, all_d18O_values))
     # else
@@ -312,25 +302,20 @@ end
     # else
     #     clims_d2H  = (-125, -40)
     # end
-
-    true_to_check_colorbar = true; # set this flag to false for final plot, true for debugging.
-
-
+    # true_to_check_colorbar = true; # set this flag to false for final plot, true for debugging.
 
     # 2) set up the common arguments for all plots below
     # link := :x #TODO(bernhard): link doesn't seem to work...
-    # layout --> (4,1)
-    # layout := @layout [precip        , -
-    #                    isotop_heatmap, colorbarlegend]
-    # @layout unsupported: https://github.com/JuliaPlots/RecipesBase.jl/issues/15
-    # TODO(bernhard): find an easy way to do: l = @layout [grid(2, 1, heights=[0.2, 0.8]) a{0.055w}]
-    # Possibly it needs to be provided when calling `plot_LWFBrook90_isotopes(... ; layout = ...)`
-    # Then make sure to number the subplots correctly and include the colorbars from 3c)
+    layout --> RecipesBase.grid(4, 1, heights=[0.1 ,0.4, 0.1, 0.4])
+    #layout --> (4,1)
+    size --> (1000,1400)
+    dpi --> 300
+    xlim --> xlimits
+    leftmargin --> 15mm
 
-
-    # 3) generate plots
-    # NOTE: --> sets attributes only when they don't already exist
-    # NOTE: :=  sets attributes even when they already exist
+    # # 3) generate plots
+    # # NOTE: --> sets attributes only when they don't already exist
+    # # NOTE: :=  sets attributes even when they already exist
 
     # 3a) Precipitation
     # We reproduce the following plot:
@@ -338,9 +323,7 @@ end
     # ts_PREC_δ18O = plot(reshape(x,1,:), reshape(row_PREC_amt,1,:), t = :bar, line_z = reshape(row_PREC_d18O,1,:), fill_z = reshape(row_PREC_d18O,1,:),
     #                 clims=clims_d18O, colorbar = true_to_check_colorbar, legend = false,
     #                 ylabel = "PREC [mm]"); # TODO(bernhard): make this work with a barplot
-    # ts_PREC_δ2H = plot(reshape(x,1,:), reshape(row_PREC_amt,1,:), t = :bar, line_z = reshape(row_PREC_d2H,1,:), fill_z = reshape(row_PREC_d2H,1,:),
-    #                 clims=clims_d2H,  colorbar = true_to_check_colorbar, legend = false,
-    #                 ylabel = "PREC [mm]"); # TODO(bernhard): make this work with a barplot
+    # ts_PREC_δ2H = ...
     @series begin # ts_PREC_δ18O
         title := "δ18O"
         seriestype := :bar
@@ -385,18 +368,6 @@ end
     y_labels   = ["PREC";   "INTS";     "INTR";     "SNOW";     round.(y_soil_ticks; digits=0);                                                "GWAT";    "RWU";     "XYLEM"]
     z2_extended = [row_PREC_d18O; row_NaN; row_INTS_d18O; row_NaN; row_INTR_d18O; row_NaN; row_SNOW_d18O; row_NaN; rows_SWAT_d18O; row_NaN; row_GWAT_d18O; row_NaN; row_RWU_d18O; row_NaN; row_XYL_d18O]
     z3_extended = [row_PREC_d2H;  row_NaN; row_INTS_d2H;  row_NaN; row_INTR_d2H;  row_NaN; row_SNOW_d2H;  row_NaN; rows_SWAT_d2H;  row_NaN; row_GWAT_d2H;  row_NaN; row_RWU_d2H;  row_NaN; row_XYL_d2H ]
-
-    # We reproduce the following plots:
-    # pl_δ18O = heatmap(x, y_extended, z2_extended;
-    #     yflip = true,
-    #     yticks = (y_ticks, y_labels), colorbar = true_to_check_colorbar,
-    #     ylabel = "Depth [mm]",
-    #     colorbar_title = "δ18O [‰]");
-    # pl_δ2H = heatmap(x, y_extended, z3_extended;
-    #     yflip = true,
-    #     yticks = (y_ticks, y_labels), colorbar = true_to_check_colorbar,
-    #     ylabel = "Depth [mm]",
-    #     colorbar_title = "δ2H [‰]");
 
     @series begin # pl_δ18O
         seriestype := :heatmap

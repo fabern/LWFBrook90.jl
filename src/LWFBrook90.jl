@@ -12,6 +12,8 @@ using Dates: now
 # using Infiltrator
 
 export SPAC, DiscretizedSPAC, discretize, simulate!
+export plotisotopes, plotisotopes!
+
 export discretize_soil, Rootden_beta_
 export RelativeDaysFloat2DateTime, plot_LWFBrook90
 
@@ -107,13 +109,13 @@ include("func_read_inputData.jl") # defines RelativeDaysFloat2DateTime which is 
 # Define modules
 # on modules: https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
 include("module_CONSTANTS.jl");  # to bring into scope: using .CONSTANTS
-include("module_KPT.jl");        using .KPT # using to bring exports into scope
+include("module_KPT.jl");        using .KPT # using to bring exports into scope here
 include("module_WAT.jl");        using .WAT # using to bring exports into scope
 include("module_SUN.jl");        # to bring into scope: using .SUN
 include("module_PET.jl");        # to bring into scope: using .PET
 include("module_SNO.jl");        # to bring into scope: using .SNO
 include("module_EVP.jl");        # to bring into scope: using .SNO
-include("module_ISO.jl");        # to bring into scope: using .ISO
+include("module_ISO.jl");        using .ISO: plotisotopes, plotisotopes! # to bring into scope so that we can export them to the user
 
 include("func_discretize_soil_domain.jl")
 include("func_DiffEq_definition_u0.jl")

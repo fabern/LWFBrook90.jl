@@ -236,7 +236,7 @@ end
     f3 = (Δz_m) -> ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.)    # function for initial conditions as f(Δz)
     f4 = (Δz_m) -> ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.)    # function for initial conditions as f(Δz)
 
-    soil_discretization = discretize_soil(;
+    soil_discretization = LWFBrook90.discretize_soil(;
         Δz_m = Δz_m,
         Rootden_ = f1,
         uAux_PSIM_init_kPa = f2,
