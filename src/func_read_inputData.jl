@@ -592,7 +592,7 @@ function read_path_soil_horizons(path_soil_horizons)
     elseif String.(propertynames(File(path_soil_horizons))) == ClappHornberger_expected_column_names
         FLAG_MualVanGen = 0
     else
-        @error """
+        error("""
         Could not derive which hydraulic model parametrization (Mualem-Van-Genuchten or
         Clapp-Hornberger) to use, based the column names of the input file '$path_soil_horizons'.
         Please check and correct the input file!
@@ -600,7 +600,7 @@ function read_path_soil_horizons(path_soil_horizons)
         Expected column names are either:
         Mualem-Van-Genuchten: $MualVanGen_expected_column_names
         or for Clapp-Hornberger: $ClappHornberger_expected_column_names
-        """
+        """)
     end
 
     if FLAG_MualVanGen == 1

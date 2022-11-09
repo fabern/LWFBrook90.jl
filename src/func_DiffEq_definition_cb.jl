@@ -651,7 +651,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
             integrator.u.SWATI.d18O   = u_δ18O_SWATI
             integrator.u.SWATI.d2H    = u_δ2H_SWATI
         else
-            @error "Unknown method for updating Isotopes in GWAT and SWAT specified."
+            error("Unknown method for updating Isotopes in GWAT and SWAT specified.")
         end
     end
 

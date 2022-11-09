@@ -686,8 +686,8 @@ function SWCHEK!(u_SWATI, p_SWATMAX, t)
 
     for i in 1:length(u_SWATI)
         if u_SWATI[i] <= 0.0
-            # @error "You lose! u_SWATI = $(u_SWATI[i]) for layer $i at time $t."*
-            # " Examine input and parameters to try to determine the cause"
+            # error("You lose! u_SWATI = $(u_SWATI[i]) for layer $i at time $t."*
+            # " Examine input and parameters to try to determine the cause")
             u_SWATI[i] = 0.0 # TODO(bernhard): remove correction and reactivate error
 
             # TODO(bernhard): This manual correction goes against the mass balance
@@ -696,8 +696,8 @@ function SWCHEK!(u_SWATI, p_SWATMAX, t)
 
             if u_SWATI[i] > p_SWATMAX[i] + 0.00001
                 # TODO(bernhard): reactivate
-                # @error "u_SWATI > SWATMAX ($(u_SWATI[i]) > $(p_SWATMAX[i])) for layer $iat time $t."*
-                # " Examine input and parameters to try to determine the cause"
+                # error("u_SWATI > SWATMAX ($(u_SWATI[i]) > $(p_SWATMAX[i])) for layer $iat time $t."*
+                # " Examine input and parameters to try to determine the cause")
                 u_SWATI[i] = p_SWATMAX[i] # TODO(bernhard): remove correction and reactivate error
             else
                 # rounding error only

@@ -158,14 +158,13 @@ function refine_soil_discretization(
     existing_interfaces = [0; input_soil_discretization[!,"Lower_m"]]
     to_add = all_needed_interfaces[(!).(all_needed_interfaces .∈ (existing_interfaces,))]
     if length(to_add) != 0
-        @warn "Adding soil layers at depths $to_add, to allow for either requested IDEPTH/QDEPTH:  $IDEPTH_m/$QDEPTH_m, "*
-              "or to accomodate defined soil horizons: $(unique(vcat(input_soil_horizons[!,"Upper_m"], input_soil_horizons[!,"Lower_m"])))"*
+        @warn "Adding interfaces to soil discretization at depths $to_add, to allow for either requested IDEPTH/QDEPTH:  $(IDEPTH_m)m/$(QDEPTH_m)m, "*
+              "or to accomodate phyiscally defined soil horizons: $(unique(vcat(input_soil_horizons[!,"Upper_m"], input_soil_horizons[!,"Lower_m"])))"*
               ifelse(length(soil_output_depths)==0,".",", or `soil_output_depths`=$soil_output_depths.")
     end
 
     # Add them to the DataFrame
     soil_discretization = copy(input_soil_discretization) # otherwise input argument is modified in-place
-    # soil_discretization = input_soil_discretization
     for interface_to_add in to_add
         for i in 1:nrow(soil_discretization)
             condition = interface_to_add > soil_discretization[i, "Lower_m"]
@@ -202,7 +201,7 @@ function refine_soil_discretization(
 
     if (-IDEPTH_m < soil_discretization[end,"Lower_m"]) ||
         (-QDEPTH_m < soil_discretization[end,"Lower_m"])
-        @error "QDEPTH_m or IDEPTH_m were defined deeper than the lowest simulation element."
+        error("QDEPTH_m or IDEPTH_m were defined deeper than the lowest simulation element.")
     end
     ############
 
@@ -283,7 +282,7 @@ function refine_soil_discretization(
     # BELOW IS ONLY UNUSED CODE:...
     for i = 1:NLAYER
         if (HEAT != 0)
-            @error "HEAT must be set to zero, as heat balance is not implemented."
+            error("HEAT must be set to zero, as heat balance is not implemented.")
         end
         # if (HEAT == 1)
         #     # TemperatureNew(i)       = soil_discretization[i,7] we don't have it in the input file!!!
@@ -304,7 +303,7 @@ function refine_soil_discretization(
 
     # heat flow -------
     # nmat   = nrow(input_soil_horizons)
-    if (HEAT != 0) @error "HEAT must be set to zero, as heat balance is not implemented." end
+    if (HEAT != 0) error("HEAT must be set to zero, as heat balance is not implemented.") end
     #       if (HEAT == 1)
     #        READ (12,*) Comment
     #        READ (12,*) tTop, Comment
