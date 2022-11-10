@@ -282,13 +282,14 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
     ####################
     ## Discretize soil parameters and interpolate discretized root distribution
     # Define refinement of grid with soil_output_depths
-    soil_discr =
+    soil_params =
         LWFBrook90.refine_soil_discretization(
             soil_horizons,
             soil_discretization,
             soil_output_depths,
             continuous_SPAC.params[:IDEPTH_m], # :IDEPTH_m is unused later on
             continuous_SPAC.params[:QDEPTH_m]) # :QDEPTH_m is unused later on
+    refined_soil_discretization = soil_params["refined_soil_discretization"]
 
     # Interpolate discretized root distribution in time
     p_fT_RELDEN = LWFBrook90.HammelKennel_transient_root_density(;
@@ -298,8 +299,8 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
         p_INITRLEN         = continuous_SPAC.params[:INITRLEN],
         p_RGROPER_y        = continuous_SPAC.params[:RGROPER],
         p_RGRORATE_m_per_y = continuous_SPAC.params[:RGRORATE],
-        p_THICK               = soil_discr["THICK"],
-        final_Rootden_profile = soil_discr["final_Rootden_"]);
+        p_THICK               = soil_params["THICK"],
+        final_Rootden_profile = soil_params["final_Rootden_"]);
     # TODO(bernhard): document input parameters: INITRDEP, INITRLEN, RGROPER, tini, frelden, MAXLAI, HEIGHT_baseline_m
     # TOOD(bernhard): remove from params: IDEPTH_m, QDEPTH_m, INITRDEP, RGRORATE, INITRDEP, INITRLEN, RGROPER
     # display(heatmap(p_fT_RELDEN', ylabel = "SOIL LAYER", xlabel = "Time (days)", yflip=true, colorbar_title = "Root density"))
@@ -307,7 +308,7 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
 
     ####################
     # Define parameters for differential equation
-    p = define_LWFB90_p(continuous_SPAC, soil_discr, p_fT_RELDEN)
+    p = define_LWFB90_p(continuous_SPAC, soil_params, p_fT_RELDEN)
     # using Plots
     # hline([0; cumsum(p.p_THICK)], yflip = true, xticks = false,
     #     title = "N_layer = "*string(p.NLAYER))
@@ -318,7 +319,7 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
     # a) allocation of u0
     u0 = define_LWFB90_u0(;simulate_isotopes = continuous_SPAC.solver_options.simulate_isotopes,
                           compute_intermediate_quantities = continuous_SPAC.solver_options.compute_intermediate_quantities,
-                          NLAYER = soil_discr["NLAYER"])
+                          NLAYER = soil_params["NLAYER"])
     ####################
 
     ####################
@@ -326,7 +327,7 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
     # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
     # Create u0 for DiffEq.jl
     # b) initialization of u0
-    init_LWFB90_u0!(;u0=u0, continuous_SPAC=continuous_SPAC, soil_discr=soil_discr, p_soil=p.p_soil)
+    init_LWFB90_u0!(;u0=u0, continuous_SPAC=continuous_SPAC, soil_params=soil_params, p_soil=p.p_soil)
     ####################
 
     ####################
@@ -373,7 +374,7 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
 
     return DiscretizedSPAC(;
         continuous_SPAC     = continuous_SPAC,
-        soil_discretization = soil_discretization,
+        soil_discretization = refined_soil_discretization,
         ODEProblem          = ode_LWFBrook90,
         ODESolution         = nothing,
         ODESolution_datetime= nothing)

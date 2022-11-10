@@ -236,7 +236,8 @@ function refine_soil_discretization(
 
     nlayer_before_join = nrow(soil_discretization)
     soil_discretization = innerjoin(soil_discretization,
-                                    input_soil_horizons, makeunique=true,
+                                    rename(input_soil_horizons, :Upper_m => :Horizon_Upper_m, :Lower_m => :Horizon_Lower_m, ),
+                                    makeunique=true,
                                     #select(input_soil_horizons, Not([:Upper_m,:Lower_m])),
                                     on = :HorizonNr)
                                     # NOTE: not using leftjoin becaus it transforms types to Union{Missing, Float64} instead of only Float64
@@ -265,15 +266,16 @@ function refine_soil_discretization(
     NLAYER = nrow(soil_discretization)
 
     return Dict([
-                ("NLAYER",NLAYER),
-                ("ILAYER",ILAYER),
-                ("QLAYER",QLAYER),
-                ("THICK",THICK),
-                ("PSIM_init",PSIM_init),
-                ("d18O_init",d18O_soil_init),
-                ("d2H_init",d2H_soil_init),
-                ("SHP", soil_discretization.shp),
-                ("final_Rootden_", soil_discretization[!,"Rootden_"])])
+                ("NLAYER",         NLAYER),
+                ("ILAYER",         ILAYER),
+                ("QLAYER",         QLAYER),
+                ("THICK",          THICK),
+                ("PSIM_init",      PSIM_init),
+                ("d18O_init",      d18O_soil_init),
+                ("d2H_init",       d2H_soil_init),
+                ("SHP",            soil_discretization.shp),
+                ("final_Rootden_", soil_discretization[!,"Rootden_"]),
+                ("refined_soil_discretization", soil_discretization)])
                 # ("PAR",PAR),
                 # ("STONEF",STONEF),
                 #("HeatCapOld",HeatCapOld),
