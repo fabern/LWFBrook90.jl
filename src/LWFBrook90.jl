@@ -2,7 +2,7 @@ module LWFBrook90
 
 using OrdinaryDiffEq  # instead of loading the full DifferentialEquations
 using DiffEqCallbacks # instead of loading the full DifferentialEquations
-using RecipesBase
+using RecipesBase, PlotUtils, Measures
 using LinearAlgebra
 using StatsBase: mean, weights
 using ComponentArrays
@@ -12,12 +12,11 @@ using Dates: now
 # using Infiltrator
 
 export SPAC, DiscretizedSPAC, discretize, simulate!
-export plotisotopes, plotisotopes!
 
 export discretize_soil, Rootden_beta_
 export RelativeDaysFloat2DateTime, plot_LWFBrook90
 
-export run_simulation, plot_and_save_results, find_indices
+export run_simulation, find_indices
 export get_auxiliary_variables, get_θ, get_δ, get_ψ, get_δsoil, get_aboveground
 
 @doc raw"""

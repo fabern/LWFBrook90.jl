@@ -18,7 +18,7 @@ using DataFrames: DataFrame, rename, unstack, Not# ,select
 
 # Parse command line arguments and call run_simulation() (if called from command line)
 sim_result = LWFBrook90.run_simulation(ARGS)
-plot_and_save_results(sim_result...)
+# plot_and_save_results(sim_result...)
 
 # Run this script interactively many simulations with run_simulation()
 # The ones with Reset=FALSE
