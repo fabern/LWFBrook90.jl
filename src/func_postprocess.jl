@@ -34,19 +34,19 @@ The user can override this with the second argument isotope as one of `:abovegro
     # 1a) extract data from solution object `sol`
         # # Two ways to extract data from soil object: using `[]` or `()`
         # u_SWATI = reduce(hcat, [sol[t_idx].SWATI.mm  for t_idx = eachindex(sol)])
-        # u_SWATI = reduce(hcat, [sol(t_days).SWATI.mm for t_days = saveat])
+        # u_SWATI = reduce(hcat, [sol(t_days).SWATI.mm for t_days = days_to_read_out_d])
 
-        # saveat decides which points to use:
-        # saveat = nothing # read out all simulation steps
-        saveat = :daily  # read out only daily values
-        if isnothing(saveat)
-            saveat = sol.t # warning this can
+        # days_to_read_out_d decides which points to use:
+        # days_to_read_out_d = nothing # read out all simulation steps
+        days_to_read_out_d = :daily  # read out only daily values
+        if isnothing(days_to_read_out_d)
+            days_to_read_out_d = sol.t # warning this can
             error("Too many output times requested. This easily freezes the program...")
-        elseif saveat == :daily
-            saveat = unique(round.(sol.t))
+        elseif days_to_read_out_d == :daily
+            days_to_read_out_d = unique(round.(sol.t))
         end
         t_ref = sol.prob.p.REFERENCE_DATE
-        x = RelativeDaysFloat2DateTime.(saveat, t_ref);
+        x = RelativeDaysFloat2DateTime.(days_to_read_out_d, t_ref);
         y_center = cumsum(sol.prob.p.p_soil.p_THICK) - sol.prob.p.p_soil.p_THICK/2
 
     # Some hardcoded options:
@@ -63,18 +63,18 @@ The user can override this with the second argument isotope as one of `:abovegro
 
 
     # Results
-    rows_SWAT_amt  = reduce(hcat, [sol(t).SWATI.mm   for t in saveat]) ./ sol.prob.p.p_soil.p_THICK
+    rows_SWAT_amt  = reduce(hcat, [sol(t).SWATI.mm   for t in days_to_read_out_d]) ./ sol.prob.p.p_soil.p_THICK
     row_NaN       = fill(NaN, 1,length(x))
-    row_PREC_amt = reshape(sol.prob.p.p_PREC.(saveat), 1, :)
-    col_INTS_amt = [sol(t).INTS.mm for t in saveat]
-    col_INTR_amt = [sol(t).INTR.mm   for t in saveat]
-    col_SNOW_amt = [sol(t).SNOW.mm   for t in saveat]
-    col_GWAT_amt = [sol(t).GWAT.mm   for t in saveat]
-    col_RWU_amt  = [sol(t).RWU.mm    for t in saveat]
-    col_XYL_amt  = [sol(t).XYLEM.mm  for t in saveat]
+    row_PREC_amt = reshape(sol.prob.p.p_PREC.(days_to_read_out_d), 1, :)
+    col_INTS_amt = [sol(t).INTS.mm for t in days_to_read_out_d]
+    col_INTR_amt = [sol(t).INTR.mm   for t in days_to_read_out_d]
+    col_SNOW_amt = [sol(t).SNOW.mm   for t in days_to_read_out_d]
+    col_GWAT_amt = [sol(t).GWAT.mm   for t in days_to_read_out_d]
+    col_RWU_amt  = [sol(t).RWU.mm    for t in days_to_read_out_d]
+    col_XYL_amt  = [sol(t).XYLEM.mm  for t in days_to_read_out_d]
 
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-        get_auxiliary_variables(sol, saveat = saveat);
+        get_auxiliary_variables(sol, days_to_read_out_d = days_to_read_out_d);
 
     # compute total amount of soil water: a) in whole domain, b) per physical soil layer
     # a)
@@ -278,41 +278,40 @@ The user can override this with the second argument isotope as one of `:abovegro
             x, y_center, p_fu_KK;
         end
 
-
         # TODO: edges of cells in heatmap are not entirely correct. Find a way to override heatmap()
         #       where we provide cell edges (n+1) instead of cell centers (n)
-        # TODO: e.g. plots_heatmap_edges: @recipe function f(::Type{Val{:plots_heatmap_edges}}, xe, ye, z)
-        # TODO: e.g. plots_heatmap_edges:     m, n = size(z.surf)
-        # TODO: e.g. plots_heatmap_edges:     x_pts, y_pts = fill(NaN, 6 * m * n), fill(NaN, 6 * m * n)
-        # TODO: e.g. plots_heatmap_edges:     fz = zeros(m * n)
-        # TODO: e.g. plots_heatmap_edges:     for i in 1:m # y
-        # TODO: e.g. plots_heatmap_edges:         for j in 1:n # x
-        # TODO: e.g. plots_heatmap_edges:             k = (j - 1) * m + i
-        # TODO: e.g. plots_heatmap_edges:             inds = (6 * (k - 1) + 1):(6 * k - 1)
-        # TODO: e.g. plots_heatmap_edges:             x_pts[inds] .= [xe[j], xe[j + 1], xe[j + 1], xe[j], xe[j]]
-        # TODO: e.g. plots_heatmap_edges:             y_pts[inds] .= [ye[i], ye[i], ye[i + 1], ye[i + 1], ye[i]]
-        # TODO: e.g. plots_heatmap_edges:             fz[k] = z.surf[i, j]
-        # TODO: e.g. plots_heatmap_edges:         end
-        # TODO: e.g. plots_heatmap_edges:     end
-        # TODO: e.g. plots_heatmap_edges:     ensure_gradient!(plotattributes, :fillcolor, :fillalpha)
-        # TODO: e.g. plots_heatmap_edges:     fill_z := fz
-        # TODO: e.g. plots_heatmap_edges:     line_z := fz
-        # TODO: e.g. plots_heatmap_edges:     x := x_pts
-        # TODO: e.g. plots_heatmap_edges:     y := y_pts
-        # TODO: e.g. plots_heatmap_edges:     z := nothing
-        # TODO: e.g. plots_heatmap_edges:     seriestype := :shape
-        # TODO: e.g. plots_heatmap_edges:     label := ""
-        # TODO: e.g. plots_heatmap_edges:     widen --> false
-        # TODO: e.g. plots_heatmap_edges:     ()
-        # TODO: e.g. plots_heatmap_edges: end
-        # TODO: e.g. plots_heatmap_edges: @deps plots_heatmap_edges shape
-        # TODO: e.g. plots_heatmap_edges: @shorthands plots_heatmap_edges
-        # TODO: e.g. plots_heatmap_edges:
-        # TODO: e.g. plots_heatmap_edges: Plots.heatmap(x[1:100], y_center, z[:,1:100])
-        # TODO: e.g. plots_heatmap_edges: Plots.heatmap(x[1:100], y_center, z[:,1:100])
-        # TODO: e.g. plots_heatmap_edges: plot(t = :heatmap, x[1:50], y_center, z[:,1:50]) # works
-        # TODO: e.g. plots_heatmap_edges: plot(t = :plots_heatmap, x[1:50], y_center, z[:,1:50]) # doesn't work
-        # TODO: e.g. plots_heatmap_edges: plot(t = :plots_heatmap_edges, x[1:50], y_center, z[:,1:50]) # doesn't work either
+        #       e.g. plots_heatmap_edges: @recipe function f(::Type{Val{:plots_heatmap_edges}}, xe, ye, z)
+        #       e.g. plots_heatmap_edges:     m, n = size(z.surf)
+        #       e.g. plots_heatmap_edges:     x_pts, y_pts = fill(NaN, 6 * m * n), fill(NaN, 6 * m * n)
+        #       e.g. plots_heatmap_edges:     fz = zeros(m * n)
+        #       e.g. plots_heatmap_edges:     for i in 1:m # y
+        #       e.g. plots_heatmap_edges:         for j in 1:n # x
+        #       e.g. plots_heatmap_edges:             k = (j - 1) * m + i
+        #       e.g. plots_heatmap_edges:             inds = (6 * (k - 1) + 1):(6 * k - 1)
+        #       e.g. plots_heatmap_edges:             x_pts[inds] .= [xe[j], xe[j + 1], xe[j + 1], xe[j], xe[j]]
+        #       e.g. plots_heatmap_edges:             y_pts[inds] .= [ye[i], ye[i], ye[i + 1], ye[i + 1], ye[i]]
+        #       e.g. plots_heatmap_edges:             fz[k] = z.surf[i, j]
+        #       e.g. plots_heatmap_edges:         end
+        #       e.g. plots_heatmap_edges:     end
+        #       e.g. plots_heatmap_edges:     ensure_gradient!(plotattributes, :fillcolor, :fillalpha)
+        #       e.g. plots_heatmap_edges:     fill_z := fz
+        #       e.g. plots_heatmap_edges:     line_z := fz
+        #       e.g. plots_heatmap_edges:     x := x_pts
+        #       e.g. plots_heatmap_edges:     y := y_pts
+        #       e.g. plots_heatmap_edges:     z := nothing
+        #       e.g. plots_heatmap_edges:     seriestype := :shape
+        #       e.g. plots_heatmap_edges:     label := ""
+        #       e.g. plots_heatmap_edges:     widen --> false
+        #       e.g. plots_heatmap_edges:     ()
+        #       e.g. plots_heatmap_edges: end
+        #       e.g. plots_heatmap_edges: @deps plots_heatmap_edges shape
+        #       e.g. plots_heatmap_edges: @shorthands plots_heatmap_edges
+        #       e.g. plots_heatmap_edges:
+        #       e.g. plots_heatmap_edges: Plots.heatmap(x[1:100], y_center, z[:,1:100])
+        #       e.g. plots_heatmap_edges: Plots.heatmap(x[1:100], y_center, z[:,1:100])
+        #       e.g. plots_heatmap_edges: plot(t = :heatmap, x[1:50], y_center, z[:,1:50]) # works
+        #       e.g. plots_heatmap_edges: plot(t = :plots_heatmap, x[1:50], y_center, z[:,1:50]) # doesn't work
+        #       e.g. plots_heatmap_edges: plot(t = :plots_heatmap_edges, x[1:50], y_center, z[:,1:50]) # doesn't work either
 
     end
 end
@@ -352,19 +351,19 @@ The user can override this with the second argument isotope as one of `:d18O`, `
     # 1a) extract data from solution object `sol`
         # # Two ways to extract data from soil object: using `[]` or `()`
         # u_SWATI = reduce(hcat, [sol[t_idx].SWATI.mm  for t_idx = eachindex(sol)])
-        # u_SWATI = reduce(hcat, [sol(t_days).SWATI.mm for t_days = saveat])
+        # u_SWATI = reduce(hcat, [sol(t_days).SWATI.mm for t_days = days_to_read_out_d])
 
-        # saveat decides which points to use:
-        # saveat = nothing # read out all simulation steps
-        saveat = :daily  # read out only daily values
-        if isnothing(saveat)
-            saveat = sol.t # warning this can
+        # days_to_read_out_d decides which points to use:
+        # days_to_read_out_d = nothing # read out all simulation steps
+        days_to_read_out_d = :daily  # read out only daily values
+        if isnothing(days_to_read_out_d)
+            days_to_read_out_d = sol.t # warning this can
             error("Too many output times requested. This easily freezes the program...")
-        elseif saveat == :daily
-            saveat = unique(round.(sol.t))
+        elseif days_to_read_out_d == :daily
+            days_to_read_out_d = unique(round.(sol.t))
         end
         t_ref = sol.prob.p.REFERENCE_DATE
-        x = RelativeDaysFloat2DateTime.(saveat, t_ref);
+        x = RelativeDaysFloat2DateTime.(days_to_read_out_d, t_ref);
         y_center = cumsum(sol.prob.p.p_soil.p_THICK) - sol.prob.p.p_soil.p_THICK/2
 
     simulate_isotopes = sol.prob.p.simulate_isotopes
@@ -382,26 +381,26 @@ The user can override this with the second argument isotope as one of `:d18O`, `
     color_scheme = :heat
 
     # Results
-    row_PREC_amt = sol.prob.p.p_PREC.(saveat)
+    row_PREC_amt = sol.prob.p.p_PREC.(days_to_read_out_d)
     # rows_SWAT_amt = sol[sol.prob.p.row_idx_SWATI, 1, :]./sol.prob.p.p_soil.p_THICK;
-    rows_SWAT_amt  = reduce(hcat, [sol(t).SWATI.mm   for t in saveat]) ./ sol.prob.p.p_soil.p_THICK
-    rows_SWAT_d18O = reduce(hcat, [sol(t).SWATI.d18O for t in saveat])
-    rows_SWAT_d2H  = reduce(hcat, [sol(t).SWATI.d2H  for t in saveat])
+    rows_SWAT_amt  = reduce(hcat, [sol(t).SWATI.mm   for t in days_to_read_out_d]) ./ sol.prob.p.p_soil.p_THICK
+    rows_SWAT_d18O = reduce(hcat, [sol(t).SWATI.d18O for t in days_to_read_out_d])
+    rows_SWAT_d2H  = reduce(hcat, [sol(t).SWATI.d2H  for t in days_to_read_out_d])
     row_NaN       = fill(NaN, 1,length(x))
-    row_PREC_d18O = reshape(sol.prob.p.p_δ18O_PREC.(saveat), 1, :)
-    row_INTS_d18O = reduce(hcat, [sol(t).INTS.d18O for t in saveat])
-    row_INTR_d18O = reduce(hcat, [sol(t).INTR.d18O for t in saveat])
-    row_SNOW_d18O = reduce(hcat, [sol(t).SNOW.d18O for t in saveat])
-    row_GWAT_d18O = reduce(hcat, [sol(t).GWAT.d18O for t in saveat])
-    row_RWU_d18O  = reduce(hcat, [sol(t).RWU.d18O for t in saveat])
-    row_XYL_d18O  = reduce(hcat, [sol(t).XYLEM.d18O for t in saveat])
-    row_PREC_d2H  = reshape(sol.prob.p.p_δ2H_PREC.(saveat), 1, :)
-    row_INTS_d2H  = reduce(hcat, [sol(t).INTS.d2H for t in saveat])
-    row_INTR_d2H  = reduce(hcat, [sol(t).INTR.d2H for t in saveat])
-    row_SNOW_d2H  = reduce(hcat, [sol(t).SNOW.d2H for t in saveat])
-    row_GWAT_d2H  = reduce(hcat, [sol(t).GWAT.d2H for t in saveat])
-    row_RWU_d2H   = reduce(hcat, [sol(t).RWU.d2H for t in saveat])
-    row_XYL_d2H   = reduce(hcat, [sol(t).XYLEM.d2H for t in saveat])
+    row_PREC_d18O = reshape(sol.prob.p.p_δ18O_PREC.(days_to_read_out_d), 1, :)
+    row_INTS_d18O = reduce(hcat, [sol(t).INTS.d18O for t in days_to_read_out_d])
+    row_INTR_d18O = reduce(hcat, [sol(t).INTR.d18O for t in days_to_read_out_d])
+    row_SNOW_d18O = reduce(hcat, [sol(t).SNOW.d18O for t in days_to_read_out_d])
+    row_GWAT_d18O = reduce(hcat, [sol(t).GWAT.d18O for t in days_to_read_out_d])
+    row_RWU_d18O  = reduce(hcat, [sol(t).RWU.d18O for t in days_to_read_out_d])
+    row_XYL_d18O  = reduce(hcat, [sol(t).XYLEM.d18O for t in days_to_read_out_d])
+    row_PREC_d2H  = reshape(sol.prob.p.p_δ2H_PREC.(days_to_read_out_d), 1, :)
+    row_INTS_d2H  = reduce(hcat, [sol(t).INTS.d2H for t in days_to_read_out_d])
+    row_INTR_d2H  = reduce(hcat, [sol(t).INTR.d2H for t in days_to_read_out_d])
+    row_SNOW_d2H  = reduce(hcat, [sol(t).SNOW.d2H for t in days_to_read_out_d])
+    row_GWAT_d2H  = reduce(hcat, [sol(t).GWAT.d2H for t in days_to_read_out_d])
+    row_RWU_d2H   = reduce(hcat, [sol(t).RWU.d2H for t in days_to_read_out_d])
+    row_XYL_d2H   = reduce(hcat, [sol(t).XYLEM.d2H for t in days_to_read_out_d])
 
     # # 1b) define some plot arguments based on the extracted data
     # # color scheme:
@@ -589,20 +588,20 @@ function find_soilDiscr_indices(depths_to_read_out_mm, solution::ODESolution)
     return idx_to_read_out
 end
 
-function get_auxiliary_variables(simulation::DiscretizedSPAC; saveat = nothing)
+function get_auxiliary_variables(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
     solution = simulation.ODESolution
     @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
 
-    get_auxiliary_variables(solution; saveat = saveat)
+    get_auxiliary_variables(solution; days_to_read_out_d = days_to_read_out_d)
 end
-# TODO(bernhard): get rid of all uses of get_auxiliary_variables(solution::ODESolution; saveat = nothing)
-function get_auxiliary_variables(solution::ODESolution; saveat = nothing)
+# TODO(bernhard): get rid of all uses of get_auxiliary_variables(solution::ODESolution; days_to_read_out_d = nothing)
+function get_auxiliary_variables(solution::ODESolution; days_to_read_out_d = nothing)
     p_soil = solution.prob.p.p_soil
     NLAYER = p_soil.NLAYER
-    if isnothing(saveat)
+    if isnothing(days_to_read_out_d)
         u_SWATI = reduce(hcat, [solution[t_idx].SWATI.mm  for t_idx = eachindex(solution)])
     else
-        u_SWATI = reduce(hcat, [solution(t_days).SWATI.mm for t_days = saveat])
+        u_SWATI = reduce(hcat, [solution(t_days).SWATI.mm for t_days = days_to_read_out_d])
     end
 
     # (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
@@ -617,13 +616,20 @@ function get_auxiliary_variables(solution::ODESolution; saveat = nothing)
     return (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
 end
 
-function get_θ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, saveat = nothing)
+"""
+    get_θ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
+
+Returns a 2D matrix of volumetric soil moisture values (m3/m3) with soil layers as rows and time steps as columns.
+The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
+that are both optionally provided as numeric vectors, e.g. depths_to_read_out_mm = [100, 150] or saveat = 1:1.0:100
+"""
+function get_θ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
     solution = simulation.ODESolution
     @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
 
-    # get auxiliary variables with requested time resolution (i.e. saveat)
+    # get auxiliary variables with requested time resolution (i.e. days_to_read_out_d)
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-        get_auxiliary_variables(simulation; saveat = saveat)
+        get_auxiliary_variables(simulation; days_to_read_out_d = days_to_read_out_d)
 
     # return requested soil layers
     if isnothing(depths_to_read_out_mm)
@@ -632,13 +638,20 @@ function get_θ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, sa
         return u_aux_θ[find_soilDiscr_indices(simulation, depths_to_read_out_mm), :]
     end
 end
-function get_ψ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, saveat = nothing)
+"""
+    get_ψ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
+
+Returns a 2D matrix of soil matric potential (kPa) with soil layers as rows and time steps as columns.
+The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
+that are both optionally provided as numeric vectors, e.g. depths_to_read_out_mm = [100, 150] or saveat = 1:1.0:100
+"""
+function get_ψ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
     solution = simulation.ODESolution
     @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
 
-    # get auxiliary variables with requested time resolution (i.e. saveat)
+    # get auxiliary variables with requested time resolution (i.e. days_to_read_out_d)
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-        get_auxiliary_variables(simulation; saveat = saveat)
+        get_auxiliary_variables(simulation; days_to_read_out_d = days_to_read_out_d)
 
     # return requested soil layers
     if isnothing(depths_to_read_out_mm)
@@ -647,13 +660,20 @@ function get_ψ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, sa
         return u_aux_PSIM[find_soilDiscr_indices(simulation, depths_to_read_out_mm), :]
     end
 end
-function get_WETNES(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, saveat = nothing)
+"""
+    get_WETNES(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
+
+Returns a 2D matrix of soil wetness (-) with soil layers as rows and time steps as columns.
+The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
+that are both optionally provided as numeric vectors, e.g. depths_to_read_out_mm = [100, 150] or saveat = 1:1.0:100
+"""
+function get_WETNES(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
     solution = simulation.ODESolution
     @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
 
-    # get auxiliary variables with requested time resolution (i.e. saveat)
+    # get auxiliary variables with requested time resolution (i.e. days_to_read_out_d)
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-        get_auxiliary_variables(simulation; saveat = saveat)
+        get_auxiliary_variables(simulation; days_to_read_out_d = days_to_read_out_d)
 
     # return requested soil layers
     if isnothing(depths_to_read_out_mm)
@@ -662,13 +682,21 @@ function get_WETNES(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing
         return u_aux_WETNES[find_soilDiscr_indices(simulation, depths_to_read_out_mm), :]
     end
 end
-function get_SWATI(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, saveat = nothing)
+"""
+    get_SWATI(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
+
+Returns a 2D matrix of soil water volumes contained in discretized layers (mm) with soil layers as rows and time steps as columns.
+Note that the values depend on the thickness of the layers and thus on the discretization.
+The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
+that are both optionally provided as numeric vectors, e.g. depths_to_read_out_mm = [100, 150] or saveat = 1:1.0:100
+"""
+function get_SWATI(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
     solution = simulation.ODESolution
     @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
 
-    # get auxiliary variables with requested time resolution (i.e. saveat)
+    # get auxiliary variables with requested time resolution (i.e. days_to_read_out_d)
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-        get_auxiliary_variables(simulation; saveat = saveat)
+        get_auxiliary_variables(simulation; days_to_read_out_d = days_to_read_out_d)
 
     # return requested soil layers
     if isnothing(depths_to_read_out_mm)
@@ -677,13 +705,20 @@ function get_SWATI(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing,
         return u_SWATI[find_soilDiscr_indices(simulation, depths_to_read_out_mm), :]
     end
 end
-function get_K(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, saveat = nothing)
+"""
+    get_K(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
+
+Returns a 2D matrix of soil hydraulic conductivities (mm/day) with soil layers as rows and time steps as columns.
+The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
+that are both optionally provided as numeric vectors, e.g. depths_to_read_out_mm = [100, 150] or saveat = 1:1.0:100
+"""
+function get_K(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
     solution = simulation.ODESolution
     @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
 
-    # get auxiliary variables with requested time resolution (i.e. saveat)
+    # get auxiliary variables with requested time resolution (i.e. days_to_read_out_d)
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-        get_auxiliary_variables(simulation; saveat = saveat)
+        get_auxiliary_variables(simulation; days_to_read_out_d = days_to_read_out_d)
 
     # return requested soil layers
     if isnothing(depths_to_read_out_mm)
@@ -693,20 +728,28 @@ function get_K(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, sav
     end
 end
 
-function get_δsoil(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, saveat = nothing)
+"""
+    get_δsoil(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
+
+Returns tuple of two 2D matrices of isotopic signatures of soil water (δ in permil) for d18O and d2H.
+The 2D matrix with soil layers as rows and time steps as columns can be accessed with `.d18O` and `.d2H`, respectively.
+The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
+that are both optionally provided as numeric vectors, e.g. depths_to_read_out_mm = [100, 150] or saveat = 1:1.0:100
+"""
+function get_δsoil(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
     solution = simulation.ODESolution
     @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
     @assert solution.prob.p.simulate_isotopes "Provided solution did not simulate isotopes"
 
-    # get auxiliary variables with requested time resolution (i.e. saveat)
-    if isnothing(saveat)
+    # get auxiliary variables with requested time resolution (i.e. days_to_read_out_d)
+    if isnothing(days_to_read_out_d)
         # vector quantities δ-values:
         rows_SWAT_d18O = reduce(hcat, [solution[t_idx].SWATI.d18O for t_idx = eachindex(solution)])
         rows_SWAT_d2H  = reduce(hcat, [solution[t_idx].SWATI.d2H  for t_idx = eachindex(solution)])
     else
         # vector quantities δ-values:
-        rows_SWAT_d18O = reduce(hcat, [solution(t_days).SWATI.d18O for t_days = saveat])
-        rows_SWAT_d2H  = reduce(hcat, [solution(t_days).SWATI.d2H  for t_days = saveat])
+        rows_SWAT_d18O = reduce(hcat, [solution(t_days).SWATI.d18O for t_days = days_to_read_out_d])
+        rows_SWAT_d2H  = reduce(hcat, [solution(t_days).SWATI.d2H  for t_days = days_to_read_out_d])
     end
     # return requested soil layers
     if isnothing(depths_to_read_out_mm)
@@ -721,18 +764,25 @@ end
 
 ##########################
 # Functions to get values linked to aboveground:
-function get_aboveground(simulation::DiscretizedSPAC; saveat = nothing)
+"""
+    get_aboveground(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
+
+Returns a DataFrame with state variables: GWAT, INTS, INTR, SNOW in mm and CC, SNOWLQ (in ? and ?).
+By default, the values are returned for each simulation timestep.
+The user can define timesteps as `days_to_read_out_d` by optionally providing a numeric vector, e.g. saveat = 1:1.0:100
+"""
+function get_aboveground(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
     solution = simulation.ODESolution
     @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
 
     compartments_to_extract = [:GWAT, :INTS, :INTR, :SNOW, :CC, :SNOWLQ]
 
-    if isnothing(saveat)
+    if isnothing(days_to_read_out_d)
         u_aboveground = [solution[t_idx][compartment].mm  for t_idx = eachindex(solution), compartment in compartments_to_extract]
         # [solution[t_idx][compartment].d18O  for t_idx = eachindex(solution), compartment in compartments_to_extract]
         # [solution[t_idx][compartment].d2H  for t_idx = eachindex(solution), compartment in compartments_to_extract]
     else
-        u_aboveground = [solution(t_days)[compartment].mm  for t_days = saveat, compartment in compartments_to_extract]
+        u_aboveground = [solution(t_days)[compartment].mm  for t_days = days_to_read_out_d, compartment in compartments_to_extract]
         # [solution[t_idx][compartment].d18O  for t_idx = eachindex(solution), compartment in compartments_to_extract]
         # [solution[t_idx][compartment].d2H  for t_idx = eachindex(solution), compartment in compartments_to_extract]
     end
@@ -741,15 +791,22 @@ function get_aboveground(simulation::DiscretizedSPAC; saveat = nothing)
     return DataFrame(u_aboveground, string.(compartments_to_extract))
 end
 
-function get_δ(simulation::DiscretizedSPAC; saveat = nothing)
-    # function get_δ(simulation::DiscretizedSPAC; saveat = nothing, compartment::Symbol = :all)
+"""
+    get_δ(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
+
+Returns a DataFrame with the isotopoic compositions of the inputs and state variables: PREC, GWAT, INTS, INTR, SNOW, RWU, XYLEM.
+By default, the values are returned for each simulation timestep.
+The user can define timesteps as `days_to_read_out_d` by optionally providing a numeric vector, e.g. saveat = 1:1.0:100
+"""
+function get_δ(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
+    # function get_δ(simulation::DiscretizedSPAC; days_to_read_out_d = nothing, compartment::Symbol = :all)
     solution = simulation.ODESolution
     @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
     @assert solution.prob.p.simulate_isotopes "Provided solution did not simulate isotopes"
 
     compartments_to_extract = [:GWAT, :INTS, :INTR, :SNOW, :RWU, :XYLEM]
 
-    if isnothing(saveat)
+    if isnothing(days_to_read_out_d)
         # row_PREC_d18O = reshape(solution.prob.p.p_δ18O_PREC.(solution.t), 1, :)
         # row_PREC_d2H  = reshape(solution.prob.p.p_δ2H_PREC.(solution.t), 1, :)
         PREC_d18O = solution.prob.p.p_δ18O_PREC.(solution.t)
@@ -759,14 +816,14 @@ function get_δ(simulation::DiscretizedSPAC; saveat = nothing)
         d18O_aboveground = [solution[t_idx][compartment].d18O  for t_idx = eachindex(solution), compartment in compartments_to_extract]
         d2H_aboveground  = [solution[t_idx][compartment].d2H   for t_idx = eachindex(solution), compartment in compartments_to_extract]
     else
-        # row_PREC_d18O = reshape(solution.prob.p.p_δ18O_PREC.(saveat), 1, :)
-        # row_PREC_d2H  = reshape(solution.prob.p.p_δ2H_PREC.(saveat), 1, :)
-        PREC_d18O = solution.prob.p.p_δ18O_PREC.(saveat)
-        PREC_d2H  = solution.prob.p.p_δ2H_PREC.( saveat)
+        # row_PREC_d18O = reshape(solution.prob.p.p_δ18O_PREC.(days_to_read_out_d), 1, :)
+        # row_PREC_d2H  = reshape(solution.prob.p.p_δ2H_PREC.(days_to_read_out_d), 1, :)
+        PREC_d18O = solution.prob.p.p_δ18O_PREC.(days_to_read_out_d)
+        PREC_d2H  = solution.prob.p.p_δ2H_PREC.( days_to_read_out_d)
 
-        # u_aboveground = [solution(t_days)[compartment].mm  for t_days = saveat, compartment in compartments_to_extract]
-        d18O_aboveground = [solution(t_days)[compartment].d18O  for t_days = saveat, compartment in compartments_to_extract]
-        d2H_aboveground  = [solution(t_days)[compartment].d2H   for t_days = saveat, compartment in compartments_to_extract]
+        # u_aboveground = [solution(t_days)[compartment].mm  for t_days = days_to_read_out_d, compartment in compartments_to_extract]
+        d18O_aboveground = [solution(t_days)[compartment].d18O  for t_days = days_to_read_out_d, compartment in compartments_to_extract]
+        d2H_aboveground  = [solution(t_days)[compartment].d2H   for t_days = days_to_read_out_d, compartment in compartments_to_extract]
     end
 
     return DataFrame([PREC_d18O d18O_aboveground PREC_d2H d2H_aboveground],

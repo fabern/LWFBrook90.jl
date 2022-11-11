@@ -503,41 +503,6 @@ function run_main_with_isotopes(;input_prefix, input_path)
     # #         xlabel = "Date",
     # #         ylabel = "Depth [mm]",
     # #         colorbar_title = "δ2H [‰]")
-
-    # # TODO: edges of cells in heatmap are not entirely correct. Find a way to override heatmap()
-    # #       where we provide cell edges (n+1) instead of cell centers (n)
-    # # TODO: e.g. plots_heatmap_edges: @recipe function f(::Type{Val{:plots_heatmap_edges}}, xe, ye, z)
-    # # TODO: e.g. plots_heatmap_edges:     m, n = size(z.surf)
-    # # TODO: e.g. plots_heatmap_edges:     x_pts, y_pts = fill(NaN, 6 * m * n), fill(NaN, 6 * m * n)
-    # # TODO: e.g. plots_heatmap_edges:     fz = zeros(m * n)
-    # # TODO: e.g. plots_heatmap_edges:     for i in 1:m # y
-    # # TODO: e.g. plots_heatmap_edges:         for j in 1:n # x
-    # # TODO: e.g. plots_heatmap_edges:             k = (j - 1) * m + i
-    # # TODO: e.g. plots_heatmap_edges:             inds = (6 * (k - 1) + 1):(6 * k - 1)
-    # # TODO: e.g. plots_heatmap_edges:             x_pts[inds] .= [xe[j], xe[j + 1], xe[j + 1], xe[j], xe[j]]
-    # # TODO: e.g. plots_heatmap_edges:             y_pts[inds] .= [ye[i], ye[i], ye[i + 1], ye[i + 1], ye[i]]
-    # # TODO: e.g. plots_heatmap_edges:             fz[k] = z.surf[i, j]
-    # # TODO: e.g. plots_heatmap_edges:         end
-    # # TODO: e.g. plots_heatmap_edges:     end
-    # # TODO: e.g. plots_heatmap_edges:     ensure_gradient!(plotattributes, :fillcolor, :fillalpha)
-    # # TODO: e.g. plots_heatmap_edges:     fill_z := fz
-    # # TODO: e.g. plots_heatmap_edges:     line_z := fz
-    # # TODO: e.g. plots_heatmap_edges:     x := x_pts
-    # # TODO: e.g. plots_heatmap_edges:     y := y_pts
-    # # TODO: e.g. plots_heatmap_edges:     z := nothing
-    # # TODO: e.g. plots_heatmap_edges:     seriestype := :shape
-    # # TODO: e.g. plots_heatmap_edges:     label := ""
-    # # TODO: e.g. plots_heatmap_edges:     widen --> false
-    # # TODO: e.g. plots_heatmap_edges:     ()
-    # # TODO: e.g. plots_heatmap_edges: end
-    # # TODO: e.g. plots_heatmap_edges: @deps plots_heatmap_edges shape
-    # # TODO: e.g. plots_heatmap_edges: @shorthands plots_heatmap_edges
-    # # TODO: e.g. plots_heatmap_edges:
-    # # TODO: e.g. plots_heatmap_edges: Plots.heatmap(x[1:100], y_centers, z[:,1:100])
-    # # TODO: e.g. plots_heatmap_edges: Plots.heatmap(x[1:100], y_centers, z[:,1:100])
-    # # TODO: e.g. plots_heatmap_edges: plot(t = :heatmap, x[1:50], y_centers, z[:,1:50]) # works
-    # # TODO: e.g. plots_heatmap_edges: plot(t = :plots_heatmap, x[1:50], y_centers, z[:,1:50]) # doesn't work
-    # # TODO: e.g. plots_heatmap_edges: plot(t = :plots_heatmap_edges, x[1:50], y_centers, z[:,1:50]) # doesn't work either
     # # # ###################
 
     # # plot(x,

@@ -73,27 +73,27 @@ function prepare_θψδ_from_sim_and_reference(;
 
     ### Sim
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-            LWFBrook90.get_auxiliary_variables(sim_sol; saveat = times_to_read_out_days)
+            LWFBrook90.get_auxiliary_variables(sim_sol; days_to_read_out_d = times_to_read_out_days)
     sim_θ = DataFrame(u_aux_θ[idx,:]', :auto);
     sim_θ.time = times_to_read_out_days;
 
     sim_ψ = DataFrame(u_aux_PSIM[idx,:]', :auto);
     sim_ψ.time = times_to_read_out_days;
     (u_SWATI_dense, u_aux_WETNES_dense, u_aux_PSIM_dense, u_aux_PSITI_dense, u_aux_θ_dense, p_fu_KK_dense) =
-            LWFBrook90.get_auxiliary_variables(sim_sol; saveat = nothing)
+            LWFBrook90.get_auxiliary_variables(sim_sol; days_to_read_out_d = nothing)
     θdense    = u_aux_θ_dense[idx,:]'
     ψdense    = u_aux_PSIM_dense[idx,:]'
 
 
     if (simulate_isotopes)
-        (u_δ18O_soil, u_δ2H_soil) = get_δsoil(simulation; saveat = times_to_read_out_days)
+        (u_δ18O_soil, u_δ2H_soil) = get_δsoil(simulation; days_to_read_out_d = times_to_read_out_days)
 
         sim_δ18O = DataFrame(u_δ18O_soil[idx,:]', :auto)
         sim_δ18O.time = times_to_read_out_days
         sim_δ2H = DataFrame(u_δ2H_soil[idx,:]', :auto)
         sim_δ2H.time = times_to_read_out_days
 
-        (u_δ18O_soil_dense, u_δ2H_soil_dense) = get_δsoil(simulation; saveat = nothing)
+        (u_δ18O_soil_dense, u_δ2H_soil_dense) = get_δsoil(simulation; days_to_read_out_d = nothing)
         δ18Odense = u_δ18O_soil_dense[idx,:]'
         δ2Hdense  = u_δ2H_soil_dense[idx,:]'
     else
@@ -277,8 +277,8 @@ function prepare_θψAboveground_from_sim_and_ref(
     idx_sim_sol = LWFBrook90.find_soilDiscr_indices(depth_to_read_out_mm, sim_sol);
 
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-            LWFBrook90.get_auxiliary_variables(sim_sol; saveat = timesteps)
-    u_aboveground = LWFBrook90.get_aboveground(simulation; saveat = timesteps);
+            LWFBrook90.get_auxiliary_variables(sim_sol; days_to_read_out_d = timesteps)
+    u_aboveground = LWFBrook90.get_aboveground(simulation; days_to_read_out_d = timesteps);
 
     sim = (θ = insertcols!(DataFrame(u_aux_θ[idx_sim_sol,:]', :auto),
                 :time => timesteps),
