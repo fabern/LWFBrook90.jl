@@ -114,7 +114,7 @@ include("module_SUN.jl");        # to bring into scope: using .SUN
 include("module_PET.jl");        # to bring into scope: using .PET
 include("module_SNO.jl");        # to bring into scope: using .SNO
 include("module_EVP.jl");        # to bring into scope: using .SNO
-include("module_ISO.jl");        using .ISO: plotisotopes, plotisotopes! # to bring into scope so that we can export them to the user
+include("module_ISO.jl");        using .ISO
 
 include("func_discretize_soil_domain.jl")
 include("func_DiffEq_definition_u0.jl")
