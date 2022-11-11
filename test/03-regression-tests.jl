@@ -113,9 +113,7 @@ end
 
 @testset "regression-delta-isoBEAdense2010-18" begin
     # run simulation
-    simulation, input_prefix, input_path = LWFBrook90.run_simulation(ARGS)
-
-    @githash_time sol = run_simulation(
+    @githash_time simulation, input_prefix, input_path = LWFBrook90.run_simulation(
     ["../examples/isoBEAdense2010-18-reset-FALSE-input/" "isoBEAdense2010-18-reset-FALSE" "true"]);
     # amberMBP-git-9d3342b: 59.289101 seconds (333.36 M allocations: 53.804 GiB, 20.36% gc time)
     # amberMBP-git-61a19ed: 89.440982 seconds (244.98 M allocations: 37.225 GiB, 9.13% gc time, 49.97% compilation time)
@@ -131,19 +129,21 @@ end
     #         get_auxiliary_variables(simulation.ODESolution)
     # u_SWATI
     # u_aux_θ
-    u_δ = get_δ(simulation.ODESolution; saveat = range(extrema(simulation.ODESolution.t)...));
-    SWAT_d18O_ref  = u_δ.SWAT.d18O[:, 1:30:end];
-    SWAT_d2H_ref   = u_δ.SWAT.d2H[ :,  1:30:end];
-    PREC_d18O_ref  = u_δ.PREC.d18O[1:30:end];
-    PREC_d2H_ref   = u_δ.PREC.d2H[ 1:30:end];
-    # u_δ.INTR.d18O[1:30:end]
-    # u_δ.INTR.d2H[ 1:30:end]
-    # u_δ.INTS.d18O[1:30:end]
-    # u_δ.INTS.d2H[ 1:30:end]
-    # u_δ.SNOW.d18O[1:30:end]
-    # u_δ.SNOW.d2H[ 1:30:end]
-    # u_δ.GWAT.d18O[1:30:end]
-    # u_δ.GWAT.d2H[ 1:30:end]
+    u_δ = get_δ(simulation; days_to_read_out_d = range(extrema(simulation.ODESolution.t)...));
+    u_δsoil = get_δsoil(simulation; days_to_read_out_d = range(extrema(simulation.ODESolution.t)...));
+
+    SWAT_d18O_ref  = u_δsoil.d18O[:, 1:30:end]
+    SWAT_d2H_ref   = u_δsoil.d2H[ :, 1:30:end]
+    PREC_d18O_ref  = u_δ[1:30:end, :PREC_d18O]
+    PREC_d2H_ref   = u_δ[1:30:end, :PREC_d2H ]
+    # u_δ[1:30:end, :INTR_d18O]
+    # u_δ[1:30:end, :INTR_d2H]
+    # u_δ[1:30:end, :INTS_d18O]
+    # u_δ[1:30:end, :INTS_d2H]
+    # u_δ[1:30:end, :SNOW_d18O]
+    # u_δ[1:30:end, :SNOW_d2H]
+    # u_δ[1:30:end, :GWAT_d18O]
+    # u_δ[1:30:end, :GWAT_d2H]
 
     # test or overwrite
     fname = input_path*input_prefix
