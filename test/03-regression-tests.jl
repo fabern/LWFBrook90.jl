@@ -113,6 +113,8 @@ end
 
 @testset "regression-delta-isoBEAdense2010-18" begin
     # run simulation
+    simulation, input_prefix, input_path = LWFBrook90.run_simulation(ARGS)
+
     @githash_time sol = run_simulation(
     ["../examples/isoBEAdense2010-18-reset-FALSE-input/" "isoBEAdense2010-18-reset-FALSE" "true"]);
     # amberMBP-git-9d3342b: 59.289101 seconds (333.36 M allocations: 53.804 GiB, 20.36% gc time)
@@ -123,16 +125,13 @@ end
     # amberMBP-git-013a35e: 18.315647 seconds (38.78 M allocations: 4.644 GiB, 4.00% gc time, 30.45% compilation time) 57445 time steps
     # amberMBP-git-f67b99f: 9.415075 seconds (32.11 M allocations: 4.335 GiB, 13.87% gc time) 57445 time steps
     # amberMBP-git-ed6bed2: 9.290332 seconds (32.11 M allocations: 4.335 GiB, 9.71% gc time)  57445 time steps
-    # sol[1] # solution
-    # sol[2] # input_prefix
-    # sol[3] # input_path
 
     # extract required data from solution object
     # (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-    #         get_auxiliary_variables(sol[1])
+    #         get_auxiliary_variables(simulation.ODESolution)
     # u_SWATI
     # u_aux_θ
-    u_δ = get_δ(sol[1]; saveat = range(extrema(sol[1].t)...));
+    u_δ = get_δ(simulation.ODESolution; saveat = range(extrema(simulation.ODESolution.t)...));
     SWAT_d18O_ref  = u_δ.SWAT.d18O[:, 1:30:end];
     SWAT_d2H_ref   = u_δ.SWAT.d2H[ :,  1:30:end];
     PREC_d18O_ref  = u_δ.PREC.d18O[1:30:end];
@@ -147,7 +146,7 @@ end
     # u_δ.GWAT.d2H[ 1:30:end]
 
     # test or overwrite
-    fname = sol[3]*sol[2]
+    fname = input_path*input_prefix
     if task == "test"
         loaded_SWAT_d18O_ref = load(fname*"_OUTPUT-SWAT_d18O_reference.jld2", "SWAT_d18O_ref");
         loaded_SWAT_d2H_ref  = load(fname*"_OUTPUT-SWAT_d2H_reference.jld2",  "SWAT_d2H_ref");
@@ -167,11 +166,11 @@ end
         #     using Plots, Measures
         #     optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
         #     pl1 = LWFBrook90.plotlwfbrook90(
-        #         sol[1], optim_ticks;
+        #         simulation.ODESolution, optim_ticks;
         #         layout = grid(6,1, heights=[0.1, 0.18, 0.18, 0.18, 0.18, 0.18]),
         #         size=(1000,700), dpi=300, leftmargin = 15mm);
         #     pl2 = LWFBrook90.ISO.plotisotopes(
-        #         sol[1], optim_ticks;
+        #         simulation.ODESolution, optim_ticks;
         #         layout = grid(4, 1, heights=[0.1 ,0.4, 0.1, 0.4]),
         #         size=(1000,1400), dpi = 300, leftmargin = 15mm);
         #     git_status_string = "__git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*

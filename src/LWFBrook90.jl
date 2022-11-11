@@ -7,17 +7,21 @@ using LinearAlgebra
 using StatsBase: mean, weights
 using ComponentArrays
 using UnPack: @unpack
-
 using Dates: now
-# using Infiltrator
 
+# TODO(bernhard): make sure we have documentation for these exported variables
 export SPAC, DiscretizedSPAC, discretize, simulate!
+export run_simulation
+export Rootden_beta_
+# TODO(bernhard): make sure we have documentation for these exported variables
+export RelativeDaysFloat2DateTime
 
-export discretize_soil, Rootden_beta_
-export RelativeDaysFloat2DateTime, plot_LWFBrook90
+# read out results for soil domain variables
+export get_δsoil,     get_θ,     get_ψ,  get_W, get_SWATI, get_K
+export get_deltasoil, get_theta, get_psi
+# read out results for aboveground/scalar variables
+export get_aboveground, get_δ, get_delta # get_mm
 
-export run_simulation, find_indices
-export get_auxiliary_variables, get_θ, get_δ, get_ψ, get_δsoil, get_aboveground
 
 @doc raw"""
     SPAC
@@ -395,7 +399,7 @@ end
 @doc raw"""
     run_simulation(args)
 
-Runs a simulation defined by input files within a folder and returns solution object.
+Runs a simulation defined by input files within a folder and returns solved DiscretizedSPAC.
 
 The function run_simulation() takes as single argument a vector of two or three strings defining
 the input_path and input_prefix of a series of input definition files (and "true"/"false" whether
@@ -452,8 +456,6 @@ function run_simulation(args)
     # plot!(t_to_eval, p.p_PREC(t_to_eval), xtick = 1:10)
     # plot!(t_to_eval,extrapolate(interpolate((input_meteoveg.days .- 0.00001, ), input_meteoveg.PRECIN, Gridded(Constant{Previous}())), Throw())(t_to_eval))
     # sol_LWFBrook90 = solve_LWFB90(u0, tspan, p)
-    @info sol_LWFBrook90.destats
-    @info "Time steps for solving: $(sol_LWFBrook90.destats.naccept) ($(sol_LWFBrook90.destats.naccept) accepted out of $(sol_LWFBrook90.destats.nreject + sol_LWFBrook90.destats.naccept) total)"
     # using Plots, Measures
     # optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
     # pl2 = LWFBrook90.ISO.plotisotopes(
@@ -461,9 +463,12 @@ function run_simulation(args)
     #     layout = grid(4, 1, heights=[0.1 ,0.4, 0.1, 0.4]),
     #     size=(1000,1400), dpi = 300, leftmargin = 15mm);
     # plot!(pl2, link = :x)
+
+    @info sol_LWFBrook90.destats
+    @info "Time steps for solving: $(sol_LWFBrook90.destats.naccept) ($(sol_LWFBrook90.destats.naccept) accepted out of $(sol_LWFBrook90.destats.nreject + sol_LWFBrook90.destats.naccept) total)"
     @show now()
 
-    return (sol_LWFBrook90, input_prefix, input_path)
+    return (simulation, input_prefix, input_path)
 end
 
 end # module

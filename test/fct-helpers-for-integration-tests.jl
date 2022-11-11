@@ -41,9 +41,10 @@ function prepare_θψδ_from_sim_and_reference(;
         # path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand_ISO2"
 
     # Run  simulation
-    sim_sol, _, _ = run_simulation([dirname(path_jl_prefix),
+    simulation, input_prefix, input_path = run_simulation([dirname(path_jl_prefix),
                                     basename(path_jl_prefix),
                                     ifelse(simulate_isotopes,"true","false")]); # "Hammel_loam-NLayer-27-RESET=TRUE"]
+    sim_sol = simulation.ODESolution
     @assert sim_sol.retcode == :Success "Error with simulation, return code: $(sim_sol.retcode)"
     sim_sol.prob.tspan
     sim_sol.t
@@ -67,32 +68,32 @@ function prepare_θψδ_from_sim_and_reference(;
     # Compare simulation and reference
     ## Extract various variables at certain depths
     depth_to_read_out_mm = [100 500 1000 1500 1900]
-    idx = find_indices(depth_to_read_out_mm, sim_sol)
+    idx = LWFBrook90.find_soilDiscr_indices(depth_to_read_out_mm, sim_sol)
     times_to_read_out_days = minimum(sim_sol.t):1.0:maximum(sim_sol.t) #sort(unique(HydrusSolution_sparseTime.time))
 
     ### Sim
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-            get_auxiliary_variables(sim_sol; saveat = times_to_read_out_days)
+            LWFBrook90.get_auxiliary_variables(sim_sol; saveat = times_to_read_out_days)
     sim_θ = DataFrame(u_aux_θ[idx,:]', :auto);
     sim_θ.time = times_to_read_out_days;
 
     sim_ψ = DataFrame(u_aux_PSIM[idx,:]', :auto);
     sim_ψ.time = times_to_read_out_days;
     (u_SWATI_dense, u_aux_WETNES_dense, u_aux_PSIM_dense, u_aux_PSITI_dense, u_aux_θ_dense, p_fu_KK_dense) =
-            get_auxiliary_variables(sim_sol; saveat = nothing)
+            LWFBrook90.get_auxiliary_variables(sim_sol; saveat = nothing)
     θdense    = u_aux_θ_dense[idx,:]'
     ψdense    = u_aux_PSIM_dense[idx,:]'
 
 
     if (simulate_isotopes)
-        (u_δ18O_soil, u_δ2H_soil) = get_δsoil(sim_sol; saveat = times_to_read_out_days)
+        (u_δ18O_soil, u_δ2H_soil) = get_δsoil(simulation; saveat = times_to_read_out_days)
 
         sim_δ18O = DataFrame(u_δ18O_soil[idx,:]', :auto)
         sim_δ18O.time = times_to_read_out_days
         sim_δ2H = DataFrame(u_δ2H_soil[idx,:]', :auto)
         sim_δ2H.time = times_to_read_out_days
 
-        (u_δ18O_soil_dense, u_δ2H_soil_dense) = get_δsoil(sim_sol; saveat = nothing)
+        (u_δ18O_soil_dense, u_δ2H_soil_dense) = get_δsoil(simulation; saveat = nothing)
         δ18Odense = u_δ18O_soil_dense[idx,:]'
         δ2Hdense  = u_δ2H_soil_dense[idx,:]'
     else
@@ -265,18 +266,19 @@ function prepare_θψAboveground_from_sim_and_ref(
 
 
     # Run  simulation
-    sim_sol, _, _ = run_simulation(
+    simulation, _, _ = run_simulation(
         [joinpath(folder_with_sim_input_and_ref_output, "input-files/") input_prefix "false"]
         );
+    sim_sol = simulation.ODESolution
     # Postprocess simulation
     timesteps = ref_below_1.θ.time;
     ## Extract certain depths of simulation
     depth_to_read_out_mm = [100 500 1000 1500 1900];
-    idx_sim_sol = find_indices(depth_to_read_out_mm, sim_sol);
+    idx_sim_sol = LWFBrook90.find_soilDiscr_indices(depth_to_read_out_mm, sim_sol);
 
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-            get_auxiliary_variables(sim_sol; saveat = timesteps)
-    u_aboveground = LWFBrook90.get_aboveground(sim_sol; saveat = timesteps);
+            LWFBrook90.get_auxiliary_variables(sim_sol; saveat = timesteps)
+    u_aboveground = LWFBrook90.get_aboveground(simulation; saveat = timesteps);
 
     sim = (θ = insertcols!(DataFrame(u_aux_θ[idx_sim_sol,:]', :auto),
                 :time => timesteps),

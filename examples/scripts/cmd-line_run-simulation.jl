@@ -1,6 +1,6 @@
 # Run this on the cmd line like:
-#  julia --project=. run_simulation.jl [] []
-#  julia --project=. run_simulation.jl "../Unit_Tests/Hammel-IntegrationTests-LWFBrook90/input_LWFBrook90.jl"
+#  julia --project=. cmd-line_run-simulation.jl [] []
+#  julia --project=. cmd-line_run-simulation.jl "../Unit_Tests/Hammel-IntegrationTests-LWFBrook90/input_LWFBrook90.jl"
 # "Hammel_loam-NLayer-27-RESET=FALSE"
 #
 # Note: I am aware that this isn't efficient as LWFBrook90 gets recompiled each time. See:
@@ -17,7 +17,8 @@ using CSV: read, File
 using DataFrames: DataFrame, rename, unstack, Not# ,select
 
 # Parse command line arguments and call run_simulation() (if called from command line)
-sim_result = LWFBrook90.run_simulation(ARGS)
+simulation,_,_ = LWFBrook90.run_simulation(ARGS)
+sim_result = simulation.ODESolution
 # plot_and_save_results(sim_result...)
 
 # Run this script interactively many simulations with run_simulation()

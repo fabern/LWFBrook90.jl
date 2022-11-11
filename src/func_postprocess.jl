@@ -561,7 +561,18 @@ The user can override this with the second argument isotope as one of `:d18O`, `
 end
 
 
-function find_indices(depths_to_read_out_mm, solution)
+
+##########################
+# Functions to get values linked to soil domain:
+
+function find_soilDiscr_indices(simulation::DiscretizedSPAC, depths_to_read_out_mm)
+    solution = simulation.ODESolution
+    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
+
+    find_soilDiscr_indices(depths_to_read_out_mm, solution)
+end
+# TODO(bernhard): get rid of all uses of find_soilDiscr_indices(depths_to_read_out_mm, solution::ODESolution)
+function find_soilDiscr_indices(depths_to_read_out_mm, solution::ODESolution)
     # depths and lower_boundaries must all be positive numbers
     @assert all(depths_to_read_out_mm .> 0)
 
@@ -578,7 +589,142 @@ function find_indices(depths_to_read_out_mm, solution)
     return idx_to_read_out
 end
 
-function get_aboveground(solution; saveat = nothing)
+function get_auxiliary_variables(simulation::DiscretizedSPAC; saveat = nothing)
+    solution = simulation.ODESolution
+    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
+
+    get_auxiliary_variables(solution; saveat = saveat)
+end
+# TODO(bernhard): get rid of all uses of get_auxiliary_variables(solution::ODESolution; saveat = nothing)
+function get_auxiliary_variables(solution::ODESolution; saveat = nothing)
+    p_soil = solution.prob.p.p_soil
+    NLAYER = p_soil.NLAYER
+    if isnothing(saveat)
+        u_SWATI = reduce(hcat, [solution[t_idx].SWATI.mm  for t_idx = eachindex(solution)])
+    else
+        u_SWATI = reduce(hcat, [solution(t_days).SWATI.mm for t_days = saveat])
+    end
+
+    # (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+    #         KPT.derive_auxiliary_SOILVAR.(u_SWATI, Ref(p_soil)) # Ref fixes scalar argument for broadcasting "."
+    u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK =
+        (fill(NaN, size(u_SWATI)) for i in 1:5)
+    for t in 1:size(u_SWATI,2)
+        (u_aux_WETNES[:, t], u_aux_PSIM[:, t], u_aux_PSITI[:, t], u_aux_θ[:, t], p_fu_KK[:, t]) =
+            KPT.derive_auxiliary_SOILVAR(u_SWATI[:,t], p_soil)
+    end
+    # returns arrays of dimenstion (t,z) where t is number of timesteps and z number of computational layers
+    return (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
+end
+
+function get_θ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, saveat = nothing)
+    solution = simulation.ODESolution
+    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
+
+    # get auxiliary variables with requested time resolution (i.e. saveat)
+    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+        get_auxiliary_variables(simulation; saveat = saveat)
+
+    # return requested soil layers
+    if isnothing(depths_to_read_out_mm)
+        return u_aux_θ[:, :]
+    else
+        return u_aux_θ[find_soilDiscr_indices(simulation, depths_to_read_out_mm), :]
+    end
+end
+function get_ψ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, saveat = nothing)
+    solution = simulation.ODESolution
+    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
+
+    # get auxiliary variables with requested time resolution (i.e. saveat)
+    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+        get_auxiliary_variables(simulation; saveat = saveat)
+
+    # return requested soil layers
+    if isnothing(depths_to_read_out_mm)
+        return u_aux_PSIM[:, :]
+    else
+        return u_aux_PSIM[find_soilDiscr_indices(simulation, depths_to_read_out_mm), :]
+    end
+end
+function get_WETNES(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, saveat = nothing)
+    solution = simulation.ODESolution
+    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
+
+    # get auxiliary variables with requested time resolution (i.e. saveat)
+    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+        get_auxiliary_variables(simulation; saveat = saveat)
+
+    # return requested soil layers
+    if isnothing(depths_to_read_out_mm)
+        return u_aux_WETNES[:, :]
+    else
+        return u_aux_WETNES[find_soilDiscr_indices(simulation, depths_to_read_out_mm), :]
+    end
+end
+function get_SWATI(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, saveat = nothing)
+    solution = simulation.ODESolution
+    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
+
+    # get auxiliary variables with requested time resolution (i.e. saveat)
+    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+        get_auxiliary_variables(simulation; saveat = saveat)
+
+    # return requested soil layers
+    if isnothing(depths_to_read_out_mm)
+        return u_SWATI[:, :]
+    else
+        return u_SWATI[find_soilDiscr_indices(simulation, depths_to_read_out_mm), :]
+    end
+end
+function get_K(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, saveat = nothing)
+    solution = simulation.ODESolution
+    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
+
+    # get auxiliary variables with requested time resolution (i.e. saveat)
+    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+        get_auxiliary_variables(simulation; saveat = saveat)
+
+    # return requested soil layers
+    if isnothing(depths_to_read_out_mm)
+        return p_fu_KK[:, :]
+    else
+        return p_fu_KK[find_soilDiscr_indices(simulation, depths_to_read_out_mm), :]
+    end
+end
+
+function get_δsoil(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, saveat = nothing)
+    solution = simulation.ODESolution
+    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
+    @assert solution.prob.p.simulate_isotopes "Provided solution did not simulate isotopes"
+
+    # get auxiliary variables with requested time resolution (i.e. saveat)
+    if isnothing(saveat)
+        # vector quantities δ-values:
+        rows_SWAT_d18O = reduce(hcat, [solution[t_idx].SWATI.d18O for t_idx = eachindex(solution)])
+        rows_SWAT_d2H  = reduce(hcat, [solution[t_idx].SWATI.d2H  for t_idx = eachindex(solution)])
+    else
+        # vector quantities δ-values:
+        rows_SWAT_d18O = reduce(hcat, [solution(t_days).SWATI.d18O for t_days = saveat])
+        rows_SWAT_d2H  = reduce(hcat, [solution(t_days).SWATI.d2H  for t_days = saveat])
+    end
+    # return requested soil layers
+    if isnothing(depths_to_read_out_mm)
+        return (d18O = rows_SWAT_d18O[:, :],
+                d2H  = rows_SWAT_d2H[ :, :])
+    else
+        idx_soil_layers = find_soilDiscr_indices(simulation, depths_to_read_out_mm)
+        return (d18O = rows_SWAT_d18O[idx_soil_layers, :],
+                d2H  = rows_SWAT_d2H[ idx_soil_layers, :])
+    end
+end
+
+##########################
+# Functions to get values linked to aboveground:
+function get_aboveground(simulation::DiscretizedSPAC; saveat = nothing)
+    solution = simulation.ODESolution
+    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
+
     compartments_to_extract = [:GWAT, :INTS, :INTR, :SNOW, :CC, :SNOWLQ]
 
     if isnothing(saveat)
@@ -595,116 +741,47 @@ function get_aboveground(solution; saveat = nothing)
     return DataFrame(u_aboveground, string.(compartments_to_extract))
 end
 
-function get_auxiliary_variables(solution; saveat = nothing)
-    p_soil = solution.prob.p.p_soil
-    NLAYER = p_soil.NLAYER
-    if isnothing(saveat)
-        u_SWATI = reduce(hcat, [solution[t_idx].SWATI.mm  for t_idx = eachindex(solution)])
-    else
-        u_SWATI = reduce(hcat, [solution(t_days).SWATI.mm for t_days = saveat])
-    end
-
-    # (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-    #         LWFBrook90.KPT.derive_auxiliary_SOILVAR.(u_SWATI, Ref(p_soil)) # Ref fixes scalar argument for broadcasting "."
-    u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK =
-        (fill(NaN, size(u_SWATI)) for i in 1:5)
-    for t in 1:size(u_SWATI,2)
-        (u_aux_WETNES[:, t], u_aux_PSIM[:, t], u_aux_PSITI[:, t], u_aux_θ[:, t], p_fu_KK[:, t]) =
-            LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI[:,t], p_soil)
-    end
-    # returns arrays of dimenstion (t,z) where t is number of timesteps and z number of computational layers
-    return (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
-end
-
-function get_θ(depths_to_read_out_mm, solution; saveat = nothing)
-    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-        get_auxiliary_variables(solution; saveat = saveat)
-
-    idx = find_indices(depths_to_read_out_mm, solution)
-
-    return u_aux_θ[idx, :]
-end
-function get_ψ(depths_to_read_out_mm, solution; saveat = nothing)
-    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-        get_auxiliary_variables(solution; saveat = saveat)
-
-    idx = find_indices(depths_to_read_out_mm, solution)
-
-    return u_aux_PSIM[idx, :]
-end
-
-function get_δ(solution; saveat = nothing)
+function get_δ(simulation::DiscretizedSPAC; saveat = nothing)
+    # function get_δ(simulation::DiscretizedSPAC; saveat = nothing, compartment::Symbol = :all)
+    solution = simulation.ODESolution
+    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
     @assert solution.prob.p.simulate_isotopes "Provided solution did not simulate isotopes"
 
+    compartments_to_extract = [:GWAT, :INTS, :INTR, :SNOW, :RWU, :XYLEM]
+
     if isnothing(saveat)
-        # row_NaN       = fill(NaN, 1,length(x))
-        # input quantities δ-values:
-        row_PREC_d18O = reshape(solution.prob.p.p_δ18O_PREC.(solution.t), 1, :)
-        row_PREC_d2H  = reshape(solution.prob.p.p_δ2H_PREC.(solution.t), 1, :)
-        # scalar quantities δ-values:
-        row_INTS_d18O = reduce(hcat, [solution[t_idx].INTS.d18O  for t_idx = eachindex(solution)])
-        row_INTR_d18O = reduce(hcat, [solution[t_idx].INTR.d18O  for t_idx = eachindex(solution)])
-        row_SNOW_d18O = reduce(hcat, [solution[t_idx].SNOW.d18O  for t_idx = eachindex(solution)])
-        row_GWAT_d18O = reduce(hcat, [solution[t_idx].GWAT.d18O  for t_idx = eachindex(solution)])
-        row_RWU_d18O  = reduce(hcat, [solution[t_idx].RWU.d18O   for t_idx = eachindex(solution)])
-        row_XYL_d18O  = reduce(hcat, [solution[t_idx].XYLEM.d18O for t_idx = eachindex(solution)])
-        row_INTS_d2H  = reduce(hcat, [solution[t_idx].INTS.d2H   for t_idx = eachindex(solution)])
-        row_INTR_d2H  = reduce(hcat, [solution[t_idx].INTR.d2H   for t_idx = eachindex(solution)])
-        row_SNOW_d2H  = reduce(hcat, [solution[t_idx].SNOW.d2H   for t_idx = eachindex(solution)])
-        row_GWAT_d2H  = reduce(hcat, [solution[t_idx].GWAT.d2H   for t_idx = eachindex(solution)])
-        row_RWU_d2H   = reduce(hcat, [solution[t_idx].RWU.d2H    for t_idx = eachindex(solution)])
-        row_XYL_d2H   = reduce(hcat, [solution[t_idx].XYLEM.d2H  for t_idx = eachindex(solution)])
-        # vector quantities δ-values:
-        rows_SWAT_d18O = reduce(hcat, [solution[t_idx].SWATI.d18O for t_idx = eachindex(solution)])
-        rows_SWAT_d2H  = reduce(hcat, [solution[t_idx].SWATI.d2H  for t_idx = eachindex(solution)])
+        # row_PREC_d18O = reshape(solution.prob.p.p_δ18O_PREC.(solution.t), 1, :)
+        # row_PREC_d2H  = reshape(solution.prob.p.p_δ2H_PREC.(solution.t), 1, :)
+        PREC_d18O = solution.prob.p.p_δ18O_PREC.(solution.t)
+        PREC_d2H  = solution.prob.p.p_δ2H_PREC.( solution.t)
+
+        # u_aboveground = [solution[t_idx][compartment].mm  for t_idx = eachindex(solution), compartment in compartments_to_extract]
+        d18O_aboveground = [solution[t_idx][compartment].d18O  for t_idx = eachindex(solution), compartment in compartments_to_extract]
+        d2H_aboveground  = [solution[t_idx][compartment].d2H   for t_idx = eachindex(solution), compartment in compartments_to_extract]
     else
-        # row_NaN       = fill(NaN, 1,length(x))
-        # input quantities δ-values:
-        row_PREC_d18O = reshape(solution.prob.p.p_δ18O_PREC.(saveat), 1, :)
-        row_PREC_d2H  = reshape(solution.prob.p.p_δ2H_PREC.(saveat), 1, :)
-        # scalar quantities δ-values:
-        row_INTS_d18O = reduce(hcat, [solution(t_days).INTS.d18O  for t_days = saveat])
-        row_INTR_d18O = reduce(hcat, [solution(t_days).INTR.d18O  for t_days = saveat])
-        row_SNOW_d18O = reduce(hcat, [solution(t_days).SNOW.d18O  for t_days = saveat])
-        row_GWAT_d18O = reduce(hcat, [solution(t_days).GWAT.d18O  for t_days = saveat])
-        row_RWU_d18O  = reduce(hcat, [solution(t_days).RWU.d18O   for t_days = saveat])
-        row_XYL_d18O  = reduce(hcat, [solution(t_days).XYLEM.d18O for t_days = saveat])
-        row_INTS_d2H  = reduce(hcat, [solution(t_days).INTS.d2H   for t_days = saveat])
-        row_INTR_d2H  = reduce(hcat, [solution(t_days).INTR.d2H   for t_days = saveat])
-        row_SNOW_d2H  = reduce(hcat, [solution(t_days).SNOW.d2H   for t_days = saveat])
-        row_GWAT_d2H  = reduce(hcat, [solution(t_days).GWAT.d2H   for t_days = saveat])
-        row_RWU_d2H   = reduce(hcat, [solution(t_days).RWU.d2H    for t_days = saveat])
-        row_XYL_d2H   = reduce(hcat, [solution(t_days).XYLEM.d2H  for t_days = saveat])
-        # vector quantities δ-values:
-        rows_SWAT_d18O = reduce(hcat, [solution(t_days).SWATI.d18O for t_days = saveat])
-        rows_SWAT_d2H  = reduce(hcat, [solution(t_days).SWATI.d2H  for t_days = saveat])
+        # row_PREC_d18O = reshape(solution.prob.p.p_δ18O_PREC.(saveat), 1, :)
+        # row_PREC_d2H  = reshape(solution.prob.p.p_δ2H_PREC.(saveat), 1, :)
+        PREC_d18O = solution.prob.p.p_δ18O_PREC.(saveat)
+        PREC_d2H  = solution.prob.p.p_δ2H_PREC.( saveat)
+
+        # u_aboveground = [solution(t_days)[compartment].mm  for t_days = saveat, compartment in compartments_to_extract]
+        d18O_aboveground = [solution(t_days)[compartment].d18O  for t_days = saveat, compartment in compartments_to_extract]
+        d2H_aboveground  = [solution(t_days)[compartment].d2H   for t_days = saveat, compartment in compartments_to_extract]
     end
 
-    return (SWAT = (d18O = rows_SWAT_d18O, d2H = rows_SWAT_d2H),
-            PREC = (d18O = row_PREC_d18O,  d2H = row_PREC_d2H),
-            INTS = (d18O = row_INTS_d18O,  d2H = row_INTS_d2H),
-            INTR = (d18O = row_INTR_d18O,  d2H = row_INTR_d2H),
-            SNOW = (d18O = row_SNOW_d18O,  d2H = row_SNOW_d2H),
-            GWAT = (d18O = row_GWAT_d18O,  d2H = row_GWAT_d2H),
-            RWU  = (d18O = row_RWU_d18O,   d2H = row_RWU_d2H),
-            XYL  = (d18O = row_XYL_d18O,   d2H = row_XYL_d2H))
+    return DataFrame([PREC_d18O d18O_aboveground PREC_d2H d2H_aboveground],
+                     ["PREC_d18O"; string.(compartments_to_extract).*"_d18O";
+                      "PREC_d2H" ; string.(compartments_to_extract).*"_d2H"])
+
 end
 
-function get_δsoil(solution; saveat = nothing)
-    u_δ = get_δ(solution; saveat = saveat)
+# also make non-unicode variants:
+get_theta     = get_θ
+get_psi       = get_ψ
+get_deltasoil = get_δsoil
 
-    return (d18O = u_δ.SWAT.d18O,
-            d2H  = u_δ.SWAT.d2H)
-end
+get_delta     = get_δ
 
-function get_δsoil(depths_to_read_out_mm, solution; saveat = nothing)
-    u_d18O, u_d2H = LWFBrook90.get_δsoil(solution; saveat = saveat)
-
-    idx = find_indices(depths_to_read_out_mm, solution)
-
-    return (d18O = u_d18O[idx, :],
-            d2H  = u_d2H[idx, :])
-end
 ############################################################################################
 ############################################################################################
 ############################################################################################

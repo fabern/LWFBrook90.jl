@@ -181,7 +181,7 @@
 #     legend = :bottomright)
 
 # # Some manual computations to include the gravel fraction
-# layer_indices = LWFBrook90.find_indices(depth_to_read_out_mm, sol_LWFBrook90)
+# layer_indices = LWFBrook90.find_soilDiscr_indices(depth_to_read_out_mm, sol_LWFBrook90)
 
 # # Variant 1: compute θ and correct with gravel fraction
 # θ_layers = u_aux_θ[:,layer_indices]
