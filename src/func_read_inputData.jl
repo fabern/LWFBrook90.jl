@@ -679,11 +679,19 @@ function read_path_soil_discretization(path_soil_discretization)
         Input file '$path_soil_discretization' contains overlapping layers.
         Please check and correct the input file.
         """
-
     @assert input_soil_discretization[1,"Upper_m"] ≈ 0 """
         Input file '$path_soil_discretization' does not start with 0.0 as Upper_m limit of first layer.
         Please check and correct the input file.
         """
+    # Check that defined layers are not zero height
+    zero_height_layers = input_soil_discretization[1:end-1,"Upper_m"] .== input_soil_discretization[2:end,"Upper_m"]
+    idx_layer_zero_height = (1:nrow(input_soil_discretization)-1)[zero_height_layers]
+    @assert !any(zero_height_layers) """
+        Input file '$path_soil_discretization' contains layers of zero height:
+        $(input_soil_discretization[[idx_layer_zero_height[1]-1, idx_layer_zero_height[1], idx_layer_zero_height[1]+1], :])
+        Please check and correct the input file.
+        """
+
     # Assert units:
     assert_unitsHeader_as_expected(path_soil_discretization,
         DataFrame(Upper_m = "m", Lower_m = "m", Rootden_ = "-",

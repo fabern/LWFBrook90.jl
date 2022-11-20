@@ -261,6 +261,7 @@ function refine_soil_discretization(
     d18O_soil_init = soil_discretization[!,"u_delta18O_init_permil"] # initial condition soil water δ18O [‰]
     d2H_soil_init  = soil_discretization[!,"u_delta2H_init_permil"]  # initial condition soil water δ2H [‰]
 
+    @assert all(THICK_m .> 0.0) "All discretized cells msut be bigger than zero...."
     @assert all(PSIM_init .<= 0) "Initial matrix psi must be negative or zero"
 
     NLAYER = nrow(soil_discretization)

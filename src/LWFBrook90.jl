@@ -214,6 +214,8 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
         # b) or use manually defined Δz
         #    and require functions for Rootden_, and initial PSIM, delta18O, and delta2H
 
+        @assert all(Δz .> 0)
+
         use_soil_discretization_csv = false
         interfaces_m = [0, cumsum(Δz)...]
         soil_discretization = DataFrame(
@@ -232,7 +234,7 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
         @assert Δz_functions.δ2Η_init  isa Function
     end
 
-    # Check validity of
+    # Check validity of loaded soil discretization
     @assert soil_horizon_extent[1] ≈ soil_discretization.Upper_m[1] "Spatial domain of soil discretization is not compatible with provided soil horizons"
     if soil_horizon_extent[2] ≈ soil_discretization.Lower_m[end]
         # all okay no need to extend z horizon
@@ -386,6 +388,8 @@ end
 function simulate!(s::DiscretizedSPAC)
     sol_SPAC = solve_LWFB90(s.ODEProblem);
     s.ODESolution = sol_SPAC;
+
+    @assert (sol_SPAC.retcode == DiffEqBase.ReturnCode.Success) "Problem with simulation: Return code of simulation was '$(sol_SPAC.retcode)'"
 
     # also save datetimes
     s.ODESolution_datetime = LWFBrook90.RelativeDaysFloat2DateTime.(s.ODESolution.t, s.continuous_SPAC.reference_date)

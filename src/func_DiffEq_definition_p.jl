@@ -181,6 +181,7 @@ function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr, p_fT_RELDEN)
     ## Soil discretization
     NLAYER   = soil_discr["NLAYER"] # Number of soil layers used
     p_THICK  = soil_discr["THICK"]  # (Soil parameter),  layer thicknesses, mm
+    @assert !any(p_THICK .≈ 0.0)
     # Documentation from ecoshift:
     # NLAYER (Soil parameter) - number of soil layers to be used, dimensionless. NLAYER is the number of soil layers to be used in the model run. It can vary from 1 to ML. Run time is more or less proportional to NLAYER. Soil parameter values for layers greater than NLAYER can be 0.
     # THICK(1 To ML) (Soil parameter) - layer thicknesses, mm. THICK is the vertical thickness of each soil layer. Each layer can have a different thickness, but the number of iterations goes up as the thickness of any layer goes down. THICK should probably not be less than 50 mm unless run time is not important. [see EVP-PLNTRES] [see KPT] [see WAT-VERT]
