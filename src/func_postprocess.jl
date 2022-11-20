@@ -163,21 +163,12 @@ The user can override this with the second argument isotope as one of `:abovegro
     if (compartments == :belowground || compartments == :above_and_belowground)
         @series begin
             title := "Belowground"
-            labels := ["total SWAT"]
+            labels := ["total SWAT" reduce(hcat, horizon_labels)]
             ylab := "Amount [mm]"
             seriestype := :line
             subplot := 3
             # and other arguments:
-            x, [col_sumSWATI_amt]
-        end
-        @series begin
-            title := "Belowground"
-            labels := reduce(hcat, horizon_labels)
-            ylab := "Amount [mm]"
-            seriestype := :line
-            subplot := 3
-            # and other arguments:
-            x, reduce(hcat, cols_sumSWATIperLayer_amt)
+            x, hcat(col_sumSWATI_amt[:], reduce(hcat, cols_sumSWATIperLayer_amt))
         end
 
         @series begin
@@ -459,7 +450,7 @@ The user can override this with the second argument isotope as one of `:d18O`, `
     # ts_PREC_δ2H = ...
     if (isotope == :d18O || isotope == :d18O_and_d2H)
         @series begin # ts_PREC_δ18O
-            title := "δ18O"
+            title --> "δ18O"
             seriestype := :bar
             # linecolor := :match
             line_z := reshape(row_PREC_d18O,1,:)
@@ -477,7 +468,7 @@ The user can override this with the second argument isotope as one of `:d18O`, `
     end
     if (isotope == :d2H || isotope == :d18O_and_d2H)
         @series begin # ts_PREC_δ2H
-            title := "δ2H"
+            title --> "δ2H"
             seriestype := :bar
             # linecolor := :match
             line_z := reshape(row_PREC_d2H,1,:)
