@@ -8,15 +8,27 @@ The user can override this with the second argument isotope as one of `:abovegro
 @userplot PlotAmounts
 @recipe function f(plam::PlotAmounts)
     # 0) parse input arguments
-    if length(plam.args) == 2
+
+    if length(plam.args) == 3
         simulation = plam.args[1]
-        compartments    = plam.args[2]
-        error("TODO: currently selecting a subset of compartments are not supported by plotamounts")
+        compartments = plam.args[2]
+        RWUcentroid = plam.args[3]
+    elseif length(plam.args) == 2
+        simulation = plam.args[1]
+        compartments = plam.args[2]
+        RWUcentroid = :dontShowRWUcentroid
     elseif length(plam.args) == 1
         simulation = plam.args[1]
-        compartments    = :above_and_belowground
+        compartments = :above_and_belowground
+        RWUcentroid= :dontShowRWUcentroid
     else
-        error("plotamounts requires an unnamed first argument of type DiscretizedSPAC, and an optional unnamed second argument (:d18O_and_d2H, :d18O, or :d2H). Other arguments to plot() should be separated by `;`,")
+        error("plotamounts requires an unnamed first argument of type DiscretizedSPAC, and optional unnamed second/third arguments (:aboveground, :belowground, or :above_and_belowground) and (:dontShowRWUcentroid, :showRWUcentroid). Other arguments to plot() should be separated by `;`.")
+    end
+    if (compartments != :above_and_belowground)
+        error("TODO: currently selecting a subset of compartments are not supported by plotamounts")
+    end
+    if !(RWUcentroid == :dontShowRWUcentroid || RWUcentroid == :showRWUcentroid)
+        error("Third unnamed argument to plotamounts should be one of (:dontShowRWUcentroid, :showRWUcentroid). Got: $(RWUcentroid)")
     end
     if !(compartments == :aboveground || compartments == :belowground || compartments == :above_and_belowground)
         error("Second unnamed argument to plotamounts should be one of (:above_and_belowground, :aboveground, or :belowground). Got: $( compartments)")
@@ -64,6 +76,7 @@ The user can override this with the second argument isotope as one of `:abovegro
 
     # Results
     rows_SWAT_amt  = reduce(hcat, [sol(t).SWATI.mm   for t in days_to_read_out_d]) ./ sol.prob.p.p_soil.p_THICK
+    rows_RWU_mmDay  = reduce(hcat, [sol(t).TRANI.mm   for t in days_to_read_out_d])
     row_NaN       = fill(NaN, 1,length(x))
     row_PREC_amt = reshape(sol.prob.p.p_PREC.(days_to_read_out_d), 1, :)
     col_INTS_amt = [sol(t).INTS.mm for t in days_to_read_out_d]
@@ -72,6 +85,9 @@ The user can override this with the second argument isotope as one of `:abovegro
     col_GWAT_amt = [sol(t).GWAT.mm   for t in days_to_read_out_d]
     col_RWU_amt  = [sol(t).RWU.mm    for t in days_to_read_out_d]
     col_XYL_amt  = [sol(t).XYLEM.mm  for t in days_to_read_out_d]
+
+    RWU_percent = rows_RWU_mmDay ./ sum(rows_RWU_mmDay; dims = 1)
+    row_RWU_centroid_mm = sum(RWU_percent .* y_center; dims=1)
 
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
         get_auxiliary_variables(sol, days_to_read_out_d = days_to_read_out_d);
@@ -201,6 +217,17 @@ The user can override this with the second argument isotope as one of `:abovegro
             # and other arguments:
             x, y_center, u_aux_PSIM;
         end
+        if (RWUcentroid == :showRWUcentroid)
+            @series begin
+                #plot!(x, row_RWU_centroid_mm', yflip=true, color=:white, label = "")
+                color := :white
+                label := ""
+                yflip := true; yticks := y_soil_ticks
+                yguide := "Depth [mm]"; colorbar_title := "ψₘ [kPa]"
+                subplot := 6
+                x, row_RWU_centroid_mm'
+            end
+        end
         # @series begin
         #     seriestype := :heatmap
         #     yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
@@ -310,6 +337,7 @@ end
 """
     plotisotopes(simulation::DiscretizedSPAC)
     plotisotopes(simulation::DiscretizedSPAC, isotope::Symbol)
+    plotisotopes(simulation::DiscretizedSPAC, isotope::Symbol, RWUcentroid::Symbol)
 
 Plots the isotope results of a SPAC Simulation. By default both δ18O and δ2H.
 The user can override this with the second argument isotope as one of `:d18O`, `:d2H`, or `:d18O_and_d2H`.
@@ -317,14 +345,23 @@ The user can override this with the second argument isotope as one of `:d18O`, `
 @userplot PlotIsotopes
 @recipe function f(pliso::PlotIsotopes)
     # 0) parse input arguments
-    if length(pliso.args) == 2
+    if length(pliso.args) == 3
         simulation = pliso.args[1]
         isotope    = pliso.args[2]
+        RWUcentroid= pliso.args[3]
+    elseif length(pliso.args) == 2
+        simulation = pliso.args[1]
+        isotope    = pliso.args[2]
+        RWUcentroid= :dontShowRWUcentroid
     elseif length(pliso.args) == 1
         simulation = pliso.args[1]
         isotope    = :d18O_and_d2H
+        RWUcentroid= :dontShowRWUcentroid
     else
-        error("plotisotopes requires an unnamed first argument of type DiscretizedSPAC, and an optional unnamed second argument (:d18O_and_d2H, :d18O, or :d2H). Other arguments to plot() should be separated by `;`,")
+        error("plotisotopes requires an unnamed first argument of type DiscretizedSPAC, and optional unnamed second/third arguments (:d18O_and_d2H, :d18O, or :d2H) and (:dontShowRWUcentroid, :showRWUcentroid). Other arguments to plot() should be separated by `;`.")
+    end
+    if !(RWUcentroid == :dontShowRWUcentroid || RWUcentroid == :showRWUcentroid)
+        error("Third unnamed argument to plotisotopes should be one of (:dontShowRWUcentroid, :showRWUcentroid). Got: $(RWUcentroid)")
     end
     if !(isotope == :d18O || isotope == :d2H || isotope == :d18O_and_d2H)
         error("Second unnamed argument to plotisotopes should be one of (:d18O_and_d2H, :d18O, or :d2H). Got: $(isotope)")
@@ -392,6 +429,10 @@ The user can override this with the second argument isotope as one of `:d18O`, `
     row_GWAT_d2H  = reduce(hcat, [sol(t).GWAT.d2H for t in days_to_read_out_d])
     row_RWU_d2H   = reduce(hcat, [sol(t).RWU.d2H for t in days_to_read_out_d])
     row_XYL_d2H   = reduce(hcat, [sol(t).XYLEM.d2H for t in days_to_read_out_d])
+
+    rows_RWU_mmDay  = reduce(hcat, [sol(t).TRANI.mm   for t in days_to_read_out_d])
+    RWU_percent = rows_RWU_mmDay ./ sum(rows_RWU_mmDay; dims = 1)
+    row_RWU_centroid_mm = sum(RWU_percent .* y_center; dims=1)
 
     # # 1b) define some plot arguments based on the extracted data
     # # color scheme:
@@ -501,15 +542,27 @@ The user can override this with the second argument isotope as one of `:d18O`, `
             seriestype := :heatmap
             yflip := true
             yticks := (y_ticks, y_labels)
-            colorbar := true_to_check_colorbar
             yguide := "Depth [mm]"
             colorbar_title := "δ18O [‰]"
             clims := clims_d18O
-            colorbar := true
+            colorbar := true # colorbar := true_to_check_colorbar
             subplot := idx_d18O_SWAT
 
             # and other arguments:
             x, y_extended, z2_extended;
+        end
+        if (RWUcentroid == :showRWUcentroid)
+            @series begin
+                #plot!(x, row_RWU_centroid_mm', yflip=true, color=:white, label = "")
+                color := :white
+                label := ""
+                yflip := true
+                yticks := (y_ticks, y_labels)
+                yguide := "Depth [mm]"
+                colorbar_title := "δ18O [‰]"
+                subplot := idx_d18O_SWAT
+                x, row_RWU_centroid_mm'
+            end
         end
     end
 
@@ -518,15 +571,28 @@ The user can override this with the second argument isotope as one of `:d18O`, `
             seriestype := :heatmap
             yflip := true
             yticks := (y_ticks, y_labels)
-            colorbar := true_to_check_colorbar
             yguide := "Depth [mm]"
             colorbar_title := "δ2H [‰]"
             clims := clims_d2H
-            colorbar := true
+            colorbar := true # colorbar := true_to_check_colorbar
             subplot := idx_d2H_SWAT
 
             # and other arguments:
             x, y_extended, z3_extended;
+        end
+        if (RWUcentroid == :showRWUcentroid)
+            @series begin
+                #plot!(x, row_RWU_centroid_mm', yflip=true, color=:white, label = "")
+                color := :white
+                label := ""
+                yflip := true
+                yflip := true
+                yticks := (y_ticks, y_labels)
+                yguide := "Depth [mm]"
+                colorbar_title := "δ2H [‰]"
+                subplot := idx_d2H_SWAT
+                x, row_RWU_centroid_mm'
+            end
         end
     end
 
@@ -595,8 +661,6 @@ function get_auxiliary_variables(solution::ODESolution; days_to_read_out_d = not
         u_SWATI = reduce(hcat, [solution(t_days).SWATI.mm for t_days = days_to_read_out_d])
     end
 
-    # (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-    #         KPT.derive_auxiliary_SOILVAR.(u_SWATI, Ref(p_soil)) # Ref fixes scalar argument for broadcasting "."
     u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK =
         (fill(NaN, size(u_SWATI)) for i in 1:5)
     for t in 1:size(u_SWATI,2)
