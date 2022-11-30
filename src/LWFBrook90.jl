@@ -1,5 +1,6 @@
 module LWFBrook90
 
+using SciMLBase       # instead of loading the full DifferentialEquations
 using OrdinaryDiffEq  # instead of loading the full DifferentialEquations
 using DiffEqCallbacks # instead of loading the full DifferentialEquations
 using RecipesBase, PlotUtils, Measures
@@ -13,8 +14,8 @@ using Dates: now
 export SPAC, DiscretizedSPAC, discretize, simulate!
 export run_simulation
 export Rootden_beta_
-# TODO(bernhard): make sure we have documentation for these exported variables
 export RelativeDaysFloat2DateTime
+# TODO(bernhard): make sure we have documentation for these exported variables
 
 # read out results for soil domain variables
 export get_δsoil,     get_θ,     get_ψ,  get_W, get_SWATI, get_K
@@ -389,7 +390,7 @@ function simulate!(s::DiscretizedSPAC)
     sol_SPAC = solve_LWFB90(s.ODEProblem);
     s.ODESolution = sol_SPAC;
 
-    @assert (sol_SPAC.retcode == DiffEqBase.ReturnCode.Success) "Problem with simulation: Return code of simulation was '$(sol_SPAC.retcode)'"
+    @assert (SciMLBase.successful_retcode(sol_SPAC)) "Problem with simulation: Return code of simulation was '$(sol_SPAC.retcode)'"
 
     # also save datetimes
     s.ODESolution_datetime = LWFBrook90.RelativeDaysFloat2DateTime.(s.ODESolution.t, s.continuous_SPAC.reference_date)

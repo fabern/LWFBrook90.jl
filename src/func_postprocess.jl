@@ -25,7 +25,7 @@ The user can override this with the second argument isotope as one of `:abovegro
         error("plotamounts requires an unnamed first argument of type DiscretizedSPAC, and optional unnamed second/third arguments (:aboveground, :belowground, or :above_and_belowground) and (:dontShowRWUcentroid, :showRWUcentroid). Other arguments to plot() should be separated by `;`.")
     end
     if (compartments != :above_and_belowground)
-        error("TODO: currently selecting a subset of compartments are not supported by plotamounts")
+        error("TODO: currently selecting a subset of compartments are not supported by plotamounts. Please only do: `plotamounts(simulation)` or `plotamounts(simulation, :above_and_belowground, :showRWUcentroid)`")
     end
     if !(RWUcentroid == :dontShowRWUcentroid || RWUcentroid == :showRWUcentroid)
         error("Third unnamed argument to plotamounts should be one of (:dontShowRWUcentroid, :showRWUcentroid). Got: $(RWUcentroid)")
