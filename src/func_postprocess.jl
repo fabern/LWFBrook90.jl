@@ -169,8 +169,8 @@ The user can override this with the second argument isotope as one of `:abovegro
             ylab := "Amount [mm]"
             seriestype := :line
             # legend := false
-            bg_legend --> colorant"rgba(100%,100%,100%,0.8)"#; legend := :outerright
             subplot := 2
+            bg_legend --> colorant"rgba(100%,100%,100%,0.8)"; legend := :topright
             # and other arguments:
             x, [col_INTS_amt col_INTR_amt col_SNOW_amt col_GWAT_amt col_XYL_amt]
         end
@@ -182,7 +182,7 @@ The user can override this with the second argument isotope as one of `:abovegro
             ylab := "Amount [mm]"
             seriestype := :line
             subplot := 3
-            bg_legend --> colorant"rgba(100%,100%,100%,0.8)"#; legend := :outerright
+            bg_legend --> colorant"rgba(100%,100%,100%,0.8)"; legend := :topright
             # and other arguments:
             x, hcat(col_sumSWATI_amt[:], reduce(hcat, cols_sumSWATIperLayer_amt))
         end
@@ -218,7 +218,7 @@ The user can override this with the second argument isotope as one of `:abovegro
             seriestype := :heatmap
             yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
             colorbar := true_to_check_colorbar; # clims := clims_d2H
-            yguide := "Depth [mm]"; colorbar_title := "pF = log₁₀(-ψₘ hPa)" #colorbar_title := "pF = \nlog₁₀(-ψ hPa)"
+            yguide := "Depth [mm]"; colorbar_title := "pF = log₁₀(-ψₘ hPa)"
             c := cgrad(color_scheme,  rev = true)
             subplot := 4
             # and other arguments:
@@ -232,7 +232,7 @@ The user can override this with the second argument isotope as one of `:abovegro
                 # bg_legend --> colorant"rgba(100%,100%,100%,0.8)";legend := :bottomright
                 bg_legend --> colorant"rgba(100%,100%,100%,0.0)";legend := :bottomright; fg_legend --> :transparent; legendfontcolor := :white
                 yflip := true; yticks := y_soil_ticks
-                yguide := "Depth [mm]"; colorbar_title := "ψₘ [kPa]"
+                yguide := "Depth [mm]"; colorbar_title := "pF = log₁₀(-ψₘ hPa)"
                 subplot := 4
                 x, row_RWU_centroid_mm'
             end
@@ -566,13 +566,11 @@ The user can override this with the second argument isotope as one of `:d18O`, `
         end
         if (RWUcentroid == :showRWUcentroid)
             @series begin
-                #plot!(x, row_RWU_centroid_mm', yflip=true, color=:white, label = "")
                 color := :white
-                label := ""
-                yflip := true
-                yticks := (y_ticks, y_labels)
-                yguide := "Depth [mm]"
-                colorbar_title := "δ18O [‰]"
+                label := "" #"mean RWU depth"
+                #bg_legend --> colorant"rgba(100%,100%,100%,0.0)";legend := :right; fg_legend --> :transparent; legendfontcolor := :white
+                yflip := true; yticks := (y_ticks, y_labels)
+                yguide := "Depth [mm]"; colorbar_title := "δ18O [‰]"
                 subplot := idx_d18O_SWAT
                 x, row_RWU_centroid_mm'
             end
@@ -595,14 +593,11 @@ The user can override this with the second argument isotope as one of `:d18O`, `
         end
         if (RWUcentroid == :showRWUcentroid)
             @series begin
-                #plot!(x, row_RWU_centroid_mm', yflip=true, color=:white, label = "")
                 color := :white
-                label := ""
-                yflip := true
-                yflip := true
-                yticks := (y_ticks, y_labels)
-                yguide := "Depth [mm]"
-                colorbar_title := "δ2H [‰]"
+                label := "" #"mean RWU depth"
+                #bg_legend --> colorant"rgba(100%,100%,100%,0.0)";legend := :right; fg_legend --> :transparent; legendfontcolor := :white
+                yflip := true; yticks := (y_ticks, y_labels)
+                yguide := "Depth [mm]"; colorbar_title := "δ2H [‰]"
                 subplot := idx_d2H_SWAT
                 x, row_RWU_centroid_mm'
             end
