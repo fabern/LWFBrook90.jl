@@ -104,7 +104,8 @@ The user can override this with the second argument isotope as one of `:abovegro
     cols_sumSWATIperLayer_amt =
         [sum(u_SWATI[simulation.soil_discretization.HorizonNr .== horizon.HorizonNr, :]; dims = [1])'
             for horizon in eachrow(soil_horizons)]
-    horizon_labels = ["$(horizon.HorizonNr): ($(round(horizon.Horizon_Upper_m;digits=2)) to $(round(horizon.Horizon_Lower_m;digits=2)) m)"
+    horizon_labels =
+        ["Horizon-$(horizon.HorizonNr): ($(round(horizon.Horizon_Upper_m;digits=2)) to $(round(horizon.Horizon_Lower_m;digits=2)) m)"
         for horizon in eachrow(soil_horizons)]
 
     # 2) set up the common arguments for all plots below
@@ -123,11 +124,7 @@ The user can override this with the second argument isotope as one of `:abovegro
                                     ° ; #4
                                     ° ; #5
                                     ° ; #6
-                                    ° ; #7
-                                    ° ; #8
-                                    ° ; #9
-                                    ° ; #10
-                                    ° ;]) #11
+                                    ° ;]) #7
         layout --> lay
 
         size --> (1000,2100)
@@ -141,6 +138,7 @@ The user can override this with the second argument isotope as one of `:abovegro
     dpi --> 300
     xlim --> xlimits
     leftmargin --> 15mm
+    rightmargin --> 15mm
 
     # # 3) generate plots
     # # NOTE: --> sets attributes only when they don't already exist
@@ -170,7 +168,8 @@ The user can override this with the second argument isotope as one of `:abovegro
             labels := ["INTS" "INTR" "SNOW" "GWAT" "XYL"]
             ylab := "Amount [mm]"
             seriestype := :line
-            legend := false
+            # legend := false
+            bg_legend --> colorant"rgba(100%,100%,100%,0.8)"#; legend := :outerright
             subplot := 2
             # and other arguments:
             x, [col_INTS_amt col_INTR_amt col_SNOW_amt col_GWAT_amt col_XYL_amt]
@@ -183,20 +182,81 @@ The user can override this with the second argument isotope as one of `:abovegro
             ylab := "Amount [mm]"
             seriestype := :line
             subplot := 3
+            bg_legend --> colorant"rgba(100%,100%,100%,0.8)"#; legend := :outerright
             # and other arguments:
             x, hcat(col_sumSWATI_amt[:], reduce(hcat, cols_sumSWATIperLayer_amt))
         end
 
+        # rows_SWAT_amt0 = u_aux_θ
+        rows_SWAT_amt1 = u_SWATI ./sol.prob.p.p_soil.p_THICK  # mm per mm of soil thickness
+        rows_SWAT_amt2 = u_SWATI ./ sol.prob.p.p_soil.p_THICK ./ (1 .- sol.prob.p.p_soil.p_STONEF)
+        # mm per mm of fine soil thickness (assuming gravel fraction contains no water)
+        rows_ψₘpF = log10.(u_aux_PSIM .* -10) #(from kPa to log10(hPa))
+        rows_ψₜₒₜpF = log10.(u_aux_PSITI .* -10) #(from kPa to log10(hPa))
+
+        # @series begin
+        #     seriestype := :heatmap
+        #     yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
+        #     colorbar := true_to_check_colorbar; # clims := clims_d2H
+        #     yguide := "Depth [mm]"; colorbar_title := "ψₘ [kPa]"
+        #     c := cgrad(color_scheme,  rev = false)
+        #     subplot := 4
+        #     # and other arguments:
+        #     x, y_center, u_aux_PSIM;
+        # end
+        # @series begin
+        #     seriestype := :heatmap
+        #     yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
+        #     colorbar := true_to_check_colorbar; # clims := clims_d2H
+        #     yguide := "Depth [mm]"; colorbar_title := "ψₜ [kPa]"
+        #     c := cgrad(color_scheme,  rev = true)
+        #     subplot := 5
+        #     # and other arguments:
+        #     x, y_center, u_aux_PSITI;
+        # end
         @series begin
             seriestype := :heatmap
             yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
             colorbar := true_to_check_colorbar; # clims := clims_d2H
-            yguide := "Depth [mm]"; colorbar_title := "SWATI [mm]"
-            c := cgrad(color_scheme,  rev = false)
+            yguide := "Depth [mm]"; colorbar_title := "pF = log₁₀(-ψₘ hPa)" #colorbar_title := "pF = \nlog₁₀(-ψ hPa)"
+            c := cgrad(color_scheme,  rev = true)
             subplot := 4
             # and other arguments:
-            x, y_center, u_SWATI;
+            x, y_center, rows_ψₘpF
         end
+        if (RWUcentroid == :showRWUcentroid)
+            @series begin
+                #plot!(x, row_RWU_centroid_mm', yflip=true, color=:white, label = "")
+                color := :white
+                label := "mean RWU depth"
+                # bg_legend --> colorant"rgba(100%,100%,100%,0.8)";legend := :bottomright
+                bg_legend --> colorant"rgba(100%,100%,100%,0.0)";legend := :bottomright; fg_legend --> :transparent; legendfontcolor := :white
+                yflip := true; yticks := y_soil_ticks
+                yguide := "Depth [mm]"; colorbar_title := "ψₘ [kPa]"
+                subplot := 4
+                x, row_RWU_centroid_mm'
+            end
+        end
+        # @series begin
+        #     seriestype := :heatmap
+        #     yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
+        #     colorbar := true_to_check_colorbar; # clims := clims_d2H
+        #     yguide := "Depth [mm]"; colorbar_title := "pF = log₁₀(-ψₜₒₜ hPa)" #colorbar_title := "pF = \nlog₁₀(-ψ hPa)"
+        #     c := cgrad(color_scheme,  rev = true)
+        #     subplot := 5
+        #     # and other arguments:
+        #     x, y_center, rows_ψₜₒₜpF
+        # end
+        # @series begin
+        #     seriestype := :heatmap
+        #     yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
+        #     colorbar := true_to_check_colorbar; # clims := clims_d2H
+        #     yguide := "Depth [mm]"; colorbar_title := "SWATI [mm]"
+        #     c := cgrad(color_scheme,  rev = false)
+        #     subplot := 5
+        #     # and other arguments:
+        #     x, y_center, u_SWATI;                 # deactivated u_SWATI as it is resolution dependent!
+        # end
         @series begin
             seriestype := :heatmap
             yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
@@ -211,90 +271,43 @@ The user can override this with the second argument isotope as one of `:abovegro
             seriestype := :heatmap
             yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
             colorbar := true_to_check_colorbar; # clims := clims_d2H
-            yguide := "Depth [mm]"; colorbar_title := "ψₘ [kPa]"
+            yguide := "Depth [mm]"; colorbar_title := "θ [m3/m3]\n(of fine soil volume)" #colorbar_title := "θ [m3/m3]\n(fine soil)" # "θ [m3/m3]"
             c := cgrad(color_scheme,  rev = false)
             subplot := 6
             # and other arguments:
-            x, y_center, u_aux_PSIM;
+            x, y_center, u_aux_θ;
         end
-        if (RWUcentroid == :showRWUcentroid)
-            @series begin
-                #plot!(x, row_RWU_centroid_mm', yflip=true, color=:white, label = "")
-                color := :white
-                label := ""
-                yflip := true; yticks := y_soil_ticks
-                yguide := "Depth [mm]"; colorbar_title := "ψₘ [kPa]"
-                subplot := 6
-                x, row_RWU_centroid_mm'
-            end
+        @series begin
+            seriestype := :heatmap
+            yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
+            colorbar := true_to_check_colorbar; # clims := clims_d2H
+            yguide := "Depth [mm]"; colorbar_title := "θ [m3/m3]\n(of total volume, incl stonef)" #colorbar_title := "θ [-]\n(total, incl stonef)"
+            c := cgrad(color_scheme,  rev = false)
+            subplot := 7
+            # and other arguments:
+            x, y_center, rows_SWAT_amt1;
         end
         # @series begin
         #     seriestype := :heatmap
         #     yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
-        #     colorbar := true_to_check_colorbar; # clims := clims_d2H
-        #     yguide := "Depth [mm]"; colorbar_title := "ψₜ [kPa]"
-        #     c := cgrad(color_scheme,  rev = true)
-        #     subplot := 6
+        #     colorbar := true_to_check_colorbar
+        #     yguide := "Depth [mm]"; colorbar_title := "θ [-] (fine soil 2)"#colorbar_title := "θ [-]\n(fine soil 2)"
+        #     c := cgrad(color_scheme,  rev = false)
+        #     subplot := 8
         #     # and other arguments:
-        #     x, y_center, u_aux_PSITI;
+        #     x, y_center, rows_SWAT_amt2           # deactivated: as it was same as `x, y_center, u_aux_θ;`
         # end
-        @series begin
-            seriestype := :heatmap
-            yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
-            colorbar := true_to_check_colorbar; # clims := clims_d2H
-            yguide := "Depth [mm]"; colorbar_title := "θ [m3/m3] (fine soil)" #colorbar_title := "θ [m3/m3]\n(fine soil)" # "θ [m3/m3]"
-            c := cgrad(color_scheme,  rev = false)
-            subplot := 7
-            # and other arguments:
-            x, y_center, u_aux_θ;
-        end
-
-        # rows_SWAT_amt0 = u_aux_θ
-        rows_SWAT_amt1 = u_SWATI ./sol.prob.p.p_soil.p_THICK  # mm per mm of soil thickness
-        rows_SWAT_amt2 = u_SWATI ./ sol.prob.p.p_soil.p_THICK ./ (1 .- sol.prob.p.p_soil.p_STONEF)
-        # mm per mm of fine soil thickness (assuming gravel fraction contains no water)
-        rows_ψₘpF = log10.(u_aux_PSIM .* -10) #(from kPa to log10(hPa))
-
-        @series begin
-            seriestype := :heatmap
-            yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
-            colorbar := true_to_check_colorbar; # clims := clims_d2H
-            yguide := "Depth [mm]"; colorbar_title := "pF = log₁₀(-ψ hPa)" #colorbar_title := "pF = \nlog₁₀(-ψ hPa)"
-            c := cgrad(color_scheme,  rev = true)
-            subplot := 8
-            # and other arguments:
-            x, y_center, rows_ψₘpF
-        end
-        @series begin
-            seriestype := :heatmap
-            yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
-            colorbar := true_to_check_colorbar; # clims := clims_d2H
-            yguide := "Depth [mm]"; colorbar_title := "θ [-](total, incl stonef)" #colorbar_title := "θ [-]\n(total, incl stonef)"
-            c := cgrad(color_scheme,  rev = false)
-            subplot := 9
-            # and other arguments:
-            x, y_center, rows_SWAT_amt1;
-        end
-        @series begin
-            seriestype := :heatmap
-            yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
-            colorbar := true_to_check_colorbar
-            yguide := "Depth [mm]"; colorbar_title := "θ [-] (fine soil 2)"#colorbar_title := "θ [-]\n(fine soil 2)"
-            c := cgrad(color_scheme,  rev = false)
-            subplot := 10
-            # and other arguments:
-            x, y_center, rows_SWAT_amt2
-        end
-        @series begin
-            seriestype := :heatmap
-            yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
-            colorbar := true_to_check_colorbar; # clims := clims_d2H
-            yguide := "Depth [mm]"; colorbar_title := "K [mm/day]"
-            c := cgrad(color_scheme,  rev = false)
-            subplot := 11
-            # and other arguments:
-            x, y_center, p_fu_KK;
-        end
+        # @series begin
+        #     seriestype := :heatmap
+        #     yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
+        #     colorbar := true_to_check_colorbar; # clims := clims_d2H
+        #     yguide := "Depth [mm]"; colorbar_title := "K [mm/day]"
+        #     c := cgrad(color_scheme,  rev = false)
+        #     subplot := 8
+        #     # and other arguments:
+        #     x, y_center, p_fu_KK;
+        #     # x, y_center, log10.(p_fu_KK);
+        # end
 
         # TODO: edges of cells in heatmap are not entirely correct. Find a way to override heatmap()
         #       where we provide cell edges (n+1) instead of cell centers (n)
