@@ -90,7 +90,7 @@ The user can override this with the second argument isotope as one of `:abovegro
     row_RWU_centroid_mm = sum(RWU_percent .* y_center; dims=1)
 
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-        get_auxiliary_variables(sol, days_to_read_out_d = days_to_read_out_d);
+        get_auxiliary_variables(simulation, days_to_read_out_d = days_to_read_out_d);
 
     # compute total amount of soil water: a) in whole domain, b) per physical soil layer
     # a)
