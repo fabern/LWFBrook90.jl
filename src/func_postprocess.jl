@@ -118,9 +118,9 @@ The user can override this with the second argument isotope as one of `:abovegro
     #     idx_d2H_SWAT  = 2
     # elseif (compartments == :above_and_belowground)
         # lay = RecipesBase.@layout [RecipesBase.grid(11, 1)]
-        lay = RecipesBase.@layout([ °{0.77w} _ ; #1 have no colorbar
-                                    °{0.77w} _ ; #2 have no colorbar
-                                    °{0.77w} _ ; #3 have no colorbar
+        lay = RecipesBase.@layout([ °{0.80w} _ ; #1 have no colorbar
+                                    °{0.80w} _ ; #2 have no colorbar
+                                    °{0.80w} _ ; #3 have no colorbar
                                     ° ; #4
                                     ° ; #5
                                     ° ; #6
