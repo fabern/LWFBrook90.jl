@@ -208,9 +208,9 @@ function MSBDAYNIGHT(FLAG_MualVanGen,
 
         # S.-W. potential transpiration and ground evaporation rates
         p_fu_PTR[J], p_fu_GER[J] =  LWFBrook90.PET.SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, p_fu_RSS, DELTA)
-        # S.-W. potential interception and ground evap. rates
+        # S.-W. potential interception evaporation and ground evap. rates
         # RSC = 0, p_fu_RSS not changed
-        p_fu_PIR[J], p_fu_GIR[J] =  LWFBrook90.PET.SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, 0, p_fu_RSS, DELTA)
+        p_fu_PIR[J], p_fu_GIR[J] =  LWFBrook90.PET.SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, 0,   p_fu_RSS, DELTA)
 
         if FLAG_MualVanGen == 1
             # S.-W. potential interception and ground evap. rates
@@ -271,9 +271,9 @@ http://www.ecoshift.net/brook/pet.html
 """
 function MSBDAYNIGHT_postprocess(FLAG_MualVanGen, NLAYER,
                                  p_fu_PTR, # potential transpiration rate for daytime or night (mm/d)
-                                 p_fu_GER, # ground evaporation rate for daytime or night (mm/d)
-                                 p_fu_PIR, # potential interception rate for daytime or night (mm/d)
-                                 p_fu_GIR, # ground evap. rate with intercep. for daytime or night (mm/d)
+                                 p_fu_GER, #      ground evaporation rate for daytime or night (mm/d)
+                                 p_fu_PIR, # potential   evaporation rate of   interception storage for daytime or night (mm/d)
+                                 p_fu_GIR, # ground evaporation      rate with interception storage for daytime or night (mm/d)
                                  p_fu_ATRI,# actual transp.rate from layer for daytime and night (mm/d)
                                  p_fT_DAYLEN,
                                  p_fu_PGER)
@@ -296,9 +296,9 @@ function MSBDAYNIGHT_postprocess(FLAG_MualVanGen, NLAYER,
     end
 
     return (p_fu_PTRAN, # average potential transpiration rate for day (mm/d)
-            p_fu_GEVP,  # average ground evaporation for day (mm/d)
-            p_fu_PINT,  # average potential evaporation rate of intercepted water for day (mm/d)
-            p_fu_GIVP,  # average ground evaporation for day with interception (mm/d)
+            p_fu_GEVP,  # average      ground evaporation rate for day (mm/d)
+            p_fu_PINT,  # average potential   evaporation rate of   interception storage for day (mm/d)
+            p_fu_GIVP,  # average ground evaporation      rate with interception storage for day (mm/d)
             p_fu_PSLVP, # average potential evaporation rate from soil for day (mm/d) TODO(bernhard) seems unused further on
             aux_du_TRANI) # average transpiration rate for day from layer (mm/d)
 end
@@ -331,18 +331,24 @@ function MSBPREINT(#arguments:
         # else
         #     aux_du_SINT, aux_du_ISVP = LWFBrook90.EVP.INTER(p_fT_SFAL, p_fu_PINT, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DTP, u_INTS)
         # end
-        # # rain interception,  note potential interception rate is PID-aux_du_ISVP (mm/day)
+        # # rain interception,  note potential interception rate is p_fu_PINT-aux_du_ISVP (mm/day)
         # aux_du_RINT, aux_du_IRVP = LWFBrook90.EVP.INTER(p_fT_RFAL, p_fu_PINT - aux_du_ISVP, p_fu_LAI, p_fu_SAI, p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS, p_DTP, u_INTR)
     else
         # one precip interval in day, use storm p_DURATN and INTER24
-        # snow interception
+        # a) snow interception storage (adding SFAL and potential condensation/evaporation p_fu_PINT)
         if (p_fu_PINT < 0 && p_fT_TA > 0)
-            # prevent frost when too warm, carry negative p_fu_PINT to rain
+            # if potential evaporation rate of interception storage is negative (i.e. condensation),
+            # atmospheric humidity will be deposited in the interception storage. However, when too warm TA > 0, deposit
+            # a negative p_fu_PINT into the rain interception storage.
+
+            # prevent frost when too warm, carry negative p_fu_PINT to rain interception storage
             aux_du_SINT, aux_du_ISVP = LWFBrook90.EVP.INTER24(p_fT_SFAL, 0, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DURATN, u_INTS, MONTHN)
         else
+            # else if PINT>0 (potential evaporation of snow intercep. storage)
+            # or   if PINT<0 (condensation) and it is cold enough that it deposits as frost:
             aux_du_SINT, aux_du_ISVP = LWFBrook90.EVP.INTER24(p_fT_SFAL, p_fu_PINT, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DURATN, u_INTS, MONTHN)
         end
-        # rain interception,  note potential interception rate is PID-aux_du_ISVP (mm/day)
+        # b) rain interception,  note potential interception rate is p_fu_PINT-aux_du_ISVP (mm/day)
         aux_du_RINT, aux_du_IRVP = LWFBrook90.EVP.INTER24(p_fT_RFAL, p_fu_PINT - aux_du_ISVP, p_fu_LAI, p_fu_SAI, p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS, p_DURATN, u_INTR, MONTHN)
     end
 

@@ -606,7 +606,7 @@ is output as W m-2 from function PM. The conversion is ETOM * WTOMJ .
 function SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, p_fu_RSS, DELTA)
     # AA      - net radiation at canopy top minus ground flux, W/m2
     # ASUBS   - net radiation minus ground flux at ground, W/m2
-    # VPD     - vapor pressure deficit, kPa
+    # VPD     - vapor pressure deficit, kPa, at reference height (D or Dx in SW-1985)
     # RAA     - boundary layer resistance, s/m
     # RAC     - leaf-air resistance, s/m
     # RAS     - ground-air resistance, s/m
@@ -615,11 +615,11 @@ function SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, p_fu_RSS, DELTA)
     # DELTA   - dEsat/dTair, kPa/K
 
 
-    RS = (DELTA + p_GAMMA) * RAS + p_GAMMA * p_fu_RSS
-    RC = (DELTA + p_GAMMA) * RAC + p_GAMMA * RSC
-    RA = (DELTA + p_GAMMA) * RAA
-    CCS = 1 / (1 + RS * RA / (RC * (RS + RA)))
-    CCC = 1 / (1 + RC * RA / (RS * (RC + RA)))
+    RS = (DELTA + p_GAMMA) * RAS + p_GAMMA * p_fu_RSS       # eq. 17 SW-1985
+    RC = (DELTA + p_GAMMA) * RAC + p_GAMMA * RSC            # eq. 18 SW-1985
+    RA = (DELTA + p_GAMMA) * RAA                            # eq. 16 SW-1985
+    CCS = 1 / (1 + RS * RA / (RC * (RS + RA)))              # eq. 15 SW-1985
+    CCC = 1 / (1 + RC * RA / (RS * (RC + RA)))              # eq. 14 SW-1985
     PMS = PM(AA, VPD - DELTA * RAS * (AA - ASUBS) / p_CPRHO, DELTA, RAA + RAS, p_fu_RSS)
     PMC = PM(AA, VPD - DELTA * RAC * ASUBS / p_CPRHO, DELTA, RAA + RAC, RSC)
     # # above results effectively in:
@@ -627,8 +627,9 @@ function SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, p_fu_RSS, DELTA)
     # PMC = ((RAA + RAC) * DELTA * AA + p_CPRHO * VPD - DELTA * RAC * ASUBS       ) / ((DELTA + p_GAMMA) * (RAA + RAC) + p_GAMMA * RSC)
 
     # LE: total latent heat flux density, W/m2
-    LE = (CCC * PMC + CCS * PMS) # λE
-    D0 = VPD + RAA * (DELTA * AA - (DELTA + p_GAMMA) * LE) / p_CPRHO
+    LE = (CCC * PMC + CCS * PMS) # λE                       # eq. 11 SW-1985
+    D0 = VPD + RAA * (DELTA * AA - (DELTA + p_GAMMA) * LE) / p_CPRHO # Vapor pressure deficit at canopy source height
+                                                            # eq. 8 SW-1985
 
     # potential transpiration rate, mm/d
     PRATE = p_ETOM * p_WTOMJ * PM(AA - ASUBS, D0, DELTA, RAC, RSC)
@@ -637,6 +638,9 @@ function SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, p_fu_RSS, DELTA)
     # # above results effectively in:
     # PRATE = p_ETOM * p_WTOMJ * (RAC * DELTA * (AA - ASUBS) + p_CPRHO * D0) / ((DELTA + p_GAMMA) * RAC + p_GAMMA * RSC)
     # ERATE = p_ETOM * p_WTOMJ * (RAS * DELTA * ASUBS        + p_CPRHO * D0) / ((DELTA + p_GAMMA) * RAS + p_GAMMA * p_fu_RSS)
+    # # or alternatively in:
+    # PRATE = p_ETOM * p_WTOMJ * (      DELTA * (AA - ASUBS) + p_CPRHO * D0/RAC) / ((DELTA + p_GAMMA)   + p_GAMMA * RSC/RAC)      # eq. 10 SW-1985
+    # ERATE = p_ETOM * p_WTOMJ * (      DELTA * ASUBS        + p_CPRHO * D0/RAS) / ((DELTA + p_GAMMA)   + p_GAMMA * p_fu_RSS/RAS) # eq. 9 SW-1985
 
     return (PRATE, ERATE)
 end
@@ -1062,6 +1066,10 @@ Compute Penman-Monteith latent heat flux density, W/m2.
 The Penman-Monteith equation is
 ```math
 L_v ρ_w E = \frac{Δ(Rn - S) + c_p ρ D_a / r_a}{Δ + γ + γ(r_c/r_a)}
+```
+or alternatively:
+```math
+L_v ρ_w E = \frac{r_a \cdot Δ \cdot(Rn - S) + c_p ρ D_a}{r_a \cdot (Δ + γ) + γ \cdot r_c }
 ```
 
 where E is the evaporation rate in volume of water per unit land area per unit time, Lv is
