@@ -343,28 +343,22 @@ function MSBPREINT(#arguments:
         aux_du_TRANI[i] = (1.0 - p_fu_WETFR) * aux_du_TRANI[i]
     end
     if (u_SNOW <= 0 && p_fu_STHR <= 0)
-        # no snow, soil evaporation weighted for p_fu_WETFR
+        # no previous snow, no added snow: soil evaporation weighted for p_fu_WETFR
         aux_du_SLVP = p_fu_WETFR * p_fu_GIVP + (1.0 - p_fu_WETFR) * p_fu_GEVP
         p_fu_RNET = p_fu_RTHR
         aux_du_RSNO = 0.0
         aux_du_SNVP = 0.0
         aux_du_SMLT = 0.0
 
-        # TODO(bernhard): check if we need suffix _new
-        u_CC_new = u_CC # added by FB
-        u_SNOW_new = u_SNOW # added by FB
-        u_SNOWLQ_new = u_SNOWLQ # added by FB
+        # u_CC, u_SNOW, u_SNOWLQ remain unchanged
     else
         if (u_SNOW <= 0 && p_fu_STHR > 0)
-            # new snow only, zero CC and SNOWLQ assumed
-            u_CC_new = 0.0
-            u_SNOWLQ_new = 0.0
-        else
-            u_CC_new = u_CC
-            u_SNOWLQ_new = u_SNOWLQ
+            # no previous snow, some added snow: initialize zero CC and SNOWLQ
+            u_CC     = 0.0
+            u_SNOWLQ = 0.0
         end
         # snow accumulation and melt
-        u_SNOW_new, u_CC_new, u_SNOWLQ_new, aux_du_RSNO, aux_du_SNVP, aux_du_SMLT =
+        u_SNOW, u_CC, u_SNOWLQ, aux_du_RSNO, aux_du_SNVP, aux_du_SMLT =
           LWFBrook90.SNO.SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN,
                    # States that are overwritten:
                    u_CC, u_SNOW, u_SNOWLQ,
