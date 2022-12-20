@@ -130,9 +130,7 @@ new, higher GER is calculated by subroutine SWGE. BROOK90 then weights the dayti
 nighttime rates by the solar daylength (DAYLEN) to obtain average rates for the day, PTRAN,
 GEVP, PINT, GIVP, and TRANI, which are used in later calculations.
 """
-function MSBDAYNIGHT(FLAG_MualVanGen,
-                     # arguments
-                     p_fT_SLFDAY, p_fu_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM, p_fu_UADTM, p_fT_TANTM, p_fu_UANTM,
+function MSBDAYNIGHT(p_fT_SLFDAY, p_fu_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM, p_fu_UADTM, p_fT_TANTM, p_fu_UANTM,
                      p_fT_I0HDAY,
                      # for AVAILEN:
                      p_fu_ALBEDO, p_C1, p_C2, p_C3, p_fT_VAPPRES, p_fu_SHEAT, p_CR, p_fu_LAIeff, p_fT_SAIeff,
@@ -156,12 +154,6 @@ function MSBDAYNIGHT(FLAG_MualVanGen,
     p_fu_PIR = fill(NaN, 2)
     p_fu_GIR = fill(NaN, 2)
     p_fu_ATRI=fill(NaN,2,NLAYER)
-
-    if FLAG_MualVanGen == 1
-        p_fu_PGER = fill(NaN, 2) # fill in values further down
-    else
-        p_fu_PGER = fill(NaN, 2) # don't fill in values, simply return NaN
-    end
 
     ATR = fill(NaN, 2)
     SLRAD=fill(NaN,2)
@@ -212,11 +204,6 @@ function MSBDAYNIGHT(FLAG_MualVanGen,
         # RSC = 0, p_fu_RSS not changed
         p_fu_PIR[J], p_fu_GIR[J] =  LWFBrook90.PET.SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, 0,   p_fu_RSS, DELTA)
 
-        if FLAG_MualVanGen == 1
-            # S.-W. potential interception and ground evap. rates
-            # RSC not changed, p_fu_RSS = 0
-            _, p_fu_PGER[J] =  LWFBrook90.PET.SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, 0, DELTA)
-        end
         # actual transpiration and ground evaporation rates
         if (p_fu_PTR[J] > 0.001)
             ATR[J], ATRANI = LWFBrook90.EVP.TBYLAYER(J, p_fu_PTR[J], p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, NLAYER, p_PSICR, NOOUTF)
@@ -247,8 +234,7 @@ function MSBDAYNIGHT(FLAG_MualVanGen,
             p_fu_GER, # ground evaporation rate for daytime or night (mm/d)
             p_fu_PIR, # potential interception rate for daytime or night (mm/d)
             p_fu_GIR, # ground evap. rate with intercep. for daytime or night (mm/d)
-            p_fu_ATRI,# actual transp.rate from layer for daytime and night (mm/d)
-            p_fu_PGER)
+            p_fu_ATRI)# actual transp.rate from layer for daytime and night (mm/d)
 
     # return (#SLRAD[2],SLRAD[1],TAJ,UAJ, SOVERI, AA, ASUBS
     #         #ES, DELTA, VPD, RAA, RAC, RAS, RSC,
@@ -269,14 +255,13 @@ Subroutine MSBDAYNIGHT_postprocess - Combine day and night rates to average dail
 
 http://www.ecoshift.net/brook/pet.html
 """
-function MSBDAYNIGHT_postprocess(FLAG_MualVanGen, NLAYER,
+function MSBDAYNIGHT_postprocess(NLAYER,
                                  p_fu_PTR, # potential transpiration rate for daytime or night (mm/d)
                                  p_fu_GER, #      ground evaporation rate for daytime or night (mm/d)
                                  p_fu_PIR, # potential   evaporation rate of   interception storage for daytime or night (mm/d)
                                  p_fu_GIR, # ground evaporation      rate with interception storage for daytime or night (mm/d)
                                  p_fu_ATRI,# actual transp.rate from layer for daytime and night (mm/d)
-                                 p_fT_DAYLEN,
-                                 p_fu_PGER)
+                                 p_fT_DAYLEN)
 
     # average rates over day (mm/day)
     # mm/day   =  mm/day      * day_fraction+ mm/day      *  day_fraction
@@ -284,10 +269,6 @@ function MSBDAYNIGHT_postprocess(FLAG_MualVanGen, NLAYER,
     p_fu_GEVP  = (p_fu_GER[1] * p_fT_DAYLEN + p_fu_GER[2] * (1 - p_fT_DAYLEN))
     p_fu_PINT  = (p_fu_PIR[1] * p_fT_DAYLEN + p_fu_PIR[2] * (1 - p_fT_DAYLEN))
     p_fu_GIVP  = (p_fu_GIR[1] * p_fT_DAYLEN + p_fu_GIR[2] * (1 - p_fT_DAYLEN))
-
-    if FLAG_MualVanGen==1
-        p_fu_PSLVP = (p_fu_PGER[1] * p_fT_DAYLEN + p_fu_PGER[2] * (1 - p_fT_DAYLEN))
-    end
 
     aux_du_TRANI=zeros(NLAYER)
 
@@ -299,7 +280,6 @@ function MSBDAYNIGHT_postprocess(FLAG_MualVanGen, NLAYER,
             p_fu_GEVP,  # average      ground evaporation rate for day (mm/d)
             p_fu_PINT,  # average potential   evaporation rate of   interception storage for day (mm/d)
             p_fu_GIVP,  # average ground evaporation      rate with interception storage for day (mm/d)
-            p_fu_PSLVP, # average potential evaporation rate from soil for day (mm/d) TODO(bernhard) seems unused further on
             aux_du_TRANI) # average transpiration rate for day from layer (mm/d)
 end
 
