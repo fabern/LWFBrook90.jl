@@ -378,7 +378,7 @@ function MSBPREINT(#arguments:
             # compute change in snow storage:
             aux_du_RSNO, aux_du_SNVP, aux_du_SMLT, p_fu_STHR,
             # compute updated states:
-            u_SNOW_new, u_CC_new, u_SNOWLQ_new)
+            u_SNOW, u_CC, u_SNOWLQ)
 end
 
 
