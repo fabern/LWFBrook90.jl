@@ -131,6 +131,15 @@ end
         p_θr     = [0.069, 0.069, 0.069])
 end
 
+@testset "reading_forcing" begin
+    path_meteoveg = "test-assets/BEA-2016/input-files/BEA2016-reset-FALSE_meteoveg.csv"
+    meteo_forcing, reference_date = LWFBrook90.read_path_meteoveg(path_meteoveg)
+    @test all(diff(meteo_forcing.days) .== 1.0)
+
+    path_meteoveg = "test-assets/BEA-2016/input-files/BEA2016-reset-FALSE_meteoveg_withGaps.csv"
+    @test_throws AssertionError meteo_forcing, reference_date = LWFBrook90.read_path_meteoveg(path_meteoveg)
+end
+
 @testset "discretization" begin
     input_soil_discretization = DataFrame(Upper_m = -(0.:8.), Lower_m = -(1.:9.),
                                 Rootden_ = (1:9) ./ 10, uAux_PSIM_init_kPa = -6.0,

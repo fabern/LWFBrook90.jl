@@ -266,6 +266,9 @@ function read_path_meteoveg(path_meteoveg)
         Densef_percent in meteoveg.csv should not be set lower than 5% as it affects aerodynamics.
     """
 
+    # Assert that no gaps
+    @assert all(diff(input_meteoveg.dates) .== Millisecond(86400000)) "There are gaps in the forcing file. The file ($path_meteoveg) needs to have a value for each data from start until the end."
+
     # Identify period of interest
     # Starting date: latest among the input data
     # Stopping date: earliest among the input data
