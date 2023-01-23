@@ -206,12 +206,11 @@ function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr, p_fT_RELDEN)
         # Hard default of 2 [mm d-1] for saturated hydraulic conductivity at field capacity K(θ_fc)
 
         # Instantiate soil parameters
-        hardcodedKθfc = 2. .+ 0. * similar(p_THICK) #PAR[:,"K(θ_fc)"] .= 2.
         p_soil = LWFBrook90.KPT.KPT_SOILPAR_Mvg1d(;
             p_THICK  = p_THICK,
             p_STONEF = [shp.p_STONEF for shp in soil_discr["SHP"]],
             p_THSAT  = [shp.p_THSAT  for shp in soil_discr["SHP"]],
-            p_Kθfc   = 2. .+ 0. * similar(p_THICK), #hardcodedKθfc,
+            p_Kθfc   = 2. .+ zeros(p_THICK),
             p_KSAT   = [shp.p_KSAT   for shp in soil_discr["SHP"]],
             p_MvGα   = [shp.p_MvGα   for shp in soil_discr["SHP"]],
             p_MvGn   = [shp.p_MvGn   for shp in soil_discr["SHP"]],
