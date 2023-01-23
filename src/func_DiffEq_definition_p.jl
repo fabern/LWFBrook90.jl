@@ -210,7 +210,7 @@ function define_LWFB90_p(continuous_SPAC::SPAC, soil_discr, p_fT_RELDEN)
             p_THICK  = p_THICK,
             p_STONEF = [shp.p_STONEF for shp in soil_discr["SHP"]],
             p_THSAT  = [shp.p_THSAT  for shp in soil_discr["SHP"]],
-            p_Kθfc   = 2. .+ zeros(p_THICK),
+            p_Kθfc   = 2. .* one.(p_THICK),
             p_KSAT   = [shp.p_KSAT   for shp in soil_discr["SHP"]],
             p_MvGα   = [shp.p_MvGα   for shp in soil_discr["SHP"]],
             p_MvGn   = [shp.p_MvGn   for shp in soil_discr["SHP"]],
