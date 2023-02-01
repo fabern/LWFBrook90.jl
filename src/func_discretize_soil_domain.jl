@@ -496,50 +496,65 @@ function HammelKennel_transient_root_density(;
         final_Rootden_profile[i] = max( final_Rootden_profile[i], 1.01e-6)
     end
 
-    # 1) Define age at which root growth arrives in a specific depth and lateral root growth commences
-    # z_center     = soil_discretization[!,"Upper_m"] - soil_discr["THICK"]/1000/2 # soil depth [m] (midpoint, i.e. average depth of layer)
-    z_center_m     = -(cumsum(p_THICK) - p_THICK/2)/1000
-    depfirst_m  = z_center_m[1] - p_THICK[1] / 1000.
-    # Here z_center_m and depfirst_m are negative values in the soil. (z axis upward)
+    # 1) Time dependent root density parameters is a vector quantity that is dependent on time (i.e. 2D array):
+    p_RELDEN_2Darray = fill(NaN, length(timepoints), NLAYER)
 
-    # 1a) compute arrival times tini
-    vᵣ = p_RGRORATE_m_per_y # growth rate (m/y)
-    zᵣ₀ = p_INITRDEP # initial depth of root
-    # zᵣ =  # maximal depth of root
-    # root_arrival_time = (zᵣ - zᵣ₀)/vᵣ
-    # tᵣ =  # time period of lateral growth (after first vertical arrival)
-    # rₗ₀ = #
-    # # t_ini(z) : arrival time of roots at depth z, then starts lateral growth
+    # compute a time dependent profile if growth period RGROPER_y is not zero
+    if p_RGROPER_y > 0 #zero(RGROPER_yrs)
 
-    t_ini = fill(NaN, NLAYER)
-    for i = 1:NLAYER
-        t_ini[i] = 1.e+20               # start out with "never"
-        z = depfirst_m - z_center_m[i]
-        roots_present = final_Rootden_profile[i] >= 1.e-6
-        if roots_present
-            if z <= zᵣ₀
-                t_ini[i] = 0.
-            elseif z > zᵣ₀
-                if vᵣ > 0
-                    t_ini[i] = (z - zᵣ₀)/vᵣ
+        # 1a) Define age at which root growth arrives in a specific depth and lateral root growth commences
+        # z_center     = soil_discretization[!,"Upper_m"] - soil_discr["THICK"]/1000/2 # soil depth [m] (midpoint, i.e. average depth of layer)
+        z_center_m     = -(cumsum(p_THICK) - p_THICK/2)/1000
+        depfirst_m  = z_center_m[1] - p_THICK[1] / 1000.
+        # Here z_center_m and depfirst_m are negative values in the soil. (z axis upward)
+
+        # 1b) compute arrival times tini
+        vᵣ = p_RGRORATE_m_per_y # growth rate (m/y)
+        zᵣ₀ = p_INITRDEP # initial depth of root
+        # zᵣ =  # maximal depth of root
+        # root_arrival_time = (zᵣ - zᵣ₀)/vᵣ
+        # tᵣ =  # time period of lateral growth (after first vertical arrival)
+        # rₗ₀ = #
+        # # t_ini(z) : arrival time of roots at depth z, then starts lateral growth
+
+        t_ini = fill(NaN, NLAYER)
+        for i = 1:NLAYER
+            t_ini[i] = 1.e+20               # start out with "never"
+            z = depfirst_m - z_center_m[i]
+            roots_present = final_Rootden_profile[i] >= 1.e-6
+            if roots_present
+                if z <= zᵣ₀
+                    t_ini[i] = 0.
+                elseif z > zᵣ₀
+                    if vᵣ > 0
+                        t_ini[i] = (z - zᵣ₀)/vᵣ
+                    end
                 end
+            end
+        end
+
+        # 1c) lateral growth per layer starts at t_ini and ends at t_ini + tᵣ
+        for i in eachindex(timepoints)
+            p_RELDEN_2Darray[i,:] =
+                HammelKennel_lateral_rootgrowth(;
+                    final_Rootden_profile = final_Rootden_profile,
+                    INITRDEP_m        = p_INITRDEP,
+                    INITRLEN_m_per_m2 = p_INITRLEN,
+                    t_y               = p_AGE(timepoints[i]),
+                    tstart_y          = t_ini,
+                    RGROPER_yrs       = p_RGROPER_y)
+        end
+    else
+        # 1a) if no growth period provieded, assume root distribution is already at constant final profile
+        p_RELDEN_2Darray = fill(NaN, length(timepoints), NLAYER)
+        for i in eachindex(timepoints)
+            for j = 1:NLAYER
+                p_RELDEN_2Darray[i,j] = final_Rootden_profile[j]
             end
         end
     end
 
-    # 2) lateral growth per layer starts at t_ini and ends at t_ini + tᵣ
-    # Time dependent root density parameters is a vector quantity that is dependent on time (i.e. 2D array):
-    p_RELDEN_2Darray = fill(NaN, length(timepoints), NLAYER)
-    for i in eachindex(timepoints)
-        p_RELDEN_2Darray[i,:] =
-            HammelKennel_lateral_rootgrowth(;
-                final_Rootden_profile = final_Rootden_profile,
-                INITRDEP_m        = p_INITRDEP,
-                INITRLEN_m_per_m2 = p_INITRLEN,
-                t_y               = p_AGE(timepoints[i]),
-                tstart_y          = t_ini,
-                RGROPER_yrs       = p_RGROPER_y)
-    end
+    # 2) In all cases provide relative density as interpolated funciton in depth and time (even when constant through time)
     p_fT_RELDEN =  extrapolate(interpolate((timepoints, 1:NLAYER), p_RELDEN_2Darray,
                                         (Gridded(Constant{Next}()), NoInterp()), # 1st dimension: ..., 2nd dimension NoInterp()
                                         ), Flat()) # extrapolate flat, alternative: Throw()

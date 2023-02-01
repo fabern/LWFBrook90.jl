@@ -632,9 +632,7 @@ function HammelKennel_lateral_rootgrowth(;final_Rootden_profile, INITRDEP_m, INI
             end
         end
     else
-        for i = 1:NLAYER
-            p_fT_RELDEN[i]=final_Rootden_profile[i]
-        end
+        stop("When setting up root distributions: called function 'HammelKennel_lateral_rootgrowth' with invalid value of RGROPER_yrs: $(RGROPER_yrs).")
     end
 
     return p_fT_RELDEN
