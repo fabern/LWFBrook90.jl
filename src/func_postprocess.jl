@@ -1,9 +1,11 @@
 """
     plotamounts(simulation::DiscretizedSPAC)
     plotamounts(simulation::DiscretizedSPAC, compartments::Symbol)
+    plotamounts(simulation::DiscretizedSPAC, compartments::Symbol, RWUcentroid::Symbol)
 
 Plots the amount results of a SPAC Simulation. By default both above and belowground.
 The user can override this with the second argument isotope as one of `:aboveground`, `:belowground`, or `:above_and_belowground`.
+RWUcentroid can have values of either :dontShowRWUcentroid or :showRWUcentroid.
 """
 @userplot PlotAmounts
 @recipe function f(plam::PlotAmounts)
@@ -89,6 +91,9 @@ The user can override this with the second argument isotope as one of `:abovegro
     RWU_percent = rows_RWU_mmDay ./ sum(rows_RWU_mmDay; dims = 1)
     row_RWU_centroid_mm = sum(RWU_percent .* y_center; dims=1)
 
+    # reduce how deep to plot soil:
+    soil_discr_to_plot = simulation.soil_discretization#[simulation.soil_discretization.Lower_m .>= -0.2, :]
+
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
         get_auxiliary_variables(simulation, days_to_read_out_d = days_to_read_out_d);
 
@@ -99,10 +104,10 @@ The user can override this with the second argument isotope as one of `:abovegro
     # b)
     # sum up SWATI to get total SWAT for each of the physical soil horizons
     # terminology: soil horizon refers to a physical horizon, discretization refers to the computational layers/cells
-    # soil_horizons = unique(simulation.soil_discretization, :HorizonNr)
-    soil_horizons = unique(simulation.soil_discretization, :HorizonNr)[:,[:HorizonNr, :Horizon_Upper_m, :Horizon_Lower_m]]
+    # soil_horizons = unique(soil_discr_to_plot, :HorizonNr)
+    soil_horizons = unique(soil_discr_to_plot, :HorizonNr)[:,[:HorizonNr, :Horizon_Upper_m, :Horizon_Lower_m]]
     cols_sumSWATIperLayer_amt =
-        [sum(u_SWATI[simulation.soil_discretization.HorizonNr .== horizon.HorizonNr, :]; dims = [1])'
+        [sum(u_SWATI[soil_discr_to_plot.HorizonNr .== horizon.HorizonNr, :]; dims = [1])'
             for horizon in eachrow(soil_horizons)]
     horizon_labels =
         ["Horizon-$(horizon.HorizonNr): ($(round(horizon.Horizon_Upper_m;digits=2)) to $(round(horizon.Horizon_Lower_m;digits=2)) m)"
@@ -191,8 +196,9 @@ The user can override this with the second argument isotope as one of `:abovegro
         rows_SWAT_amt1 = u_SWATI ./sol.prob.p.p_soil.p_THICK  # mm per mm of soil thickness
         rows_SWAT_amt2 = u_SWATI ./ sol.prob.p.p_soil.p_THICK ./ (1 .- sol.prob.p.p_soil.p_STONEF)
         # mm per mm of fine soil thickness (assuming gravel fraction contains no water)
-        rows_ψₘpF = log10.(u_aux_PSIM .* -10) #(from kPa to log10(hPa))
+        rows_ψₘpF  = log10.(u_aux_PSIM  .* -10) #(from kPa to log10(hPa))
         rows_ψₜₒₜpF = log10.(u_aux_PSITI .* -10) #(from kPa to log10(hPa))
+        # rows_ψₘpF= log10.(u_aux_PSIM  .* -10 + 0.1) #(from kPa to log10(hPa) and small shift to start at pF = -1 instead of pF = -∞)
 
         # @series begin
         #     seriestype := :heatmap
@@ -354,6 +360,7 @@ end
 
 Plots the isotope results of a SPAC Simulation. By default both δ18O and δ2H.
 The user can override this with the second argument isotope as one of `:d18O`, `:d2H`, or `:d18O_and_d2H`.
+RWUcentroid can have values of either :dontShowRWUcentroid or :showRWUcentroid.
 """
 @userplot PlotIsotopes
 @recipe function f(pliso::PlotIsotopes)
