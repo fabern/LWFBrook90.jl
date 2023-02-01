@@ -473,28 +473,32 @@ function WEATHER(p_fT_TMAX, p_fT_TMIN, p_fT_DAYLEN, p_fT_I0HDAY, p_fT_VAPPRES, p
 end
 
 """
-    ESAT(TA)
+    ESAT(TA_degC)
 
 Calculate saturated vp (kPa) and DELTA=dES/dTA (kPa/K) from temperature based on
-Murray J Applied Meteorol 6:203 (Magnus-Tetens) using as input TA (air temperature in °C).
+Murray J Applied Meteorol 6:203 (Magnus-Tetens) using as input TA_degC (air temperature in °C).
 """
-function ESAT(TA)
-    # Above water (if T >= 0 )
-    # Eq. 6 (Murray 1967)
-    ES = 0.61078 * exp(17.26939 * TA / (TA + 237.3)) # T+273.16-35.86 = T+237.3
-    # Derivative: dES/dTA = d/dTA c * exp(a*T/(b+T)) = c * exp(a*T/(b+T)) * d/dTA {a*T/(b+T)} =
-    #                       c * exp(a*T/(b+T)) * a*b/(b+T)^2 = ES * a*b/(b+T)^2
-    # DELTA = 17.26939 * 237.3 * ES / (TA + 237.3) ^ 2
-    DELTA = 4098 * ES / (TA + 237.3) ^ 2
+function ESAT(TA_degC)
+    # Eq. 6 (Murray 1967) gives ES in mbar = hPa = 0.1kPa with factor 6.1078 hPa -> 0.61078 kPa
+    # Eq. 6: ES_hPa = 6.1078 * exp(a * (T_Kelvin - 273.16) / (T_Kelvin      - b))
+    #               = 6.1078 * exp(a * (T_degC)            / (T_degC+273.16 - b))
 
-    # Above ice (if T < 0 )
-    if (TA < 0)
-      # Eq. 6 (Murray 1967)
-      ES = 0.61078 * exp(21.87456 * TA / (TA + 265.5)) # T+273.16-7.66 = T+265.5
-      # DELTA = 21.87456 * 265.5 * ES / (TA + 265.5) ^ 2
-      DELTA = 5808 * ES / (TA + 265.5) ^ 2
+    # Derivative: dES/dTA = d/dTA c * exp(a*T/(b+T)) = c * exp(a*T/(b+T)) * d/dTA {a*T/(b+T)} =
+    #                       c * exp(a*T/(b+T)) * a*b/(b+T)^2 = ES_kPa * a*b/(b+T)^2
+
+
+    # Above water (if T >= 0 ) -> a= 17.26, b=35.86
+    ES_kPa = 0.61078 * exp(17.26939 * TA_degC / (TA_degC + 237.3)) # T_degC+273.16 - 35.86 = T+237.3
+    # DELTA = 17.26939 * 237.3 * ES_kPa / (TA_degC + 237.3) ^ 2
+    DELTA = 4098 * ES_kPa / (TA_degC + 237.3) ^ 2
+
+    # Above ice (if T < 0 ) -> a= 21.87, b=7.66
+    if (TA_degC < 0)
+      ES_kPa = 0.61078 * exp(21.87456 * TA_degC / (TA_degC + 265.5)) # T+273.16 - 7.66 = T+265.5
+      # DELTA = 21.87456 * 265.5 * ES_kPa / (TA_degC + 265.5) ^ 2
+      DELTA = 5808 * ES_kPa / (TA_degC + 265.5) ^ 2
     end
-    return (ES, DELTA)
+    return (ES_kPa, DELTA)
 end
 
 @doc raw"""
