@@ -68,14 +68,14 @@ if basename(pwd()) != "test"; cd("test"); end
         reduce(hcat, [example_result["solution"](t_days).INTS.mm   for t_days = t_out]),
         reduce(hcat, [example_result["solution"](t_days).INTR.mm   for t_days = t_out]),
         reduce(hcat, [example_result["solution"](t_days).SNOW.mm   for t_days = t_out]),
-        reduce(hcat, [example_result["solution"](t_days).CC.mm     for t_days = t_out]),
+        reduce(hcat, [example_result["solution"](t_days).CC.MJm2   for t_days = t_out]),
         reduce(hcat, [example_result["solution"](t_days).SNOWLQ.mm for t_days = t_out]),
-        reduce(hcat, [example_result["solution"](t_days).RWU.mm    for t_days = t_out]),
+        reduce(hcat, [example_result["solution"](t_days).RWU.mmday for t_days = t_out]),
         reduce(hcat, [example_result["solution"](t_days).XYLEM.mm  for t_days = t_out]),
         reduce(hcat, [example_result["solution"](t_days).SWATI.mm  for t_days = t_out]),
-        # reduce(hcat, [example_result["solution"][t_idx].TRANI.mm  for t_idx = eachindex(example_result["solution"])]),
-        # reduce(hcat, [example_result["solution"][t_idx].aux.θ     for t_idx = eachindex(example_result["solution"])]),
-        # reduce(hcat, [example_result["solution"][t_idx].accum     for t_idx = eachindex(example_result["solution"])])
+        # reduce(hcat, [example_result["solution"][t_idx].TRANI.mmday for t_idx = eachindex(example_result["solution"])]),
+        # reduce(hcat, [example_result["solution"][t_idx].aux.θ       for t_idx = eachindex(example_result["solution"])]),
+        # reduce(hcat, [example_result["solution"][t_idx].accum       for t_idx = eachindex(example_result["solution"])])
     )
 
     # test or overwrite

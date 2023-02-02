@@ -37,7 +37,8 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             aux    = zeros(NLAYER, 3), # TODO: where to store θ, ψ and K(θ) ?
             accum  = zeros(N_accum_var,1))
     # Give ComponentArray as u0 to DiffEq.jl
-    name_variables = ifelse(simulate_isotopes, (:mm, :d18O, :d2H), (:mm,))
+    name_states = ifelse(simulate_isotopes, (:mm,    :d18O, :d2H), (:mm,))
+    name_fluxes = ifelse(simulate_isotopes, (:mmday, :d18O, :d2H), (:mmday,))
     name_aux       = (:θ,:ψ,:K)
     name_accum     = (:cum_d_prec, :cum_d_rfal, :cum_d_sfal, :cum_d_rint,  :cum_d_sint, :cum_d_rsno,
                     :cum_d_rnet, :cum_d_smlt, :cum_d_evap, :cum_d_tran, :cum_d_irvp, :cum_d_isvp,
@@ -47,34 +48,34 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
                     :totalSWAT,  :new_totalWATER,  :BALERD_SWAT,  :BALERD_total)
     if simulate_isotopes
         u0 = ComponentArray(
-            SWATI  = NamedTuple{name_variables, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:SWATI][:,:,1])...)),
-            GWAT   = NamedTuple{name_variables,      NTuple{3, Float64}}(u0_NamedTuple[:GWAT][:,:,1]),
-            INTS   = NamedTuple{name_variables,      NTuple{3, Float64}}(u0_NamedTuple[:INTS][:,:,1]),
-            INTR   = NamedTuple{name_variables,      NTuple{3, Float64}}(u0_NamedTuple[:INTR][:,:,1]),
-            SNOW   = NamedTuple{name_variables,      NTuple{3, Float64}}(u0_NamedTuple[:SNOW][:,:,1]),
-            RWU    = NamedTuple{name_variables,      NTuple{3, Float64}}(u0_NamedTuple[:RWU]        ),
-            XYLEM  = NamedTuple{name_variables,      NTuple{3, Float64}}(u0_NamedTuple[:XYLEM]      ),
-            CC     = NamedTuple{name_variables[[1]], NTuple{1, Float64}}(u0_NamedTuple[:CC][:,:,1]),
-            SNOWLQ = NamedTuple{name_variables[[1]], NTuple{1, Float64}}(u0_NamedTuple[:SNOWLQ][:,:,1]),
+            SWATI  = NamedTuple{name_states, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:SWATI][:,:,1])...)),
+            GWAT   = NamedTuple{name_states,      NTuple{3, Float64}}(u0_NamedTuple[:GWAT][:,:,1]),
+            INTS   = NamedTuple{name_states,      NTuple{3, Float64}}(u0_NamedTuple[:INTS][:,:,1]),
+            INTR   = NamedTuple{name_states,      NTuple{3, Float64}}(u0_NamedTuple[:INTR][:,:,1]),
+            SNOW   = NamedTuple{name_states,      NTuple{3, Float64}}(u0_NamedTuple[:SNOW][:,:,1]),
+            RWU    = NamedTuple{name_fluxes,      NTuple{3, Float64}}(u0_NamedTuple[:RWU]        ),
+            XYLEM  = NamedTuple{name_states,      NTuple{3, Float64}}(u0_NamedTuple[:XYLEM]      ),
+            CC     = NamedTuple{(:MJm2,),         NTuple{1, Float64}}(u0_NamedTuple[:CC][:,:,1]),
+            SNOWLQ = NamedTuple{name_states[[1]], NTuple{1, Float64}}(u0_NamedTuple[:SNOWLQ][:,:,1]),
 
-            TRANI = NamedTuple{name_variables, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:TRANI][:,:,1])...)),
+            TRANI = NamedTuple{name_fluxes, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:TRANI][:,:,1])...)),
 
-            aux   = NamedTuple{name_aux, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:aux])...)),
+            aux   = NamedTuple{name_aux,   NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:aux])...)),
             accum = NamedTuple{name_accum, NTuple{31, Float64}}((0. for i in eachindex(name_accum))))
     else
         # TODO(bernhard): check if this is bad programming if NTuple{1, ...} depends on runtime variable simulate_isotopes...
         u0 = ComponentArray(
-            SWATI  = NamedTuple{name_variables, NTuple{1, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:SWATI][:,:,1])...)),
-            GWAT   = NamedTuple{name_variables,      NTuple{1, Float64}}(u0_NamedTuple[:GWAT][:,:,1]),
-            INTS   = NamedTuple{name_variables,      NTuple{1, Float64}}(u0_NamedTuple[:INTS][:,:,1]),
-            INTR   = NamedTuple{name_variables,      NTuple{1, Float64}}(u0_NamedTuple[:INTR][:,:,1]),
-            SNOW   = NamedTuple{name_variables,      NTuple{1, Float64}}(u0_NamedTuple[:SNOW][:,:,1]),
-            RWU    = NamedTuple{name_variables,      NTuple{1, Float64}}(u0_NamedTuple[:RWU]        ),
-            XYLEM  = NamedTuple{name_variables,      NTuple{1, Float64}}(u0_NamedTuple[:XYLEM]      ),
-            CC     = NamedTuple{name_variables[[1]], NTuple{1, Float64}}(u0_NamedTuple[:CC][:,:,1]),
-            SNOWLQ = NamedTuple{name_variables[[1]], NTuple{1, Float64}}(u0_NamedTuple[:SNOWLQ][:,:,1]),
+            SWATI  = NamedTuple{name_states, NTuple{1, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:SWATI][:,:,1])...)),
+            GWAT   = NamedTuple{name_states,      NTuple{1, Float64}}(u0_NamedTuple[:GWAT][:,:,1]),
+            INTS   = NamedTuple{name_states,      NTuple{1, Float64}}(u0_NamedTuple[:INTS][:,:,1]),
+            INTR   = NamedTuple{name_states,      NTuple{1, Float64}}(u0_NamedTuple[:INTR][:,:,1]),
+            SNOW   = NamedTuple{name_states,      NTuple{1, Float64}}(u0_NamedTuple[:SNOW][:,:,1]),
+            RWU    = NamedTuple{name_fluxes,      NTuple{1, Float64}}(u0_NamedTuple[:RWU]        ),
+            XYLEM  = NamedTuple{name_states,      NTuple{1, Float64}}(u0_NamedTuple[:XYLEM]      ),
+            CC     = NamedTuple{(:MJm2,),         NTuple{1, Float64}}(u0_NamedTuple[:CC][:,:,1]),
+            SNOWLQ = NamedTuple{name_states[[1]], NTuple{1, Float64}}(u0_NamedTuple[:SNOWLQ][:,:,1]),
 
-            TRANI = NamedTuple{name_variables, NTuple{1, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:TRANI][:,:,1])...)),
+            TRANI = NamedTuple{name_fluxes, NTuple{1, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:TRANI][:,:,1])...)),
 
             aux   = NamedTuple{name_aux, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:aux])...)),
             accum = NamedTuple{name_accum, NTuple{31, Float64}}((0. for i in eachindex(name_accum))))
@@ -108,9 +109,9 @@ function init_LWFB90_u0!(;u0::ComponentArray, continuous_SPAC, soil_params, p_so
         u0.SWATI.d2H  .= soil_params["d2H_init"]
     end
 
-    u0.RWU.mm   = 0
-    u0.XYLEM.mm = 5
-    u0.TRANI.mm  = zeros(soil_params["NLAYER"])
+    u0.RWU.mmday   = 0
+    u0.XYLEM.mm    = 5
+    u0.TRANI.mmday = zeros(soil_params["NLAYER"])
     if (N_iso == 2)
         u0.RWU.d18O   = soil_params["d18O_init"][1] # start out with same concentration as in first soil layer
         u0.RWU.d2H    = soil_params["d2H_init"][1]   # start out with same concentration as in first soil layer

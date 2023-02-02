@@ -85,7 +85,7 @@ end
 # TODO: unimplemented. Do this after switching to ComponentArrays.jl
 # variant a2) only check certain states that are not containing NaNs (δ values might be set to NaN
 function unstable_check_function(dt,u::ComponentVector,p,t) # select only amounts in the first 12 compartments, no concentrations
-    # any(isnan.([u.GWAT.mm, u.INTS.mm, u.INTR.mm, u.SNOW.mm, u.CC.mm, u.SNOWLQ.mm, u.SWATI.mm, u.RWU.mm, u.XYLEM.mm, u.TRANI.mm]))
+    # any(isnan.([u.GWAT.mm, u.INTS.mm, u.INTR.mm, u.SNOW.mm, u.CC.MJm2, u.SNOWLQ.mm, u.SWATI.mm, u.RWU.mmday, u.XYLEM.mm, u.TRANI.mmday]))
     # # NOTE: `aux`` is missing on purpose
     # any(isnan, u.SWATI) # Do it for SWATI (both amt and concentration)
     any(isnan, u.SWATI.mm) # Do it for SWATI (only amt)
@@ -103,12 +103,12 @@ function norm_to_use(u::ComponentVector, t)
                                                 u.INTS.mm,
                                                 u.INTR.mm,
                                                 u.SNOW.mm,
-                                                u.CC.mm,
+                                                u.CC.MJm2,
                                                 u.SNOWLQ.mm,
                                                 u.SWATI.mm,
-                                                u.RWU.mm,
+                                                u.RWU.mmday,
                                                 u.XYLEM.mm,
-                                                u.TRANI.mm,
+                                                u.TRANI.mmday,
                                                 u.aux.θ, #u.aux.ψ, u.aux.K,
                                                 u.accum
             ]),
@@ -117,12 +117,12 @@ function norm_to_use(u::ComponentVector, t)
     #                                  u.INTS.mm,
     #                                  u.INTR.mm,
     #                                  u.SNOW.mm,
-    #                                  u.CC.mm,
+    #                                  u.CC.MJm2,
     #                                  u.SNOWLQ.mm,
     #                                  u.SWATI.mm,
-    #                                  u.RWU.mm,
+    #                                  u.RWU.mmday,
     #                                  u.XYLEM.mm,
-    #                                  u.TRANI.mm,
+    #                                  u.TRANI.mmday,
     #                                  u.accum),
     # t)
 end

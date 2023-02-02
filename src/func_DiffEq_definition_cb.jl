@@ -116,7 +116,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     u_INTS     = integrator.u.INTS.mm
     u_INTR     = integrator.u.INTR.mm
     u_SNOW     = integrator.u.SNOW.mm
-    u_CC       = integrator.u.CC.mm
+    u_CC       = integrator.u.CC.MJm2
     u_SNOWLQ   = integrator.u.SNOWLQ.mm
     u_SWATI    = integrator.u.SWATI.mm
 
@@ -232,7 +232,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
 
     # update SNOW, CC, SNOWLQ
     integrator.u.SNOW.mm   = u_SNOW
-    integrator.u.CC.mm     = u_CC
+    integrator.u.CC.MJm2   = u_CC
     integrator.u.SNOWLQ.mm = u_SNOWLQ
 
     # save intermediate results for use in ODE (function f()) or other callbacks
@@ -251,11 +251,13 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     # Accumulate flows to compute daily sums
     # Note that below state variables serve only as accumulator but do not affect
     # the evolution of the system.
+
+    integrator.u.TRANI.mmday .= p_DTP .* aux_du_TRANI
+    integrator.u.RWU.mmday    = p_DTP  * sum(aux_du_TRANI)
     if compute_intermediate_quantities
 
         # 1) Either set daily sum if rate is constant throughout precipitation interval: p_DTP*(...)
         # 2) or then set daily sum to zero and use ODE to accumulate flow.
-
         integrator.u.accum.cum_d_prec       = p_DTP * (p_fT_RFAL + p_fT_SFAL)                 # RFALD + SFALD        # cum_d_prec
         integrator.u.accum.cum_d_rfal       = p_DTP * (p_fT_RFAL)                                                    # cum_d_rfal
         integrator.u.accum.cum_d_sfal       = p_DTP * (p_fT_SFAL)                                                    # cum_d_sfal
@@ -288,8 +290,6 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         # integrator.u.accum.BALERD_SWAT    = BALERD_SWAT
         # integrator.u.accum.BALERD_total   = BALERD_total
 
-        # below are computed in separate callback:
-        integrator.u.TRANI.mm .= aux_du_TRANI
         # TODO(bernhard): use SavingCallback() for all quantities that have u=... and du=0
         #                 only keep du=... for quantities for which we compute cumulative sums
     end
@@ -318,7 +318,7 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         u_INTS     = integrator.u.INTS.mm
         u_INTR     = integrator.u.INTR.mm
         u_SNOW     = integrator.u.SNOW.mm
-        # u_CC       = integrator.u.CC.mm
+        # u_CC       = integrator.u.CC.MJm2
         # u_SNOWLQ   = integrator.u.SNOWLQ.mm
         # u_SWATI    = integrator.u.SWATI.mm
 
@@ -557,7 +557,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
         # u_INTS     = integrator.u.INTS.mm
         # u_INTR     = integrator.u.INTR.mm
         # u_SNOW     = integrator.u.SNOW.mm
-        # u_CC       = integrator.u.CC.mm
+        # u_CC       = integrator.u.CC.MJm2
         # u_SNOWLQ   = integrator.u.SNOWLQ.mm
         u_SWATI    = integrator.u.SWATI.mm
 
@@ -1291,7 +1291,7 @@ function LWFBrook90R_check_balance_errors!(integrator)
     u_INTS     = integrator.u.INTS.mm
     u_INTR     = integrator.u.INTR.mm
     u_SNOW     = integrator.u.SNOW.mm
-    # u_CC       = integrator.u.CC.mm
+    # u_CC       = integrator.u.CC.MJm2
     # u_SNOWLQ   = integrator.u.SNOWLQ.mm
     u_SWATI    = integrator.u.SWATI.mm
 

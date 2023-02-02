@@ -77,15 +77,15 @@ RWUcentroid can have values of either :dontShowRWUcentroid or :showRWUcentroid.
 
 
     # Results
-    rows_SWAT_amt  = reduce(hcat, [sol(t).SWATI.mm   for t in days_to_read_out_d]) ./ sol.prob.p.p_soil.p_THICK
-    rows_RWU_mmDay  = reduce(hcat, [sol(t).TRANI.mm   for t in days_to_read_out_d])
+    rows_SWAT_amt  = reduce(hcat, [sol(t).SWATI.mm    for t in days_to_read_out_d]) ./ sol.prob.p.p_soil.p_THICK
+    rows_RWU_mmDay = reduce(hcat, [sol(t).TRANI.mmday for t in days_to_read_out_d])
     row_NaN       = fill(NaN, 1,length(x))
     row_PREC_amt = reshape(sol.prob.p.p_PREC.(days_to_read_out_d), 1, :)
     col_INTS_amt = [sol(t).INTS.mm for t in days_to_read_out_d]
     col_INTR_amt = [sol(t).INTR.mm   for t in days_to_read_out_d]
     col_SNOW_amt = [sol(t).SNOW.mm   for t in days_to_read_out_d]
     col_GWAT_amt = [sol(t).GWAT.mm   for t in days_to_read_out_d]
-    col_RWU_amt  = [sol(t).RWU.mm    for t in days_to_read_out_d]
+    col_RWU_amt  = [sol(t).RWU.mmday for t in days_to_read_out_d]
     col_XYL_amt  = [sol(t).XYLEM.mm  for t in days_to_read_out_d]
 
     RWU_percent = rows_RWU_mmDay ./ sum(rows_RWU_mmDay; dims = 1)
@@ -450,7 +450,7 @@ RWUcentroid can have values of either :dontShowRWUcentroid or :showRWUcentroid.
     row_RWU_d2H   = reduce(hcat, [sol(t).RWU.d2H for t in days_to_read_out_d])
     row_XYL_d2H   = reduce(hcat, [sol(t).XYLEM.d2H for t in days_to_read_out_d])
 
-    rows_RWU_mmDay  = reduce(hcat, [sol(t).TRANI.mm   for t in days_to_read_out_d])
+    rows_RWU_mmDay  = reduce(hcat, [sol(t).TRANI.mmday   for t in days_to_read_out_d])
     RWU_percent = rows_RWU_mmDay ./ sum(rows_RWU_mmDay; dims = 1)
     row_RWU_centroid_mm = sum(RWU_percent .* y_center; dims=1)
 
@@ -837,7 +837,7 @@ end
 """
     get_aboveground(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
 
-Returns a DataFrame with state variables: GWAT, INTS, INTR, SNOW in mm and CC, SNOWLQ (in ? and ?).
+Returns a DataFrame with state variables: GWAT, INTS, INTR, SNOW, SNOWLQ in mm and CC in MJm2.
 By default, the values are returned for each simulation timestep.
 The user can define timesteps as `days_to_read_out_d` by optionally providing a numeric vector, e.g. saveat = 1:1.0:100
 """
@@ -845,14 +845,17 @@ function get_aboveground(simulation::DiscretizedSPAC; days_to_read_out_d = nothi
     solution = simulation.ODESolution
     @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
 
-    compartments_to_extract = [:GWAT, :INTS, :INTR, :SNOW, :CC, :SNOWLQ]
+    # compartments_to_extract = [:GWAT, :INTS, :INTR, :SNOW, :SNOWLQ]
+    compartments_to_extract = [:GWAT, :INTS, :INTR, :SNOW, :CC, :SNOWLQ] # CC is in MJm2
 
     if isnothing(days_to_read_out_d)
-        u_aboveground = [solution[t_idx][compartment].mm  for t_idx = eachindex(solution), compartment in compartments_to_extract]
+        # u_aboveground = [solution[t_idx][compartment].mm  for t_idx = eachindex(solution), compartment in compartments_to_extract]
+        u_aboveground = [solution[t_idx][compartment][1]  for t_idx = eachindex(solution), compartment in compartments_to_extract]  # CC is in MJm2, by using [1] we avoid specifiyng :mm or :MJm2
         # [solution[t_idx][compartment].d18O  for t_idx = eachindex(solution), compartment in compartments_to_extract]
         # [solution[t_idx][compartment].d2H  for t_idx = eachindex(solution), compartment in compartments_to_extract]
     else
-        u_aboveground = [solution(t_days)[compartment].mm  for t_days = days_to_read_out_d, compartment in compartments_to_extract]
+        # u_aboveground = [solution(t_days)[compartment].mm  for t_days = days_to_read_out_d, compartment in compartments_to_extract]
+        u_aboveground = [solution(t_days)[compartment][1]  for t_days = days_to_read_out_d, compartment in compartments_to_extract] # CC is in MJm2, by using [1] we avoid specifiyng :mm or :MJm2
         # [solution[t_idx][compartment].d18O  for t_idx = eachindex(solution), compartment in compartments_to_extract]
         # [solution[t_idx][compartment].d2H  for t_idx = eachindex(solution), compartment in compartments_to_extract]
     end

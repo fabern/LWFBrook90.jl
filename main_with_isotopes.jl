@@ -339,7 +339,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
         # plot(pl_θ,pl_ψ,layout = (2,1))
         # b) for RWU
         # b1) RWU heatmap (depths vs time)
-        rows_RWU_mmDay  = reduce(hcat, [sol_LWFBrook90[t_idx].TRANI.mm   for t_idx = eachindex(sol_LWFBrook90)])
+        rows_RWU_mmDay  = reduce(hcat, [sol_LWFBrook90[t_idx].TRANI.mmday   for t_idx = eachindex(sol_LWFBrook90)])
         # rows_RWU_mmDay  = reduce(hcat, [sol_LWFBrook90[t_idx].XYLEM.mm for t_idx = eachindex(sol_LWFBrook90)])
         # rows_RWU_mmDay = sol_LWFBrook90[sol_LWFBrook90.prob.p.row_idx_TRANI, 1, :]
         rows_RWU = rows_RWU_mmDay ./ sol_LWFBrook90.prob.p.p_soil.p_THICK

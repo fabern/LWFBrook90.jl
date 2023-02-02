@@ -80,7 +80,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # u_INTS      = u.INTS.mm
         # u_INTR      = u.INTR.mm
         # u_SNOW      = u.SNOW.mm
-        # u_CC        = u.CC.mm
+        # u_CC        = u.CC.MJm2
         # u_SNOWLQ    = u.SNOWLQ.mm
         u_SWATI     = u.SWATI.mm
 
@@ -160,8 +160,15 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         du.INTS.mm   = 0
         du.INTR.mm   = 0
         du.SNOW.mm   = 0
-        du.CC.mm     = 0
+        du.CC.MJm2   = 0
         du.SNOWLQ.mm = 0
+
+        du.XYLEM.mm = 0
+        du.RWU.mmday   = 0  # TODO(bernhard): these are rather accumulated quantities than proper state variables
+        du.TRANI.mmday .= 0 # TODO(bernhard): these are rather accumulated quantities than proper state variables
+        # du.XYLEM.d18O = 0 #TODO(bernhard): remove from here
+        # du.RWU.d18O   = 0 #TODO(bernhard): remove from here
+        # du.TRANI.d18O = 0 #TODO(bernhard): remove from here
 
         # Update SWATI for each layer:
         du.SWATI.mm .= du_NTFLI
