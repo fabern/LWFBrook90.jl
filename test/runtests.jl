@@ -28,5 +28,4 @@ include("01-unit-tests.jl")
 
 include("02-integration-tests.jl")
 
-# include("03-regression-tests.jl")
-
+include("03-regression-tests.jl")

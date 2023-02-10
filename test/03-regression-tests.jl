@@ -52,6 +52,7 @@ if basename(pwd()) != "test"; cd("test"); end
     # amberMBP-git+61a19ed: 0.039381 seconds (117.87 k allocations: 11.615 MiB) 343 time steps
     # amberMBP-git+013a35e: 0.212826 seconds (684.81 k allocations: 70.468 MiB) 2997 time steps
     # amberMBP-git-ed6bed2: 0.103988 seconds (666.88 k allocations: 69.062 MiB) 2997 time steps
+    # amberMBP-git-51e7866: 0.118765 seconds (684.56 k allocations: 70.457 MiB) 2997 time steps
 
     # extract required data from solution object
     idx_u_scalar_amounts = example_result["solution"].prob.p.row_idx_scalars;
@@ -87,7 +88,7 @@ if basename(pwd()) != "test"; cd("test"); end
         if !is_a_CI_system
             @test all(abs.((u_ref  .- loaded_u_ref) ./ (loaded_u_ref  .+ eps(Float64))) .< 1e-3) # adding eps for values where _ref is zero
         else
-            @test_broken all(abs.((u_ref  .- loaded_u_ref) ./ (loaded_u_ref  .+ eps(Float64))) .< 1e-3) # adding eps for values where _ref is zero
+            @test all(abs.((u_ref  .- loaded_u_ref) ./ (loaded_u_ref  .+ eps(Float64))) .< 1e-3) # adding eps for values where _ref is zero
         end
     elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
         jldsave(fname; u_ref);
@@ -104,7 +105,6 @@ if basename(pwd()) != "test"; cd("test"); end
 
     else
         # do nothing
-        @test_broken all(abs.((u_ref  .- loaded_u_ref) ./ (loaded_u_ref  .+ eps(Float64))) .< 1e-3) # adding eps for values where _ref is zero
     end
 
 end
@@ -123,6 +123,7 @@ end
     # amberMBP-git-013a35e: 18.315647 seconds (38.78 M allocations: 4.644 GiB, 4.00% gc time, 30.45% compilation time) 57445 time steps
     # amberMBP-git-f67b99f: 9.415075 seconds (32.11 M allocations: 4.335 GiB, 13.87% gc time) 57445 time steps
     # amberMBP-git-ed6bed2: 9.290332 seconds (32.11 M allocations: 4.335 GiB, 9.71% gc time)  57445 time steps
+    # amberMBP-git-51e7866: 9.802559 seconds (32.11 M allocations: 4.335 GiB, 9.15% gc time) 57445 time steps
 
     # extract required data from solution object
     # (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
@@ -154,8 +155,8 @@ end
             @test        all(abs.((SWAT_d18O_ref .- loaded_SWAT_d18O_ref) ./ (loaded_SWAT_d18O_ref .+ eps(Float64))) .< 1e-5) # adding eps for values where _ref is zero
             @test        all(abs.((SWAT_d2H_ref  .- loaded_SWAT_d2H_ref ) ./ (loaded_SWAT_d2H_ref  .+ eps(Float64))) .< 1e-5) # adding eps for values where _ref is zero
         else
-            @test_broken all(abs.((SWAT_d18O_ref .- loaded_SWAT_d18O_ref) ./ (loaded_SWAT_d18O_ref .+ eps(Float64))) .< 1e-5) # adding eps for values where _ref is zero
-            @test_broken all(abs.((SWAT_d2H_ref  .- loaded_SWAT_d2H_ref ) ./ (loaded_SWAT_d2H_ref  .+ eps(Float64))) .< 1e-5) # adding eps for values where _ref is zero
+            @test all(abs.((SWAT_d18O_ref .- loaded_SWAT_d18O_ref) ./ (loaded_SWAT_d18O_ref .+ eps(Float64))) .< 1e-5) # adding eps for values where _ref is zero
+            @test all(abs.((SWAT_d2H_ref  .- loaded_SWAT_d2H_ref ) ./ (loaded_SWAT_d2H_ref  .+ eps(Float64))) .< 1e-5) # adding eps for values where _ref is zero
         end
     elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
         # overwrite output
