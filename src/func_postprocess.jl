@@ -633,6 +633,192 @@ end
 
 
 
+"""
+    plotforcingandstates(simulation::DiscretizedSPAC)
+
+Plots the forcing, states and major fluxes as results of a SPAC Simulation.
+"""
+@userplot PlotForcingAndStates
+@recipe function f(plam::PlotForcingAndStates)
+    # 0) parse input arguments
+    if length(plam.args) == 1
+        simulation = plam.args[1]
+    else
+        error("plotforcingandstates requires an unnamed first argument of type DiscretizedSPAC. Other arguments to plot() should be separated by `;`.")
+    end
+    if !(simulation isa DiscretizedSPAC)
+        error("First unnamed argument to plotamounts should be of type DiscretizedSPAC. Got: $(typeof(simulation))")
+    end
+    if isnothing(simulation.ODESolution)
+        error("plotamounts requires a solved system. Please `simulate!()` the DiscretizedSPAC first.")
+    end
+
+    # 1) prepare data to plot
+    sol = simulation.ODESolution;
+
+    # 1a) extract data from solution object `sol`
+    # 1a) i) forcing (wind, vappres, globrad, tmax, tmin, prec, lai, )
+    x1  = simulation.ODESolution_datetime;
+    y11 = simulation.ODESolution.prob.p.p_WIND.(simulation.ODESolution.t);      lbl11 = "p_WIND [m/s]";
+    y12 = simulation.ODESolution.prob.p.p_VAPPRES.(simulation.ODESolution.t);   lbl12 = "p_VAPPRES [kPa]";
+    y13 = simulation.ODESolution.prob.p.p_GLOBRAD.(simulation.ODESolution.t);   lbl13 = "p_GLOBRAD [MJ/day/m2]"
+    y14 = hcat(simulation.ODESolution.prob.p.p_TMIN.(simulation.ODESolution.t),
+                    simulation.ODESolution.prob.p.p_TMAX.(simulation.ODESolution.t)); lbl14 = ["p_TMIN [°C]" "p_TMAX [°C]"]
+    y15 = simulation.ODESolution.prob.p.p_PREC.(simulation.ODESolution.t);      lbl15 = "p_PREC [mm]"
+    # plot_forcing = plot(layout = (:,1),
+    #     plot(x1, y11; labels = lbl11),
+    #     plot(x1, y12; labels = lbl12),
+    #     plot(x1, y13; labels = lbl13),
+    #     plot(x1, y14; labels = lbl14),
+    #     plot(x1, y15; labels = lbl15))
+
+    x2 = simulation.ODESolution_datetime;
+    y21 = hcat(simulation.ODESolution.prob.p.p_DENSEF.(simulation.ODESolution.t),
+                        simulation.ODESolution.prob.p.p_SAI.(simulation.ODESolution.t),
+                        simulation.ODESolution.prob.p.p_LAI.(simulation.ODESolution.t)); lbl21 = ["p_DENSEF [-]" "p_SAI [-]" "p_LAI [-]"];
+    y22 = simulation.ODESolution.prob.p.p_HEIGHT.(simulation.ODESolution.t); lbl22 = "p_HEIGHT [-]";
+    # plot_vegetation = plot(layout = (2,1), title = "Vegetation",
+    #     plot(x2, y21; labels = lbl21),
+    #     plot(x2, y22;labels = lbl22))
+    #     # plot!(twinx(),100*rand(10))
+    #     # plot!(twinx(), simulation.ODESolution_datetime, simulation.ODESolution.prob.p.p_HEIGHT.(simulation.ODESolution.t))#;labels = "p_HEIGHT [-]")
+
+    # 1a) ii) states (scalar and vector)
+    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) = LWFBrook90.get_auxiliary_variables(simulation.ODESolution)
+
+    x3 = simulation.ODESolution_datetime;
+    y31 = hcat(reduce(hcat, [simulation.ODESolution(t).INTR.mm   for t in simulation.ODESolution.t])',
+                reduce(hcat, [simulation.ODESolution(t).INTS.mm   for t in simulation.ODESolution.t])',
+                reduce(hcat, [simulation.ODESolution(t).SNOW.mm   for t in simulation.ODESolution.t])',
+                reduce(hcat, [simulation.ODESolution(t).SNOWLQ.mm   for t in simulation.ODESolution.t])',
+                reduce(hcat, [simulation.ODESolution(t).XYLEM.mm   for t in simulation.ODESolution.t])');
+    lbl31 = ["INTR [mm]" "INTS [mm]" "SNOW [mm]" "SNOWLQ [mm]" "XYLEM [mm]"];
+    y32 = hcat(sum(u_SWATI; dims=1)',
+                reduce(hcat, [simulation.ODESolution(t).GWAT.mm   for t in simulation.ODESolution.t])');
+    lbl32 = ["Total Soil Water [mm]" "GWAT [mm]"];
+    # pl_states1 = plot(x3,
+    #         # yaxis=:log,  1 .+
+    #         y31; title = "Scalar states", labels = lbl31)
+    # pl_states2 = plot(x3, y32 = ; title = "Soil/ground water", labels = lbl32)
+    # plot_states = plot(pl_states1, pl_states2, layout = (2,1))
+
+    # 1a) iii) fluxes
+    x4 = simulation.ODESolution_datetime;
+    y41 = hcat(  reduce(hcat, [simulation.ODESolution(t).RWU.mmday   for t in simulation.ODESolution.t])',
+                                        sum(reduce(hcat, [simulation.ODESolution(t).TRANI.mmday   for t in simulation.ODESolution.t]); dims=1)')
+    lbl41 = ["RWU (mm/day)" "sum(TRANI)"]
+    # plot_fluxes = plot(x4, y41; labels = lbl41)
+
+    # plot(plot_forcing, plot_vegetation, plot_states, plot_fluxes,
+    #     layout = grid(4, 1, heights=[0.5 ,0.2, 0.2, 0.1]),
+    #     size=(800,2000), dpi = 300, leftmargin = 15mm)
+
+    # 2) set up the common arguments for all plots below
+    # lay = RecipesBase.grid(4, 1, heights=[0.5 ,0.2, 0.2, 0.1])
+    lay = RecipesBase.grid(10, 1)
+    layout --> lay
+    size --> (800,2000)
+    dpi --> 300
+    # xlim --> xlimits
+    leftmargin --> 15mm
+
+    # # 3) generate plots
+    # # NOTE: --> sets attributes only when they don't already exist
+    # # NOTE: :=  sets attributes even when they already exist
+    @series begin
+        yguide := "PREC [mm]"
+        # seriestype := :bar
+        # legend := false
+        subplot := 1
+        label := lbl11
+        # and other arguments:
+        x1, y11
+    end
+    @series begin
+        yguide := "PREC [mm]"
+        # seriestype := :bar
+        # legend := false
+        subplot := 2
+        label := lbl12
+        # and other arguments:
+        x1, y12
+    end
+    @series begin
+        yguide := "PREC [mm]"
+        # seriestype := :bar
+        # legend := false
+        subplot := 3
+        label := lbl13
+        # and other arguments:
+        x1, y13
+    end
+    @series begin
+        yguide := "PREC [mm]"
+        # seriestype := :bar
+        # legend := false
+        subplot := 4
+        label := lbl14
+        # and other arguments:
+        x1, y14
+    end
+    @series begin
+        yguide := "PREC [mm]"
+        # seriestype := :bar
+        # legend := false
+        subplot := 5
+        label := lbl15
+        # and other arguments:
+        x1, y15
+    end
+    @series begin
+        yguide := "PREC [mm]"
+        # seriestype := :bar
+        # legend := false
+        subplot := 6
+        label := lbl21
+        # and other arguments:
+        x2, y21
+    end
+    @series begin
+        yguide := "PREC [mm]"
+        # seriestype := :bar
+        # legend := false
+        subplot := 7
+        label := lbl22
+        # and other arguments:
+        x2, y22
+    end
+    @series begin
+        yguide := "PREC [mm]"
+        # seriestype := :bar
+        # legend := false
+        subplot := 8
+        label := lbl31
+        # and other arguments:
+        x3, y31
+    end
+    @series begin
+        yguide := "PREC [mm]"
+        # seriestype := :bar
+        # legend := false
+        subplot := 9
+        label := lbl32
+        # and other arguments:
+        x3, y32
+    end
+    @series begin
+        yguide := "PREC [mm]"
+        # seriestype := :bar
+        # legend := false
+        subplot := 10
+        label := lbl41
+        # and other arguments:
+        x4, y41
+    end
+end
+
+
+
 ##########################
 # Functions to get values linked to soil domain:
 
