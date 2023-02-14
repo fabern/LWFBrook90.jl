@@ -62,7 +62,13 @@ function run_main_with_isotopes(;input_prefix, input_path)
     end
 
     # simulation = LWFBrook90.discretize(model; Δz = Δz_m, tspan = (0,10));
-    simulation = LWFBrook90.discretize(model; Δz = Δz_m, tspan = (0,300));
+    simulation = LWFBrook90.discretize(model;
+                                        Δz = (thickness_m = Δz_m,
+                                              functions = (rootden = ((Δz_m)->LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)),
+                                                           PSIM_init = ((Δz_m)->fill(-6.3, length(Δz_m))),
+                                                           δ18Ο_init = ((Δz_m)->ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.)),
+                                                           δ2Η_init  = ((Δz_m)->ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.))),
+                                        tspan = (0,300)));
     # display(heatmap(simulation.ODEProblem.p.p_fT_RELDEN', ylabel = "SOIL LAYER", xlabel = "Time (days)", yflip=true, colorbar_title = "Root density"))
 
     # Solve ODE:

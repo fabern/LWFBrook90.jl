@@ -383,6 +383,8 @@ function Rootden_beta_(
     # d: depth below beginning of mineral soil
     @assert z_Upper_m <= 0 "Discretization of humus layer (>0m) is untested."
     @assert minimum(Δz_m) > 0 "Discretization cell height Δz_m must be positive"
+    @assert z_rootMax_m < 0 "z_rootMax_m must be negative"
+
     z_interfaces_m = z_Upper_m .+ [0; cumsum(-Δz_m)]
 
     # (Gale and Grigal, 1987)

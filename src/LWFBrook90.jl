@@ -178,16 +178,18 @@ include("../examples/func_run_example.jl") # defines RelativeDaysFloat2DateTime
 # end
 
 function LWFBrook90.discretize(continuous_SPAC::SPAC;
-                                Δz = nothing,
-                                tspan = nothing,
-                                soil_output_depths = zeros(Float64, 0), # e.g. # soil_output_depths = [-0.35, -0.42, -0.48, -1.05]
-                                Δz_functions = (rootden   = ((Δz_m)->LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)),
+                                Δz = (thickness_m = nothing,
+                                      functions   = (rootden   = ((Δz_m)->LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)),
                                                 PSIM_init = ((Δz_m)->fill(-6.3, length(Δz_m))),
                                                 δ18Ο_init = ((Δz_m)->ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.)),
-                                                δ2Η_init  = ((Δz_m)->ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.)))
+                                                δ2Η_init  = ((Δz_m)->ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.)))),
+                                tspan = nothing,
+                                soil_output_depths = zeros(Float64, 0), # e.g. # soil_output_depths = [-0.35, -0.42, -0.48, -1.05]
         )
     soil_horizons = copy(continuous_SPAC.soil_horizons)
     soil_horizon_extent = (maximum(soil_horizons.Upper_m), minimum(soil_horizons.Lower_m))
+
+    modified_SPAC = deepcopy(continuous_SPAC)
 
     ##########
     # Discretize the model in space as `soil_discretization`
@@ -197,15 +199,15 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
 
     # Define grid for spatial discretization
     # Note that later on grid will be further refined with observation nodes and required interfaces (if needed)
-    if isnothing(Δz)
+    if isnothing(Δz.thickness_m)
          # a) either read the discretization from a file `soil_discretization.csv`
          #    including Rootden_, and initial PSIM, delta18O, and delta2H
         use_soil_discretization_csv = true
-        path_soil_discretization    = continuous_SPAC.continuousIC.soil
+        path_soil_discretization    = modified_SPAC.continuousIC.soil
         soil_discretization         = LWFBrook90.read_path_soil_discretization(path_soil_discretization)
 
         # Assert type stability by executing disallowmissing!
-        if (continuous_SPAC.solver_options.simulate_isotopes)
+        if (modified_SPAC.solver_options.simulate_isotopes)
             disallowmissing!(soil_discretization, [:Rootden_, :uAux_PSIM_init_kPa, :u_delta18O_init_permil, :u_delta2H_init_permil])
         else
             disallowmissing!(soil_discretization, [:Rootden_, :uAux_PSIM_init_kPa])
@@ -214,11 +216,10 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
     else
         # b) or use manually defined Δz
         #    and require functions for Rootden_, and initial PSIM, delta18O, and delta2H
-
-        @assert all(Δz .> 0)
-
         use_soil_discretization_csv = false
-        interfaces_m = [0, cumsum(Δz)...]
+
+        @assert all(Δz.thickness_m .> 0)
+        interfaces_m = [0, cumsum(Δz.thickness_m)...]
         soil_discretization = DataFrame(
             Upper_m = -interfaces_m[Not(end)],
             Lower_m = -interfaces_m[Not(1)],
@@ -228,11 +229,36 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
             u_delta2H_init_permil = NaN)
 
         # check that functions are provided
-        @assert keys(Δz_functions) == (:rootden, :PSIM_init, :δ18Ο_init, :δ2Η_init)
-        @assert Δz_functions.rootden   isa Function
-        @assert Δz_functions.PSIM_init isa Function
-        @assert Δz_functions.δ18Ο_init isa Function
-        @assert Δz_functions.δ2Η_init  isa Function
+        @assert keys(Δz.functions) == (:rootden, :PSIM_init, :δ18Ο_init, :δ2Η_init)
+        @assert Δz.functions.PSIM_init isa Function
+        @assert Δz.functions.δ18Ο_init isa Function
+        @assert Δz.functions.δ2Η_init  isa Function
+
+        if modified_SPAC.root_distribution isa NamedTuple
+            @assert isnothing(Δz.functions.rootden) "If you provide root parameters in SPAC.root_distributions, `Δz.functions.rootden` must return `nothing`."
+            if (:beta in keys(modified_SPAC.root_distribution))
+                @assert modified_SPAC.root_distribution.beta isa Real
+                if (:maxRootDepth_m in keys(modified_SPAC.root_distribution))
+                    @assert modified_SPAC.root_distribution.maxRootDepth_m isa Real
+                    rootden_fct = ((Δz_m)->LWFBrook90.Rootden_beta_(modified_SPAC.root_distribution.beta,
+                                                                    Δz_m = Δz_m,
+                                                                    z_rootMax_m = -modified_SPAC.root_distribution.maxRootDepth_m))
+                else
+                    rootden_fct = ((Δz_m)->LWFBrook90.Rootden_beta_(modified_SPAC.root_distribution.beta, Δz_m = Δz_m))
+                end
+            elseif (:maxRootDepth_m in keys(modified_SPAC.root_distribution))
+                @assert modified_SPAC.root_distribution.maxRootDepth_m isa Real
+                rootden_fct = ((Δz_m)->ifelse.(cumsum(Δz_m) .<= modified_SPAC.root_distribution.maxRootDepth_m,
+                                                        1.0 /modified_SPAC.root_distribution.maxRootDepth_m,
+                                                        0.0))
+            else
+                @warn "modified_SPAC.root_distribution has unexpected keys: $(modified_SPAC.root_distribution). Expected keys are either: `:beta` or `:maxRootDepth_m`"
+            end
+        else
+            @assert Δz.functions.rootden   isa Function
+            rootden_fct = Δz.functions.rootden
+            modified_SPAC.root_distribution = "manually_defined"
+        end
     end
 
     # Check validity of loaded soil discretization
@@ -258,20 +284,19 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
 
     # Define initial conditions and root densities
     if use_soil_discretization_csv
-        # Nothing needed as columns in `soil_discretization` are exptected to be already filled.
-
+        # Nothing needed as columns in `soil_discretization` are expected to be already filled.
         @assert !(any(isnan.(soil_discretization.Rootden_)))           "Error: 'soil_discretization.Rootden_' contains NaNs."
         @assert !(any(isnan.(soil_discretization.uAux_PSIM_init_kPa))) "Error: 'soil_discretization.uAux_PSIM_init_kPa' contains NaNs."
-        @assert typeof(continuous_SPAC.continuousIC.soil) == String && isfile(continuous_SPAC.continuousIC.soil) "Expected 'continuous_SPAC.continuousIC.soil' to be a file containing the initial conditions."
-        @assert typeof(continuous_SPAC.root_distribution) == String && isfile(continuous_SPAC.root_distribution) "Expected 'continuous_SPAC.continuousIC.soil' to be a file containing the initial conditions."
-        @assert continuous_SPAC.continuousIC.soil == continuous_SPAC.root_distribution "If provided as .csv file, initial conditions and root distribution should refer to the same file."
+        @assert typeof(modified_SPAC.continuousIC.soil) == String && isfile(modified_SPAC.continuousIC.soil) "Expected 'modified_SPAC.continuousIC.soil' to be a file containing the initial conditions."
+        @assert typeof(modified_SPAC.root_distribution) == String && isfile(modified_SPAC.root_distribution) "Expected 'modified_SPAC.continuousIC.soil' to be a file containing the initial conditions."
+        @assert modified_SPAC.continuousIC.soil == modified_SPAC.root_distribution "If provided as .csv file, initial conditions and root distribution should refer to the same file."
     else
         soil_discretization = discretize_soil(;
-            Δz_m = Δz,
-            Rootden_               = Δz_functions.rootden,
-            uAux_PSIM_init_kPa     = Δz_functions.PSIM_init,
-            u_delta18O_init_permil = Δz_functions.δ18Ο_init,
-            u_delta2H_init_permil  = Δz_functions.δ2Η_init)
+            Δz_m = Δz.thickness_m,
+            Rootden_               = rootden_fct,
+            uAux_PSIM_init_kPa     = Δz.functions.PSIM_init,
+            u_delta18O_init_permil = Δz.functions.δ18Ο_init,
+            u_delta2H_init_permil  = Δz.functions.δ2Η_init)
     end
 
     # TODO(bernhard): make above code a four step procedure:
@@ -293,18 +318,18 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
             soil_horizons,
             soil_discretization,
             soil_output_depths,
-            continuous_SPAC.params[:IDEPTH_m], # :IDEPTH_m is unused later on
-            continuous_SPAC.params[:QDEPTH_m]) # :QDEPTH_m is unused later on
+            modified_SPAC.params[:IDEPTH_m], # :IDEPTH_m is unused later on
+            modified_SPAC.params[:QDEPTH_m]) # :QDEPTH_m is unused later on
     refined_soil_discretization = soil_params["refined_soil_discretization"]
 
     # Interpolate discretized root distribution in time
     p_fT_RELDEN = LWFBrook90.HammelKennel_transient_root_density(;
-        timepoints         = continuous_SPAC.meteo_forcing.p_days,
-        p_AGE              = continuous_SPAC.canopy_evolution.p_AGE,
-        p_INITRDEP         = continuous_SPAC.params[:INITRDEP],
-        p_INITRLEN         = continuous_SPAC.params[:INITRLEN],
-        p_RGROPER_y        = continuous_SPAC.params[:RGROPER],
-        p_RGRORATE_m_per_y = continuous_SPAC.params[:RGRORATE],
+        timepoints         = modified_SPAC.meteo_forcing.p_days,
+        p_AGE              = modified_SPAC.canopy_evolution.p_AGE,
+        p_INITRDEP         = modified_SPAC.params[:INITRDEP],
+        p_INITRLEN         = modified_SPAC.params[:INITRLEN],
+        p_RGROPER_y        = modified_SPAC.params[:RGROPER],
+        p_RGRORATE_m_per_y = modified_SPAC.params[:RGRORATE],
         p_THICK               = soil_params["THICK"],
         final_Rootden_profile = soil_params["final_Rootden_"]);
     # TODO(bernhard): document input parameters: INITRDEP, INITRLEN, RGROPER, tini, frelden, MAXLAI, HEIGHT_baseline_m
@@ -314,7 +339,7 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
 
     ####################
     # Define parameters for differential equation
-    p = define_LWFB90_p(continuous_SPAC, soil_params, p_fT_RELDEN)
+    p = define_LWFB90_p(modified_SPAC, soil_params, p_fT_RELDEN)
     # using Plots
     # hline([0; cumsum(p.p_THICK)], yflip = true, xticks = false,
     #     title = "N_layer = "*string(p.NLAYER))
@@ -323,8 +348,8 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
     ####################
     # Define state vector u for DiffEq.jl
     # a) allocation of u0
-    u0 = define_LWFB90_u0(;simulate_isotopes = continuous_SPAC.solver_options.simulate_isotopes,
-                          compute_intermediate_quantities = continuous_SPAC.solver_options.compute_intermediate_quantities,
+    u0 = define_LWFB90_u0(;simulate_isotopes = modified_SPAC.solver_options.simulate_isotopes,
+                          compute_intermediate_quantities = modified_SPAC.solver_options.compute_intermediate_quantities,
                           NLAYER = soil_params["NLAYER"])
     ####################
 
@@ -333,7 +358,7 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
     # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
     # Create u0 for DiffEq.jl
     # b) initialization of u0
-    init_LWFB90_u0!(;u0=u0, continuous_SPAC=continuous_SPAC, soil_params=soil_params, p_soil=p.p_soil)
+    init_LWFB90_u0!(;u0=u0, continuous_SPAC=modified_SPAC, soil_params=soil_params, p_soil=p.p_soil)
     ####################
 
     ####################
@@ -347,15 +372,15 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
     # Define simulation time span:
     # tspan = (0.,  5.) # simulate 5 days
     # tspan = (0.,  100.) # simulate 100 days # NOTE: KAU bugs in "branch 005-" when at least 3*365
-    # tspan = (minimum(continuous_SPAC.meteo_forcing[:,"days"]),
-    #         maximum(continuous_SPAC.meteo_forcing[:,"days"])) # simulate all available days
+    # tspan = (minimum(modified_SPAC.meteo_forcing[:,"days"]),
+    #         maximum(modified_SPAC.meteo_forcing[:,"days"])) # simulate all available days
     # tspan = (LWFBrook90.DateTime2RelativeDaysFloat(DateTime(1980,1,1), reference_date),
     #          LWFBrook90.DateTime2RelativeDaysFloat(DateTime(1985,1,1), reference_date)) # simulates selected period
 
     if isnothing(tspan)
-        tspan = continuous_SPAC.tspan
+        tspan = modified_SPAC.tspan
     else
-        @warn "Overwriting tspan defined in SPAC $(continuous_SPAC.tspan) with provided value of $tspan"
+        @warn "Overwriting tspan defined in SPAC $(modified_SPAC.tspan) with provided value of $tspan"
         tspan = tspan
     end
 
@@ -379,7 +404,7 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
     ####################
 
     return DiscretizedSPAC(;
-        continuous_SPAC     = continuous_SPAC,
+        continuous_SPAC     = modified_SPAC,
         soil_discretization = refined_soil_discretization,
         ODEProblem          = ode_LWFBrook90,
         ODESolution         = nothing,
