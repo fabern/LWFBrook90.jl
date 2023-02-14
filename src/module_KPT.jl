@@ -57,6 +57,7 @@ export AbstractSoilHydraulicParams, MualemVanGenuchtenSHP
 using Roots: find_zero, Bisection # to find wetness for a given hydraulic conductivity
 using ..CONSTANTS: p_ThCrit,p_RHOWG # https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
 using DataFrames: DataFrame
+using Printf: @sprintf
 
 ### ### Parameters
 ### #   Clapp and Hornberger (FLAG_MualVanGen=0)
@@ -155,6 +156,18 @@ function MualemVanGenuchtenSHP(df::DataFrame)
         p_KSAT   = dfrow.ksat_mmDay,      p_MvGl   = dfrow.tort_,
         p_STONEF = dfrow.gravel_volFrac)
     for dfrow in eachrow(df)]
+end
+
+function Base.show(io::IO, shp::MualemVanGenuchtenSHP)
+    # function Base.show(io::IO, mime::MIME"text/plain", shp::MualemVanGenuchtenSHP)
+    print(io,
+        @sprintf("(θ from θr=%.3f to θs=%.3f, Ks =% 7.1f, STONEF=%.1f, l=%.1f, n=%.1f, α=% 5.1f)",
+                shp.p_θr, shp.p_THSAT,
+                shp.p_KSAT,
+                shp.p_STONEF,
+                shp.p_MvGl,
+                shp.p_MvGn,
+                shp.p_MvGα))
 end
 
 @doc raw"""

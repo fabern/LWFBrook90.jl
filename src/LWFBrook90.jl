@@ -235,7 +235,7 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
         @assert Δz.functions.δ2Η_init  isa Function
 
         if modified_SPAC.root_distribution isa NamedTuple
-            @assert isnothing(Δz.functions.rootden) "If you provide root parameters in SPAC.root_distributions, `Δz.functions.rootden` must return `nothing`."
+            @assert isnothing(Δz.functions.rootden) "If you provide root parameters in SPAC.root_distributions, `Δz.functions.rootden` must be `nothing`."
             if (:beta in keys(modified_SPAC.root_distribution))
                 @assert modified_SPAC.root_distribution.beta isa Real
                 if (:maxRootDepth_m in keys(modified_SPAC.root_distribution))

@@ -1,8 +1,9 @@
 using CSV: read, File
 using DataFrames: DataFrame, rename, sort!# ,select
 using DataFramesMeta#: @linq, transform, DataFramesMeta
-using Dates: DateTime, Millisecond, Second, Day, Month, month, value, dayofyear
-
+using Dates: DateTime, Millisecond, Second, Day, Month, month, value, dayofyear, format
+using Statistics: mean
+# using Printf: @sprintf
 """
     SPAC(folder::String, prefix::String)
 
@@ -102,6 +103,69 @@ function SPAC(folder::String, prefix::String;
         continuousIC      = continuousIC,
         params            = params,
         solver_options    = solver_options) # Note: unclear whether solver_options should be part of SPAC() or DiscretizedSPAC()
+end
+function Base.show(io::IO, mime::MIME"text/plain", model::SPAC)
+    println(io, "SPAC model:")
+    # print(io, "α:", me.α, " β:", me.β, " γ:", me.γ)
+
+    println(io, "===== DATES:===============")
+    println(io, format(model.reference_date, "YYYY-mm-dd"), ", tspan:", model.tspan, "days")
+    println(io, "\n===== METEO FORCING:===============")
+    show_avg_and_range = function(vector, title)
+        # "$(title)avg:$(round(Statistics.mean(vector); digits=2)), range:$(extrema(vector))"
+        @sprintf("%savg:%7.2f, range:%7.2f to%7.2f",
+                 title, mean(vector), extrema(vector)[1], extrema(vector)[2])
+    end
+    println(io, show_avg_and_range(model.meteo_forcing.p_GLOBRAD.itp.itp.coefs,     "GLOBRAD (MJ/m2/day): "))
+    println(io, show_avg_and_range(model.meteo_forcing.p_PREC.itp.itp.coefs,        "PREC       (mm/day): "))
+    println(io, show_avg_and_range(model.meteo_forcing.p_TMAX.itp.itp.coefs,        "TMAX           (°C): "))
+    println(io, show_avg_and_range(model.meteo_forcing.p_TMIN.itp.itp.coefs,        "TMIN           (°C): "))
+    println(io, show_avg_and_range(model.meteo_forcing.p_VAPPRES.itp.itp.coefs,     "VAPPRES       (kPa): "))
+    println(io, show_avg_and_range(model.meteo_forcing.p_WIND.itp.itp.coefs,        "WIND          (m/s): "))
+    if (model.solver_options.simulate_isotopes)
+        println(io, show_avg_and_range(model.meteo_iso_forcing.p_d18OPREC.itp.coefs,"δ18O            (‰): "))
+        println(io, show_avg_and_range(model.meteo_iso_forcing.p_d2HPREC.itp.coefs, "δ2H             (‰): "))
+    end
+    println(io, "\n===== CANOPY EVOLUTION:===============")
+    println(io, show_avg_and_range(model.canopy_evolution.p_AGE.(model.tspan),    "AGE         (years): "))
+    println(io, show_avg_and_range(model.canopy_evolution.p_DENSEF.itp.itp.coefs, "DENSEF         (°C): "))
+    println(io, show_avg_and_range(model.canopy_evolution.p_HEIGHT.itp.itp.coefs, "HEIGHT          (m): "))
+    println(io, show_avg_and_range(model.canopy_evolution.p_LAI.itp.itp.coefs,    "LAI         (m2/m2): "))
+    println(io, show_avg_and_range(model.canopy_evolution.p_SAI.itp.itp.coefs,    "SAI         (m2/m2): "))
+
+    println(io, "\n===== INITIAL CONDITIONS:===============")
+    println(io, "Soil   IC: " * model.continuousIC.soil)
+    print(  io, "Scalar IC: ")
+    println(io, model.continuousIC.scalar)
+
+    println(io, "\n===== MODEL PARAMETRIZATION:===============")
+    # println(io, model.params)
+    #display(io, model.params) # dump(model.params); using PrettyPrinting; pprintln(model.params)
+    # maxlength = maximum(length.(string.(keys(model.params)))) # 17
+    # maxlength # 17
+    # for (k,v) in pairs(model.params) println(@sprintf("%18s",k) => v) end
+    # for (k,v) in pairs(model.params) println(@sprintf("%18s",k) => @sprintf("% 8.1f",v)) end
+    # for (k,v) in pairs(model.params) println(@sprintf("%18s => % 8.1f",k,v)) end
+    string_vec = [@sprintf("%18s => % 8.1f",k,v) for (k,v) in pairs(model.params)];
+    # reshape(string_vec, 27, 3)
+    # reduce.(*, reshape(string_vec, 27, 3))
+    # reduce.(*, reshape(vcat(string_vec, fill("", 21*4-length(string_vec))), 21, 4))
+    # reshape(vcat(string_vec, fill("", 21*4-length(string_vec))), 21, 4)
+    show(IOContext(io, :limit => true), "text/plain",
+         reshape(vcat(string_vec, fill("", 21*4-length(string_vec))), 21, 4))
+    # show(IOContext(io, :limit => true), "text/plain",
+    #      reshape(vcat(string_vec, fill("", 42*2-length(string_vec))), 42, 2))
+
+    println(io, "\n===== SOIL DOMAIN:===============")
+    # println(io, model.soil_horizons)
+    # for shp in model.soil_horizons.shp println(io, shp) end
+    # show(IOContext(io, :limit => false), "text/plain", model.soil_horizons)
+    show(IOContext(io, :limit => false), mime, model.soil_horizons[:,Not(:HorizonNr)]; truncate = 100);
+    println()
+    print(  io, "Root distribution: "); println(io, model.root_distribution)
+
+    println(io, "\n===== SOLVER OPTIONS:===============")
+    println(io, model.solver_options)
 end
 
 ######################
