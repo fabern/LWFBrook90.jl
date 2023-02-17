@@ -48,3 +48,4 @@ test/test-assets/*/*.jld2
 examples/*/*.png
 out/*
 .vscode/launch.json
+pgm-out-/*
