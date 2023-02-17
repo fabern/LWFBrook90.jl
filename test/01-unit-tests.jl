@@ -335,7 +335,7 @@ end
 #     1  # MONTHN
 # ) # returns (aux_du_RINT, aux_du_IRVP)
 
-@testset "root-model (Δz_m = $(first(Δz_m)))" for Δz_m in Δz_m_data # source: https://stackoverflow.com/a/63871951
+@testset "root-model beta (Δz_m = $(first(Δz_m)))" for Δz_m in Δz_m_data # source: https://stackoverflow.com/a/63871951
     continuous_SPAC = SPAC("test-assets/Hammel-2001/input-files-ISO",
                       "Hammel_loam-NLayer-27-RESET=FALSE";
                       simulate_isotopes = false);
@@ -358,7 +358,7 @@ end
     end
 end
 
-@testset "root-model (Δz_m = $(first(Δz_m)))" for Δz_m in Δz_m_data # source: https://stackoverflow.com/a/63871951
+@testset "root-model beta cropped (Δz_m = $(first(Δz_m)))" for Δz_m in Δz_m_data # source: https://stackoverflow.com/a/63871951
     continuous_SPAC = SPAC("test-assets/Hammel-2001/input-files-ISO",
                       "Hammel_loam-NLayer-27-RESET=FALSE";
                       simulate_isotopes = false);
