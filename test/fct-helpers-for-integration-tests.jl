@@ -45,7 +45,7 @@ function prepare_θψδ_from_sim_and_reference(;
                                     basename(path_jl_prefix),
                                     ifelse(simulate_isotopes,"true","false")]); # "Hammel_loam-NLayer-27-RESET=TRUE"]
     sim_sol = simulation.ODESolution
-    @assert sim_sol.retcode == :Success "Error with simulation, return code: $(sim_sol.retcode)"
+    @assert (SciMLBase.successful_retcode(sim_sol)) "Problem with simulation: Return code of simulation was '$(sim_sol.retcode)'"
     sim_sol.prob.tspan
     sim_sol.t
     # Load reference solution
