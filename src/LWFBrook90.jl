@@ -9,6 +9,7 @@ using StatsBase: mean, weights
 using ComponentArrays
 using UnPack: @unpack
 using Dates: now
+using Printf: @sprintf
 
 # TODO(bernhard): make sure we have documentation for these exported variables
 export SPAC, DiscretizedSPAC, discretize, simulate!
@@ -409,6 +410,16 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
         ODEProblem          = ode_LWFBrook90,
         ODESolution         = nothing,
         ODESolution_datetime= nothing)
+end
+function Base.show(io::IO, mime::MIME"text/plain", discSPAC::DiscretizedSPAC)
+    println(io, "Discretized SPAC model:")
+    println(io, "========================= DISCRETIZATION:===============================")
+    println(io, "Solution was computed: $(!isnothing(discSPAC.ODESolution))")
+    Δz = discSPAC.soil_discretization.Upper_m - discSPAC.soil_discretization.Lower_m
+    println(io, "Soil discretized into N=$(length(discSPAC.soil_discretization.Upper_m)) layers, "*
+                "$(@sprintf("Δz layers: (avg, min, max) = (%.3f,%.3f,%.3f)m.", mean(Δz),minimum(Δz),maximum(Δz)))")
+    println(io, "========================= CONTINUOUS SPAC MODEL:========================")
+    Base.show(io, mime, discSPAC.continuous_SPAC)
 end
 
 function simulate!(s::DiscretizedSPAC)
