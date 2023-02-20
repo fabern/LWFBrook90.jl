@@ -94,8 +94,6 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_fT_RELDEN,
         p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p;
 
-    p_fT_DENSEF = max(0.050, p_DENSEF(integrator.t))
-
     ## C) state dependent parameters:
     # Calculate parameters:
     #  - solar parameters depending on DOY
@@ -135,7 +133,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
                  # for SUNDS:
                  p_LAT, p_ESLOPE, p_DOY(integrator.t), p_L1, p_L2,
                  # for LWFBrook90_CANOPY:
-                 p_HEIGHT(integrator.t), p_LAI(integrator.t), p_SAI(integrator.t), u_SNOW, p_SNODEN, p_MXRTLN, p_MXKPL, p_fT_DENSEF,
+                 p_HEIGHT(integrator.t), p_LAI(integrator.t), p_SAI(integrator.t), u_SNOW, p_SNODEN, p_MXRTLN, p_MXKPL, p_DENSEF(integrator.t),
                  #
                  p_Z0S, p_Z0G,
                  # for ROUGH:

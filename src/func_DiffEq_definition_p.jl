@@ -729,6 +729,8 @@ function interpolate_meteoveg(;
     @assert unique(diff(meteo_forcing.days)) == [1.0] """
         Error: LWFBrook90.jl expects the input data in meteoveg.csv to provided as daily values.
     """
+    # assert a minimum value for p_DENSEF of 0.050:
+    DENSEF_values = max(0.050, canopy_evolution.DENSEF./100 .* p_DENSEF_baseline_)
     time_range = range(minimum(meteo_forcing.days), maximum(meteo_forcing.days), length=length(meteo_forcing.days))
     p_GLOBRAD = extrapolate(scale(interpolate(meteo_forcing.GLOBRAD, (BSpline(Constant{Previous}()))), time_range) ,0)
     p_TMAX    = extrapolate(scale(interpolate(meteo_forcing.TMAX,    (BSpline(Constant{Previous}()))), time_range) ,0)
@@ -738,7 +740,7 @@ function interpolate_meteoveg(;
     p_PREC    = extrapolate(scale(interpolate(meteo_forcing.PRECIN,  (BSpline(Constant{Previous}()))), time_range) ,0)
     p_LAI     = extrapolate(scale(interpolate(canopy_evolution.LAI./100 .* p_MAXLAI,              (BSpline(Constant{Previous}()))), time_range) ,0)
     p_SAI     = extrapolate(scale(interpolate(canopy_evolution.SAI./100 .* p_SAI_baseline_,       (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_DENSEF  = extrapolate(scale(interpolate(canopy_evolution.DENSEF./100 .* p_DENSEF_baseline_, (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_DENSEF  = extrapolate(scale(interpolate(DENSEF_values,                                      (BSpline(Constant{Previous}()))), time_range) ,0)
     p_HEIGHT  = extrapolate(scale(interpolate(canopy_evolution.HEIGHT./100 .* p_HEIGHT_baseline_m,(BSpline(Constant{Previous}()))), time_range) ,0)
     ###
     p_AGE     = (t) -> p_AGE_baseline_yrs + t/365
