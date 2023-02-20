@@ -726,7 +726,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
     # # NOTE: --> sets attributes only when they don't already exist
     # # NOTE: :=  sets attributes even when they already exist
     @series begin
-        yguide := "PREC [mm]"
+        yguide := ""
         # seriestype := :bar
         # legend := false
         subplot := 1
@@ -735,7 +735,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
         x1, y11
     end
     @series begin
-        yguide := "PREC [mm]"
+        yguide := ""
         # seriestype := :bar
         # legend := false
         subplot := 2
@@ -744,7 +744,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
         x1, y12
     end
     @series begin
-        yguide := "PREC [mm]"
+        yguide := ""
         # seriestype := :bar
         # legend := false
         subplot := 3
@@ -753,7 +753,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
         x1, y13
     end
     @series begin
-        yguide := "PREC [mm]"
+        yguide := ""
         # seriestype := :bar
         # legend := false
         subplot := 4
@@ -762,7 +762,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
         x1, y14
     end
     @series begin
-        yguide := "PREC [mm]"
+        yguide := ""
         # seriestype := :bar
         # legend := false
         subplot := 5
@@ -771,7 +771,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
         x1, y15
     end
     @series begin
-        yguide := "PREC [mm]"
+        yguide := ""
         # seriestype := :bar
         # legend := false
         subplot := 6
@@ -780,7 +780,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
         x2, y21
     end
     @series begin
-        yguide := "PREC [mm]"
+        yguide := ""
         # seriestype := :bar
         # legend := false
         subplot := 7
@@ -789,7 +789,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
         x2, y22
     end
     @series begin
-        yguide := "PREC [mm]"
+        yguide := ""
         # seriestype := :bar
         # legend := false
         subplot := 8
@@ -798,7 +798,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
         x3, y31
     end
     @series begin
-        yguide := "PREC [mm]"
+        yguide := ""
         # seriestype := :bar
         # legend := false
         subplot := 9
@@ -807,7 +807,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
         x3, y32
     end
     @series begin
-        yguide := "PREC [mm]"
+        yguide := ""
         # seriestype := :bar
         # legend := false
         subplot := 10
