@@ -252,11 +252,11 @@ function setup(parametrizedSPAC::SPAC;
 
     # Define grid for spatial discretization
     # Note that later on grid will be further refined with observation nodes and required interfaces (if needed)
-    if isnothing(Δz.thickness_m)
-         # a) either read the discretization from a file `soil_discretization.csv`
-         #    including Rootden_, and initial PSIM, delta18O, and delta2H
+    if ispath(modified_SPAC.Δz_thickness_m)
+        # a1) either read the discretization from a file `soil_discretization.csv`
+        #    including Rootden_, and initial PSIM, delta18O, and delta2H
         use_soil_discretization_csv = true
-        path_soil_discretization    = modified_SPAC.IC.soil
+        path_soil_discretization    = modified_SPAC.Δz_thickness_m
         soil_discretization         = LWFBrook90.read_path_soil_discretization(path_soil_discretization)
 
         # Assert type stability by executing disallowmissing!
@@ -266,13 +266,25 @@ function setup(parametrizedSPAC::SPAC;
             disallowmissing!(soil_discretization, [:Rootden_, :uAux_PSIM_init_kPa])
         end
 
+        # Assert no unused inputs:
+        @assert modified_SPAC.pars.IC_soil           == "Δz_thickness_m" "modified_SPAC.pars.IC_soil provided, but but these parameter are unused as IC conditions from file `soil_discretization.csv` are used."
+        @assert modified_SPAC.pars.root_distribution == "Δz_thickness_m" "modified_SPAC.pars.root_distribution provided, but these parameter are unused as IC conditions from file `soil_discretization.csv` are used."
+                ## TODO TODO TODO TODOTODOTODOTODOTODOTODOTODOTODOTODOTODOTODOTODO
+        # TODO: similar to canopy_evolution. Just print a warning (not an error), when Rootden_ or IC_soil from soil_discretization.csv are overwritten
+    elseif modified_SPAC.Δz_thickness_m isa DataFrame
+        # a2)
+        use_soil_discretization_csv = true
+        soil_discretization = modified_SPAC.Δz_thickness_m
+        # Assert no unused inputs:
+        @assert modified_SPAC.pars.IC_soil   == "Δz_thickness_m" "modified_SPAC.pars.IC_soil provided, but but these parameter are unused as IC conditions from file `soil_discretization.csv` are used."
+        @assert model.pars.root_distribution == "Δz_thickness_m" "modified_SPAC.pars.root_distribution provided, but these parameter are unused as IC conditions from file `soil_discretization.csv` are used."
     else
         # b) or use manually defined Δz
         #    and require functions for Rootden_, and initial PSIM, delta18O, and delta2H
         use_soil_discretization_csv = false
 
-        @assert all(Δz.thickness_m .> 0)
-        interfaces_m = [0, cumsum(Δz.thickness_m)...]
+        @assert all(modified_SPAC.Δz_thickness_m .> 0)
+        interfaces_m = [0, cumsum(modified_SPAC.Δz_thickness_m)...]
         soil_discretization = DataFrame(
             Upper_m = -interfaces_m[Not(end)],
             Lower_m = -interfaces_m[Not(1)],
@@ -287,30 +299,28 @@ function setup(parametrizedSPAC::SPAC;
         @assert Δz.functions.δ18Ο_init isa Function
         @assert Δz.functions.δ2Η_init  isa Function
 
-        if modified_SPAC.root_distribution isa NamedTuple
-            @assert isnothing(Δz.functions.rootden) "If you provide root parameters in SPAC.root_distributions, `Δz.functions.rootden` must be `nothing`."
-            if (:beta in keys(modified_SPAC.root_distribution))
-                @assert modified_SPAC.root_distribution.beta isa Real
-                if (:maxRootDepth_m in keys(modified_SPAC.root_distribution))
-                    @assert modified_SPAC.root_distribution.maxRootDepth_m isa Real
-                    rootden_fct = ((Δz_m)->LWFBrook90.Rootden_beta_(modified_SPAC.root_distribution.beta,
+        if modified_SPAC.pars.root_distribution isa NamedTuple
+            if (:beta in keys(modified_SPAC.pars.root_distribution))
+                @assert modified_SPAC.pars.root_distribution.beta isa Real
+                if (:maxRootDepth_m in keys(modified_SPAC.pars.root_distribution))
+                    @assert modified_SPAC.pars.root_distribution.maxRootDepth_m isa Real
+                    rootden_fct = ((Δz_m)->LWFBrook90.Rootden_beta_(modified_SPAC.pars.root_distribution.beta,
                                                                     Δz_m = Δz_m,
-                                                                    z_rootMax_m = -modified_SPAC.root_distribution.maxRootDepth_m))
+                                                                    z_rootMax_m = -modified_SPAC.pars.root_distribution.maxRootDepth_m))
                 else
-                    rootden_fct = ((Δz_m)->LWFBrook90.Rootden_beta_(modified_SPAC.root_distribution.beta, Δz_m = Δz_m))
+                    rootden_fct = ((Δz_m)->LWFBrook90.Rootden_beta_(modified_SPAC.pars.root_distribution.beta, Δz_m = Δz_m))
                 end
-            elseif (:maxRootDepth_m in keys(modified_SPAC.root_distribution))
-                @assert modified_SPAC.root_distribution.maxRootDepth_m isa Real
-                rootden_fct = ((Δz_m)->ifelse.(cumsum(Δz_m) .<= modified_SPAC.root_distribution.maxRootDepth_m,
-                                                        1.0 /modified_SPAC.root_distribution.maxRootDepth_m,
+            elseif (:maxRootDepth_m in keys(modified_SPAC.pars.root_distribution))
+                @assert modified_SPAC.pars.root_distribution.maxRootDepth_m isa Real
+                rootden_fct = ((Δz_m)->ifelse.(cumsum(Δz_m) .<= modified_SPAC.pars.root_distribution.maxRootDepth_m,
+                                                        1.0 /modified_SPAC.pars.root_distribution.maxRootDepth_m,
                                                         0.0))
             else
-                @warn "modified_SPAC.root_distribution has unexpected keys: $(modified_SPAC.root_distribution). Expected keys are either: `:beta` or `:maxRootDepth_m`"
+                @warn "modified_SPAC.pars.root_distribution has unexpected keys: $(modified_SPAC.pars.root_distribution). Expected keys are either: `:beta` or `:maxRootDepth_m`"
             end
         else
-            @assert Δz.functions.rootden   isa Function
-            rootden_fct = Δz.functions.rootden
-            modified_SPAC.root_distribution = "manually_defined"
+            @assert modified_SPAC.pars.root_distribution   isa Function
+            rootden_fct = modified_SPAC.pars.root_distribution
         end
     end
 
@@ -345,7 +355,7 @@ function setup(parametrizedSPAC::SPAC;
         @assert modified_SPAC.IC.soil == modified_SPAC.root_distribution "If provided as .csv file, initial conditions and root distribution should refer to the same file."
     else
         soil_discretization = discretize_soil(;
-            Δz_m = Δz.thickness_m,
+            Δz_m = modified_SPAC.Δz_thickness_m,
             Rootden_               = rootden_fct,
             uAux_PSIM_init_kPa     = Δz.functions.PSIM_init,
             u_delta18O_init_permil = Δz.functions.δ18Ο_init,
@@ -392,7 +402,7 @@ function setup(parametrizedSPAC::SPAC;
 
     ####################
     # Define parameters for differential equation
-    p = define_LWFB90_p(modified_SPAC, soil_horizons, p_fT_RELDEN)
+    p = define_LWFB90_p(modified_SPAC, soil_horizons, p_fT_RELDEN, canopy_evolution_cont)
     # using Plots
     # hline([0; cumsum(p.p_THICK)], yflip = true, xticks = false,
     #     title = "N_layer = "*string(p.NLAYER))

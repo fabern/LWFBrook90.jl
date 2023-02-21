@@ -1,4 +1,3 @@
-using Interpolations: interpolate, extrapolate, NoInterp, Gridded, Constant, Next, Previous, Flat, Throw, scale, BSpline
 """
     define_diff_eq_parameters()
 
@@ -10,7 +9,7 @@ Generate vector p needed for ODE() problem in DiffEq.jl package.
 - `simulate_isotopes::...`: TODO argument description.
 - `soil_output_depths`: vector of depths at which state variables should be extractable (negative numeric values [in meter])
 """
-function define_LWFB90_p(parametrizedSPAC::SPAC, soil_discr, p_fT_RELDEN)
+function define_LWFB90_p(parametrizedSPAC::SPAC, soil_discr, p_fT_RELDEN, canopy_evolution_cont)
 
     ########
     ## Solver algorithm options
@@ -503,16 +502,16 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, soil_discr, p_fT_RELDEN)
         p_WIND         = parametrizedSPAC.meteo_forcing.p_WIND,
         p_PREC         = parametrizedSPAC.meteo_forcing.p_PREC,
 
-        p_DENSEF       = parametrizedSPAC.canopy_evolution.p_DENSEF, # canopy density multiplier between 0.05 and 1, dimensionless
-        p_HEIGHT       = parametrizedSPAC.canopy_evolution.p_HEIGHT,
-        p_LAI          = parametrizedSPAC.canopy_evolution.p_LAI,
-        p_SAI          = parametrizedSPAC.canopy_evolution.p_SAI,
-        p_AGE          = parametrizedSPAC.canopy_evolution.p_AGE,
-        p_fT_RELDEN       = p_fT_RELDEN,
+        p_DENSEF       = canopy_evolution_cont.p_DENSEF, # canopy density multiplier between 0.05 and 1, dimensionless
+        p_HEIGHT       = canopy_evolution_cont.p_HEIGHT,
+        p_LAI          = canopy_evolution_cont.p_LAI,
+        p_SAI          = canopy_evolution_cont.p_SAI,
+        p_AGE          = canopy_evolution_cont.p_AGE,
+        p_fT_RELDEN    = p_fT_RELDEN,
 
         p_δ18O_PREC     = parametrizedSPAC.meteo_iso_forcing.p_d18OPREC,
         p_δ2H_PREC      = parametrizedSPAC.meteo_iso_forcing.p_d2HPREC,
-        REFERENCE_DATE = parametrizedSPAC.reference_date,
+        REFERENCE_DATE  = parametrizedSPAC.reference_date,
 
         # formerly p_fu:
         # Initialize placeholder for parameters that depend on solution and are computed
@@ -781,13 +780,13 @@ function interpolate_veg(;
 
     ### Quickfix:
     # assert a minimum value for p_DENSEF of 0.050:
+    time_range = range(minimum(canopy_evolution.days), maximum(canopy_evolution.days), length=length(canopy_evolution.days))
     DENSEF_values = max.(0.050, canopy_evolution.DENSEF./100 .* p_DENSEF_baseline_)
     p_DENSEF  = extrapolate(scale(interpolate(DENSEF_values,                                      (BSpline(Constant{Previous}()))), time_range) ,0)
     p_LAI     = extrapolate(scale(interpolate(canopy_evolution.LAI./100 .* p_MAXLAI,              (BSpline(Constant{Previous}()))), time_range) ,0)
     p_SAI     = extrapolate(scale(interpolate(canopy_evolution.SAI./100 .* p_SAI_baseline_,       (BSpline(Constant{Previous}()))), time_range) ,0)
     p_HEIGHT  = extrapolate(scale(interpolate(canopy_evolution.HEIGHT./100 .* p_HEIGHT_baseline_m,(BSpline(Constant{Previous}()))), time_range) ,0)
     p_AGE     = (t) -> p_AGE_baseline_yrs + t/365
-    # p_AGE     = extrapolate(interpolate((canopy_evolution.days  .- 0.00001, ), canopy_evolution.AGE, Gridded(Constant{Next}())), Flat()) #extrapolate flat, alternative: Throw())
     ###
     return (
         p_DENSEF   = p_DENSEF,

@@ -282,7 +282,7 @@ end
 
     ####################
     # Define parameters for differential equation
-    p = LWFBrook90.define_LWFB90_p(parametrizedSPAC, soil_discr, p_fT_RELDEN);
+    p = LWFBrook90.define_LWFB90_p(parametrizedSPAC, soil_discr, p_fT_RELDEN, nothing);
     # using Plots
     # hline([0; cumsum(p.p_THICK)], yflip = true, xticks = false,
     #     title = "N_layer = "*string(p.NLAYER))

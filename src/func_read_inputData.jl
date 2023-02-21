@@ -21,7 +21,8 @@ the corresponding input files for LWFBrook90.jl.
 function loadSPAC(folder::String, prefix::String;
     suffix::String = "",
     simulate_isotopes::Bool = true,
-    compute_intermediate_quantities::Bool = true)
+    compute_intermediate_quantities::Bool = true,
+    canopy_evolution = nothing)
 
     ## Define solver options
     solver_options =
@@ -46,49 +47,33 @@ function loadSPAC(folder::String, prefix::String;
     meteo_forcing = input_meteoveg[:, [:days, :GLOBRAD, :TMAX, :TMIN, :VAPPRES, :WIND, :PRECIN]]
 
     ## Load time-varying vegetation parameters
-    if ("DENSEF" in names(input_meteoveg) &&
-        "HEIGHT" in names(input_meteoveg) &&
-        "LAI" in names(input_meteoveg) &&
-        "SAI" in names(input_meteoveg))
-        _canopy_evolution = input_meteoveg[:, [:days, :DENSEF, :HEIGHT, :LAI, :SAI]]
-    else
-        # This case is currently not implemented
-        @warn  """
+    if (isnothing(canopy_evolution))
+        # Use DataFrame from meteoveg.csv
+        if ("DENSEF" in names(input_meteoveg) && "HEIGHT" in names(input_meteoveg) &&
+            "LAI"    in names(input_meteoveg) && "SAI"    in names(input_meteoveg))
+
+            _canopy_evolution = input_meteoveg[:, [:days, :DENSEF, :HEIGHT, :LAI, :SAI]] # store DataFrame in SPAC
+        else
+            @warn  """
                 Input_meteoveg is expected to contain one or multiple of the columns: :DENSEF, :HEIGHT, :LAI, or :SAI.
                 Please check your input files with the current documentation and possibly contact the developer team if the error persists.
                 If it does not contain the columns please provide a parametrization to loadSPAC(, canopy_evolution::NamedTuple = ())
                 with the named tuple:
                 `(DENSEF = 100, HEIGHT = 25, SAI = 100, LAI = (DOY_Bstart, Bduration, DOY_Cstart, Cduration, LAI_perc_BtoC, LAI_perc_CtoB))`
                 """
+        end
+    else
+        # Use received parameter from arguments to loadSPAC()
+        if ("DENSEF" in names(input_meteoveg) && "HEIGHT" in names(input_meteoveg) &&
+            "LAI"    in names(input_meteoveg) && "SAI"    in names(input_meteoveg))
+            @warn "Received canopy_evolution in loadSPAC(), overwriting values from `meteoveg.csv`."
+        end
         @assert canopy_evolution isa NamedTuple
         @assert keys(canopy_evolution) == (:DENSEF, :HEIGHT, :SAI, :LAI)
         @assert keys(canopy_evolution.LAI) == (:DOY_Bstart, :Bduration, :DOY_Cstart, :Cduration, :LAI_perc_BtoC, :LAI_perc_CtoB)
-        _canopy_evolution = canopy_evolution
-        # canopy_evolution = ... # Will be overwritten with a dataframe, when discretizing loadSPAC()
-        #       TODO in setup(): DataFrame(days=input_meteoveg.days, DENSEF=100, HEIGHT=100, LAI = NaN, SAI=100))
-        #       TODO in setup(): canopy_evolution.LAI = interpolate_LAI(input_meteoveg.days, LAI_DOY_B1, LAI_DOY_B2, LAI_DOY_C1, LAI_DOY_C2, LAImin_percent, LAImax_percent) #TODO: make this vector by interpolating between input_meteoveg.days as DOY
 
-        ### expected format of `canopy_evolution.csv`:
-        ### densef_percent, height_percent, SAI_percent, LAImin_percent, LAI_DOY1_budburst, LAI_duration1, LAI_DOY2_leaffall, LAI_duration2)
-        ### 100,            100,            100,         20,             130,               160,          270,               320
-
-        # LAI_perc_BtoC
-        # LAI_perc_CtoB
-        # LAI_DOY_B1 = DOY_Bstart
-        # LAI_DOY_B2 = DOY_Bstart + Bduration
-        # LAI_DOY_C1 = DOY_Cstart
-        # LAI_DOY_C2 = DOY_Cstart + Cduration
-        # @assert 1 ≤ LAI_DOY_B1 ≤ LAI_DOY_B2 ≤ LAI_DOY_C1 ≤ LAI_DOY_C2 ≤ 365
-            # example R-code:
-            # compute_LAI_percent <- function(DOY, LAI_min, DOYinit, DOY1, DOY2, DOY3, DOY4, DOYmax){
-            #   LAI_max <- 1
-            #   LAI_dates  <- c(DOYinit,    DOY1, DOY2   , DOY3   , DOY4   , DOYmax)
-            #   LAI_values <- c(LAI_min, LAI_min, LAI_max, LAI_max, LAI_min, LAI_min)
-            #   # return relative evolution of LAI
-            #   100*stats::approx(x = LAI_dates, y = LAI_values, method = "linear", xout = DOY)$y
-            # }
+        _canopy_evolution = canopy_evolution # store parameter arguments in SPAC
     end
-
 
     ## Load space-varying soil data
     soil_horizons = init_soil(path_soil_horizons)
