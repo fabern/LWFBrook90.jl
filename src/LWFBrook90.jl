@@ -8,8 +8,9 @@ using LinearAlgebra
 using StatsBase: mean, weights
 using ComponentArrays
 using UnPack: @unpack
-using Dates: now
+using Dates: now, Day
 using Printf: @sprintf
+using Interpolations: interpolate, extrapolate, NoInterp, Gridded, Constant, Next, Previous, Flat, Throw, scale, BSpline, linear_interpolation
 
 # TODO(bernhard): make sure we have documentation for these exported variables
 export SPAC, DiscretizedSPAC, loadSPAC, setup, simulate!
@@ -181,32 +182,66 @@ function setup(parametrizedSPAC::SPAC;
                                 tspan = nothing,
                                 soil_output_depths = zeros(Float64, 0), # e.g. # soil_output_depths = [-0.35, -0.42, -0.48, -1.05]
         )
-    soil_horizons = copy(parametrizedSPAC.soil_horizons)
+    soil_horizons = copy(parametrizedSPAC.pars.soil_horizons)
     soil_horizon_extent = (maximum(soil_horizons.Upper_m), minimum(soil_horizons.Lower_m))
 
     modified_SPAC = deepcopy(parametrizedSPAC)
 
     ##########
     ## Make time dependent vegetation parameters continuous in time (interpolate)
-    # TODO:
     if parametrizedSPAC.pars.canopy_evolution isa NamedTuple
+        canopy_evolution_DF = DataFrame(days=model.forcing.meteo.p_days,
+                                        DENSEF = model.pars.canopy_evolution.DENSEF,
+                                        HEIGHT = model.pars.canopy_evolution.HEIGHT,
+                                        LAI = NaN,
+                                        SAI = model.pars.canopy_evolution.SAI)
+
+        days = model.reference_date .+ Day.(model.forcing.meteo.p_days)
+            # manual extrapolation to 1 and 366 days
+            # knots = [1,
+            #          model2.pars.canopy_evolution.LAI.DOY_Bstart,
+            #          model2.pars.canopy_evolution.LAI.DOY_Bstart + model2.pars.canopy_evolution.LAI.Bduration,
+            #          model2.pars.canopy_evolution.LAI.DOY_Cstart,
+            #          model2.pars.canopy_evolution.LAI.DOY_Cstart + model2.pars.canopy_evolution.LAI.Cduration,
+            #          366]
+            # values = [model2.pars.canopy_evolution.LAI.LAI_perc_CtoB,
+            #           model2.pars.canopy_evolution.LAI.LAI_perc_CtoB,
+            #           model2.pars.canopy_evolution.LAI.LAI_perc_BtoC,
+            #           model2.pars.canopy_evolution.LAI.LAI_perc_BtoC,
+            #           model2.pars.canopy_evolution.LAI.LAI_perc_CtoB,
+            #           model2.pars.canopy_evolution.LAI.LAI_perc_CtoB]
+            # plot(linear_interpolation(knots, values).(Dates.dayofyear.(days)))
+            # plot(linear_interpolation(knots, values).(-100:400))
+        knots = [model2.pars.canopy_evolution.LAI.DOY_Bstart,
+                 model2.pars.canopy_evolution.LAI.DOY_Cstart,
+                 model2.pars.canopy_evolution.LAI.DOY_Bstart + model2.pars.canopy_evolution.LAI.Bduration,
+                 model2.pars.canopy_evolution.LAI.DOY_Cstart + model2.pars.canopy_evolution.LAI.Cduration]
+        @assert 1 ≤ knots[1] ≤ knots[2] ≤ knots[3] ≤ knots[4] ≤ 366 "DOY of LAI are not ordered."
+        values = [model2.pars.canopy_evolution.LAI.LAI_perc_CtoB,
+                  model2.pars.canopy_evolution.LAI.LAI_perc_BtoC,
+                  model2.pars.canopy_evolution.LAI.LAI_perc_BtoC,
+                  model2.pars.canopy_evolution.LAI.LAI_perc_CtoB]
+        # plot(linear_interpolation(knots, values; extrapolation_bc=Flat()).(Dates.dayofyear.(days)))
+        canopy_evolution_DF.LAI = linear_interpolation(knots, values; extrapolation_bc=Flat()).(Dates.dayofyear.(days))
+
+            #  example R-code: compute_LAI_percent <- function(DOY, LAI_min, DOYinit, DOY1, DOY2, DOY3, DOY4, DOYmax){
+            #   LAI_max <- 1
+            #   LAI_dates  <- c(DOYinit,    DOY1, DOY2   , DOY3   , DOY4   , DOYmax)
+            #   LAI_values <- c(LAI_min, LAI_min, LAI_max, LAI_max, LAI_min, LAI_min)
+            #   # return relative evolution of LAI
+            #   100*stats::approx(x = LAI_dates, y = LAI_values, method = "linear", xout = DOY)$y}
     elseif parametrizedSPAC.pars.canopy_evolution isa DataFrame
-        # do nothing
+        canopy_evolution_DF = parametrizedSPAC.pars.canopy_evolution
     else
         @warn "Unexpected format of `parametrizedSPAC.pars.canopy_evolution`"
     end
-    parametrizedSPAC.canopy.evolution
-    time_range = meteo_forcing.p_days
-    canopy_evolution_DF = parametrizedSPAC.canopy_params.evolution
-
     canopy_evolution_cont = LWFBrook90.interpolate_veg(
                 canopy_evolution              = canopy_evolution_DF,
-                p_MAXLAI                      = parametrizedSPAC.params[:MAXLAI],
-                p_SAI_baseline_               = parametrizedSPAC.params[:SAI_baseline_],
-                p_DENSEF_baseline_            = parametrizedSPAC.params[:DENSEF_baseline_],
-                p_AGE_baseline_yrs            = parametrizedSPAC.params[:AGE_baseline_yrs],
-                p_HEIGHT_baseline_m           = parametrizedSPAC.params[:HEIGHT_baseline_m])
-                # TODO: remove from params: :MAXLAI, :SAI_baseline_, :DENSEF_baseline_, :AGE_baseline_yrs, :HEIGHT_baseline_m
+                p_MAXLAI                      = parametrizedSPAC.pars.params[:MAXLAI],
+                p_SAI_baseline_               = parametrizedSPAC.pars.params[:SAI_baseline_],
+                p_DENSEF_baseline_            = parametrizedSPAC.pars.params[:DENSEF_baseline_],
+                p_AGE_baseline_yrs            = parametrizedSPAC.pars.params[:AGE_baseline_yrs],
+                p_HEIGHT_baseline_m           = parametrizedSPAC.pars.params[:HEIGHT_baseline_m])
     ##########
 
     ##########
