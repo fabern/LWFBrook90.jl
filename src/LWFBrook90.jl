@@ -12,7 +12,7 @@ using Dates: now
 using Printf: @sprintf
 
 # TODO(bernhard): make sure we have documentation for these exported variables
-export SPAC, DiscretizedSPAC, discretize, simulate!
+export SPAC, DiscretizedSPAC, loadSPAC, setup, simulate!
 export run_simulation
 export Rootden_beta_
 export RelativeDaysFloat2DateTime
@@ -28,56 +28,50 @@ export get_aboveground, get_δ, get_delta # get_mm
 @doc raw"""
     SPAC
 
-An instance of a soil-plant-atmopsheric continuum model.
+An instance of a soil-plant-atmopsheric continuum model with the following fields:
+
+- `reference_date`: DateTime to relate internal use of numerical days to real-world dates
+- `tspan`: Tuple `(0, Int)` Time span of available input data in days since reference date
+- `solver_options`: `NamedTuple`: (), containing some solver options for the model
+- `Δz_thickness_m`:either
+    - `String` defining the path to a `soil_discretizations.csv`
+    - `DataFrame` of contents of `soil_discretizations.csv`
+    - or `Vector`: `Δz_thickness_m``
+- `forcing`: `NamedTuple`: (:meteo, :meteo\_iso, :storm\_durations), containing atmospheric forcings
+    - `forcing.meteo`: DataFrame with daily atmospheric variables
+    - `forcing.meteo_iso`: DataFrame with isotopic signatures of precipitation
+    - `forcing.storm_durations`: DataFrame with approximate typical storm duration in hours for each month
+-   `pars`: `NamedTuple`: (:params, )
+    - `pars.params`: `NamedTuple`: (), containing scalar parameter values for the model
+    - `pars.root_distribution`: either:
+        - `NamedTuple`: (beta = 0.97, z\_rootMax\_m = nothing) parametrization of root distribution with depth (f(z\_m) with z\_m in meters and negative downward). Alternatively path to soil\_discretization.csv"
+        - or String: "Δz_thickness_m"` meaning that it must be defined in `soil_discretizations.csv`
+    - `pars.IC_scalar`: `NamedTuple`: (), containing initial conditions of the scalar state variables
+    - `pars.IC_soil`: initial conditions of the state variables (scalar or related to the soil). Either:
+        - `NamedTuple`: (PSIM\_init, δ18O\_init, δ2H\_init), containing functions of the initial values with argument Δz
+        - or String: `"Δz_thickness_m"` meaning that it must be defined in `soil_discretizations.csv`
+    - `pars.canopy_evolution`: canopy parameters (LAI, SAI, DENSEF, HEIGHT). Either:
+        - `NamedTuple`: (DENSEF = 100, HEIGHT = 25, SAI = 100, LAI = (DOY\_Bstart, Bduration, DOY\_Cstart, Cduration, LAI\_perc\_BtoC, LAI\_perc\_CtoB)), containing constant values and parameters for LAI\_relative interpolation
+        - or DataFrame: with daily values
+    - `pars.soil_horizons`: DataFrame containing description of soil layers/horizons and soil hydraulic parameters
 """
 Base.@kwdef mutable struct SPAC
-
-    # time related:
-    "Reference date to relate internal use of days to real-world dates [DateTime]"
+    # A) Assumed known: will not be estimated
+    # A1) Simulation related (non-physical)
     reference_date
-    "Time span of available input data [days since reference date]"
     tspan
-
-    # atmospheric forcing:
-    "DataFrame with daily atmospheric variables"          #TODO: interpolate this in time
-    meteo_forcing
-    "DataFrame with isotopic signatures of precipitation" #TODO: interpolate this in time
-    meteo_iso_forcing
-    "DataFrame with approximate typical storm duration in hours for each month"
-    storm_durations
-
-    # soil description:
-    "DataFrame containing description of soil layers/horizons and soil hydraulic parameters"
-    soil_horizons # a data.frame with columns: DataFrame(HorizonNr::Int, Upper_m::Float64, Lower_m::Float64, shp::soil_hydr_params)
-
-    # vegetation characteristics:
-    "DataFrame with daily vegatation variables (DENSEF, HEIGHT, LAI, SAI)" #TODO: interpolate this in time
-    canopy_evolution # e.g. LAI(t), ...
-    "TODO: function describing root distribution with depth (f(z_m) with z_m in meters and negative downward). Alternatively path to soil_discretization.csv" #TODO: interpolate this in time
-    root_distribution # e.g. β_root
-
-    # initial conditions:
-    """
-    NamedTuple: (continuousIC.soil, continuousIC.scalar), which conatains the initial
-    conditions of the state variables (scalar or related to the soil).
-    TODO: for soil it is either a path to soil_discretization.csv or alternatively:
-        a set of functions describing initial conditions (ψM, δ18O, δ2H) with depth (f(z_m) with z_m in meters and negative downward)
-    """
-    continuousIC # e.g. .soil = PSIM, δ2H, δ18O, but also .aboveground = SNOW,INTR,INTS
-
-    # simulation parameter:
-    """
-        params
-
-    NamedTuple: (), which contains parameter values for the model
-    """
-    params # e.g. (VXYLEM_mm = 20.0, DISPERSIVITY_mm = 10, Str = "oh")
-    """
-        solver_options
-
-    NamedTuple: (), which contains some solver options for the model
-    """
-    solver_options # reset_flag, compute_intermediate_quantities, simulate_isotopes, soil_output_depths
+    solver_options                 # reset_flag, compute_intermediate_quantities, simulate_isotopes, soil_output_depths
+    Δz_thickness_m # either "path_to_soil_discretization.csv" or then NamedTuple: `(Δz_thickness_m = , functions = )`
+    # A2) Physical forcing
+    forcing # atmospheric forcing:  #TODO: interpolate forcing.meteo and forcing.meteo_iso in time
+    # B) Model parameters: might be estimated
+    pars
+        # pars.params: e.g. (VXYLEM_mm = 20.0, DISPERSIVITY_mm = 10, Str = "oh")
+        # pars.root_distribution: e.g. (beta = 0.97, z_rootMax_m = nothing)
+        # pars.IC:                e.g. .soil = PSIM, δ2H, δ18O, but also .scalar = SNOW,INTR,INTS
+        # pars.root_distribution = (beta = 0.97, z_rootMax_m = nothing) # TODO: define default....
+        # pars.canopy_evolution:  e.g. LAI(t), ...
+        # pars.soil_horizons
 end
 
 @doc raw"""
@@ -87,7 +81,7 @@ An discretization of a soil-plant-atmopsheric continuum model ready for simulati
 """
 Base.@kwdef mutable struct DiscretizedSPAC
 	# input fields:
-	continuous_SPAC::SPAC
+	parametrizedSPAC::SPAC
 	soil_discretization
 
 	# derived fields:
@@ -98,11 +92,11 @@ end
 
 # input_prefix = "isoBEAdense2010-18-reset-FALSE";
 # input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
-# model = SPAC(input_path, input_prefix;
+# model = loadSPAC(input_path, input_prefix;
 #              simulate_isotopes = simulate_isotopes);
 # # # constructor of DiscretizedSPAC
-# continuous_SPAC = model
-# discrete_SPAC = discretize(continuous_SPAC);
+# parametrizedSPAC = model
+# discrete_SPAC = setup(parametrizedSPAC);
 # discrete_SPAC.ODEProblem.tspan
 # simulate!(discrete_SPAC)
 # using Plots
@@ -162,7 +156,7 @@ include("../examples/func_run_example.jl") # defines RelativeDaysFloat2DateTime
 
 #     # Constructors
 #     function SPACSimulation(config = "conf.toml")
-#         params, u0  init_spac(config)
+#         params, u0  init_loadSPAC(config)
     #         params = init_parameters(config)
     #         u0 = init_state(config)
     #         tspan = ...
@@ -178,19 +172,42 @@ include("../examples/func_run_example.jl") # defines RelativeDaysFloat2DateTime
 #     end
 # end
 
-function LWFBrook90.discretize(continuous_SPAC::SPAC;
+function setup(parametrizedSPAC::SPAC;
                                 Δz = (thickness_m = nothing,
-                                      functions   = (rootden   = ((Δz_m)->LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)),
-                                                PSIM_init = ((Δz_m)->fill(-6.3, length(Δz_m))),
-                                                δ18Ο_init = ((Δz_m)->ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.)),
-                                                δ2Η_init  = ((Δz_m)->ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.)))),
+                                    functions   = (rootden   = ((Δz_m)->LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)),
+                                            PSIM_init = ((Δz_m)->fill(-6.3, length(Δz_m))),
+                                            δ18Ο_init = ((Δz_m)->ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.)),
+                                            δ2Η_init  = ((Δz_m)->ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.)))),
                                 tspan = nothing,
                                 soil_output_depths = zeros(Float64, 0), # e.g. # soil_output_depths = [-0.35, -0.42, -0.48, -1.05]
         )
-    soil_horizons = copy(continuous_SPAC.soil_horizons)
+    soil_horizons = copy(parametrizedSPAC.soil_horizons)
     soil_horizon_extent = (maximum(soil_horizons.Upper_m), minimum(soil_horizons.Lower_m))
 
-    modified_SPAC = deepcopy(continuous_SPAC)
+    modified_SPAC = deepcopy(parametrizedSPAC)
+
+    ##########
+    ## Make time dependent vegetation parameters continuous in time (interpolate)
+    # TODO:
+    if parametrizedSPAC.pars.canopy_evolution isa NamedTuple
+    elseif parametrizedSPAC.pars.canopy_evolution isa DataFrame
+        # do nothing
+    else
+        @warn "Unexpected format of `parametrizedSPAC.pars.canopy_evolution`"
+    end
+    parametrizedSPAC.canopy.evolution
+    time_range = meteo_forcing.p_days
+    canopy_evolution_DF = parametrizedSPAC.canopy_params.evolution
+
+    canopy_evolution_cont = LWFBrook90.interpolate_veg(
+                canopy_evolution              = canopy_evolution_DF,
+                p_MAXLAI                      = parametrizedSPAC.params[:MAXLAI],
+                p_SAI_baseline_               = parametrizedSPAC.params[:SAI_baseline_],
+                p_DENSEF_baseline_            = parametrizedSPAC.params[:DENSEF_baseline_],
+                p_AGE_baseline_yrs            = parametrizedSPAC.params[:AGE_baseline_yrs],
+                p_HEIGHT_baseline_m           = parametrizedSPAC.params[:HEIGHT_baseline_m])
+                # TODO: remove from params: :MAXLAI, :SAI_baseline_, :DENSEF_baseline_, :AGE_baseline_yrs, :HEIGHT_baseline_m
+    ##########
 
     ##########
     # Discretize the model in space as `soil_discretization`
@@ -204,7 +221,7 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
          # a) either read the discretization from a file `soil_discretization.csv`
          #    including Rootden_, and initial PSIM, delta18O, and delta2H
         use_soil_discretization_csv = true
-        path_soil_discretization    = modified_SPAC.continuousIC.soil
+        path_soil_discretization    = modified_SPAC.IC.soil
         soil_discretization         = LWFBrook90.read_path_soil_discretization(path_soil_discretization)
 
         # Assert type stability by executing disallowmissing!
@@ -288,9 +305,9 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
         # Nothing needed as columns in `soil_discretization` are expected to be already filled.
         @assert !(any(isnan.(soil_discretization.Rootden_)))           "Error: 'soil_discretization.Rootden_' contains NaNs."
         @assert !(any(isnan.(soil_discretization.uAux_PSIM_init_kPa))) "Error: 'soil_discretization.uAux_PSIM_init_kPa' contains NaNs."
-        @assert typeof(modified_SPAC.continuousIC.soil) == String && isfile(modified_SPAC.continuousIC.soil) "Expected 'modified_SPAC.continuousIC.soil' to be a file containing the initial conditions."
-        @assert typeof(modified_SPAC.root_distribution) == String && isfile(modified_SPAC.root_distribution) "Expected 'modified_SPAC.continuousIC.soil' to be a file containing the initial conditions."
-        @assert modified_SPAC.continuousIC.soil == modified_SPAC.root_distribution "If provided as .csv file, initial conditions and root distribution should refer to the same file."
+        @assert typeof(modified_SPAC.IC.soil) == String && isfile(modified_SPAC.IC.soil) "Expected 'modified_SPAC.IC.soil' to be a file containing the initial conditions."
+        @assert typeof(modified_SPAC.root_distribution) == String && isfile(modified_SPAC.root_distribution) "Expected 'modified_SPAC.IC.soil' to be a file containing the initial conditions."
+        @assert modified_SPAC.IC.soil == modified_SPAC.root_distribution "If provided as .csv file, initial conditions and root distribution should refer to the same file."
     else
         soil_discretization = discretize_soil(;
             Δz_m = Δz.thickness_m,
@@ -314,14 +331,14 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
     ####################
     ## Discretize soil parameters and interpolate discretized root distribution
     # Define refinement of grid with soil_output_depths
-    soil_params =
+    soil_horizons =
         LWFBrook90.refine_soil_discretization(
             soil_horizons,
             soil_discretization,
             soil_output_depths,
             modified_SPAC.params[:IDEPTH_m], # :IDEPTH_m is unused later on
             modified_SPAC.params[:QDEPTH_m]) # :QDEPTH_m is unused later on
-    refined_soil_discretization = soil_params["refined_soil_discretization"]
+    refined_soil_discretization = soil_horizons["refined_soil_discretization"]
 
     # Interpolate discretized root distribution in time
     p_fT_RELDEN = LWFBrook90.HammelKennel_transient_root_density(;
@@ -331,8 +348,8 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
         p_INITRLEN         = modified_SPAC.params[:INITRLEN],
         p_RGROPER_y        = modified_SPAC.params[:RGROPER],
         p_RGRORATE_m_per_y = modified_SPAC.params[:RGRORATE],
-        p_THICK               = soil_params["THICK"],
-        final_Rootden_profile = soil_params["final_Rootden_"]);
+        p_THICK               = soil_horizons["THICK"],
+        final_Rootden_profile = soil_horizons["final_Rootden_"]);
     # TODO(bernhard): document input parameters: INITRDEP, INITRLEN, RGROPER, tini, frelden, MAXLAI, HEIGHT_baseline_m
     # TOOD(bernhard): remove from params: IDEPTH_m, QDEPTH_m, INITRDEP, RGRORATE, INITRDEP, INITRLEN, RGROPER
     # display(heatmap(p_fT_RELDEN', ylabel = "SOIL LAYER", xlabel = "Time (days)", yflip=true, colorbar_title = "Root density"))
@@ -340,7 +357,7 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
 
     ####################
     # Define parameters for differential equation
-    p = define_LWFB90_p(modified_SPAC, soil_params, p_fT_RELDEN)
+    p = define_LWFB90_p(modified_SPAC, soil_horizons, p_fT_RELDEN)
     # using Plots
     # hline([0; cumsum(p.p_THICK)], yflip = true, xticks = false,
     #     title = "N_layer = "*string(p.NLAYER))
@@ -351,7 +368,7 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
     # a) allocation of u0
     u0 = define_LWFB90_u0(;simulate_isotopes = modified_SPAC.solver_options.simulate_isotopes,
                           compute_intermediate_quantities = modified_SPAC.solver_options.compute_intermediate_quantities,
-                          NLAYER = soil_params["NLAYER"])
+                          NLAYER = soil_horizons["NLAYER"])
     ####################
 
     ####################
@@ -359,7 +376,7 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
     # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
     # Create u0 for DiffEq.jl
     # b) initialization of u0
-    init_LWFB90_u0!(;u0=u0, continuous_SPAC=modified_SPAC, soil_params=soil_params, p_soil=p.p_soil)
+    init_LWFB90_u0!(;u0=u0, parametrizedSPAC=modified_SPAC, soil_horizons=soil_horizons, p_soil=p.p_soil)
     ####################
 
     ####################
@@ -404,8 +421,8 @@ function LWFBrook90.discretize(continuous_SPAC::SPAC;
                     callback=cb_func)
     ####################
 
-    return DiscretizedSPAC(;
-        continuous_SPAC     = modified_SPAC,
+    return DiscretizedloadSPAC(;
+        parametrizedSPAC     = modified_SPAC,
         soil_discretization = refined_soil_discretization,
         ODEProblem          = ode_LWFBrook90,
         ODESolution         = nothing,
@@ -419,7 +436,7 @@ function Base.show(io::IO, mime::MIME"text/plain", discSPAC::DiscretizedSPAC)
     println(io, "Soil discretized into N=$(length(discSPAC.soil_discretization.Upper_m)) layers, "*
                 "$(@sprintf("Δz layers: (avg, min, max) = (%.3f,%.3f,%.3f)m.", mean(Δz),minimum(Δz),maximum(Δz)))")
     println(io, "========================= CONTINUOUS SPAC MODEL:========================")
-    Base.show(io, mime, discSPAC.continuous_SPAC)
+    Base.show(io, mime, discSPAC.parametrizedSPAC)
 end
 
 function simulate!(s::DiscretizedSPAC)
@@ -429,7 +446,7 @@ function simulate!(s::DiscretizedSPAC)
     @assert (SciMLBase.successful_retcode(sol_SPAC)) "Problem with simulation: Return code of simulation was '$(sol_SPAC.retcode)'"
 
     # also save datetimes
-    s.ODESolution_datetime = LWFBrook90.RelativeDaysFloat2DateTime.(s.ODESolution.t, s.continuous_SPAC.reference_date)
+    s.ODESolution_datetime = LWFBrook90.RelativeDaysFloat2DateTime.(s.ODESolution.t, s.parametrizedSPAC.reference_date)
     return nothing
 end
 
@@ -474,13 +491,13 @@ function run_simulation(args)
 
     ####################
     # Define simulation model by reading in system definition and input data
-    model = SPAC(input_path, input_prefix;
+    model = loadSPAC(input_path, input_prefix;
                       simulate_isotopes = simulate_isotopes);
     ####################
 
     ####################
     # Prepare simulation by discretizing spatial domain
-    simulation = LWFBrook90.discretize(model);
+    simulation = LWFBrook90.setup(model);
 
     # Solve ODE:
     LWFBrook90.simulate!(simulation)

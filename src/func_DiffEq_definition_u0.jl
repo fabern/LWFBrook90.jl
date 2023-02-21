@@ -89,36 +89,36 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
     return u0
 end
 
-function init_LWFB90_u0!(;u0::ComponentArray, continuous_SPAC, soil_params, p_soil)
+function init_LWFB90_u0!(;u0::ComponentArray, parametrizedSPAC, soil_horizons, p_soil)
 
-    N_iso = ifelse(continuous_SPAC.solver_options.simulate_isotopes, 2, 0)
+    N_iso = ifelse(parametrizedSPAC.solver_options.simulate_isotopes, 2, 0)
 
     # A) Define initial conditions of states
-    u_SWATIinit_mm      = LWFBrook90.KPT.FTheta(LWFBrook90.KPT.FWETNES(soil_params["PSIM_init"], p_soil), p_soil) .*
+    u_SWATIinit_mm      = LWFBrook90.KPT.FTheta(LWFBrook90.KPT.FWETNES(soil_horizons["PSIM_init"], p_soil), p_soil) .*
                           p_soil.p_SWATMAX ./ p_soil.p_THSAT # see l.2020: https://github.com/pschmidtwalter/LWFBrook90R/blob/6f23dc1f6be9e1723b8df5b188804da5acc92e0f/src/md_brook90.f95#L2020
 
-    u0.GWAT   .= continuous_SPAC.continuousIC.scalar[1:(N_iso+1), "u_GWAT_init_mm"]
-    u0.INTS   .= continuous_SPAC.continuousIC.scalar[1:(N_iso+1), "u_INTS_init_mm"]
-    u0.INTR   .= continuous_SPAC.continuousIC.scalar[1:(N_iso+1), "u_INTR_init_mm"]
-    u0.SNOW   .= continuous_SPAC.continuousIC.scalar[1:(N_iso+1), "u_SNOW_init_mm"]
-    u0.CC     .= continuous_SPAC.continuousIC.scalar[1,           "u_CC_init_MJ_per_m2"]
-    u0.SNOWLQ .= continuous_SPAC.continuousIC.scalar[1,           "u_SNOWLQ_init_mm"]
+    u0.GWAT   .= parametrizedSPAC.IC.scalar[1:(N_iso+1), "u_GWAT_init_mm"]
+    u0.INTS   .= parametrizedSPAC.IC.scalar[1:(N_iso+1), "u_INTS_init_mm"]
+    u0.INTR   .= parametrizedSPAC.IC.scalar[1:(N_iso+1), "u_INTR_init_mm"]
+    u0.SNOW   .= parametrizedSPAC.IC.scalar[1:(N_iso+1), "u_SNOW_init_mm"]
+    u0.CC     .= parametrizedSPAC.IC.scalar[1,           "u_CC_init_MJ_per_m2"]
+    u0.SNOWLQ .= parametrizedSPAC.IC.scalar[1,           "u_SNOWLQ_init_mm"]
     u0.SWATI.mm  .= u_SWATIinit_mm
     if (N_iso == 2)
-        u0.SWATI.d18O  .= soil_params["d18O_init"]
-        u0.SWATI.d2H  .= soil_params["d2H_init"]
+        u0.SWATI.d18O  .= soil_horizons["d18O_init"]
+        u0.SWATI.d2H  .= soil_horizons["d2H_init"]
     end
 
     u0.RWU.mmday   = 0
     u0.XYLEM.mm    = 5
-    u0.TRANI.mmday = zeros(soil_params["NLAYER"])
+    u0.TRANI.mmday = zeros(soil_horizons["NLAYER"])
     if (N_iso == 2)
-        u0.RWU.d18O   = soil_params["d18O_init"][1] # start out with same concentration as in first soil layer
-        u0.RWU.d2H    = soil_params["d2H_init"][1]   # start out with same concentration as in first soil layer
-        u0.XYLEM.d18O = soil_params["d18O_init"][1] # start out with same concentration as in first soil layer
-        u0.XYLEM.d2H  = soil_params["d2H_init"][1]  # start out with same concentration as in first soil layer
-        u0.TRANI.d18O .= soil_params["d18O_init"]    # start out with same concentration as in       soil layer
-        u0.TRANI.d2H  .= soil_params["d2H_init"]     # start out with same concentration as in       soil layer
+        u0.RWU.d18O   = soil_horizons["d18O_init"][1] # start out with same concentration as in first soil layer
+        u0.RWU.d2H    = soil_horizons["d2H_init"][1]   # start out with same concentration as in first soil layer
+        u0.XYLEM.d18O = soil_horizons["d18O_init"][1] # start out with same concentration as in first soil layer
+        u0.XYLEM.d2H  = soil_horizons["d2H_init"][1]  # start out with same concentration as in first soil layer
+        u0.TRANI.d18O .= soil_horizons["d18O_init"]    # start out with same concentration as in       soil layer
+        u0.TRANI.d2H  .= soil_horizons["d2H_init"]     # start out with same concentration as in       soil layer
     end
     # # TODO(bernhard): if species-specific uptakes add here a totalRWU *PER SPECIES*
     # # TODO(bernhard): if species-specific uptakes add here a Xylem value *PER SPECIES*
@@ -128,7 +128,7 @@ function init_LWFB90_u0!(;u0::ComponentArray, continuous_SPAC, soil_params, p_so
     u0.aux # TODO: θ, ψ, K
 
     # C) Define initial conditions of accumulation variables
-    if continuous_SPAC.solver_options.compute_intermediate_quantities
+    if parametrizedSPAC.solver_options.compute_intermediate_quantities
         # initialize terms for balance errors with initial values from u0
         new_SWAT       = sum(u_SWATIinit_mm) # total soil water in all layers, mm
         new_totalWATER = u0.INTR.mm + u0.INTS.mm + u0.SNOW.mm + new_SWAT + u0.GWAT.mm # total water in all compartments, mm

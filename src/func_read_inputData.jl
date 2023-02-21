@@ -5,7 +5,7 @@ using Dates: DateTime, Millisecond, Second, Day, Month, month, value, dayofyear,
 using Statistics: mean
 # using Printf: @sprintf
 """
-    SPAC(folder::String, prefix::String)
+    loadSPAC(folder::String, prefix::String)
 
 Define instance of SPAC model by loading different input files for LWFBrook90:
 - `meteoveg.csv`
@@ -18,7 +18,7 @@ These files were created with an R script `generate_LWFBrook90jl_Input.R` that
 takes the same arguements as the R function `LWFBrook90R::run_LWFB90()` and generates
 the corresponding input files for LWFBrook90.jl.
 """
-function SPAC(folder::String, prefix::String;
+function loadSPAC(folder::String, prefix::String;
     suffix::String = "",
     simulate_isotopes::Bool = true,
     compute_intermediate_quantities::Bool = true)
@@ -45,27 +45,67 @@ function SPAC(folder::String, prefix::String;
 
     meteo_forcing = input_meteoveg[:, [:days, :GLOBRAD, :TMAX, :TMIN, :VAPPRES, :WIND, :PRECIN]]
 
+    ## Load time-varying vegetation parameters
+    if ("DENSEF" in names(input_meteoveg) &&
+        "HEIGHT" in names(input_meteoveg) &&
+        "LAI" in names(input_meteoveg) &&
+        "SAI" in names(input_meteoveg))
+        _canopy_evolution = input_meteoveg[:, [:days, :DENSEF, :HEIGHT, :LAI, :SAI]]
+    else
+        # This case is currently not implemented
+        @warn  """
+                Input_meteoveg is expected to contain one or multiple of the columns: :DENSEF, :HEIGHT, :LAI, or :SAI.
+                Please check your input files with the current documentation and possibly contact the developer team if the error persists.
+                If it does not contain the columns please provide a parametrization to loadSPAC(, canopy_evolution::NamedTuple = ())
+                with the named tuple:
+                `(DENSEF = 100, HEIGHT = 25, SAI = 100, LAI = (DOY_Bstart, Bduration, DOY_Cstart, Cduration, LAI_perc_BtoC, LAI_perc_CtoB))`
+                """
+        @assert canopy_evolution isa NamedTuple
+        @assert keys(canopy_evolution) == (:DENSEF, :HEIGHT, :SAI, :LAI)
+        @assert keys(canopy_evolution.LAI) == (:DOY_Bstart, :Bduration, :DOY_Cstart, :Cduration, :LAI_perc_BtoC, :LAI_perc_CtoB)
+        _canopy_evolution = canopy_evolution
+        # canopy_evolution = ... # Will be overwritten with a dataframe, when discretizing loadSPAC()
+        #       TODO in setup(): DataFrame(days=input_meteoveg.days, DENSEF=100, HEIGHT=100, LAI = NaN, SAI=100))
+        #       TODO in setup(): canopy_evolution.LAI = interpolate_LAI(input_meteoveg.days, LAI_DOY_B1, LAI_DOY_B2, LAI_DOY_C1, LAI_DOY_C2, LAImin_percent, LAImax_percent) #TODO: make this vector by interpolating between input_meteoveg.days as DOY
+
+        ### expected format of `canopy_evolution.csv`:
+        ### densef_percent, height_percent, SAI_percent, LAImin_percent, LAI_DOY1_budburst, LAI_duration1, LAI_DOY2_leaffall, LAI_duration2)
+        ### 100,            100,            100,         20,             130,               160,          270,               320
+
+        # LAI_perc_BtoC
+        # LAI_perc_CtoB
+        # LAI_DOY_B1 = DOY_Bstart
+        # LAI_DOY_B2 = DOY_Bstart + Bduration
+        # LAI_DOY_C1 = DOY_Cstart
+        # LAI_DOY_C2 = DOY_Cstart + Cduration
+        # @assert 1 ≤ LAI_DOY_B1 ≤ LAI_DOY_B2 ≤ LAI_DOY_C1 ≤ LAI_DOY_C2 ≤ 365
+            # example R-code:
+            # compute_LAI_percent <- function(DOY, LAI_min, DOYinit, DOY1, DOY2, DOY3, DOY4, DOYmax){
+            #   LAI_max <- 1
+            #   LAI_dates  <- c(DOYinit,    DOY1, DOY2   , DOY3   , DOY4   , DOYmax)
+            #   LAI_values <- c(LAI_min, LAI_min, LAI_max, LAI_max, LAI_min, LAI_min)
+            #   # return relative evolution of LAI
+            #   100*stats::approx(x = LAI_dates, y = LAI_values, method = "linear", xout = DOY)$y
+            # }
+    end
+
+
     ## Load space-varying soil data
     soil_horizons = init_soil(path_soil_horizons)
 
-    ## Load time- and/or space-varying vegetation parameters
-    canopy_evolution, root_distribution = init_vegetation(joinpath(folder,input_file_XXXX)) #(reference_date, tspan, ...)
-    if (!isnothing(canopy_evolution))
-        @assert !("DENSEF" in names(input_meteoveg) ||
-                "HEIGHT" in names(input_meteoveg) ||
-                "LAI" in names(input_meteoveg) ||
-                "SAI" in names(input_meteoveg)) """
-                Input_meteoveg contains one or multiple of the columns: :DENSEF, :HEIGHT, :LAI, or :SAI, but
-                in that case we would expect canopy_evolution loaded with `init_vegetation` to be `nothing`.
-                Please check your input files and possibly contact the developer team if the error persists.
-                """
-        # TODO(bernharf): generate a canopy_evolution or canopy_evolution_cont
-    elseif (isnothing(canopy_evolution))
-        canopy_evolution = input_meteoveg[:, [:days, :DENSEF, :HEIGHT, :LAI, :SAI]]
-    end
+    ## Define placeholder for root distribution (to be loaded either via file or then parametrized)
+    root_distribution = (input = "input_soildiscretization",
+                         distribution = DataFrame())
+    root_distribution = (input = (rootden = ((Δz_m)->LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)),
+                         distribution = DataFrame()))
+                            # Δz = (thickness_m = nothing,
+                            #         functions   = (rootden   = ((Δz_m)->LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)),
+                            #                 PSIM_init = ((Δz_m)->fill(-6.3, length(Δz_m))),
+                            #                 δ18Ο_init = ((Δz_m)->ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.)),
+                            #                 δ2Η_init  = ((Δz_m)->ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.))))
 
     ## Load initial conditions of scalar state variables
-    continuousIC = init_IC(path_initial_conditions; simulate_isotopes)
+    IC = init_IC(path_initial_conditions; simulate_isotopes)
 
     ## Load model input parameters
     params, solver_opts = init_param(path_param; simulate_isotopes = simulate_isotopes)
@@ -73,41 +113,65 @@ function SPAC(folder::String, prefix::String;
     solver_options = merge(solver_options, solver_opts) # append to manually provided solver options
 
     ## Make time dependent input parameters continuous in time (interpolate)
-    (meteo_forcing_cont, meteo_iso_forcing_cont, canopy_evolution_cont) =
-        LWFBrook90.interpolate_meteoveg(;
+    (meteo_forcing_cont, meteo_iso_forcing_cont) =
+        LWFBrook90.interpolate_meteo(;
             meteo_forcing                 = meteo_forcing,
-            meteo_iso_forcing             = meteo_iso_forcing,
-            canopy_evolution              = canopy_evolution,
-            p_MAXLAI                      = params[:MAXLAI],
-            p_SAI_baseline_               = params[:SAI_baseline_],
-            p_DENSEF_baseline_            = params[:DENSEF_baseline_],
-            p_AGE_baseline_yrs            = params[:AGE_baseline_yrs],
-            p_HEIGHT_baseline_m           = params[:HEIGHT_baseline_m]);
-            # TODO: remove from params: :MAXLAI, :SAI_baseline_, :DENSEF_baseline_, :AGE_baseline_yrs, :HEIGHT_baseline_m
-            ## unused:
-            ## time_interpolated.REFERENCE_DATE # TODO(bernharf): remove references to REFERENCE_DATE
-    # Note that the continuous versions can easily be discretized again by doing:
-        # keys(model.meteo_forcing);     DataFrame(model.meteo_forcing)
-        # keys(model.meteo_iso_forcing); DataFrame(model.meteo_iso_forcing)
-        # keys(model.canopy_evolution);  DataFrame(model.canopy_evolution)
+            meteo_iso_forcing             = meteo_iso_forcing);
 
     return SPAC(;
         reference_date    = reference_date,
         tspan             = tspan,
-        meteo_forcing     = meteo_forcing_cont,
-        meteo_iso_forcing = meteo_iso_forcing_cont,
-        storm_durations   = storm_durations,
-        soil_horizons     = soil_horizons,
-        canopy_evolution  = canopy_evolution_cont,
-        root_distribution = root_distribution,
-        continuousIC      = continuousIC,
-        params            = params,
-        solver_options    = solver_options) # Note: unclear whether solver_options should be part of SPAC() or DiscretizedSPAC()
+        solver_options    = solver_options,
+        Δz_thickness_m    = IC.soil, # path to soil_discretization.csv
+                            # - `Δz_thickness_m`:either
+                            #     - `String` defining the path to a soil_discretizations.csv
+                            #     - `DataFrame` of contents of soil_discretizations.csv
+                            #     - or `Vector`: Δz_thickness_m
+        forcing = (meteo           = meteo_forcing_cont,
+                   meteo_iso       = meteo_iso_forcing_cont,
+                   storm_durations = storm_durations),
+        pars    = (params = params,
+                   root_distribution = root_distribution,
+                   IC_scalar = IC.scalar,
+                   IC_soil = "Δz_thickness_m",
+                   canopy_evolution = _canopy_evolution,
+                   soil_horizons = soil_horizons),
+        )
 end
+# -   `pars`: NamedTuple: (:params, )
+#     - `pars.params`: NamedTuple: (), containing scalar parameter values for the model
+#     - `pars.root_distribution`: either:
+#         - NamedTuple: (beta = 0.97, z_rootMax_m = nothing) parametrization of root distribution with depth (f(z_m) with z_m in meters and negative downward). Alternatively path to soil_discretization.csv" #TODO: interpolate this in time
+#         - or String: "Δz_thickness_m" meaning that it must be defined in soil_discretizations.csv
+#     - `pars.IC_scalar`: NamedTuple: (), containing initial conditions of the scalar state variables
+#     - `pars.IC_soil`: initial conditions of the state variables (scalar or related to the soil). Either:
+#         - NamedTuple: (PSIM_init, δ18O_init, δ2H_init), containing the initial values
+#         - NamedTuple: (PSIM_init_fct, δ18O_init_fct, δ2H_init_fct), containing the initial values
+#         - or String: "Δz_thickness_m" meaning that it must be defined in soil_discretizations.csv
+#     - `pars.canopy`: canopy parameters (LAI, SAI, DENSEF, HEIGHT). Either:
+#         - NamedTuple: (DENSEF = 100, HEIGHT = 25, SAI = 100, LAI = (DOY_Bstart, Bduration, DOY_Cstart, Cduration, LAI_perc_BtoC, LAI_perc_CtoB)), containing constant values and parameters for LAI_relative interpolation
+#         - or String: "Δz_thickness_m" meaning that it must be defined in soil_discretizations.csv
+#     - `pars.soil_horizons`: DataFrame containing description of soil layers/horizons and soil hydraulic parameters
+# """
+# SPAC(reference_date,
+#     tspan,
+#     solver_options,                 # reset_flag, compute_intermediate_quantities, simulate_isotopes, soil_output_depths
+#     Δz_thickness_m, # either "path_to_soil_discretization.csv" or then NamedTuple: `(Δz_thickness_m = , functions = )`
+#     # A2) Physical forcing
+#     forcing, # atmospheric forcing:  #TODO: interpolate forcing.meteo and forcing.meteo_iso in time
+#     # B) Model parameters: might be estimated
+#     pars,
+#         # pars.params: e.g. (VXYLEM_mm = 20.0, DISPERSIVITY_mm = 10, Str = "oh")
+#         # pars.root_distribution: e.g. (beta = 0.97, z_rootMax_m = nothing)
+#         # pars.IC:                e.g. .soil = PSIM, δ2H, δ18O, but also .scalar = SNOW,INTR,INTS
+#         # pars.root_distribution = (beta = 0.97, z_rootMax_m = nothing) # TODO: define default....
+#         # pars.canopy:            e.g. LAI(t), ...
+#         # pars.soil_horizons
+# )
+
+
 function Base.show(io::IO, mime::MIME"text/plain", model::SPAC)
     println(io, "SPAC model:")
-    # print(io, "α:", me.α, " β:", me.β, " γ:", me.γ)
-
     println(io, "===== DATES:===============")
     println(io, format(model.reference_date, "YYYY-mm-dd"), ", tspan:", model.tspan, "days")
     println(io, "\n===== METEO FORCING:===============")
@@ -116,27 +180,33 @@ function Base.show(io::IO, mime::MIME"text/plain", model::SPAC)
         @sprintf("%savg:%7.2f, range:%7.2f to%7.2f",
                  title, mean(vector), extrema(vector)[1], extrema(vector)[2])
     end
-    println(io, show_avg_and_range(model.meteo_forcing.p_GLOBRAD.itp.itp.coefs,     "GLOBRAD (MJ/m2/day): "))
-    println(io, show_avg_and_range(model.meteo_forcing.p_PREC.itp.itp.coefs,        "PREC       (mm/day): "))
-    println(io, show_avg_and_range(model.meteo_forcing.p_TMAX.itp.itp.coefs,        "TMAX           (°C): "))
-    println(io, show_avg_and_range(model.meteo_forcing.p_TMIN.itp.itp.coefs,        "TMIN           (°C): "))
-    println(io, show_avg_and_range(model.meteo_forcing.p_VAPPRES.itp.itp.coefs,     "VAPPRES       (kPa): "))
-    println(io, show_avg_and_range(model.meteo_forcing.p_WIND.itp.itp.coefs,        "WIND          (m/s): "))
+    println(io, show_avg_and_range(model.forcing.meteo.p_GLOBRAD.itp.itp.coefs,     "GLOBRAD (MJ/m2/day): "))
+    println(io, show_avg_and_range(model.forcing.meteo.p_PREC.itp.itp.coefs,        "PREC       (mm/day): "))
+    println(io, show_avg_and_range(model.forcing.meteo.p_TMAX.itp.itp.coefs,        "TMAX           (°C): "))
+    println(io, show_avg_and_range(model.forcing.meteo.p_TMIN.itp.itp.coefs,        "TMIN           (°C): "))
+    println(io, show_avg_and_range(model.forcing.meteo.p_VAPPRES.itp.itp.coefs,     "VAPPRES       (kPa): "))
+    println(io, show_avg_and_range(model.forcing.meteo.p_WIND.itp.itp.coefs,        "WIND          (m/s): "))
     if (model.solver_options.simulate_isotopes)
-        println(io, show_avg_and_range(model.meteo_iso_forcing.p_d18OPREC.itp.coefs,"δ18O            (‰): "))
-        println(io, show_avg_and_range(model.meteo_iso_forcing.p_d2HPREC.itp.coefs, "δ2H             (‰): "))
+        println(io, show_avg_and_range(model.forcing.meteo_iso.p_d18OPREC.itp.coefs,"δ18O            (‰): "))
+        println(io, show_avg_and_range(model.forcing.meteo_iso.p_d2HPREC.itp.coefs, "δ2H             (‰): "))
     end
+    # println(io, model.forcing.storm_durations)
+
     println(io, "\n===== CANOPY EVOLUTION:===============")
-    println(io, show_avg_and_range(model.canopy_evolution.p_AGE.(model.tspan),    "AGE         (years): "))
-    println(io, show_avg_and_range(model.canopy_evolution.p_DENSEF.itp.itp.coefs, "DENSEF         (°C): "))
-    println(io, show_avg_and_range(model.canopy_evolution.p_HEIGHT.itp.itp.coefs, "HEIGHT          (m): "))
-    println(io, show_avg_and_range(model.canopy_evolution.p_LAI.itp.itp.coefs,    "LAI         (m2/m2): "))
-    println(io, show_avg_and_range(model.canopy_evolution.p_SAI.itp.itp.coefs,    "SAI         (m2/m2): "))
+    if model.pars.canopy_evolution isa DataFrame
+        println(io, "model.pars.canopy_evolution was loaded form meteoveg.csv")
+        # println(io, show_avg_and_range(model.pars.canopy_evolution.DENSEF,"DENSEF            (%): "))
+        # println(io, show_avg_and_range(model.pars.canopy_evolution.HEIGHT,"HEIGHT            (%): "))
+        # println(io, show_avg_and_range(model.pars.canopy_evolution.LAI,"LAI            (%): "))
+        # println(io, show_avg_and_range(model.pars.canopy_evolution.SAI,"SAI            (%): "))
+    else
+        println(io, model.pars.canopy_evolution)
+    end
 
     println(io, "\n===== INITIAL CONDITIONS:===============")
-    println(io, "Soil   IC: " * model.continuousIC.soil)
+    println(io, "Soil   IC: " * model.pars.IC_soil)
     print(  io, "Scalar IC: ")
-    println(io, model.continuousIC.scalar)
+    println(io, model.pars.IC_scalar)
 
     println(io, "\n===== MODEL PARAMETRIZATION:===============")
     # println(io, model.params)
@@ -146,7 +216,7 @@ function Base.show(io::IO, mime::MIME"text/plain", model::SPAC)
     # for (k,v) in pairs(model.params) println(@sprintf("%18s",k) => v) end
     # for (k,v) in pairs(model.params) println(@sprintf("%18s",k) => @sprintf("% 8.1f",v)) end
     # for (k,v) in pairs(model.params) println(@sprintf("%18s => % 8.1f",k,v)) end
-    string_vec = [@sprintf("%18s => % 8.1f",k,v) for (k,v) in pairs(model.params)];
+    string_vec = [@sprintf("%18s => % 8.1f",k,v) for (k,v) in pairs(model.pars.params)];
     # reshape(string_vec, 27, 3)
     # reduce.(*, reshape(string_vec, 27, 3))
     # reduce.(*, reshape(vcat(string_vec, fill("", 21*4-length(string_vec))), 21, 4))
@@ -157,12 +227,14 @@ function Base.show(io::IO, mime::MIME"text/plain", model::SPAC)
     #      reshape(vcat(string_vec, fill("", 42*2-length(string_vec))), 42, 2))
 
     println(io, "\n===== SOIL DOMAIN:===============")
-    # println(io, model.soil_horizons)
-    # for shp in model.soil_horizons.shp println(io, shp) end
-    # show(IOContext(io, :limit => false), "text/plain", model.soil_horizons)
-    show(IOContext(io, :limit => false), mime, model.soil_horizons[:,Not(:HorizonNr)]; truncate = 100);
-    println()
-    print(  io, "Root distribution: "); println(io, model.root_distribution)
+    print(  io, "Δz_thickness_m:    "); println(io, model.Δz_thickness_m)
+    print(  io, "Root distribution: "); println(io, model.pars.root_distribution)
+    println(io, "Soil layer properties:")
+    # println(io, model.pars.soil_horizons)
+    # for shp in model.pars.soil_horizons.shp println(io, shp) end
+    # show(IOContext(io, :limit => false), "text/plain", model.pars.soil_horizons)
+    show(IOContext(io, :limit => false), mime, model.pars.soil_horizons[:,Not(:HorizonNr)]; truncate = 100);
+    println(io, "")
 
     println(io, "\n===== SOLVER OPTIONS:===============")
     println(io, model.solver_options)
@@ -258,15 +330,6 @@ function init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes = t
     return reference_date, tspan, meteo_forcing, meteo_iso_forcing, storm_durations
 end
 
-function init_vegetation(input_file_XXXX)
-    path_soil_discretization = replace(input_file_XXXX, "XXXX" => "soil_discretization")
-
-    canopy_evolution  = nothing                  # if set to nothing input_meteoveg will be used
-    root_distribution = path_soil_discretization # if set to a path, this will be loaded when discretizing the soil domain
-
-    return canopy_evolution, root_distribution
-end
-
 function init_IC(path_initial_conditions; simulate_isotopes = true)
     scalar_initial_conditions = read_path_initial_conditions(path_initial_conditions;
                                                                 simulate_isotopes = simulate_isotopes)
@@ -274,15 +337,15 @@ function init_IC(path_initial_conditions; simulate_isotopes = true)
     # Impose type of Float64 instead of Float64?
     disallowmissing!(scalar_initial_conditions)
 
-    # Note: continuousIC.soil is used this if there is a definition of the initial conditions that is independent from the discretization
+    # Note: IC.soil is used this if there is a definition of the initial conditions that is independent from the discretization
     #       If there is no such definition of the ICs, set soil to the path of the soil_discretiztation file that will be
     #       read definition of soil initial condition (uAux_PSIM_init_kPa, as well as u_delta18O_init_permil, u_delta2H_init_permil)
     # path_soil_discretization = joinpath(folder, replace(input_file_XXXX, "XXXX" => "soil_discretization"))
     path_soil_discretization = replace(path_initial_conditions, "initial_conditions" => "soil_discretization")
 
-    continuousIC = (soil   = path_soil_discretization,    # if set to a path, this will be loaded when discretizing the soil domain
-                    scalar = scalar_initial_conditions)
-    return continuousIC
+    IC = (soil   = path_soil_discretization,    # if set to a path, this will be loaded when discretizing the soil domain
+          scalar = scalar_initial_conditions)
+    return IC
 end
 
 function init_soil(path_soil_horizons)

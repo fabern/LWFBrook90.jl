@@ -237,7 +237,7 @@ end
             [fill(0.01, 200);]
         ]
 @testset "adding-soil-layers (Δz_m = $(first(Δz_m)))" for Δz_m in Δz_m_data # source: https://stackoverflow.com/a/63871951
-    continuous_SPAC = SPAC("test-assets/Hammel-2001/input-files-ISO/",
+    parametrizedSPAC = loadSPAC("test-assets/Hammel-2001/input-files-ISO/",
                       "Hammel_loam-NLayer-103-RESET=FALSE";
                       simulate_isotopes = false);
     f1 = (Δz_m) -> LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)  # function for root density as f(Δz)
@@ -262,27 +262,27 @@ end
     end
     soil_discr =
         LWFBrook90.refine_soil_discretization(
-            continuous_SPAC.soil_horizons,
+            parametrizedSPAC.soil_horizons,
             soil_discretization,
             soil_output_depths,
-            continuous_SPAC.params[:IDEPTH_m],
-            continuous_SPAC.params[:QDEPTH_m])
+            parametrizedSPAC.params[:IDEPTH_m],
+            parametrizedSPAC.params[:QDEPTH_m])
 
     # Interpolate discretized root distribution in time
     p_fT_RELDEN = LWFBrook90.HammelKennel_transient_root_density(;
-        timepoints = continuous_SPAC.meteo_forcing.p_days,
-        p_AGE      = continuous_SPAC.canopy_evolution.p_AGE,
-        p_INITRDEP = continuous_SPAC.params[:INITRDEP],
-        p_INITRLEN = continuous_SPAC.params[:INITRLEN],
-        p_RGROPER_y  = continuous_SPAC.params[:RGROPER],
-        p_RGRORATE_m_per_y = continuous_SPAC.params[:RGRORATE],
+        timepoints = parametrizedSPAC.meteo_forcing.p_days,
+        p_AGE      = parametrizedSPAC.canopy_evolution.p_AGE,
+        p_INITRDEP = parametrizedSPAC.params[:INITRDEP],
+        p_INITRLEN = parametrizedSPAC.params[:INITRLEN],
+        p_RGROPER_y  = parametrizedSPAC.params[:RGROPER],
+        p_RGRORATE_m_per_y = parametrizedSPAC.params[:RGRORATE],
         p_THICK         = soil_discr["THICK"],
         final_Rootden_profile = soil_discr["final_Rootden_"]);
     ####################
 
     ####################
     # Define parameters for differential equation
-    p = LWFBrook90.define_LWFB90_p(continuous_SPAC, soil_discr, p_fT_RELDEN);
+    p = LWFBrook90.define_LWFB90_p(parametrizedSPAC, soil_discr, p_fT_RELDEN);
     # using Plots
     # hline([0; cumsum(p.p_THICK)], yflip = true, xticks = false,
     #     title = "N_layer = "*string(p.NLAYER))
@@ -291,8 +291,8 @@ end
     ####################
     # Define state vector u for DiffEq.jl
     # a) allocation of u0
-    u0 = LWFBrook90.define_LWFB90_u0(;simulate_isotopes = continuous_SPAC.solver_options.simulate_isotopes,
-                          compute_intermediate_quantities = continuous_SPAC.solver_options.compute_intermediate_quantities,
+    u0 = LWFBrook90.define_LWFB90_u0(;simulate_isotopes = parametrizedSPAC.solver_options.simulate_isotopes,
+                          compute_intermediate_quantities = parametrizedSPAC.solver_options.compute_intermediate_quantities,
                           NLAYER = soil_discr["NLAYER"]);
     ####################
 
@@ -336,13 +336,13 @@ end
 # ) # returns (aux_du_RINT, aux_du_IRVP)
 
 @testset "root-model beta (Δz_m = $(first(Δz_m)))" for Δz_m in Δz_m_data # source: https://stackoverflow.com/a/63871951
-    continuous_SPAC = SPAC("test-assets/Hammel-2001/input-files-ISO",
+    parametrizedSPAC = loadSPAC("test-assets/Hammel-2001/input-files-ISO",
                       "Hammel_loam-NLayer-27-RESET=FALSE";
                       simulate_isotopes = false);
 
-    continuous_SPAC.root_distribution = (beta = 0.95, )
+    parametrizedSPAC.root_distribution = (beta = 0.95, )
 
-    simulation = discretize(continuous_SPAC, Δz = (thickness_m = Δz_m,
+    simulation = setup(parametrizedSPAC, Δz = (thickness_m = Δz_m,
                                       functions = (rootden = nothing,  # function for root density as f(Δz)
                                                     PSIM_init = (Δz_m) -> fill(-6.3, length(Δz_m)),                      # function for initial conditions as f(Δz)
                                                     δ18Ο_init = (Δz_m) -> ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.),    # function for initial conditions as f(Δz)
@@ -359,13 +359,13 @@ end
 end
 
 @testset "root-model beta cropped (Δz_m = $(first(Δz_m)))" for Δz_m in Δz_m_data # source: https://stackoverflow.com/a/63871951
-    continuous_SPAC = SPAC("test-assets/Hammel-2001/input-files-ISO",
+    parametrizedSPAC = loadSPAC("test-assets/Hammel-2001/input-files-ISO",
                       "Hammel_loam-NLayer-27-RESET=FALSE";
                       simulate_isotopes = false);
 
-    continuous_SPAC.root_distribution = (beta = 0.95, maxRootDepth_m = 0.5)
+    parametrizedSPAC.root_distribution = (beta = 0.95, maxRootDepth_m = 0.5)
 
-    simulation = discretize(continuous_SPAC, Δz = (thickness_m = Δz_m,
+    simulation = setup(parametrizedSPAC, Δz = (thickness_m = Δz_m,
                                       functions = (rootden = nothing,  # function for root density as f(Δz)
                                                     PSIM_init = (Δz_m) -> fill(-6.3, length(Δz_m)),                      # function for initial conditions as f(Δz)
                                                     δ18Ο_init = (Δz_m) -> ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.),    # function for initial conditions as f(Δz)

@@ -24,7 +24,7 @@ if basename(pwd()) != "test"; cd("test"); end
     @test soil_horizons isa DataFrame
 end
 @testset "trial2" begin
-    res = SPAC("test-assets/DAV-2020/input-files/", "DAV_LW1_def"; simulate_isotopes = false)
+    res = loadSPAC("test-assets/DAV-2020/input-files/", "DAV_LW1_def"; simulate_isotopes = false)
     @test res isa SPAC
 end
 @testset "$site-θ-ψ-aboveground-states" for site in ["BEA-2016" "DAV-2020"]

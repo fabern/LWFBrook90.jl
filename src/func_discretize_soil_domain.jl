@@ -56,7 +56,7 @@ function discretize_soil(;
         u_delta2H_init_permil = u_delta2H_init_permil(Δz_m))
 end
 
-# function discretize(soil_horizons::DataFrame, )
+# function setup(soil_horizons::DataFrame, )
 #     # checks on structure
 #     @assert names(soil_horizons) == ["HorizonNr", "Upper_m", "Lower_m", "shp"]
 #     coltypes = [eltype(col) for col in eachcol(input_soil_horizons[1])]
@@ -253,7 +253,7 @@ function refine_soil_discretization(
     ############
 
     ############
-    HEAT = 0 # flag for heat balance; not implemented; continuous_SPAC.params[:HEAT], @ hardcoded
+    HEAT = 0 # flag for heat balance; not implemented; parametrizedSPAC.params[:HEAT], @ hardcoded
 
     THICK_m        = soil_discretization[!,"Upper_m"] - soil_discretization[!,"Lower_m"] # thickness of soil layer [m]
     THICK          = 1000*(THICK_m)                                    # thickness of soil layer [mm]

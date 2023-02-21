@@ -104,6 +104,8 @@ mdtable(example_soil_horizons,latex=false) # hide
 mdtable(example_meteoveg_to_print , latex=false)  # hide
 ```
 
+If meteoveg.csv does not contain columns for DENSEF, HEIGHT, LAI, SAI, the parametrization
+of these should be provided to the function `loadSPAC()`.
 
 `meteoiso.csv`: contains time dependent isotopic signatures of precipiation.
 (Note that the `dates` contain the end dates of the collection interval of cumulative
