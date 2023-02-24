@@ -33,11 +33,14 @@ An instance of a soil-plant-atmopsheric continuum model with the following field
 
 - `reference_date`: DateTime to relate internal use of numerical days to real-world dates
 - `tspan`: Tuple `(0, Int)` Time span of available input data in days since reference date
-- `solver_options`: `NamedTuple`: (), containing some solver options for the model
-- `Δz_thickness_m`:either
-    - `String` defining the path to a `soil_discretizations.csv`
-    - `DataFrame` of contents of `soil_discretizations.csv`
-    - or `Vector`: `Δz_thickness_m``
+- `solver_options`: `NamedTuple`: (compute_intermediate_quantities, simulate_isotopes, DTIMAX, DSWMAX, DPSIMAX), containing some solver options for the model
+
+- `soil_discretization`: `DataFrame` with contents from `soil_discretizations.csv`, i.e. containing columns:
+        `Upper_m`,`Lower_m`,`Rootden_`,`uAux_PSIM_init_kPa`,`u_delta18O_init_permil`,`u_delta2H_init_permil`
+
+        Either loaded from `soil_discretizations.csv` or then specified as argument to loadSPAC().
+        Unused values are NaN.
+
 - `forcing`: `NamedTuple`: (:meteo, :meteo\_iso, :storm\_durations), containing atmospheric forcings
     - `forcing.meteo`: DataFrame with daily atmospheric variables
     - `forcing.meteo_iso`: DataFrame with isotopic signatures of precipitation
@@ -46,11 +49,12 @@ An instance of a soil-plant-atmopsheric continuum model with the following field
     - `pars.params`: `NamedTuple`: (), containing scalar parameter values for the model
     - `pars.root_distribution`: either:
         - `NamedTuple`: (beta = 0.97, z\_rootMax\_m = nothing) parametrization of root distribution with depth (f(z\_m) with z\_m in meters and negative downward). Alternatively path to soil\_discretization.csv"
-        - or String: "Δz_thickness_m"` meaning that it must be defined in `soil_discretizations.csv`
+        - or String: `"soil_discretization.csv"` meaning that it must be defined in `soil_discretizations.csv`
     - `pars.IC_scalar`: `NamedTuple`: (), containing initial conditions of the scalar state variables
     - `pars.IC_soil`: initial conditions of the state variables (scalar or related to the soil). Either:
-        - `NamedTuple`: (PSIM\_init, δ18O\_init, δ2H\_init), containing functions of the initial values with argument Δz
-        - or String: `"Δz_thickness_m"` meaning that it must be defined in `soil_discretizations.csv`
+        - `NamedTuple`: (PSIM\_init, δ18O\_init, δ2H\_init), containing constant values for the initial conditions
+        - [NOT IMPELMENTED:]`NamedTuple`: (PSIM\_init, δ18O\_init, δ2H\_init), containing functions of the initial values with argument Δz
+        - or String: `"soil_discretization.csv"` meaning that it must be defined in `soil_discretizations.csv`
     - `pars.canopy_evolution`: canopy parameters (LAI, SAI, DENSEF, HEIGHT). Either:
         - `NamedTuple`: (DENSEF = 100, HEIGHT = 25, SAI = 100, LAI = (DOY\_Bstart, Bduration, DOY\_Cstart, Cduration, LAI\_perc\_BtoC, LAI\_perc\_CtoB)), containing constant values and parameters for LAI\_relative interpolation
         - or DataFrame: with daily values
@@ -61,16 +65,16 @@ Base.@kwdef mutable struct SPAC
     # A1) Simulation related (non-physical)
     reference_date
     tspan
-    solver_options                 # reset_flag, compute_intermediate_quantities, simulate_isotopes, soil_output_depths
-    Δz_thickness_m # either "path_to_soil_discretization.csv" or then NamedTuple: `(Δz_thickness_m = , functions = )`
+    solver_options
+    soil_discretization
     # A2) Physical forcing
     forcing # atmospheric forcing:  #TODO: interpolate forcing.meteo and forcing.meteo_iso in time
     # B) Model parameters: might be estimated
     pars
-        # pars.params: e.g. (VXYLEM_mm = 20.0, DISPERSIVITY_mm = 10, Str = "oh")
+        # pars.params:            e.g. (VXYLEM_mm = 20.0, DISPERSIVITY_mm = 10, Str = "oh")
         # pars.root_distribution: e.g. (beta = 0.97, z_rootMax_m = nothing)
         # pars.IC:                e.g. .soil = PSIM, δ2H, δ18O, but also .scalar = SNOW,INTR,INTS
-        # pars.root_distribution = (beta = 0.97, z_rootMax_m = nothing) # TODO: define default....
+        # pars.root_distribution = (beta = 0.97, z_rootMax_m = nothing)
         # pars.canopy_evolution:  e.g. LAI(t), ...
         # pars.soil_horizons
 end
@@ -174,12 +178,7 @@ include("../examples/func_run_example.jl") # defines RelativeDaysFloat2DateTime
 # end
 
 function setup(parametrizedSPAC::SPAC;
-                                Δz = (thickness_m = nothing,
-                                    functions   = (rootden   = ((Δz_m)->LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)),
-                                            PSIM_init = ((Δz_m)->fill(-6.3, length(Δz_m))),
-                                            δ18Ο_init = ((Δz_m)->ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.)),
-                                            δ2Η_init  = ((Δz_m)->ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.)))),
-                                tspan = nothing,
+                tspan = nothing,
                                 soil_output_depths = zeros(Float64, 0), # e.g. # soil_output_depths = [-0.35, -0.42, -0.48, -1.05]
         )
     soil_horizons = copy(parametrizedSPAC.pars.soil_horizons)
@@ -252,11 +251,11 @@ function setup(parametrizedSPAC::SPAC;
 
     # Define grid for spatial discretization
     # Note that later on grid will be further refined with observation nodes and required interfaces (if needed)
-    if ispath(modified_SPAC.Δz_thickness_m)
+    if ispath(modified_SPAC.soil_discretization)
         # a1) either read the discretization from a file `soil_discretization.csv`
         #    including Rootden_, and initial PSIM, delta18O, and delta2H
         use_soil_discretization_csv = true
-        path_soil_discretization    = modified_SPAC.Δz_thickness_m
+        path_soil_discretization    = modified_SPAC.soil_discretization
         soil_discretization         = LWFBrook90.read_path_soil_discretization(path_soil_discretization)
 
         # Assert type stability by executing disallowmissing!
@@ -267,24 +266,26 @@ function setup(parametrizedSPAC::SPAC;
         end
 
         # Assert no unused inputs:
-        @assert modified_SPAC.pars.IC_soil           == "Δz_thickness_m" "modified_SPAC.pars.IC_soil provided, but but these parameter are unused as IC conditions from file `soil_discretization.csv` are used."
-        @assert modified_SPAC.pars.root_distribution == "Δz_thickness_m" "modified_SPAC.pars.root_distribution provided, but these parameter are unused as IC conditions from file `soil_discretization.csv` are used."
+        @assert modified_SPAC.pars.IC_soil           == "soil_discretization.csv" "modified_SPAC.pars.IC_soil provided, but but these parameter are unused as IC conditions from file `soil_discretization.csv` are used."
+        @assert modified_SPAC.pars.root_distribution == "soil_discretization.csv" "modified_SPAC.pars.root_distribution provided, but these parameter are unused as root distribution from file `soil_discretization.csv` is used."
                 ## TODO TODO TODO TODOTODOTODOTODOTODOTODOTODOTODOTODOTODOTODOTODO
+        @warn "Received pars.IC_soil or pars.root_distritubiont in loadSPAC(), overwriting values from `soil_discretization.csv`."
+
         # TODO: similar to canopy_evolution. Just print a warning (not an error), when Rootden_ or IC_soil from soil_discretization.csv are overwritten
-    elseif modified_SPAC.Δz_thickness_m isa DataFrame
+    elseif modified_SPAC.soil_discretization isa DataFrame
         # a2)
         use_soil_discretization_csv = true
-        soil_discretization = modified_SPAC.Δz_thickness_m
+        soil_discretization = modified_SPAC.soil_discretization
         # Assert no unused inputs:
-        @assert modified_SPAC.pars.IC_soil   == "Δz_thickness_m" "modified_SPAC.pars.IC_soil provided, but but these parameter are unused as IC conditions from file `soil_discretization.csv` are used."
-        @assert model.pars.root_distribution == "Δz_thickness_m" "modified_SPAC.pars.root_distribution provided, but these parameter are unused as IC conditions from file `soil_discretization.csv` are used."
+        @assert modified_SPAC.pars.IC_soil   == "soil_discretization.csv" "modified_SPAC.pars.IC_soil provided, but but these parameter are unused as IC conditions from file `soil_discretization.csv` are used."
+        @assert model.pars.root_distribution == "soil_discretization.csv" "modified_SPAC.pars.root_distribution provided, but these parameter are unused as IC conditions from file `soil_discretization.csv` are used."
     else
         # b) or use manually defined Δz
         #    and require functions for Rootden_, and initial PSIM, delta18O, and delta2H
         use_soil_discretization_csv = false
 
-        @assert all(modified_SPAC.Δz_thickness_m .> 0)
-        interfaces_m = [0, cumsum(modified_SPAC.Δz_thickness_m)...]
+        @assert all(modified_SPAC.soil_discretization .> 0)
+        interfaces_m = [0, cumsum(modified_SPAC.soil_discretization)...]
         soil_discretization = DataFrame(
             Upper_m = -interfaces_m[Not(end)],
             Lower_m = -interfaces_m[Not(1)],
@@ -355,7 +356,7 @@ function setup(parametrizedSPAC::SPAC;
         @assert modified_SPAC.IC.soil == modified_SPAC.root_distribution "If provided as .csv file, initial conditions and root distribution should refer to the same file."
     else
         soil_discretization = discretize_soil(;
-            Δz_m = modified_SPAC.Δz_thickness_m,
+            Δz_m = modified_SPAC.soil_discretization,
             Rootden_               = rootden_fct,
             uAux_PSIM_init_kPa     = Δz.functions.PSIM_init,
             u_delta18O_init_permil = Δz.functions.δ18Ο_init,
@@ -477,7 +478,7 @@ function Base.show(io::IO, mime::MIME"text/plain", discSPAC::DiscretizedSPAC)
     println(io, "Discretized SPAC model:")
     println(io, "========================= DISCRETIZATION:===============================")
     println(io, "Solution was computed: $(!isnothing(discSPAC.ODESolution))")
-    Δz = discSPAC.soil_discretization.Upper_m - discSPAC.soil_discretization.Lower_m
+    Δz = discSPAC.soil_discretization.df.Upper_m - discSPAC.soil_discretization.df.Lower_m
     println(io, "Soil discretized into N=$(length(discSPAC.soil_discretization.Upper_m)) layers, "*
                 "$(@sprintf("Δz layers: (avg, min, max) = (%.3f,%.3f,%.3f)m.", mean(Δz),minimum(Δz),maximum(Δz)))")
     println(io, "========================= CONTINUOUS SPAC MODEL:========================")

@@ -22,7 +22,10 @@ function loadSPAC(folder::String, prefix::String;
     suffix::String = "",
     simulate_isotopes::Bool = true,
     compute_intermediate_quantities::Bool = true,
-    canopy_evolution = nothing)
+    canopy_evolution  = nothing,
+    Δz_thickness_m    = "soil_discretization.csv",
+    root_distribution = "soil_discretization.csv",  #either "soil_discretization.csv" or (beta = 0.97, z_rootMax_m = nothing)
+    IC_soil           = "soil_discretization.csv")  #either "soil_discretization.csv" or (PSIM_init_kPa = -6.3, delta18O_init_permil = -10., delta2H_init_permil = -95.)
 
     ## Define solver options
     solver_options =
@@ -78,19 +81,91 @@ function loadSPAC(folder::String, prefix::String;
     ## Load space-varying soil data
     soil_horizons = init_soil(path_soil_horizons)
 
-    ## Define placeholder for root distribution (to be loaded either via file or then parametrized)
-    root_distribution = (input = "input_soildiscretization",
-                         distribution = DataFrame())
-    root_distribution = (input = (rootden = ((Δz_m)->LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)),
-                         distribution = DataFrame()))
-                            # Δz = (thickness_m = nothing,
-                            #         functions   = (rootden   = ((Δz_m)->LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)),
-                            #                 PSIM_init = ((Δz_m)->fill(-6.3, length(Δz_m))),
-                            #                 δ18Ο_init = ((Δz_m)->ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.)),
-                            #                 δ2Η_init  = ((Δz_m)->ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.))))
-
     ## Load initial conditions of scalar state variables
-    IC = init_IC(path_initial_conditions; simulate_isotopes)
+    IC_scalar = init_IC(path_initial_conditions)
+
+    ## Load soil discretizations either from `soil_discretizations.csv`
+    ## or then use provided Δz_thickness_m which also requires IC and root distribution parameters
+
+    # Possible cases of arguments:
+    # (Δz_thickness_m="soil_discretization.csv", root_distribution="soil_discretization.csv", IC_soil="soil_discretization.csv"): load soil_discretization.csv
+    # (Δz_thickness_m="soil_discretization.csv", root_distribution="soil_discretization.csv", IC_soil=(.=, .=, .=)             ): load soil_discretization.csv + overwrite IC
+    # (Δz_thickness_m="soil_discretization.csv", root_distribution=(.=, .=, .=),              IC_soil="soil_discretization.csv"): load soil_discretization.csv                + overwrite roots
+    # (Δz_thickness_m="soil_discretization.csv", root_distribution=(.=, .=, .=),              IC_soil=(.=, .=, .=)             ): load soil_discretization.csv + overwrite IC + overwrite roots
+
+    # (Δz_thickness_m=[., .]                   , root_distribution="soil_discretization.csv", IC_soil="soil_discretization.csv"): # error: provide parametric version of root distribution and IC
+    # (Δz_thickness_m=[., .]                   , root_distribution="soil_discretization.csv", IC_soil=(.=, .=, .=)             ): # error: provide parametric version of root distribution
+    # (Δz_thickness_m=[., .]                   , root_distribution=(.=, .=, .=),              IC_soil="soil_discretization.csv"): # error: provide parametric version of                       IC
+    # (Δz_thickness_m=[., .]                   , root_distribution=(.=, .=, .=),              IC_soil=(.=, .=, .=)             ): # okay. warning: not using "soil_discretization.csv"
+
+    if Δz_thickness_m isa Vector
+        # Define soil discretiztion freely
+        @warn "loadSPAC(...; Δz_thickness_m = ...) provided. Ignoring `soil_discretization.csv`, i.e. also overwriting root distribution and initial conditions."
+        interfaces = vcat(0, cumsum(Δz_thickness_m))
+        soil_discretization = DataFrame(Upper_m           = interfaces[Not(end)],
+                                    Lower_m               = interfaces[Not(1)],
+                                    Rootden_              = NaN,
+                                    uAux_PSIM_init_kPa    = NaN,
+                                    u_delta18O_init_permil= NaN,
+                                    u_delta2H_init_permil = NaN)
+
+        if root_distribution == "soil_discretization.csv" error("Requested to create soil discretization manually instead of using `soil_discretization.csv`, but no parametric root_distribution provided.") end
+        if IC_soil           == "soil_discretization.csv" error("Requested to create soil discretization manually instead of using `soil_discretization.csv`, but no parametric soil initial conditions provided.") end
+        # _to_use_root_distribution = (beta = 0.97, z_rootMax_m = nothing)
+        # _to_use_IC_soil           = (PSIM_init_kPa = -6.3, delta18O_init_permil = -10., delta2H_init_permil = -95.)
+        _to_use_Δz_thickness_m = Δz_thickness_m
+
+        # Overwrite soil_discretization with roots # TODO: make this a function to reuse if needed in setup()
+        _to_use_root_distribution = root_distribution
+        overwrite_rootden!(soil_discretization, _to_use_root_distribution, _to_use_Δz_thickness_m)
+        # Overwrite soil_discretization with IC # TODO: make this a function to reuse if needed in setup()
+        _to_use_IC_soil = IC_soil
+        overwrite_IC!(soil_discretization, _to_use_IC_soil, simulate_isotopes)
+
+    elseif Δz_thickness_m == "soil_discretization.csv"
+        path_soil_discretization = joinpath(folder, replace(input_file_XXXX, "XXXX" => "soil_discretization"))
+        if isfile(path_soil_discretization)
+            soil_discretization = LWFBrook90.read_path_soil_discretization(path_soil_discretization)
+            # Assert type stability by executing disallowmissing!
+            if !("u_delta18O_init_permil" in names(soil_discretization)) insertcols!(soil_discretization, :u_delta18O_init_permil => NaN) end
+            if !("u_delta2H_init_permil" in names(soil_discretization))  insertcols!(soil_discretization, :u_delta2H_init_permil => NaN)  end
+            disallowmissing!(soil_discretization, [:Rootden_, :uAux_PSIM_init_kPa, :u_delta18O_init_permil, :u_delta2H_init_permil])
+
+            _to_use_Δz_thickness_m = soil_discretization.Upper_m - soil_discretization.Lower_m
+            _to_use_root_distribution = root_distribution
+            _to_use_IC_soil = IC_soil
+
+            if root_distribution != "soil_discretization.csv"
+                # overwrite root distribution and warn about overwriting
+                overwrite_rootden!(soil_discretization, _to_use_root_distribution, _to_use_Δz_thickness_m)
+                @warn "Requested to overwrite root distribution. Root distribution defined in soil_discretization is ignored."
+            end
+            if IC_soil != "soil_discretization.csv"
+                # overwrite initial conditions and warn about overwriting
+                overwrite_IC!(soil_discretization, _to_use_IC_soil, simulate_isotopes)
+                @warn "Requested to overwrite initial conditions. Initial conditions defined in soil_discretization are ignored."
+            end
+        else
+            error("No file `$path_soil_discretization` found. Either define a file `soil_discretiztions.csv` or then provide loadSPAC(...; soil_discretization = [0.04, 0.04, 0.04, 0.04, 0.04].")
+            # @warn """
+            # No file `$path_soil_discretization` found.
+            # soil_discretization is derived from layers in `$path_soil_horizons`.
+            # Consider providing either a file `soil_discretiztions.csv` or then provide loadSPAC(...; soil_discretization = [0.04, 0.04, 0.04, 0.04, 0.04])
+            # Using default initial conditions (-6.3 kPa, ... permil, ... permil) and root distribution (beta = 0.97), unless overwritten in setup().
+            # """
+            # soil_discretization = DataFrame(Upper_m                = soil_horizons.Upper_m,
+            #                             Lower_m               = soil_horizons.Lower_m,
+            #                             Rootden_              = NaN,
+            #                             uAux_PSIM_init_kPa    = NaN,
+            #                             u_delta18O_init_permil= NaN,
+            #                             u_delta2H_init_permil = NaN)
+            # # default root distribution and initial conditiosn unless otherwise defined in setup(), then they are overwritten
+            # root_distribution = (beta = 0.97, z_rootMax_m = nothing)
+            # IC_soil           = (PSIM_init_kPa = -6.3, delta18O_init_permil = -10., delta2H_init_permil = -95.)
+        end
+    else
+        error("Unknown format for argument `Δz_thickness_m`: $Δz_thickness_m")
+    end
 
     ## Load model input parameters
     params, solver_opts = init_param(path_param; simulate_isotopes = simulate_isotopes)
@@ -107,53 +182,19 @@ function loadSPAC(folder::String, prefix::String;
         reference_date    = reference_date,
         tspan             = tspan,
         solver_options    = solver_options,
-        Δz_thickness_m    = IC.soil, # path to soil_discretization.csv
-                            # - `Δz_thickness_m`:either
-                            #     - `String` defining the path to a soil_discretizations.csv
-                            #     - `DataFrame` of contents of soil_discretizations.csv
-                            #     - or `Vector`: Δz_thickness_m
+        soil_discretization    = (Δz = _to_use_Δz_thickness_m,
+                                  df = soil_discretization),
         forcing = (meteo           = meteo_forcing_cont,
                    meteo_iso       = meteo_iso_forcing_cont,
                    storm_durations = storm_durations),
         pars    = (params = params,
-                   root_distribution = root_distribution,
-                   IC_scalar = IC.scalar,
-                   IC_soil = "Δz_thickness_m",
+                   root_distribution = _to_use_root_distribution,
+                   IC_scalar = IC_scalar,
+                   IC_soil   = _to_use_IC_soil,
                    canopy_evolution = _canopy_evolution,
                    soil_horizons = soil_horizons),
         )
 end
-# -   `pars`: NamedTuple: (:params, )
-#     - `pars.params`: NamedTuple: (), containing scalar parameter values for the model
-#     - `pars.root_distribution`: either:
-#         - NamedTuple: (beta = 0.97, z_rootMax_m = nothing) parametrization of root distribution with depth (f(z_m) with z_m in meters and negative downward). Alternatively path to soil_discretization.csv" #TODO: interpolate this in time
-#         - or String: "Δz_thickness_m" meaning that it must be defined in soil_discretizations.csv
-#     - `pars.IC_scalar`: NamedTuple: (), containing initial conditions of the scalar state variables
-#     - `pars.IC_soil`: initial conditions of the state variables (scalar or related to the soil). Either:
-#         - NamedTuple: (PSIM_init, δ18O_init, δ2H_init), containing the initial values
-#         - NamedTuple: (PSIM_init_fct, δ18O_init_fct, δ2H_init_fct), containing the initial values
-#         - or String: "Δz_thickness_m" meaning that it must be defined in soil_discretizations.csv
-#     - `pars.canopy`: canopy parameters (LAI, SAI, DENSEF, HEIGHT). Either:
-#         - NamedTuple: (DENSEF = 100, HEIGHT = 25, SAI = 100, LAI = (DOY_Bstart, Bduration, DOY_Cstart, Cduration, LAI_perc_BtoC, LAI_perc_CtoB)), containing constant values and parameters for LAI_relative interpolation
-#         - or String: "Δz_thickness_m" meaning that it must be defined in soil_discretizations.csv
-#     - `pars.soil_horizons`: DataFrame containing description of soil layers/horizons and soil hydraulic parameters
-# """
-# SPAC(reference_date,
-#     tspan,
-#     solver_options,                 # reset_flag, compute_intermediate_quantities, simulate_isotopes, soil_output_depths
-#     Δz_thickness_m, # either "path_to_soil_discretization.csv" or then NamedTuple: `(Δz_thickness_m = , functions = )`
-#     # A2) Physical forcing
-#     forcing, # atmospheric forcing:  #TODO: interpolate forcing.meteo and forcing.meteo_iso in time
-#     # B) Model parameters: might be estimated
-#     pars,
-#         # pars.params: e.g. (VXYLEM_mm = 20.0, DISPERSIVITY_mm = 10, Str = "oh")
-#         # pars.root_distribution: e.g. (beta = 0.97, z_rootMax_m = nothing)
-#         # pars.IC:                e.g. .soil = PSIM, δ2H, δ18O, but also .scalar = SNOW,INTR,INTS
-#         # pars.root_distribution = (beta = 0.97, z_rootMax_m = nothing) # TODO: define default....
-#         # pars.canopy:            e.g. LAI(t), ...
-#         # pars.soil_horizons
-# )
-
 
 function Base.show(io::IO, mime::MIME"text/plain", model::SPAC)
     println(io, "SPAC model:")
@@ -189,7 +230,7 @@ function Base.show(io::IO, mime::MIME"text/plain", model::SPAC)
     end
 
     println(io, "\n===== INITIAL CONDITIONS:===============")
-    println(io, "Soil   IC: " * model.pars.IC_soil)
+    println(io, "Soil   IC: $(model.pars.IC_soil)")
     print(  io, "Scalar IC: ")
     println(io, model.pars.IC_scalar)
 
@@ -212,8 +253,11 @@ function Base.show(io::IO, mime::MIME"text/plain", model::SPAC)
     #      reshape(vcat(string_vec, fill("", 42*2-length(string_vec))), 42, 2))
 
     println(io, "\n===== SOIL DOMAIN:===============")
-    print(  io, "Δz_thickness_m:    "); println(io, model.Δz_thickness_m)
-    print(  io, "Root distribution: "); println(io, model.pars.root_distribution)
+    # print(  io, "soil_discretization loaded from soil_discretization.csv:"); println(io, model.soil_discretization)
+    Δz = model.soil_discretization.df.Upper_m - model.soil_discretization.df.Lower_m
+    println(io, "Soil discretized into N=$(length(model.soil_discretization.df.Upper_m)) layers, "*
+                "$(@sprintf("Δz layers: (avg, min, max) = (%.3f,%.3f,%.3f)m.", mean(Δz),minimum(Δz),maximum(Δz)))")
+    print(  io, "Root distribution:  "); println(io, model.pars.root_distribution)
     println(io, "Soil layer properties:")
     # println(io, model.pars.soil_horizons)
     # for shp in model.pars.soil_horizons.shp println(io, shp) end
@@ -316,21 +360,7 @@ function init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes = t
 end
 
 function init_IC(path_initial_conditions; simulate_isotopes = true)
-    scalar_initial_conditions = read_path_initial_conditions(path_initial_conditions;
-                                                                simulate_isotopes = simulate_isotopes)
-    # Assert that no missing
-    # Impose type of Float64 instead of Float64?
-    disallowmissing!(scalar_initial_conditions)
-
-    # Note: IC.soil is used this if there is a definition of the initial conditions that is independent from the discretization
-    #       If there is no such definition of the ICs, set soil to the path of the soil_discretiztation file that will be
-    #       read definition of soil initial condition (uAux_PSIM_init_kPa, as well as u_delta18O_init_permil, u_delta2H_init_permil)
-    # path_soil_discretization = joinpath(folder, replace(input_file_XXXX, "XXXX" => "soil_discretization"))
-    path_soil_discretization = replace(path_initial_conditions, "initial_conditions" => "soil_discretization")
-
-    IC = (soil   = path_soil_discretization,    # if set to a path, this will be loaded when discretizing the soil domain
-          scalar = scalar_initial_conditions)
-    return IC
+    read_path_initial_conditions(path_initial_conditions)
 end
 
 function init_soil(path_soil_horizons)
@@ -553,7 +583,7 @@ function read_path_meteoiso(path_meteoiso,
 end
 
 # path_initial_conditions = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_initial_conditions.csv"
-function read_path_initial_conditions(path_initial_conditions; simulate_isotopes::Bool = false)
+function read_path_initial_conditions(path_initial_conditions)
     parsing_types =
         Dict(# Initial conditions (of vector states) -------
             "u_GWAT_init_mm" => Float64,       "u_INTS_init_mm" => Float64,

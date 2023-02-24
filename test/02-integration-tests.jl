@@ -27,6 +27,47 @@ end
     res = loadSPAC("test-assets/DAV-2020/input-files/", "DAV_LW1_def"; simulate_isotopes = false)
     @test res isa SPAC
 end
+@testset "loadSPAC()-parametrization of root distribution and IC" begin
+        # input_path = "test-assets/Hammel-2001/input-files-ISO"
+        # input_prefix = "Hammel_loam-NLayer-27-RESET=FALSE"
+        input_prefix = "isoBEAdense2010-18-reset-FALSE";
+        input_path = "../examples/isoBEAdense2010-18-reset-FALSE-input/";
+        simulate_isotopes = true
+
+        model = loadSPAC(input_path, input_prefix; simulate_isotopes = simulate_isotopes);
+        @test model.pars.root_distribution == "soil_discretization.csv"
+        @test model.pars.IC_soil == "soil_discretization.csv"
+        @test length(model.soil_discretization.Δz) == 21
+        model = loadSPAC(input_path, input_prefix; simulate_isotopes = simulate_isotopes,
+                        root_distribution = (beta = 0.90, z_rootMax_m = nothing));
+        @test model.pars.root_distribution == (beta = 0.90, z_rootMax_m = nothing)
+        @test model.pars.IC_soil == "soil_discretization.csv"
+        model = loadSPAC(input_path, input_prefix; simulate_isotopes = simulate_isotopes,
+                        IC_soil           = (PSIM_init_kPa = -12., delta18O_init_permil = -22., delta2H_init_permil = -88.));
+        @test all(model.soil_discretization.df.uAux_PSIM_init_kPa .== -12.)
+        model = loadSPAC(input_path, input_prefix; simulate_isotopes = simulate_isotopes,
+                        root_distribution = (beta = 0.90, z_rootMax_m = nothing),
+                        IC_soil           = (PSIM_init_kPa = -12., delta18O_init_permil = -22., delta2H_init_permil = -88.));
+        model
+        model = loadSPAC(input_path, input_prefix; simulate_isotopes = simulate_isotopes,
+                        Δz_thickness_m = [0.5, 0.5],
+                        root_distribution = (beta = 0.90, z_rootMax_m = nothing),
+                        IC_soil           = (PSIM_init_kPa = -12., delta18O_init_permil = -22., delta2H_init_permil = -88.));
+        @test nrow(model.soil_discretization.df) == 2
+        @test model.soil_discretization.df.Rootden_ ≈ [0.019896924495853598, 0.00010254427616865014]
+        @test model.soil_discretization.df.uAux_PSIM_init_kPa == [-12., -12.]
+        @test model.soil_discretization.df.u_delta18O_init_permil == [-22., -22.]
+        @test model.soil_discretization.df.u_delta2H_init_permil  == [-88., -88.]
+        @test_throws ErrorException loadSPAC(input_path, input_prefix; simulate_isotopes = simulate_isotopes,
+                        Δz_thickness_m = [0.5, 0.5]);
+        @test_throws ErrorException loadSPAC(input_path, input_prefix; simulate_isotopes = simulate_isotopes,
+                        Δz_thickness_m = [0.5, 0.5],
+                        IC_soil           = (PSIM_init_kPa = -12., delta18O_init_permil = -22., delta2H_init_permil = -88.));
+        @test_throws ErrorException loadSPAC(input_path, input_prefix; simulate_isotopes = simulate_isotopes,
+                        Δz_thickness_m = [0.5, 0.5],
+                        root_distribution = (beta = 0.90, z_rootMax_m = nothing));
+end
+
 @testset "$site-θ-ψ-aboveground-states" for site in ["BEA-2016" "DAV-2020"]
     out_figure_string = "test-assets/$site/out"
     folder_with_sim_input_and_ref_output = "test-assets/$site"

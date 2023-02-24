@@ -350,7 +350,26 @@ function refine_soil_discretization(
 end
 
 
+function overwrite_IC!(soil_discretization_DF, _to_use_IC_soil, simulate_isotopes)
+    @assert (keys(_to_use_IC_soil) == (:PSIM_init_kPa, :delta18O_init_permil, :delta2H_init_permil)) | (keys(_to_use_IC_soil) == (:PSIM_init_kPa))
+    @assert !((simulate_isotopes) && (keys(_to_use_IC_soil) == (:PSIM_init_kPa)))
+    if (keys(_to_use_IC_soil) == (:PSIM_init_kPa, :delta18O_init_permil, :delta2H_init_permil))
+        soil_discretization_DF.uAux_PSIM_init_kPa     .= _to_use_IC_soil.PSIM_init_kPa
+        soil_discretization_DF.u_delta18O_init_permil .= _to_use_IC_soil.delta18O_init_permil
+        soil_discretization_DF.u_delta2H_init_permil  .= _to_use_IC_soil.delta2H_init_permil
+    else
+        soil_discretization_DF.uAux_PSIM_init_kPa     .= _to_use_IC_soil.PSIM_init_kPa
+    end
+end
 
+function overwrite_rootden!(soil_discretization_DF, _to_use_root_distribution, _to_use_Δz_thickness_m)
+    @assert (keys(_to_use_root_distribution) == (:beta, :z_rootMax_m)) | (keys(_to_use_root_distribution) == (:beta))
+    if (keys(_to_use_root_distribution) == (:beta)) || (isnothing(_to_use_root_distribution.z_rootMax_m))
+        soil_discretization_DF.Rootden_ = LWFBrook90.Rootden_beta_(_to_use_root_distribution.beta; Δz_m = _to_use_Δz_thickness_m)
+    else
+        soil_discretization_DF.Rootden_ = LWFBrook90.Rootden_beta_(_to_use_root_distribution.beta; Δz_m = _to_use_Δz_thickness_m, z_rootMax_m = _to_use_root_distribution.z_rootMax_m)
+    end
+end
 
 
 """
@@ -371,7 +390,7 @@ This function returns the instantaneous root fraction (dY/dd) (units of -/cm). U
 function Rootden_beta_(
     β;
     Δz_m,
-    z_rootMax_m = -maximum(cumsum(Δz_m)), # total_effective_rooting_depth_m
+    z_rootMax_m = -sum(Δz_m), # total_effective_rooting_depth_m
     z_Upper_m = 0) # # Upper interface of topmost discretization cell
     # e.g. Δz_m = fill(0.10, 10)
     #      z_rootMax_m = -0.22
