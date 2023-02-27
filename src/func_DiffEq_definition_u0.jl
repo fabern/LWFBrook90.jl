@@ -97,12 +97,12 @@ function init_LWFB90_u0!(;u0::ComponentArray, parametrizedSPAC, soil_horizons, p
     u_SWATIinit_mm      = LWFBrook90.KPT.FTheta(LWFBrook90.KPT.FWETNES(soil_horizons["PSIM_init"], p_soil), p_soil) .*
                           p_soil.p_SWATMAX ./ p_soil.p_THSAT # see l.2020: https://github.com/pschmidtwalter/LWFBrook90R/blob/6f23dc1f6be9e1723b8df5b188804da5acc92e0f/src/md_brook90.f95#L2020
 
-    u0.GWAT   .= parametrizedSPAC.IC.scalar[1:(N_iso+1), "u_GWAT_init_mm"]
-    u0.INTS   .= parametrizedSPAC.IC.scalar[1:(N_iso+1), "u_INTS_init_mm"]
-    u0.INTR   .= parametrizedSPAC.IC.scalar[1:(N_iso+1), "u_INTR_init_mm"]
-    u0.SNOW   .= parametrizedSPAC.IC.scalar[1:(N_iso+1), "u_SNOW_init_mm"]
-    u0.CC     .= parametrizedSPAC.IC.scalar[1,           "u_CC_init_MJ_per_m2"]
-    u0.SNOWLQ .= parametrizedSPAC.IC.scalar[1,           "u_SNOWLQ_init_mm"]
+    u0.GWAT   .= parametrizedSPAC.pars.IC_scalar[1:(N_iso+1), "u_GWAT_init_mm"]
+    u0.INTS   .= parametrizedSPAC.pars.IC_scalar[1:(N_iso+1), "u_INTS_init_mm"]
+    u0.INTR   .= parametrizedSPAC.pars.IC_scalar[1:(N_iso+1), "u_INTR_init_mm"]
+    u0.SNOW   .= parametrizedSPAC.pars.IC_scalar[1:(N_iso+1), "u_SNOW_init_mm"]
+    u0.CC     .= parametrizedSPAC.pars.IC_scalar[1,           "u_CC_init_MJ_per_m2"]
+    u0.SNOWLQ .= parametrizedSPAC.pars.IC_scalar[1,           "u_SNOWLQ_init_mm"]
     u0.SWATI.mm  .= u_SWATIinit_mm
     if (N_iso == 2)
         u0.SWATI.d18O  .= soil_horizons["d18O_init"]

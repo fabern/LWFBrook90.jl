@@ -92,7 +92,7 @@ RWUcentroid can have values of either :dontShowRWUcentroid or :showRWUcentroid.
     row_RWU_centroid_mm = sum(RWU_percent .* y_center; dims=1)
 
     # reduce how deep to plot soil:
-    soil_discr_to_plot = simulation.soil_discretization#[simulation.soil_discretization.Lower_m .>= -0.2, :]
+    soil_discr_to_plot = simulation.parametrizedSPAC.soil_discretization.df#[simulation.soil_discretization.Lower_m .>= -0.2, :]
 
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
         get_auxiliary_variables(simulation, days_to_read_out_d = days_to_read_out_d);

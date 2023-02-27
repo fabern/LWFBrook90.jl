@@ -17,6 +17,15 @@ Define instance of SPAC model by loading different input files for LWFBrook90:
 These files were created with an R script `generate_LWFBrook90jl_Input.R` that
 takes the same arguements as the R function `LWFBrook90R::run_LWFB90()` and generates
 the corresponding input files for LWFBrook90.jl.
+
+Optional arguments:
+- `suffix::String = ""`
+- `simulate_isotopes::Bool = true`
+- `compute_intermediate_quantities::Bool = true"`
+- `canopy_evolution  = nothing`
+- `Δz_thickness_m    = "soil_discretization.csv"`
+- `root_distribution = "soil_discretization.csv"`
+- `IC_soil           = "soil_discretization.csv"`
 """
 function loadSPAC(folder::String, prefix::String;
     suffix::String = "",
@@ -55,7 +64,7 @@ function loadSPAC(folder::String, prefix::String;
         if ("DENSEF" in names(input_meteoveg) && "HEIGHT" in names(input_meteoveg) &&
             "LAI"    in names(input_meteoveg) && "SAI"    in names(input_meteoveg))
 
-            _canopy_evolution = input_meteoveg[:, [:days, :DENSEF, :HEIGHT, :LAI, :SAI]] # store DataFrame in SPAC
+            _to_use_canopy_evolution = input_meteoveg[:, [:days, :DENSEF, :HEIGHT, :LAI, :SAI]] # store DataFrame in SPAC
         else
             @warn  """
                 Input_meteoveg is expected to contain one or multiple of the columns: :DENSEF, :HEIGHT, :LAI, or :SAI.
@@ -75,7 +84,7 @@ function loadSPAC(folder::String, prefix::String;
         @assert keys(canopy_evolution) == (:DENSEF, :HEIGHT, :SAI, :LAI)
         @assert keys(canopy_evolution.LAI) == (:DOY_Bstart, :Bduration, :DOY_Cstart, :Cduration, :LAI_perc_BtoC, :LAI_perc_CtoB)
 
-        _canopy_evolution = canopy_evolution # store parameter arguments in SPAC
+        _to_use_canopy_evolution = canopy_evolution # store parameter arguments in SPAC
     end
 
     ## Load space-varying soil data
@@ -101,9 +110,9 @@ function loadSPAC(folder::String, prefix::String;
     if Δz_thickness_m isa Vector
         # Define soil discretiztion freely
         @warn "loadSPAC(...; Δz_thickness_m = ...) provided. Ignoring `soil_discretization.csv`, i.e. also overwriting root distribution and initial conditions."
-        interfaces = vcat(0, cumsum(Δz_thickness_m))
-        soil_discretization = DataFrame(Upper_m           = interfaces[Not(end)],
-                                    Lower_m               = interfaces[Not(1)],
+        interfaces_m = -vcat(0, cumsum(Δz_thickness_m))
+        soil_discretization = DataFrame(Upper_m           = interfaces_m[Not(end)],
+                                    Lower_m               = interfaces_m[Not(1)],
                                     Rootden_              = NaN,
                                     uAux_PSIM_init_kPa    = NaN,
                                     u_delta18O_init_permil= NaN,
@@ -167,6 +176,10 @@ function loadSPAC(folder::String, prefix::String;
         error("Unknown format for argument `Δz_thickness_m`: $Δz_thickness_m")
     end
 
+    ## Extend soil horizons if needed by requested soil discretization
+    # (in such a case emit a warning)
+    extended_soil_horizons = extend_lowest_horizon(soil_horizons, soil_discretization)
+
     ## Load model input parameters
     params, solver_opts = init_param(path_param; simulate_isotopes = simulate_isotopes)
 
@@ -191,13 +204,14 @@ function loadSPAC(folder::String, prefix::String;
                    root_distribution = _to_use_root_distribution,
                    IC_scalar = IC_scalar,
                    IC_soil   = _to_use_IC_soil,
-                   canopy_evolution = _canopy_evolution,
-                   soil_horizons = soil_horizons),
+                   canopy_evolution = _to_use_canopy_evolution,
+                   soil_horizons = extended_soil_horizons),
         )
 end
 
-function Base.show(io::IO, mime::MIME"text/plain", model::SPAC)
-    println(io, "SPAC model:")
+function Base.show(io::IO, mime::MIME"text/plain", model::SPAC; show_SPAC_title=true)
+    if (show_SPAC_title) println(io, "SPAC model:") end
+
     println(io, "===== DATES:===============")
     println(io, format(model.reference_date, "YYYY-mm-dd"), ", tspan:", model.tspan, "days")
     println(io, "\n===== METEO FORCING:===============")
@@ -206,15 +220,15 @@ function Base.show(io::IO, mime::MIME"text/plain", model::SPAC)
         @sprintf("%savg:%7.2f, range:%7.2f to%7.2f",
                  title, mean(vector), extrema(vector)[1], extrema(vector)[2])
     end
-    println(io, show_avg_and_range(model.forcing.meteo.p_GLOBRAD.itp.itp.coefs,     "GLOBRAD (MJ/m2/day): "))
-    println(io, show_avg_and_range(model.forcing.meteo.p_PREC.itp.itp.coefs,        "PREC       (mm/day): "))
-    println(io, show_avg_and_range(model.forcing.meteo.p_TMAX.itp.itp.coefs,        "TMAX           (°C): "))
-    println(io, show_avg_and_range(model.forcing.meteo.p_TMIN.itp.itp.coefs,        "TMIN           (°C): "))
-    println(io, show_avg_and_range(model.forcing.meteo.p_VAPPRES.itp.itp.coefs,     "VAPPRES       (kPa): "))
-    println(io, show_avg_and_range(model.forcing.meteo.p_WIND.itp.itp.coefs,        "WIND          (m/s): "))
+    println(io, show_avg_and_range(model.forcing.meteo["p_GLOBRAD"].itp.itp.coefs,     "GLOBRAD (MJ/m2/day): "))
+    println(io, show_avg_and_range(model.forcing.meteo["p_PREC"].itp.itp.coefs,        "PREC       (mm/day): "))
+    println(io, show_avg_and_range(model.forcing.meteo["p_TMAX"].itp.itp.coefs,        "TMAX           (°C): "))
+    println(io, show_avg_and_range(model.forcing.meteo["p_TMIN"].itp.itp.coefs,        "TMIN           (°C): "))
+    println(io, show_avg_and_range(model.forcing.meteo["p_VAPPRES"].itp.itp.coefs,     "VAPPRES       (kPa): "))
+    println(io, show_avg_and_range(model.forcing.meteo["p_WIND"].itp.itp.coefs,        "WIND          (m/s): "))
     if (model.solver_options.simulate_isotopes)
-        println(io, show_avg_and_range(model.forcing.meteo_iso.p_d18OPREC.itp.coefs,"δ18O            (‰): "))
-        println(io, show_avg_and_range(model.forcing.meteo_iso.p_d2HPREC.itp.coefs, "δ2H             (‰): "))
+        println(io, show_avg_and_range(model.forcing.meteo_iso["p_d18OPREC"].itp.coefs,"δ18O            (‰): "))
+        println(io, show_avg_and_range(model.forcing.meteo_iso["p_d2HPREC"].itp.coefs, "δ2H             (‰): "))
     end
     # println(io, model.forcing.storm_durations)
 
@@ -253,17 +267,17 @@ function Base.show(io::IO, mime::MIME"text/plain", model::SPAC)
     #      reshape(vcat(string_vec, fill("", 42*2-length(string_vec))), 42, 2))
 
     println(io, "\n===== SOIL DOMAIN:===============")
-    # print(  io, "soil_discretization loaded from soil_discretization.csv:"); println(io, model.soil_discretization)
-    Δz = model.soil_discretization.df.Upper_m - model.soil_discretization.df.Lower_m
-    println(io, "Soil discretized into N=$(length(model.soil_discretization.df.Upper_m)) layers, "*
-                "$(@sprintf("Δz layers: (avg, min, max) = (%.3f,%.3f,%.3f)m.", mean(Δz),minimum(Δz),maximum(Δz)))")
-    print(  io, "Root distribution:  "); println(io, model.pars.root_distribution)
-    println(io, "Soil layer properties:")
+    print(  io, "Root distribution:       "); println(io, model.pars.root_distribution)
+    print(  io, "Soil layer properties:   ")
     # println(io, model.pars.soil_horizons)
     # for shp in model.pars.soil_horizons.shp println(io, shp) end
     # show(IOContext(io, :limit => false), "text/plain", model.pars.soil_horizons)
     show(IOContext(io, :limit => false), mime, model.pars.soil_horizons[:,Not(:HorizonNr)]; truncate = 100);
     println(io, "")
+    Δz = model.soil_discretization.Δz
+    println(io, "Soil discretized into N=$(length(model.soil_discretization.df.Lower_m)) layers, "*
+                "$(@sprintf("Δz layers: (avg, min, max) = (%.3f,%.3f,%.3f)m.", mean(Δz),minimum(Δz),maximum(Δz)))")
+    println(io, round.(model.soil_discretization.df.Lower_m; digits=3))
 
     println(io, "\n===== SOLVER OPTIONS:===============")
     println(io, model.solver_options)

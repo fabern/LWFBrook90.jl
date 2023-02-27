@@ -161,7 +161,7 @@ end
 function Base.show(io::IO, shp::MualemVanGenuchtenSHP)
     # function Base.show(io::IO, mime::MIME"text/plain", shp::MualemVanGenuchtenSHP)
     print(io,
-        @sprintf("(θ from θr=%.3f to θs=%.3f, Ks =% 7.1f, STONEF=%.1f, l=%.1f, n=%.1f, α=% 5.1f)",
+        @sprintf("(θ from θr=%.3f to θs=%.3f, Ks =% 8.1f, STONEF=%.1f, l=%.1f, n=%.1f, α=% 7.1f)",
                 shp.p_θr, shp.p_THSAT,
                 shp.p_KSAT,
                 shp.p_STONEF,

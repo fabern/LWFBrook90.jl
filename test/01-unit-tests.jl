@@ -271,6 +271,9 @@ end
     # Interpolate discretized root distribution in time
     p_fT_RELDEN = LWFBrook90.HammelKennel_transient_root_density(;
         timepoints = parametrizedSPAC.meteo_forcing.p_days,
+        # timepoints         = modified_SPAC.forcing.meteo.p_days,
+        # AGE_at_timepoints  = canopy_evolution_cont.p_AGE.(modified_SPAC.forcing.meteo.p_days),
+        # TODO: check this above
         p_AGE      = parametrizedSPAC.canopy_evolution.p_AGE,
         p_INITRDEP = parametrizedSPAC.params[:INITRDEP],
         p_INITRLEN = parametrizedSPAC.params[:INITRLEN],
