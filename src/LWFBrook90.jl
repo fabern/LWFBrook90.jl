@@ -217,14 +217,12 @@ function setup(parametrizedSPAC::SPAC;
             modifiedSPAC.pars.params[:QDEPTH_m])
 
     # Discretize the model in space as `soil_discretization`
-    soil_horizons_Dict = map_soil_horizons_to_discretization(modifiedSPAC.pars.soil_horizons, refined_soil_discretizationDF)#computational_grid)
-    soil_horizons_Dict["ILAYER"] = IDEPTH_idx # TODO: remove this
-    soil_horizons_Dict["QLAYER"] = QDEPTH_idx # TODO: remove this
+    final_soil_discretizationDF = map_soil_horizons_to_discretization(modifiedSPAC.pars.soil_horizons, refined_soil_discretizationDF)#computational_grid)
 
     # Update soil_discretization in underlying SPAC model
     modifiedSPAC.soil_discretization = (
-        Δz = soil_horizons_Dict["soil_discretization"].Upper_m - soil_horizons_Dict["soil_discretization"].Lower_m,
-        df = soil_horizons_Dict["soil_discretization"])
+        Δz = final_soil_discretizationDF.Upper_m - final_soil_discretizationDF.Lower_m,
+        df = final_soil_discretizationDF)
 
     # TODO(bernhard): make above code a four step procedure:
         # 1) define a grid resolution Δz (either a) reading in from soil_discretization or b) manually defined vector)
@@ -250,7 +248,6 @@ function setup(parametrizedSPAC::SPAC;
                 p_DENSEF_baseline_            = modifiedSPAC.pars.params[:DENSEF_baseline_],
                 p_AGE_baseline_yrs            = modifiedSPAC.pars.params[:AGE_baseline_yrs],
                 p_HEIGHT_baseline_m           = modifiedSPAC.pars.params[:HEIGHT_baseline_m])
-
     ####################
 
     ####################
@@ -266,8 +263,8 @@ function setup(parametrizedSPAC::SPAC;
         p_INITRLEN         = modifiedSPAC.pars.params[:INITRLEN],
         p_RGROPER_y        = modifiedSPAC.pars.params[:RGROPER],
         p_RGRORATE_m_per_y = modifiedSPAC.pars.params[:RGRORATE],
-        p_THICK               = soil_horizons_Dict["THICK"],
-        final_Rootden_profile = soil_horizons_Dict["final_Rootden_"]);
+        p_THICK               = 1000*modifiedSPAC.soil_discretization.Δz,
+        final_Rootden_profile = modifiedSPAC.soil_discretization.df.Rootden_);
     # TODO(bernhard): document input parameters: INITRDEP, INITRLEN, RGROPER, tini, frelden, MAXLAI, HEIGHT_baseline_m
     # TOOD(bernhard): remove from params: IDEPTH_m, QDEPTH_m, INITRDEP, RGRORATE, INITRDEP, INITRLEN, RGROPER
     # display(heatmap(vegetation_fT["p_RELDEN"]', ylabel = "SOIL LAYER", xlabel = "Time (days)", yflip=true, colorbar_title = "Root density"))
@@ -275,9 +272,9 @@ function setup(parametrizedSPAC::SPAC;
 
     ####################
     # Define parameters for differential equation
-    p = define_LWFB90_p(modifiedSPAC, soil_horizons_Dict, vegetation_fT)
+    p = define_LWFB90_p(modifiedSPAC, vegetation_fT, IDEPTH_idx, QDEPTH_idx)
     # using Plots
-    # hline([0; cumsum(p.p_THICK)], yflip = true, xticks = false,
+    # hline([0; cumsum(p.p_soil.p_THICK)], yflip = true, xticks = false,
     #     title = "N_layer = "*string(p.NLAYER))
    ####################
 
@@ -287,9 +284,9 @@ function setup(parametrizedSPAC::SPAC;
     # a) allocation of u0
     u0 = define_LWFB90_u0(;simulate_isotopes = modifiedSPAC.solver_options.simulate_isotopes,
                           compute_intermediate_quantities = modifiedSPAC.solver_options.compute_intermediate_quantities,
-                          NLAYER = soil_horizons_Dict["NLAYER"])
+                          NLAYER = nrow(modifiedSPAC.soil_discretization.df))
     # b) initialization of u0
-    init_LWFB90_u0!(;u0=u0, parametrizedSPAC=modifiedSPAC, soil_horizons=soil_horizons_Dict, p_soil=p.p_soil)
+    init_LWFB90_u0!(;u0=u0, parametrizedSPAC=modifiedSPAC, p_soil=p.p_soil)
     ####################
 
     ####################

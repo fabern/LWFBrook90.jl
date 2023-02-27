@@ -72,6 +72,8 @@ end
     input_prefix = "isoBEAdense2010-18-reset-FALSE";
     input_path = "../examples/isoBEAdense2010-18-reset-FALSE-input/";
     simulate_isotopes = true
+    Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5); 0.1]; # grid spacing (heterogenous), meter (N=21)
+
     # TODO: make this work without parametric root distribution (use)
     @test_throws "no parametric root_distribution provided" loadSPAC(input_path, input_prefix; Δz_thickness_m = Δz_m)
     @test_throws "no parametric soil initial conditions" loadSPAC(input_path, input_prefix; Δz_thickness_m = Δz_m, root_distribution = (beta = 0.98))

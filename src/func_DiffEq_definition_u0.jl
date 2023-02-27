@@ -89,12 +89,16 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
     return u0
 end
 
-function init_LWFB90_u0!(;u0::ComponentArray, parametrizedSPAC, soil_horizons, p_soil)
+function init_LWFB90_u0!(;u0::ComponentArray, parametrizedSPAC, p_soil)
 
     N_iso = ifelse(parametrizedSPAC.solver_options.simulate_isotopes, 2, 0)
 
+    soil_PSIM_init = parametrizedSPAC.soil_discretization.df.uAux_PSIM_init_kPa
+    soil_d18O_init = parametrizedSPAC.soil_discretization.df.u_delta18O_init_permil
+    soil_d2H_init  = parametrizedSPAC.soil_discretization.df.u_delta2H_init_permil
+
     # A) Define initial conditions of states
-    u_SWATIinit_mm      = LWFBrook90.KPT.FTheta(LWFBrook90.KPT.FWETNES(soil_horizons["PSIM_init"], p_soil), p_soil) .*
+    u_SWATIinit_mm      = LWFBrook90.KPT.FTheta(LWFBrook90.KPT.FWETNES(soil_PSIM_init, p_soil), p_soil) .*
                           p_soil.p_SWATMAX ./ p_soil.p_THSAT # see l.2020: https://github.com/pschmidtwalter/LWFBrook90R/blob/6f23dc1f6be9e1723b8df5b188804da5acc92e0f/src/md_brook90.f95#L2020
 
     u0.GWAT   .= parametrizedSPAC.pars.IC_scalar[1:(N_iso+1), "u_GWAT_init_mm"]
@@ -105,20 +109,20 @@ function init_LWFB90_u0!(;u0::ComponentArray, parametrizedSPAC, soil_horizons, p
     u0.SNOWLQ .= parametrizedSPAC.pars.IC_scalar[1,           "u_SNOWLQ_init_mm"]
     u0.SWATI.mm  .= u_SWATIinit_mm
     if (N_iso == 2)
-        u0.SWATI.d18O  .= soil_horizons["d18O_init"]
-        u0.SWATI.d2H  .= soil_horizons["d2H_init"]
+        u0.SWATI.d18O  .= soil_d18O_init
+        u0.SWATI.d2H  .= soil_d2H_init
     end
 
     u0.RWU.mmday   = 0
     u0.XYLEM.mm    = 5
-    u0.TRANI.mmday = zeros(soil_horizons["NLAYER"])
+    u0.TRANI.mmday = zeros(nrow(parametrizedSPAC.soil_discretization.df))
     if (N_iso == 2)
-        u0.RWU.d18O   = soil_horizons["d18O_init"][1] # start out with same concentration as in first soil layer
-        u0.RWU.d2H    = soil_horizons["d2H_init"][1]   # start out with same concentration as in first soil layer
-        u0.XYLEM.d18O = soil_horizons["d18O_init"][1] # start out with same concentration as in first soil layer
-        u0.XYLEM.d2H  = soil_horizons["d2H_init"][1]  # start out with same concentration as in first soil layer
-        u0.TRANI.d18O .= soil_horizons["d18O_init"]    # start out with same concentration as in       soil layer
-        u0.TRANI.d2H  .= soil_horizons["d2H_init"]     # start out with same concentration as in       soil layer
+        u0.RWU.d18O   = soil_d18O_init[1] # start out with same concentration as in first soil layer
+        u0.RWU.d2H    = soil_d2H_init[1]   # start out with same concentration as in first soil layer
+        u0.XYLEM.d18O = soil_d18O_init[1] # start out with same concentration as in first soil layer
+        u0.XYLEM.d2H  = soil_d2H_init[1]  # start out with same concentration as in first soil layer
+        u0.TRANI.d18O .= soil_d18O_init    # start out with same concentration as in       soil layer
+        u0.TRANI.d2H  .= soil_d2H_init     # start out with same concentration as in       soil layer
     end
     # # TODO(bernhard): if species-specific uptakes add here a totalRWU *PER SPECIES*
     # # TODO(bernhard): if species-specific uptakes add here a Xylem value *PER SPECIES*

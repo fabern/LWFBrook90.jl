@@ -136,8 +136,13 @@ function loadSPAC(folder::String, prefix::String;
         if isfile(path_soil_discretization)
             soil_discretization = LWFBrook90.read_path_soil_discretization(path_soil_discretization)
             # Assert type stability by executing disallowmissing!
-            if !("u_delta18O_init_permil" in names(soil_discretization)) insertcols!(soil_discretization, :u_delta18O_init_permil => NaN) end
-            if !("u_delta2H_init_permil" in names(soil_discretization))  insertcols!(soil_discretization, :u_delta2H_init_permil => NaN)  end
+            # Impose type of Float64 instead of Float64?, by defining unused variables as -9999.99
+            if !("u_delta18O_init_permil" in names(soil_discretization)) insertcols!(soil_discretization, :u_delta18O_init_permil => -9999.0) end #NaN) end
+            if !("u_delta2H_init_permil"  in names(soil_discretization)) insertcols!(soil_discretization, :u_delta2H_init_permil => -9999.0)  end #NaN) end
+            if (any(ismissing.(soil_discretization.u_delta18O_init_permil)) || any(ismissing.(soil_discretization.u_delta2H_init_permil)))
+                soil_discretization.u_delta18O_init_permil .= -9999.0
+                soil_discretization.u_delta2H_init_permil  .= -9999.0
+            end
             disallowmissing!(soil_discretization, [:Rootden_, :uAux_PSIM_init_kPa, :u_delta18O_init_permil, :u_delta2H_init_permil])
 
             _to_use_Δz_thickness_m = soil_discretization.Upper_m - soil_discretization.Lower_m

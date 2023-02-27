@@ -9,7 +9,7 @@ Generate vector p needed for ODE() problem in DiffEq.jl package.
 - `simulate_isotopes::...`: TODO argument description.
 - `soil_output_depths`: vector of depths at which state variables should be extractable (negative numeric values [in meter])
 """
-function define_LWFB90_p(parametrizedSPAC::SPAC, soil_discr, vegetation_fT)
+function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEPTH_idx)
 
     ########
     ## Solver algorithm options
@@ -178,8 +178,8 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, soil_discr, vegetation_fT)
     # MXRTLN Total root length per unit area (RTLEN) is MXRTLN * RELHT * DENSEF. MXRTLN is used to calculate rhizosphere resistance and is only important when soil is dry or roots are sparse. Values of MXRTLN are not frequent in the literature, especially for forests. Newman (1974) reported a range of 1700 to 11000 m/m2 for 5 woody plants. Safford (1974) found fine root masses of 1200 g/m2 for northern hardwoods, and Safford and Bell (1972) found 700 g/m2 for white spruce; with a mean diameter of 0.7 mm and density of 0.5 g/cm3, these become 6200 and 3600 m/m2. To turn off TRAN set MXRTLN to zero. [see PET-CANOPY] [see EVP-PLNTRES]
 
     ## Soil discretization
-    NLAYER   = soil_discr["NLAYER"] # Number of soil layers used
-    p_THICK  = soil_discr["THICK"]  # (Soil parameter),  layer thicknesses, mm
+    NLAYER   = nrow(parametrizedSPAC.soil_discretization.df) # Number of soil layers used
+    p_THICK  = 1000*parametrizedSPAC.soil_discretization.Δz  # (Soil parameter),  layer thicknesses, mm
     @assert !any(p_THICK .≈ 0.0)
     # Documentation from ecoshift:
     # NLAYER (Soil parameter) - number of soil layers to be used, dimensionless. NLAYER is the number of soil layers to be used in the model run. It can vary from 1 to ML. Run time is more or less proportional to NLAYER. Soil parameter values for layers greater than NLAYER can be 0.
@@ -189,17 +189,17 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, soil_discr, vegetation_fT)
     p_RSSA   = parametrizedSPAC.pars.params[:RSSA] # Soil evaporation resistance (RSS) at field capacity, s/m (BROOK90: RSSA is fixed at 500 s/m following Shuttleworth and Gurney (1990))
     p_RSSB   = parametrizedSPAC.pars.params[:RSSB] # Exponent in relation of soil evaporation resistance (RSS) to soil water potential (PSIM) in the top layer, dimensionless, (BROOK90: RSSB is fixed at 1.0, which makes RSS directly proportional to PSIM)
     # TODO(bernharf): get rid of this and simply use the vector of AbstractSoilHydraulicParams...
-    FLAG_MualVanGen = typeof(parametrizedSPAC.pars.soil_horizons[1,:shp]) == LWFBrook90.KPT.MualemVanGenuchtenSHP # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
+    FLAG_MualVanGen = typeof(parametrizedSPAC.soil_discretization.df.shp[1]) == LWFBrook90.KPT.MualemVanGenuchtenSHP # 0 for Clapp-Hornberger; 1 for Mualem-van Genuchten
     if FLAG_MualVanGen == 0
         p_soil = LWFBrook90.KPT.KPT_SOILPAR_Ch1d(;
             p_THICK = p_THICK,
-            p_STONEF = [shp.p_STONEF for shp in soil_discr["SHP"]], # stone volume fraction in each soil layer, dimensionless
-            p_THSAT  = [shp.p_THSAT  for shp in soil_discr["SHP"]], # THETA at saturation, m3/m3
-            p_THETAF = [shp.p_THETAF for shp in soil_discr["SHP"]], # volumetric water content at "field capacity" corresponding to KF and PSIF for soil layer, m3/m3
-            p_KF     = [shp.p_KF     for shp in soil_discr["SHP"]], # hydraulic conductivity at field capacity corresponding to THETAF and PSIF for a soil layer, mm/d
-            p_PSIF   = [shp.p_PSIF   for shp in soil_discr["SHP"]], # matric potential at "field capacity" corresponding to KF and THETAF for a soil layer, kPa
-            p_BEXP   = [shp.p_BEXP   for shp in soil_discr["SHP"]], # Clapp-Hornberger exponent for ψ-θ relation
-            p_WETINF = [shp.p_WETINF for shp in soil_discr["SHP"]]) # wetness at dry end of near-saturation range for a soil layer, dimensionless
+            p_STONEF = [shp.p_STONEF for shp in parametrizedSPAC.soil_discretization.df.shp], # stone volume fraction in each soil layer, dimensionless
+            p_THSAT  = [shp.p_THSAT  for shp in parametrizedSPAC.soil_discretization.df.shp], # THETA at saturation, m3/m3
+            p_THETAF = [shp.p_THETAF for shp in parametrizedSPAC.soil_discretization.df.shp], # volumetric water content at "field capacity" corresponding to KF and PSIF for soil layer, m3/m3
+            p_KF     = [shp.p_KF     for shp in parametrizedSPAC.soil_discretization.df.shp], # hydraulic conductivity at field capacity corresponding to THETAF and PSIF for a soil layer, mm/d
+            p_PSIF   = [shp.p_PSIF   for shp in parametrizedSPAC.soil_discretization.df.shp], # matric potential at "field capacity" corresponding to KF and THETAF for a soil layer, kPa
+            p_BEXP   = [shp.p_BEXP   for shp in parametrizedSPAC.soil_discretization.df.shp], # Clapp-Hornberger exponent for ψ-θ relation
+            p_WETINF = [shp.p_WETINF for shp in parametrizedSPAC.soil_discretization.df.shp]) # wetness at dry end of near-saturation range for a soil layer, dimensionless
     elseif FLAG_MualVanGen == 1
         # ..it's a sin......
         # Hard default of 2 [mm d-1] for saturated hydraulic conductivity at field capacity K(θ_fc)
@@ -207,14 +207,14 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, soil_discr, vegetation_fT)
         # Instantiate soil parameters
         p_soil = LWFBrook90.KPT.KPT_SOILPAR_Mvg1d(;
             p_THICK  = p_THICK,
-            p_STONEF = [shp.p_STONEF for shp in soil_discr["SHP"]],
-            p_THSAT  = [shp.p_THSAT  for shp in soil_discr["SHP"]],
+            p_STONEF = [shp.p_STONEF for shp in parametrizedSPAC.soil_discretization.df.shp],
+            p_THSAT  = [shp.p_THSAT  for shp in parametrizedSPAC.soil_discretization.df.shp],
             p_Kθfc   = 2. .* one.(p_THICK),
-            p_KSAT   = [shp.p_KSAT   for shp in soil_discr["SHP"]],
-            p_MvGα   = [shp.p_MvGα   for shp in soil_discr["SHP"]],
-            p_MvGn   = [shp.p_MvGn   for shp in soil_discr["SHP"]],
-            p_MvGl   = [shp.p_MvGl   for shp in soil_discr["SHP"]],
-            p_θr     = [shp.p_θr     for shp in soil_discr["SHP"]])
+            p_KSAT   = [shp.p_KSAT   for shp in parametrizedSPAC.soil_discretization.df.shp],
+            p_MvGα   = [shp.p_MvGα   for shp in parametrizedSPAC.soil_discretization.df.shp],
+            p_MvGn   = [shp.p_MvGn   for shp in parametrizedSPAC.soil_discretization.df.shp],
+            p_MvGl   = [shp.p_MvGl   for shp in parametrizedSPAC.soil_discretization.df.shp],
+            p_θr     = [shp.p_θr     for shp in parametrizedSPAC.soil_discretization.df.shp])
     else
         error("Unsupported FLAG_MualVanGen: $FLAG_MualVanGen")
     end
@@ -251,8 +251,8 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, soil_discr, vegetation_fT)
     ### Infiltration (incl. preferential flow)
     p_IMPERV = parametrizedSPAC.pars.params[:IMPERV] # (Flow parameter), fraction of impervious surface area generating surface or source area flow (SRFL), dimensionless
     p_INFEXP = parametrizedSPAC.pars.params[:INFEXP] # (Flow parameter), infiltration exponent that determines the distribution of infiltrated water with depth, dimensionless (from 0 to >1; 0 = all infiltration to top soil layer, 1 = uniform distribution down to ILAYER, >1 = more water in lower layers closer to ILAYER)
-    p_ILAYER = soil_discr["ILAYER"] # (Flow parameter), number of layers over which infiltration is distributed
-    p_QLAYER = soil_discr["QLAYER"] # (Flow parameter), number of soil layers for SRFL
+    p_ILAYER = IDEPTH_idx #soil_discr["ILAYER"] # (Flow parameter), number of layers over which infiltration is distributed
+    p_QLAYER = QDEPTH_idx #soil_discr["QLAYER"] # (Flow parameter), number of soil layers for SRFL
     p_INFRAC = LWFBrook90.WAT.INFPAR(p_INFEXP, p_ILAYER, p_soil, NLAYER) # fraction of (preferential) infiltration to each layer
 
     ### Flow generation

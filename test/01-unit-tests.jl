@@ -166,19 +166,20 @@ end
             input_soil_horizons,
             [],
             IDEPTH_m, QDEPTH_m)
-    soil_horizons_Dict = LWFBrook90.map_soil_horizons_to_discretization(input_soil_horizons, refined_soil_disc)
+    final_soil_discr = LWFBrook90.map_soil_horizons_to_discretization(input_soil_horizons, refined_soil_disc)
 
-    @test soil_horizons_Dict["NLAYER"] == 10
-    @test soil_horizons_Dict["THICK"]  ≈ [45.0, 955.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0]
-    @test soil_horizons_Dict["PSIM_init"] ≈ [-6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0]
-    keys(soil_horizons_Dict)
-    @test soil_horizons_Dict["final_Rootden_"] ≈ [0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    @test nrow(final_soil_discr) == 10
+    THICK_m        = final_soil_discr[!,"Upper_m"] - final_soil_discr[!,"Lower_m"] # thickness of soil layer [m]
+    THICK          = 1000*(THICK_m)                                 # thickness of soil layer [mm]
+    @test THICK  ≈ [45.0, 955.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0]
+    @test final_soil_discr[!,"uAux_PSIM_init_kPa"] ≈ [-6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0, -6.0]
+    @test final_soil_discr[!,"Rootden_"] ≈ [0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
     @test QDEPTH_idx == 0
     @test IDEPTH_idx == 1
-    @test [shp.p_STONEF for shp in soil_horizons_Dict["SHP"]] ≈ [0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7]
-    # @test [shp.p_STONEF for shp in soil_horizons_Dict["SHP"]] ≈ [0.9, 0.9, 0.9, 0.9, 0.8, 0.8, 0.8, 0.8, 0.8, 0.7]
-    @test [shp.p_THSAT for shp in soil_horizons_Dict["SHP"]] ≈ [0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55]
-    # @test [shp.p_THSAT for shp in soil_horizons_Dict["SHP"]] ≈ [0.55, 0.55, 0.55, 0.55, 0.6, 0.6, 0.6, 0.6, 0.6, 0.65]
+    @test [shp.p_STONEF for shp in final_soil_discr.shp] ≈ [0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7]
+    # @test [shp.p_STONEF for shp in final_soil_discr.shp] ≈ [0.9, 0.9, 0.9, 0.9, 0.8, 0.8, 0.8, 0.8, 0.8, 0.7]
+    @test [shp.p_THSAT for shp in final_soil_discr.shp] ≈ [0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55]
+    # @test [shp.p_THSAT for shp in final_soil_discr.shp] ≈ [0.55, 0.55, 0.55, 0.55, 0.6, 0.6, 0.6, 0.6, 0.6, 0.65]
 end
 
 @testset "KPT.KPT_SOILPAR_Ch1d" begin
@@ -277,7 +278,12 @@ end
             parametrizedSPAC.pars.params[:QDEPTH_m])
 
     # Discretize the model in space as `soil_discretization`
-    soil_horizons_Dict = LWFBrook90.map_soil_horizons_to_discretization(parametrizedSPAC.pars.soil_horizons, refined_soil_discretizationDF)#computational_grid)
+    final_soil_discretizationDF = LWFBrook90.map_soil_horizons_to_discretization(parametrizedSPAC.pars.soil_horizons, refined_soil_discretizationDF)#computational_grid)
+
+    # Update soil_discretization in underlying SPAC model
+    parametrizedSPAC.soil_discretization = (
+        Δz = final_soil_discretizationDF.Upper_m - final_soil_discretizationDF.Lower_m,
+        df = final_soil_discretizationDF)
 
     ## c) Derive time evolution of aboveground vegetation based on parameter from SPAC
     canopy_evolution_relative = LWFBrook90.generate_canopy_timeseries_relative(
@@ -307,14 +313,13 @@ end
         p_INITRLEN         = parametrizedSPAC.pars.params[:INITRLEN],
         p_RGROPER_y        = parametrizedSPAC.pars.params[:RGROPER],
         p_RGRORATE_m_per_y = parametrizedSPAC.pars.params[:RGRORATE],
-        p_THICK               = soil_horizons_Dict["THICK"],
-        final_Rootden_profile = soil_horizons_Dict["final_Rootden_"]);
-    p_fT_RELDEN = vegetation_fT["p_RELDEN"]
+        p_THICK               = 1000*parametrizedSPAC.soil_discretization.Δz,
+        final_Rootden_profile = parametrizedSPAC.soil_discretization.df.Rootden_)
     ####################
 
     ####################
     # Define parameters for differential equation
-    p = LWFBrook90.define_LWFB90_p(parametrizedSPAC, soil_horizons_Dict, vegetation_fT, IDEPTH_idx, QDEPTH_idx);
+    p = LWFBrook90.define_LWFB90_p(parametrizedSPAC, vegetation_fT, IDEPTH_idx, QDEPTH_idx);
 
     # using Plots
     # hline([0; cumsum(p.p_soil.p_THICK)], yflip = true, xticks = false,
@@ -327,9 +332,9 @@ end
     # a) allocation of u0
     u0 = LWFBrook90.define_LWFB90_u0(;simulate_isotopes = parametrizedSPAC.solver_options.simulate_isotopes,
                           compute_intermediate_quantities = parametrizedSPAC.solver_options.compute_intermediate_quantities,
-                          NLAYER = soil_horizons_Dict["NLAYER"]);
+                          NLAYER = nrow(parametrizedSPAC.soil_discretization.df));
     # b) initialization of u0
-    LWFBrook90.init_LWFB90_u0!(;u0=u0, parametrizedSPAC=parametrizedSPAC, soil_horizons=soil_horizons_Dict, p_soil=p.p_soil);
+    LWFBrook90.init_LWFB90_u0!(;u0=u0, parametrizedSPAC=parametrizedSPAC, p_soil=p.p_soil);
     ####################
 
     # Check if defined layers correspond to requested
@@ -398,7 +403,7 @@ end
                       Δz_thickness_m = Δz_m,
                       root_distribution = (beta = 0.95, z_rootMax_m = -0.5),
                       IC_soil = (PSIM_init_kPa = -7.0, delta18O_init_permil = -9.0, delta2H_init_permil = -11.0))
-    simulation = setup(parametrizedSPAC)
+    simulation = setup(parametrizedSPAC);
 
     # plot(simulation.soil_discretization.Rootden_, simulation.soil_discretization.Lower_m)
     if ([0.5, 0.5, 0.5, 0.5] == Δz_m)

@@ -1,50 +1,50 @@
 # # TODO: maybe move this into a module? on soil discretization?
-# """
-# discretize_soil(;
-#     Δz_m::Vector{T},
-#     Rootden_::Function,
-#     uAux_PSIM_init_kPa::Function,
-#     u_delta18O_init_permil::Function = ((Δz_m) -> missing),
-#     u_delta2H_init_permil::Function = ((Δz_m) -> missing))
+"""
+discretize_soil(;
+    Δz_m::Vector{T},
+    Rootden_::Function,
+    uAux_PSIM_init_kPa::Function,
+    u_delta18O_init_permil::Function = ((Δz_m) -> missing),
+    u_delta2H_init_permil::Function = ((Δz_m) -> missing))
 
-# Manually generate a soil- and root-discretization for LWFBrook90.jl. This function can be
-# used as alternative to loading an input file `soil_discretization.csv`.
+Manually generate a soil- and root-discretization for LWFBrook90.jl. This function can be
+used as alternative to loading an input file `soil_discretization.csv`.
 
-# Reqired arguments are a vector with thickness of the discretization cells/layers in meter
-# `Δ_m`, and functions `Rootden_(Δ_m)` that generates the root density, a function
-# `uAux_PSIM_init_kPa(Δ_m)` that generates the initial values of ψ (kPa)
-# for all cells as a function of `Δ_m`.
+Reqired arguments are a vector with thickness of the discretization cells/layers in meter
+`Δ_m`, and functions `Rootden_(Δ_m)` that generates the root density, a function
+`uAux_PSIM_init_kPa(Δ_m)` that generates the initial values of ψ (kPa)
+for all cells as a function of `Δ_m`.
 
-# Optional arguments are functions initial conditions of the two isotopic
-# signatures based on `Δ_m`.
-# """
-# function discretize_soil(;
-#     Δz_m::Vector{T},
-#     Rootden_::Function,
-#     uAux_PSIM_init_kPa::Function,
-#     u_delta18O_init_permil::Function = ((Δz_m) -> missing),
-#     u_delta2H_init_permil::Function = ((Δz_m) -> missing)) where {T<:Number}
+Optional arguments are functions initial conditions of the two isotopic
+signatures based on `Δ_m`.
+"""
+function discretize_soil(;
+    Δz_m::Vector{T},
+    Rootden_::Function,
+    uAux_PSIM_init_kPa::Function,
+    u_delta18O_init_permil::Function = ((Δz_m) -> missing),
+    u_delta2H_init_permil::Function = ((Δz_m) -> missing)) where {T<:Number}
 
-#     # Derive cell interfaces based on the cell spacing Δz_m
-#     z_cell_interfaces = -[0; cumsum(Δz_m)]
-#     z_cell_interfaces = round.(z_cell_interfaces; digits=6)
+    # Derive cell interfaces based on the cell spacing Δz_m
+    z_cell_interfaces = -[0; cumsum(Δz_m)]
+    z_cell_interfaces = round.(z_cell_interfaces; digits=6)
 
-#     # Output required DataFrame
-#     soil_discretizationDF = DataFrame(
-#         Upper_m = z_cell_interfaces[Not(end)],
-#         Lower_m = z_cell_interfaces[Not(1)],
-#         Rootden_ = Rootden_(Δz_m),
-#         uAux_PSIM_init_kPa = uAux_PSIM_init_kPa(Δz_m),
-#         u_delta18O_init_permil = u_delta18O_init_permil(Δz_m),
-#         u_delta2H_init_permil = u_delta2H_init_permil(Δz_m))
+    # Output required DataFrame
+    soil_discretizationDF = DataFrame(
+        Upper_m = z_cell_interfaces[Not(end)],
+        Lower_m = z_cell_interfaces[Not(1)],
+        Rootden_ = Rootden_(Δz_m),
+        uAux_PSIM_init_kPa = uAux_PSIM_init_kPa(Δz_m),
+        u_delta18O_init_permil = u_delta18O_init_permil(Δz_m),
+        u_delta2H_init_permil = u_delta2H_init_permil(Δz_m))
 
-#     # TODO: refine Δz if needed for certain parameters
-#     #       Don't do this if it is a manual definition
-#     #       But do it if it stems from discretize_soil(::SPAC)
+    # TODO: refine Δz if needed for certain parameters
+    #       Don't do this if it is a manual definition
+    #       But do it if it stems from discretize_soil(::SPAC)
 
-#     # Output DataFrame
-#     return soil_discretizationDF
-# end
+    # Output DataFrame
+    return soil_discretizationDF
+end
 
 # function setup(soil_horizons::DataFrame, )
 #     # checks on structure
@@ -128,8 +128,9 @@ function refine_soil_discretization(
     #        parameters."
 
     # Define what is close enough (also minimal thickness of layers to create with this procedure)
-    ε = 0.010   # thickness of layer to be inserted, [m]
-    # ε = 0.025 # thickness of layer to be inserted, [m]
+    ε = 0.005     # thickness of layer to be inserted, [m]
+    # ε = 0.010   # thickness of layer to be inserted, [m]
+    # ε = 0.025   # thickness of layer to be inserted, [m]
     # ε = 0.050   # thickness of layer to be inserted, [m]
 
     # IF WE WANT TO SUPPORT Δz as argument instead of soil_discretization_DF:
@@ -181,7 +182,7 @@ function refine_soil_discretization(
     if length(needed_interfaces)>0
         needed_interfaces = needed_interfaces[
             [true;                                    # keep first one for sure
-            abs.(diff(needed_interfaces)) .>= ε]      # keep 2:N layers only if diff large enough
+            abs.(diff(needed_interfaces)) .>= ε*0.9]  # keep 2:N layers only if diff large enough (use 0.9ε instead of ε because of floating point precisison)
         ]
     end
 
@@ -291,32 +292,30 @@ function map_soil_horizons_to_discretization(soil_horizons, computational_grid)
         # (Note that the discretized domain is defined in a separate input CSV-file and is further extended to include internal variables IDEPTH_m and QDEPTH_m.)
     ############
 
-    ############
-    HEAT = 0 # flag for heat balance; not implemented; parametrizedSPAC.params[:HEAT], @ hardcoded
-
+    # Some final checks and return
     THICK_m        = computational_grid2[!,"Upper_m"] - computational_grid2[!,"Lower_m"] # thickness of soil layer [m]
     THICK          = 1000*(THICK_m)                                 # thickness of soil layer [mm]
-    PSIM_init      = computational_grid2[!,"uAux_PSIM_init_kPa"]     # initial condition PSIM [kPa]
-    d18O_soil_init = computational_grid2[!,"u_delta18O_init_permil"] # initial condition soil water δ18O [‰]
-    d2H_soil_init  = computational_grid2[!,"u_delta2H_init_permil"]  # initial condition soil water δ2H [‰]
-
     @assert all(THICK_m .> 0.0) "All discretized cells msut be bigger than zero...."
+    PSIM_init      = computational_grid2[!,"uAux_PSIM_init_kPa"]    # initial condition PSIM [kPa]
     @assert all(PSIM_init .<= 0) "Initial matrix psi must be negative or zero"
 
-    NLAYER = nrow(computational_grid2)
+    return computational_grid2
+    # TODO: replace in define_LWFB90_p:
+    #       - soil_discr["SHP"] with soil_horizons_Dict["soil_discretization"].shp
+    #         i.e. parametrizedSPAC....something.shp
+    #       - soil_horizons_Dict["NLAYER"] with nrow(soil_horizons_Dict["soil_discretization"])
+    #       - soil_horizons_Dict["THICK"] with
+    #         i.e. parametrizedSPAC...something.Δz_m*1000
+    #       - soil_horizons_Dict["PSIM_init"]
+    #       - soil_horizons_Dict["final_Rootden_"]
+    #       - soil_horizons_Dict["PSIM_init"]      = soil_horizons_Dict["soil_discretization"][!,"uAux_PSIM_init_kPa"]     # initial condition PSIM [kPa]
+    #       - soil_horizons_Dict["d18O_soil_init"] = soil_horizons_Dict["soil_discretization"][!,"u_delta18O_init_permil"] # initial condition soil water δ18O [‰]
+    #       - soil_horizons_Dict["d2H_soil_init"]  = soil_horizons_Dict["soil_discretization"][!,"u_delta2H_init_permil"]  # initial condition soil water δ2H [‰]
+    #       - soil_horizons_Dict["final_Rootden_"] = soil_horizons_Dict["soil_discretization"][!,"Rootden_"]
 
-    return Dict([
-                ("NLAYER",         NLAYER),
-                ("ILAYER",         0), # TODO: remove this
-                ("QLAYER",         0), # TODO: remove this
-                ("THICK",          THICK),
-                ("PSIM_init",      PSIM_init),
-                ("d18O_init",      d18O_soil_init),
-                ("d2H_init",       d2H_soil_init),
-                ("SHP",            computational_grid2.shp),
-                ("final_Rootden_", computational_grid2[!,"Rootden_"]),
-                ("soil_discretization", computational_grid2)])
 
+    ############
+    HEAT = 0 # flag for heat balance; not implemented; parametrizedSPAC.params[:HEAT], @ hardcoded
     # # BELOW IS ONLY UNUSED CODE:... linked to discretization of thermal properties
     # for i = 1:NLAYER
     #     if (HEAT != 0)
