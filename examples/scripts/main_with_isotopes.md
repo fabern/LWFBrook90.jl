@@ -1,5 +1,5 @@
 # Example isotope simulation
-This script illustrates a script that runs a isotope simulation.
+This notebook illustrates a script that runs a isotope simulation.
 
 ## Loading of the package LWFBrook90 and other dependencies:
 

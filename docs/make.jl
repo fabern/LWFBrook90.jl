@@ -1,6 +1,7 @@
-using LWFBrook90
-using Documenter
-using Literate
+using
+    Documenter,
+    Literate,
+    LWFBrook90
 
 #### code pertaining to Literate.jl
 ### From Literate.jl (https://github.com/fredrikekre/Literate.jl/blob/master/docs/make.jl):
@@ -12,11 +13,15 @@ deployconfig = Documenter.auto_detect_deploy_system()
 Documenter.post_status(deployconfig; type="pending", repo="github.com/fabern/LWFBrook90.jl")
 
 # generate examples
-EXAMPLE = joinpath(@__DIR__, "..", "examples", "scripts", "example.jl")
+# EXAMPLE = joinpath(@__DIR__, "..", "examples", "scripts", "example.jl")
+# EXAMPLE = joinpath(@__DIR__, "..", "examples", "scripts", "main_with_isotopes.jl")
+# EXAMPLE = joinpath(@__DIR__, "..", "examples", "scripts", "main.jl")
 EXAMPLE = joinpath(@__DIR__, "..", "examples", "scripts", "test_literate.jl")
 OUTPUT = joinpath(@__DIR__, "src/generated")
 
-Literate.markdown(EXAMPLE, OUTPUT)
+Literate.markdown(EXAMPLE, OUTPUT; name = "example")
+Literate.notebook(EXAMPLE, OUTPUT; name = "example")
+Literate.script(EXAMPLE, OUTPUT; name = "example")
 #### end code for Literate.jl
 
 
