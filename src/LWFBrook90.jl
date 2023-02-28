@@ -232,13 +232,22 @@ function setup(parametrizedSPAC::SPAC;
             soil_output_depths_m,
             modifiedSPAC.pars.params[:IDEPTH_m],
             modifiedSPAC.pars.params[:QDEPTH_m])
+    Δz_refined = refined_soil_discretizationDF.Upper_m - refined_soil_discretizationDF.Lower_m
+    # if rootden (and initial conditions were given parametrically redo them):
+    modifiedSPAC.pars.root_distribution
+    if (modifiedSPAC.pars.root_distribution isa DataFrame)
+        # keep as is
+    elseif (modifiedSPAC.pars.root_distribution isa NamedTuple)
+        overwrite_rootden!(refined_soil_discretizationDF, modifiedSPAC.pars.root_distribution, Δz_refined)
+        overwrite_IC!(     refined_soil_discretizationDF, modifiedSPAC.pars.IC_soil, modifiedSPAC.solver_options.simulate_isotopes)
+    end
 
     # Discretize the model in space as `soil_discretization`
     final_soil_discretizationDF = map_soil_horizons_to_discretization(modifiedSPAC.pars.soil_horizons, refined_soil_discretizationDF)#computational_grid)
 
     # Update soil_discretization in underlying SPAC model
     modifiedSPAC.soil_discretization = (
-        Δz = final_soil_discretizationDF.Upper_m - final_soil_discretizationDF.Lower_m,
+        Δz = Δz_refined,
         df = final_soil_discretizationDF)
 
     # TODO(bernhard): make above code a four step procedure:

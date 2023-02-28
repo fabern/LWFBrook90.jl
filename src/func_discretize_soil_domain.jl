@@ -389,6 +389,7 @@ function overwrite_IC!(soil_discretization_DF, _to_use_IC_soil, simulate_isotope
     else
         soil_discretization_DF.uAux_PSIM_init_kPa     .= _to_use_IC_soil.PSIM_init_kPa
     end
+    return nothing
 end
 
 function overwrite_rootden!(soil_discretization_DF, _to_use_root_distribution, _to_use_Δz_thickness_m)
@@ -398,6 +399,7 @@ function overwrite_rootden!(soil_discretization_DF, _to_use_root_distribution, _
     else
         soil_discretization_DF.Rootden_ = LWFBrook90.Rootden_beta_(_to_use_root_distribution.beta; Δz_m = _to_use_Δz_thickness_m, z_rootMax_m = _to_use_root_distribution.z_rootMax_m)
     end
+    return nothing
 end
 
 
