@@ -49,3 +49,10 @@ examples/*/*.png
 out/*
 .vscode/launch.json
 pgm-out-/*
+test/test-assets-external/DAV-2020-IntegrationTests-LWFBrook90/DAV-IntegrationTests-LWFBrook90/*
+examples/DAV2020-bare-minimum/DAV2020-minimal_meteoiso-forLWFsynthetic.csv
+examples/DAV2020-bare-minimum/DAV2020-minimal_meteoveg-LWF.csv
+examples/DAV2020-full/DAV2020-full_meteoiso_forLWF-synthetic.csv
+examples/DAV2020-full/DAV2020-full_meteoveg-LWF.csv
+script1-DAV-simulation.jl
+isoBEAdense2010-18-reset-FALSE_plotRecipe_AMT.png
