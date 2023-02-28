@@ -253,7 +253,7 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
     p_INFEXP = parametrizedSPAC.pars.params[:INFEXP] # (Flow parameter), infiltration exponent that determines the distribution of infiltrated water with depth, dimensionless (from 0 to >1; 0 = all infiltration to top soil layer, 1 = uniform distribution down to ILAYER, >1 = more water in lower layers closer to ILAYER)
     p_ILAYER = IDEPTH_idx #soil_discr["ILAYER"] # (Flow parameter), number of layers over which infiltration is distributed
     p_QLAYER = QDEPTH_idx #soil_discr["QLAYER"] # (Flow parameter), number of soil layers for SRFL
-    p_INFRAC = LWFBrook90.WAT.INFPAR(p_INFEXP, p_ILAYER, p_soil, NLAYER) # fraction of (preferential) infiltration to each layer
+    p_INFRAC = LWFBrook90.WAT.INFPAR(p_INFEXP, p_ILAYER, p_soil) # fraction of (preferential) infiltration to each layer
 
     ### Flow generation
     p_BYPAR  = parametrizedSPAC.pars.params[:BYPAR]  # (Flow parameter), flag to activate bypass flow (BYFL), (0/1)

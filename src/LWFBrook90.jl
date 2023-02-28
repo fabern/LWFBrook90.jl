@@ -13,7 +13,7 @@ using Printf: @sprintf
 using Interpolations: interpolate, extrapolate, NoInterp, Gridded, Constant, Next, Previous, Flat, Throw, scale, BSpline, linear_interpolation
 
 # TODO(bernhard): make sure we have documentation for these exported variables
-export SPAC, DiscretizedSPAC, loadSPAC, setup, simulate!
+export SPAC, DiscretizedSPAC, loadSPAC, setup, simulate!, remakeSPAC
 export run_simulation
 export Rootden_beta_
 export RelativeDaysFloat2DateTime
@@ -175,7 +175,109 @@ include("../examples/func_run_example.jl") # defines RelativeDaysFloat2DateTime
 #     end
 # end
 
+"""
+    remakeSPAC(discrSPAC::DiscretizedSPAC;
+                requested_tspan = nothing,
+                soil_output_depths_m::Vector = zeros(Float64, 0),
+                kwargs...)
+or
+    remakeSPAC(parametrizedSPAC::SPAC;
+                requested_tspan = nothing,
+                soil_output_depths_m::Vector = zeros(Float64, 0),
+                kwargs...)
 
+Generates a copy of the provided SPAC or DiscretizedSPAC and modifies all the parameter
+that are provided as kwargs. This is useful running the same model with a range of different
+parameter.
+
+Possible kwargs are:
+- `soil_toplayer = (beta = ... , )`
+- `LAI = (DOY_Bstart = ... , )`
+- `params = (beta = ... , )`
+- `root_distribution = (beta = ... , )`
+"""
+function remakeSPAC(discrSPAC::DiscretizedSPAC;
+                requested_tspan = nothing,
+                soil_output_depths_m::Vector = zeros(Float64, 0),
+                kwargs...)
+    return remakeSPAC(discrSPAC.parametrizedSPAC;
+                requested_tspan = requested_tspan,
+                soil_output_depths_m = soil_output_depths_m,
+                kwargs...)
+end
+function remakeSPAC(parametrizedSPAC::SPAC;
+                requested_tspan = nothing,
+                soil_output_depths_m::Vector = zeros(Float64, 0),
+                kwargs...) # kwargs collects all others
+    # dump(kwargs) # kwargs contains NamedTuples to be modified
+    modifiedSPAC = deepcopy(parametrizedSPAC)
+    for curr_change in keys(kwargs)
+        @assert values(kwargs)[curr_change] isa NamedTuple """
+        Argument $curr_change is not a NamedTuple. Append single values with comma, e.g. (beta=12,)
+        """
+        if (curr_change     == :soil_toplayer)
+            modifiedSPAC = remake_soil_layers(      modifiedSPAC, values(kwargs)[curr_change])
+        elseif (curr_change == :LAI)
+            modifiedSPAC = remake_LAI(              modifiedSPAC, values(kwargs)[curr_change])
+        elseif (curr_change == :params)
+            modifiedSPAC = remake_params(           modifiedSPAC, values(kwargs)[curr_change])
+        elseif (curr_change == :root_distribution)
+            modifiedSPAC = remake_root_distribution(modifiedSPAC, values(kwargs)[curr_change])
+        else
+            error("Unknown argument provided to remake(): $curr_change")
+        end
+    end
+    return setup(modifiedSPAC;
+                requested_tspan = requested_tspan,
+                soil_output_depths_m = soil_output_depths_m)
+end
+function remake_soil_layers(spac, changesNT)
+    shp_names = Dict(:ths_       => :p_THSAT,
+                     :Ksat_mmday => :p_KSAT,
+                     :alpha_     => :p_MvGα)
+    for (key, val) in zip(keys(changesNT), changesNT)
+        @assert key ∈ keys(shp_names) "Unclear how to remake '$key' provided to LAI."
+        ratio = val/getproperty(spac.pars.soil_horizons.shp[1], shp_names[key])
+        for shp in spac.pars.soil_horizons.shp
+            setproperty!(shp, shp_names[key], ratio * getproperty(shp, shp_names[key]))
+        end
+    end
+    return spac
+end
+function remake_LAI(spac, changesNT)
+    @assert spac.pars.canopy_evolution isa NamedTuple """
+        LAI evolution can only be modified if the SPAC was generated with a parametrized variant of LAI.
+        """
+    LAI_names = [:DOY_Bstart,:Bduration ,:DOY_Cstart,:Cduration ,:LAI_perc_BtoC,:LAI_perc_CtoB]
+    for (key, val) in zip(keys(changesNT), changesNT)
+        @assert key ∈ LAI_names "Unclear how to remake '$key' provided to soil_layers."
+    end
+    # create new LAI reusing the old no and overwriting whats defined
+    new_LAI_pars = (;spac.pars.canopy_evolution.LAI..., changesNT...) # https://stackoverflow.com/a/60883705
+    spac.pars = (;spac.pars...,
+                  canopy_evolution = (;spac.pars.canopy_evolution..., LAI = new_LAI_pars))
+    return spac
+end
+function remake_root_distribution(spac, changesNT)
+    allowed_names = [:beta, :z_rootMax_m]
+    for (key, val) in zip(keys(changesNT), changesNT)
+        @assert key ∈ allowed_names "Unclear how to remake '$key' provided to params."
+    end
+    # create new params reusing the old no and only overwriting whats defined by changesNT
+    new_root_distribution = (;spac.pars.root_distribution..., changesNT...) # https://stackoverflow.com/a/60883705
+    spac.pars = (;spac.pars..., root_distribution = new_root_distribution)
+    return spac
+end
+function remake_params(spac, changesNT)
+    allowed_names = keys(spac.pars.params)
+    for (key, val) in zip(keys(changesNT), changesNT)
+        @assert key ∈ allowed_names "Unclear how to remake '$key' provided to params."
+    end
+    # create new params reusing the old no and only overwriting whats defined by changesNT
+    new_params = (;spac.pars.params..., changesNT...) # https://stackoverflow.com/a/60883705
+    spac.pars = (;spac.pars..., params = new_params)
+    return spac
+end
 
 """
     function setup(parametrizedSPAC::SPAC;
@@ -334,7 +436,7 @@ function setup(parametrizedSPAC::SPAC;
     if isnothing(requested_tspan)
         tspan_to_use = modifiedSPAC.tspan
     else
-        @warn "Overwriting tspan defined in SPAC $(modifiedSPAC.tspan) with provided value of $tspan"
+        @warn "Overwriting tspan defined in SPAC $(modifiedSPAC.tspan) with provided value of $requested_tspan"
         tspan_to_use = requested_tspan
 
         # Update tspan in underlying SPAC model

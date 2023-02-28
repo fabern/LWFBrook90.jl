@@ -521,3 +521,174 @@ end
     @test simulation.ODEProblem.u0.INTR.d2H  == -95.333
     @test simulation.ODEProblem.u0.SNOW.d2H  == -95.444
 end
+
+@testset "remake-SPAC" begin
+    Δz_m = fill(0.1, 11)
+    parametrizedSPAC = loadSPAC(
+            "../examples/DAV2020-full/", "DAV2020-full"; simulate_isotopes = true,
+            # "../examples/DAV2020-bare-minimum/", "DAV2020-minimal"; simulate_isotopes = true,
+            Δz_thickness_m = Δz_m,
+            root_distribution = (beta = 0.77, z_rootMax_m = -0.5),
+            IC_soil = (PSIM_init_kPa = -7.0, delta18O_init_permil = -10.11111, delta2H_init_permil = -91.1111),
+            canopy_evolution = (DENSEF = 100, HEIGHT = 25, SAI = 100,
+                                            LAI = (DOY_Bstart = 120,
+                                                Bduration  = 21,
+                                                DOY_Cstart = 270,
+                                                Cduration  = 60,
+                                                LAI_perc_BtoC = 95,
+                                                LAI_perc_CtoB = 70)))#,
+            # storm_durations_h = [5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44],
+            # IC_scalar = (amount = (u_GWAT_init_mm = 1.,
+            #                        u_INTS_init_mm = 13.7,
+            #                        u_INTR_init_mm = 0.,
+            #                        u_SNOW_init_mm = 22.222,
+            #                        u_CC_init_MJ_per_m2 = 0.101010,
+            #                        u_SNOWLQ_init_mm =  0.),
+            #             d18O    = (u_GWAT_init_permil = -11.111,
+            #                        u_INTS_init_permil = -12.222,
+            #                        u_INTR_init_permil = -13.333,
+            #                        u_SNOW_init_permil = -14.444),
+            #             d2H     = (u_GWAT_init_permil = -95.111,
+            #                        u_INTS_init_permil = -95.222,
+            #                        u_INTR_init_permil = -95.333,
+            #                        u_SNOW_init_permil = -95.444)));
+
+    # Discretized the baseline
+    discrSPAC = setup(parametrizedSPAC);
+
+    # Remake (modifies and (re)-discretizes)
+
+    # TODO: below tests for comprisons of Dicts are flawed... see: https://discourse.julialang.org/t/julian-way-of-comparing-two-dictionaries/5693/7
+    # TEST CHANGES TO SOIL HYDRAULICS ################################################################
+    remSPAC_1  = remakeSPAC(discrSPAC, soil_toplayer = (ths_ = 0.4,))
+    # test parametrizedSPAC:
+    @test remSPAC_1.parametrizedSPAC.pars.soil_horizons.shp[1].p_THSAT != discrSPAC.parametrizedSPAC.pars.soil_horizons.shp[1].p_THSAT
+    @test remSPAC_1.parametrizedSPAC.pars.soil_horizons.shp[1].p_THSAT == 0.4
+    # test ODEProblem:
+    @test remSPAC_1.ODEProblem.p.p_soil.p_THSAT[1] == 0.4
+    @test remSPAC_1.ODEProblem.p.p_soil.p_THSAT[end] != discrSPAC.parametrizedSPAC.pars.soil_horizons.shp[end].p_THSAT
+
+    remSPAC_2  = remakeSPAC(discrSPAC, soil_toplayer = (Ksat_mmday = 3854.9,))
+    # test parametrizedSPAC:
+    @test remSPAC_2.parametrizedSPAC.pars.soil_horizons.shp[1].p_KSAT != discrSPAC.parametrizedSPAC.pars.soil_horizons.shp[1].p_KSAT
+    @test remSPAC_2.parametrizedSPAC.pars.soil_horizons.shp[1].p_KSAT == 3854.9
+    # test ODEProblem:
+    @test remSPAC_2.ODEProblem.p.p_soil.p_KSAT[1] == 3854.9
+    @test remSPAC_2.ODEProblem.p.p_soil.p_KSAT[end] != discrSPAC.parametrizedSPAC.pars.soil_horizons.shp[end].p_KSAT
+
+    remSPAC_3  = remakeSPAC(discrSPAC, soil_toplayer = (alpha_ = 7.11,)) # we modify alpha as this scales h (it seems we are off by some orders in SCH)
+    # test parametrizedSPAC:
+    @test remSPAC_3.parametrizedSPAC.pars.soil_horizons.shp[1].p_MvGα != discrSPAC.parametrizedSPAC.pars.soil_horizons.shp[1].p_MvGα
+    @test remSPAC_3.parametrizedSPAC.pars.soil_horizons.shp[1].p_MvGα == 7.11
+    # test ODEProblem:
+    @test remSPAC_3.ODEProblem.p.p_soil.p_MvGα[1] == 7.11
+    @test remSPAC_3.ODEProblem.p.p_soil.p_MvGα[end] != discrSPAC.parametrizedSPAC.pars.soil_horizons.shp[end].p_MvGα
+
+    # TEST CHANGES TO FLOW ################################################################
+    to_change = (DRAIN=.33, BYPAR=1, IDEPTH_m=0.67, INFEXP=0.33)
+    remSPAC_4  = remakeSPAC(discrSPAC, params = to_change)
+    # test parametrizedSPAC:
+    @test remSPAC_4.parametrizedSPAC.pars.params[[:DRAIN, :BYPAR, :IDEPTH_m, :INFEXP]] != discrSPAC.parametrizedSPAC.pars.params[[:DRAIN, :BYPAR, :IDEPTH_m, :INFEXP]]
+    @test remSPAC_4.parametrizedSPAC.pars.params[[:DRAIN, :BYPAR, :IDEPTH_m, :INFEXP]] == to_change
+    # test ODEProblem:
+    @test remSPAC_4.ODEProblem.p.p_DRAIN == to_change.DRAIN
+    @test remSPAC_4.ODEProblem.p.p_BYPAR == to_change.BYPAR
+    @test remSPAC_4.ODEProblem.p.p_INFRAC == LWFBrook90.WAT.INFPAR(
+        to_change.INFEXP,
+        sum(-to_change.IDEPTH_m .<= remSPAC_4.parametrizedSPAC.soil_discretization.df.Lower_m), # new ILAYER
+        remSPAC_4.ODEProblem.p.p_soil)
+
+    # TEST CHANGES TO POT TRANSPIRATION ################################################################
+    to_change = (GLMAX=.00801, R5=235., CVPD=1.9,) # discrSPAC.parametrizedSPAC.pars.params[[:GLMAX, :R5, :CVPD]]
+    remSPAC_5  = remakeSPAC(discrSPAC, params = to_change)
+    # test parametrizedSPAC:
+    @test all(values(remSPAC_5.parametrizedSPAC.pars.params[keys(to_change)]) .≈ values(Dict(pairs(to_change),)))
+    # test ODEProblem:
+    @test remSPAC_5.ODEProblem.p.p_GLMAX ≈ to_change.GLMAX
+    @test remSPAC_5.ODEProblem.p.p_R5    ≈ to_change.R5
+    @test remSPAC_5.ODEProblem.p.p_CVPD  ≈ to_change.CVPD
+
+    # TEST CHANGES TO INTERCEPTION ################################################################
+    to_change = (CINTRL=0.18,) # discrSPAC.parametrizedSPAC.pars.params[[:CINTRL]]
+    remSPAC_6  = remakeSPAC(discrSPAC, params = to_change)
+    # test parametrizedSPAC:
+    @test all(values(remSPAC_6.parametrizedSPAC.pars.params[keys(to_change)]) .≈ values(Dict(pairs(to_change),)))
+    # test ODEProblem:
+    @test all(values(remSPAC_6.ODEProblem.p[Symbol.("p_".*String.(keys(to_change)))]) .≈ values(to_change))
+
+    # TEST CHANGES TO ENERGY BALANCE ################################################################
+    to_change = (ALB=0.15, ALBSN=0.7,) # discrSPAC.parametrizedSPAC.pars.params[[:ALB, :ALBSN]]
+    remSPAC_7  = remakeSPAC(discrSPAC, params = to_change)
+    # test parametrizedSPAC:
+    @test remSPAC_7.parametrizedSPAC.pars.params[[:ALB, :ALBSN]] == to_change
+    # test ODEProblem:
+    @test all(values(remSPAC_7.ODEProblem.p[Symbol.("p_".*String.(keys(to_change)))]) .≈ values(to_change))
+
+    # TEST CHANGES TO SOIL EVAPORATION
+    to_change = (RSSA=720.,) # discrSPAC.parametrizedSPAC.pars.params[[:RSSA]]
+    remSPAC_8  = remakeSPAC(discrSPAC, params = to_change)
+    # test parametrizedSPAC:
+    @test all(values(remSPAC_8.parametrizedSPAC.pars.params[keys(to_change)]) .≈ values(Dict(pairs(to_change),)))
+    # test ODEProblem:
+    @test all(values(remSPAC_8.ODEProblem.p[Symbol.("p_".*String.(keys(to_change)))]) .≈ values(to_change))
+
+    # TEST CHANGES TO PLANT WATER SUPPLY ################################################################
+    to_change = (PSICR=-1.6, FXYLEM=0.4, MXKPL=16.5) # discrSPAC.parametrizedSPAC.pars.params[[:PSICR, :FXYLEM, :MXKPL]]
+    remSPAC_9  = remakeSPAC(discrSPAC, params = to_change)
+    # test parametrizedSPAC:
+    @test remSPAC_9.parametrizedSPAC.pars.params[[:PSICR, :FXYLEM, :MXKPL]] == to_change
+    # test ODEProblem:
+    @test all(values(remSPAC_9.ODEProblem.p[Symbol.("p_".*String.(keys(to_change)))]) .≈ values(to_change))
+
+    # TEST CHANGES TO PLANT ################################################################
+    to_change = (MAXLAI=9.999,) # discrSPAC.parametrizedSPAC.pars.params[[:MAXLAI]]
+    remSPAC_10  = remakeSPAC(discrSPAC, params = to_change)
+    # test parametrizedSPAC:
+    @test all(values(remSPAC_10.parametrizedSPAC.pars.params[keys(to_change)]) .≈ values(Dict(pairs(to_change),)))
+    # test ODEProblem:
+    if discrSPAC.parametrizedSPAC.pars.canopy_evolution isa DataFrame
+        max_relative_LAI = maximum(discrSPAC.parametrizedSPAC.pars.canopy_evolution.LAI)/100
+    elseif discrSPAC.parametrizedSPAC.pars.canopy_evolution isa NamedTuple
+        max_relative_LAI = discrSPAC.parametrizedSPAC.pars.canopy_evolution.LAI.LAI_perc_BtoC/100
+    else
+        error("...")
+    end
+    # @test maximum(remSPAC_10.ODEProblem.p.p_LAI.(1:365)) ≈ discrSPAC.parametrizedSPAC.pars.params[:MAXLAI] * max_relative_LAI
+    @test maximum(remSPAC_10.ODEProblem.p.p_LAI.(1:365)) ≈ to_change.MAXLAI * max_relative_LAI
+    # plot(remSPAC_10.ODEProblem.p.p_LAI(1:364))
+
+    # TEST CHANGES TO BUDBURST ################################################################
+    to_change = (DOY_Bstart = 115,)
+    remSPAC_11  = remakeSPAC(discrSPAC, LAI = to_change)
+    # test parametrizedSPAC:
+    @test remSPAC_11.parametrizedSPAC.pars.canopy_evolution.LAI.DOY_Bstart != discrSPAC.parametrizedSPAC.pars.canopy_evolution.LAI.DOY_Bstart
+    @test remSPAC_11.parametrizedSPAC.pars.canopy_evolution.LAI.DOY_Bstart == to_change.DOY_Bstart
+    # test ODEProblem:
+    LAI_t = remSPAC_11.ODEProblem.p.p_LAI(1:364)
+    @test (to_change.DOY_Bstart) == findfirst(LAI_t .> minimum(LAI_t))
+
+    # TEST CHANGES TO ROOTS ################################################################
+    to_change = (beta = 0.88, z_rootMax_m = -0.6,)
+    remSPAC_12  = remakeSPAC(discrSPAC, root_distribution = to_change)
+    # test parametrizedSPAC:
+    @test remSPAC_12.parametrizedSPAC.pars.root_distribution.beta        .≈ to_change.beta
+    @test remSPAC_12.parametrizedSPAC.pars.root_distribution.z_rootMax_m .≈ to_change.z_rootMax_m
+    # test ODEProblem:
+    @test all(remSPAC_12.ODEProblem.p.p_fT_RELDEN.itp.coefs[1,:] .≈
+                LWFBrook90.Rootden_beta_(
+                    to_change.beta,
+                    Δz_m = remSPAC_12.parametrizedSPAC.soil_discretization.Δz,
+                    z_rootMax_m = to_change.z_rootMax_m))
+
+    # code to easily modify:
+    # - θs, Ks, α                    # p_THSAT, p_KSAT, p_MvGα,              all in parametrizedSPAC.pars.soil_horizons.shp[1] and proportionally all other layers
+    # - drain, bypar, ilayer, infexp # DRAIN, BYPAR, BYPAR, IDEPTH_m, INFEXP all in parametrizedSPAC.pars.params
+    # - glmax, r5, cvpd              # GLMAX, R5, CVPD                       all in parametrizedSPAC.pars.params
+    # - cintrl                       # CINTRL                                all in parametrizedSPAC.pars.params
+    # - alb, albsn                   # ALB, ALBSN                            all in parametrizedSPAC.pars.params
+    # - rssa                         # RSSA                                  all in parametrizedSPAC.pars.params
+    # - budburstdoy (i.e. LAI(t))    # DOY_Bstart, DOY_Cstart, LAI_perc_CtoB all in parametrizedSPAC.pars.canopy_evolution.LAI
+    # - psicr, fxylem, mxkpl         # PSICR, FXYLEM, MXKPL                  all in parametrizedSPAC.pars.params
+    # - maxlai                       # MAXLAI                                all in parametrizedSPAC.pars.params
+    # - maxrootdepth, betaroot       # beta, z_rootMax_m                     all in parametrizedSPAC.pars.root_distribution
+end
