@@ -1,221 +1,171 @@
-# # This is an example script. See others in folder "examples/scripts/".
+# How to work with a Julia script in a new environment
+# create a new folder: "pgm"
+# a) start `julia` -> `]` -> activate . -> add LWFBrook90
+# b) in VSCode -> click at bottom and select "pgm" as Julia env
+# c) run the code
 
-# using LWFBrook90
-# using OrdinaryDiffEq: solve, Tsit5, init
-# # example = LWFBrook90.run_example()
+using LWFBrook90
+# alternatively right-click on the folder in VSCode -> Change to this Directory and Activate this environment
 
-# # Read in input data
-# input_prefix = "BEA2016-reset-FALSE"
-# input_path = "examples/" * input_prefix * "-input/"
+# Using LWFBrook90 brings the following exported functions into scope:
+# SPAC(), DiscretizedSPAC(), discretize(), simulate!()
+# get_δsoil(), get_θ(), get_ψ(), get_W(), get_SWATI(), get_K(), get_aboveground(), get_δ(),
+# get_deltasoil(), get_theta(), get_psi(), get_delta()
 
-# ####################
-# (input_meteoveg,
-#     _input_meteoiso, # TODO possibly unused
-#     input_meteoveg_reference_date,
-#     input_param,
-#     input_storm_durations,
-#     input_initial_conditions,
-#     input_soil_horizons,
-#     simOption_FLAG_MualVanGen) = read_inputData(input_path, input_prefix)
+# For plotting:
+using Plots, Measures; gr();
+using Dates: today;
 
-# # Define grid for spatial discretization as well as initial conditions and root densities
-# # a) either read the discretization from a file `soil_discretization.csv`
-# unused = discretize_soil(input_path, input_prefix)
+# setup output folder
+out_dir = joinpath("out", string(today()))
+mkpath(out_dir)
 
-# # b) or define them manually
-# ψ_init = unused.uAux_PSIM_init_kPa[1]
-# # Δz_m = round.(-diff([unused.Upper_m[1]; unused.Lower_m]), digits=5)
-# # Δz_m = [fill(0.005, 4); fill(0.02, 99)]                          # grid spacing (heterogenous), meter (N=103)
-# # Δz_m = round.(diff(0.0:0.05:-minimum(unused.Lower_m)), digits=5) # grid spacing (heterogenous), meter
 
-# # As a test: subsequently increase resolution of the top layers.
-# Δz_m = [0.04, 0.04, 0.12, 0.25, 0.3, 0.35, 0.1]                            # grid spacing (heterogenous), meter (N=7)
-# # Δz_m = [0.04, 0.04, 0.04, 0.08, 0.25, 0.3, 0.35, 0.1]                    # grid spacing (heterogenous), meter (N=8)
-# # Δz_m = [0.04, 0.04, 0.04, 0.04, 0.04, 0.25, 0.3, 0.35, 0.1]              # grid spacing (heterogenous), meter (N=9)
-# # Δz_m = [fill(0.04, 5); fill(0.05, 5); 0.3; 0.35; 0.1]                    # grid spacing (heterogenous), meter (N=13)
-# # Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); 0.35; 0.1]          # grid spacing (heterogenous), meter (N=17)
-# # Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5); 0.1] # grid spacing (heterogenous), meter (N=21)
+####################
+# Define simulation model by reading in system definition and input data from input files
 
-# f1 = (Δz_m) -> LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)  # function for root density as f(Δz)
-# f2 = (Δz_m) -> fill(-6.3, length(Δz_m))          # function for initial conditions as f(Δz)
-# input_soil_discretization = discretize_soil(;Δz_m = Δz_m, Rootden_ = f1, uAux_PSIM_init_kPa = f2)
-# ####################
+# Read in input data
+# input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
+input_path = "examples/DAV2020-full/";         input_prefix = "DAV2020-full";
 
-# ####################
-# # Define solver options
-# Reset = false                          # currently only Reset = 0 implemented
-# compute_intermediate_quantities = true # Flag whether ODE containes additional quantities than only states
+model = loadSPAC(input_path, input_prefix; simulate_isotopes = false);
+model = loadSPAC(input_path, input_prefix; simulate_isotopes = true);
+model
 
-# # Override input file settings
-# # Here possibility to check and override dataframes input_[...] manually
-# # # E.g:
-# # # Soil hydraulic model
-# # input_param[1,"NOOUTF"] = true # `true` if outflow from roots prevented, `false` if allowed
-# ####################
+# If wanted, arguments can be supplied to modify the loaded SPAC (e.g. for parameter estimation):
+model_modified =
+    loadSPAC("examples/DAV2020-bare-minimum/", "DAV2020-minimal";
+        simulate_isotopes = true,
+        Δz_thickness_m    = [fill(0.04, 5); # grid spacing (heterogenous), meter (N=21)
+                             fill(0.05, 5); # write Δ in VSCode by typing \Delta and hit shift
+                             fill(0.06, 5);
+                             fill(0.07, 5);
+                             fill(0.10, 1)],
+        root_distribution = (beta = 0.98, z_rootMax_m=-0.5),
+        IC_soil           = (PSIM_init_kPa = -7.0, delta18O_init_permil = -9.0, delta2H_init_permil = -11.0),
+        canopy_evolution  = (DENSEF = 100,
+                             HEIGHT = 25,
+                             SAI = 100,
+                             LAI = (DOY_Bstart = 120,
+                                     Bduration  = 21,
+                                     DOY_Cstart = 270,
+                                     Cduration  = 60,
+                                     LAI_perc_BtoC = 100,
+                                     LAI_perc_CtoB = 55)),
+        storm_durations_h = [5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44],
+        IC_scalar         = (amount = (u_GWAT_init_mm = 1.,
+                                       u_INTS_init_mm = 13.7,
+                                       u_INTR_init_mm = 0.,
+                                       u_SNOW_init_mm = 22.222,
+                                       u_CC_init_MJ_per_m2 = 0.101010,
+                                       u_SNOWLQ_init_mm =  0.),
+                            d18O    = (u_GWAT_init_permil = -11.111,
+                                       u_INTS_init_permil = -12.222,
+                                       u_INTR_init_permil = -13.333,
+                                       u_SNOW_init_permil = -14.444),
+                            d2H     = (u_GWAT_init_permil = -95.111,
+                                       u_INTS_init_permil = -95.222,
+                                       u_INTR_init_permil = -95.333,
+                                       u_SNOW_init_permil = -95.444)));
 
-# ####################
-# # Define parameters for differential equation
-# (ψM_initial, _δ18O_initial, _δ2H_initial), p = define_LWFB90_p(
-#     input_meteoveg,
-#     _input_meteoiso, # TODO: possibly unused
-#     input_meteoveg_reference_date,
-#     input_param,
-#     input_storm_durations,
-#     input_soil_horizons,
-#     input_soil_discretization,
-#     simOption_FLAG_MualVanGen;
-#     Reset = Reset,
-#     # soil_output_depths = collect(-0.05:-0.05:-1.1),
-#     # soil_output_depths = [-0.1, -0.5, -1.0, -1.5, -1.9],
-#     compute_intermediate_quantities = compute_intermediate_quantities,
-#     simulate_isotopes = false)
-# ####################
+# `model` and `model_modified` are instances of a SPAC() (soil-plant-atmosphere continuum)
+# and contain fully specified simulations. To run them they need to be transformed into a
+# system of ODES and solved by doing:
 
-# ####################
-# # Define initial states of differential equation
-# # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
-# # Create u0 for DiffEq.jl
-# u0, p = define_LWFB90_u0(p, input_initial_conditions,
-#     ψM_initial, _δ18O_initial, _δ2H_initial, # TODO: possibly unused
-#     compute_intermediate_quantities;
-#     simulate_isotopes = false)
-# ####################
+simulation          = setup(model)
+simulation_modified = setup(model_modified)
 
-# ####################
-# # Define ODE problem which consists of
-# #   - definition of right-hand-side (RHS) function f
-# #   - definition of callback function cb
-# #   - u0:     initial condition of states
-# #   - tspan:  definition of simulation time span
-# #   - p:      parameters
+# Inputs can be checked with:
+# plot_inputs(simulation) NOT YET IMPLEMENTED
 
-# # Define simulation time span:
-# # tspan = (0.0, 10.0) # simulate 5 days
-# # tspan = (0.,  100.) # simulate 100 days # NOTE: KAU bugs in "branch 005-" when at least 3*365
-# tspan = (minimum(input_meteoveg[:, "days"]),
-#          maximum(input_meteoveg[:, "days"])) # simulate all available days
-# # tspan = (LWFBrook90.DateTime2RelativeDaysFloat(DateTime(1980,1,1), reference_date),
-# #          LWFBrook90.DateTime2RelativeDaysFloat(DateTime(1985,1,1), reference_date)) # simulates selected period
-# ####################
+# These simulations are run with:
+simulate!(simulation) # which stores the solution internally in `simulation`
+simulate!(simulation_modified)
 
-# ####################
-# ## Solve ODE:
-# sol_LWFBrook90 = solve_LWFB90(u0, tspan, p);
-# ####################
+# These simulations can then be post-processed with predefined functions
+# Alternatively the followig objects can be used for user-defined post-processing:
+simulation.ODESolution;
+simulation.ODESolution_datetime;
+
+# # #   To get these namye, type `simulation.` and wait for the autocomplete!
+
+# # # simulation.ODESolution is a ODESolution object: documentation how to access under:
+# # # https://docs.sciml.ai/DiffEqDocs/stable/basics/solution/
+# # # and more generally:
+# # # https://docs.sciml.ai/Overview/stable/
+
+# # simulation.ODESolution.t
+# # simulation.ODESolution.u
+# # simulation.ODESolution.retcode
+# # simulation.ODESolution.destats
+####################
 
 # ####################
-# ## Benchmarking
-# # @time sol_LWFBrook90 = solve_LWFB90(u0, tspan, p);
-# using BenchmarkTools # for benchmarking
-# sol_LWFBrook90 = @btime sol_LWFBrook90 = solve_LWFB90(u0, tspan, p);
-
-# ## Performance optimizing
-# @time LWFBrook90.f_LWFBrook90R(copy(u0), u0, p, 1.0) # 0.000039 seconds (59 allocations: 5.047 KiB)
-# # @btime LWFBrook90.f_LWFBrook90R(copy(u0), u0, p, 1.0)
-# # @code_warntype LWFBrook90.f_LWFBrook90R(copy(u0), u0, p, 1.0)
-# @enter LWFBrook90.f_LWFBrook90R(copy(u0), u0, p, 1.0)
-# # integrator = init(ode_LWFBrook90, Tsit5();
-# #     progress = true,
-# #     saveat = tspan[1]:tspan[2], dt = 1e-3, adaptive = true)
-# # @time LWFBrook90.LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator) # 0.000048 seconds (119 allocations: 9.391 KiB)
-# # @enter LWFBrook90.LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
-#     # @time LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil) # 0.000010 seconds (10 allocations: 1.406 KiB)
-# # @time LWFBrook90.KPT.derive_auxiliary_SOILVAR(integrator.u[integrator.p[1][4].row_idx_SWATI], integrator.p_soil) # 0.000013 seconds (11 allocations: 1.547 KiB)
+# # Note, that it is possible to use R Code from within Julia, e.g ggplot:
+# # https://stackoverflow.com/a/70073193/3915004
 # ####################
 
+####################
+# Plotting simulation object (using provided functions)
+fname = input_prefix
+fname = "DAV2020-minimal"
 
+# 0a) Amounts
+pl1 = plotamounts(simulation_modified, :above_and_belowground, :showRWUcentroid)
+pl1
+savefig(pl1, joinpath(out_dir, fname*"_plotRecipe_AMT.png"))
+
+
+# 0b) Isotopes
+pl2 = plotisotopes(simulation_modified, :d18O, :showRWUcentroid)
+pl2
+# plotisotopes(simulation_modified, :d2H)
+# plotisotopes(simulation_modified, :d18O)
+# plotisotopes(simulation_modified;
+#              xlim = (DateTime("2010-01-01"), DateTime("2010-03-31")))
+# plotisotopes(simulation_modified, :d2H;
+#              xlim = (DateTime("2010-01-01"), DateTime("2010-08-30")))
+savefig(pl2, joinpath(out_dir, fname*"_plotRecipe_ISO.png"))
+
+# 0c) Forcing and states: internal check:
+pl3 = plotforcingandstates(simulation_modified)
+savefig(pl3, joinpath(out_dir, fname*"_plotRecipe_CHECK.png"))
 # ####################
-# ## Plotting and exporting to CSV
-# mkpath("out")
 
-# REFERENCE_DATE = sol_LWFBrook90.prob.p.REFERENCE_DATE
-# time_to_plot = RelativeDaysFloat2DateTime.(sol_LWFBrook90.t, REFERENCE_DATE) # define simulation times as dates
+##### Illustration how to export certain depths into a *.csv
+using CSV, DataFrames
 
-# using Plots # Install plot package at first use with `]` and then `add Plots`
+# How to get θ?
+get_θ(simulation_modified; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
+depth_to_read_out_mm = [10 150 500 1000 1150]
+get_θ(simulation_modified; depths_to_read_out_mm = depth_to_read_out_mm, days_to_read_out_d = nothing)
+get_θ(simulation_modified; depths_to_read_out_mm = depth_to_read_out_mm)
 
-# ##### Plot 0 using plotting recipe defined in LWFBrook90.jl
-# using Plots, Measures
-# optim_ticks = (x1, x2) -> Plots.optimize_ticks(x1, x2; k_min = 4)
+# How to export θ as CSV?
+# Only every day, provide days_to_read_out
+days_to_read_out = range(simulation_modified.ODESolution.prob.tspan...)
+dates_to_read_out = LWFBrook90.RelativeDaysFloat2DateTime.(days_to_read_out, simulation_modified.parametrizedSPAC.reference_date)
 
-# pl_final = LWFBrook90.plotlwfbrook90(sol_LWFBrook90, optim_ticks)
-# savefig(pl_final, joinpath("out", input_prefix *
-#     "_plotRecipe_NLAYER" * string(sol_LWFBrook90.prob.p.p_soil.NLAYER) * ".png"))
+df_out_daily = DataFrame(
+    transpose(
+        get_θ(simulation_modified;
+            depths_to_read_out_mm = depth_to_read_out_mm,
+            days_to_read_out_d    = days_to_read_out)),
+    "θ_" .* string.(depth_to_read_out_mm[:]) .* "mm")
 
-# ##### Plot 1 very basic
-# # Plot a)
-# plot(sol_LWFBrook90; vars = [1, 2, 3, 4, 5, 6],label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"])
+insertcols!(df_out_daily, 1, :dates => dates_to_read_out)
 
-# ##### Plot 2
-# # http://docs.juliaplots.org/latest/generated/gr/#gr-ref43 # Heatmap with DateTime axis
-# (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-#     LWFBrook90.get_auxiliary_variables(sol_LWFBrook90)
+plot(df_out_daily[:,:dates], Matrix(df_out_daily[:,Not(:dates)]))
+CSV.write(
+    joinpath(out_dir, fname * "_θ_depths_daily.csv"),
+    df_out_daily)
 
-# n = sol_LWFBrook90.prob.p.p_soil.NLAYER
-# # time_to_plot = #(see above)
-# y_cell_centers = [0; cumsum(sol_LWFBrook90.prob.p.p_soil.p_THICK)[1:(n-1)]] + sol_LWFBrook90.prob.p.p_soil.p_THICK / 2
-# z = sol_LWFBrook90[7 .+ (0:sol_LWFBrook90.prob.p.p_soil.NLAYER-1), 1, :]./sol_LWFBrook90.prob.p.p_soil.p_THICK
-
-# heatmap(time_to_plot, y_cell_centers, u_aux_θ', yflip = true,
-#         xlabel = "Date",
-#         ylabel = "Depth [mm]",
-#         colorbar_title = "θ [-]")
-# heatmap(time_to_plot, y_cell_centers, u_aux_PSIM', yflip = true,
-#         xlabel = "Date",
-#         ylabel = "Depth [mm]",
-#         colorbar_title = "ψ [kPa]")
-
-# ##### Plot 3
-# # aux_indices = sol_LWFBrook90.prob.p.row_idx_accum
-# # aux_names = sol_LWFBrook90.prob.p.names_accum
-# # plot(sol_LWFBrook90; vars = aux_indices, label = aux_names)
-# # plot(sol_LWFBrook90; vars = aux_indices[17:25], label = aux_names[:, 17:25])
-
-# ##### Plot 4: illustration how to extract certain depths and do manual calculations
-# depth_to_read_out_mm = [10 150 500 1000 1150]
-# pl_θ_fineSoil = plot(time_to_plot,
-#     LWFBrook90.get_θ(depth_to_read_out_mm, sol_LWFBrook90),
-#     labels = string.(depth_to_read_out_mm) .* "mm",
-#     title = "Plot using get_θ()",
-#     xlabel = "Date",
-#     ylabel = "θ [-]",
-#     legend = :bottomright)
-
-# # Some manual computations to include the gravel fraction
-# layer_indices = LWFBrook90.find_soilDiscr_indices(depth_to_read_out_mm, sol_LWFBrook90)
-
-# # Variant 1: compute θ and correct with gravel fraction
-# θ_layers = u_aux_θ[:,layer_indices]
-# gravel_fraction_layers = sol_LWFBrook90.prob.p.p_soil.p_STONEF[layer_indices]
-# θtotal_layers = θ_layers .* transpose(1 .- gravel_fraction_layers) # θtotal = θ*(1-gravelfrc) + 0.0*gravelfrc
-# pl_θ_totalVolume1 = plot(time_to_plot, θtotal_layers,
-#     labels = string.(depth_to_read_out_mm) .* "mm",
-#     title = "Plot using get_θ() and divide by p_STONEF",
-#     xlabel = "Date",
-#     ylabel = "θ total soil+rock volume [-]",
-#     legend = :bottomright)
-
-# # Variant 1: compute SWATI and correct with thickness of cell/layer
-# # u_SWATI # alternatively u_SWATI = transpose(sol_LWFBrook90[7 .+ (0:n-1), 1, :])
-# θtotal = u_SWATI ./ transpose(sol_LWFBrook90.prob.p.p_soil.p_THICK)
-# θtotal_layers2 = θtotal[:, layer_indices]
-# pl_θ_totalVolume2 = plot(time_to_plot, θtotal_layers2,
-#     labels = string.(depth_to_read_out_mm) .* "mm",
-#     title = "Plot using u_SWATI and divide by p_THICK",
-#     xlabel = "Date",
-#     ylabel = "θ total soil+rock volume [-]",
-#     legend = :bottomright)
-
-# plot(pl_θ_fineSoil, pl_θ_totalVolume1, pl_θ_totalVolume2;
-#     layout=(3,1), size=(600,1200), left_margin = 10mm) # left_margin needed as soon as we use size
-# savefig(joinpath("out",input_prefix * "_different_θ_depths_NLAYER" * string(sol_LWFBrook90.prob.p.p_soil.NLAYER) * ".png"))
-
-# ##### Illustration how to export certain depths into a *.csv
-# using CSV, DataFrames
-# df_out = DataFrame(
-#     LWFBrook90.get_θ(depth_to_read_out_mm, sol_LWFBrook90),
+# For every day:
+# df_out_eachtimestep = DataFrame(
+#     transpose(get_θ(simulation_modified; depths_to_read_out_mm = depth_to_read_out_mm)),
 #     "θ_" .* string.(depth_to_read_out_mm[:]) .* "mm")
-# df_out.Date = time_to_plot
-# CSV.write(
-#     joinpath("out",input_prefix * "_θ_depths_NLAYER" * string(sol_LWFBrook90.prob.p.p_soil.NLAYER) * ".csv"),
-#     df_out)
-# ####################
+# insertcols!(df_out_eachtimestep, 1, :dates => simulation_modified.ODESolution_datetime)
+# # CSV.write(
+# #     joinpath(out_dir, fname * "_θ_depths_eachtimestep.csv"),
+# #     df_out_eachtimestep)
+####################

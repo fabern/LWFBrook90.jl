@@ -13,7 +13,7 @@ using DataFramesMeta#: @linq, transform, DataFramesMeta
         # # TODO: make a test out of this:
         # parametrizedSPAC = loadSPAC("../../../LWF-Brook90.jl-calibration/Meteo-Data/DAV_LW1_def/", "DAV_LW1_def"; simulate_isotopes = true);
         # Δz = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5)]; # grid spacing (heterogenous), meter (N=20)
-        # soil_output_depths = zeros(Float64, 0)
+        # soil_output_depths_m = zeros(Float64, 0)
         # parametrizedSPAC.tspan
         # DS = LWFBrook90.setup(parametrizedSPAC::SPAC; Δz = Δz,  tspan = (0,10));
         # # Test the f and cb() functions (LWFBrook90.f_LWFBrook90R, )
@@ -60,7 +60,7 @@ input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
                                            Cduration  = 60,
                                            LAI_perc_BtoC = 100,
                                            LAI_perc_CtoB = 20)));
-    simulation  = setup(model; soil_output_depths = [-0.03, -0.11]);
+    simulation  = setup(model; soil_output_depths_m = [-0.03, -0.11]);
     ####################
 
     ####################
@@ -80,7 +80,7 @@ input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
         IC_soil = (PSIM_init_kPa = -7.0, delta18O_init_permil = -9.0, delta2H_init_permil = -11.0))
     model3
     simulation3
-    simulation3 = setup(model3, soil_output_depths = [-0.03, -0.11]);
+    simulation3 = setup(model3, soil_output_depths_m = [-0.03, -0.11]);
     simulation3
     # @run Base.show(IOContext(stdout, :limit => true), "text/plain", model3)
     # @run Base.show(IOContext(stdout, :limit => true), "text/plain", simulation3)
