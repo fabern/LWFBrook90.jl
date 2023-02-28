@@ -5,36 +5,85 @@ using Dates: DateTime, Millisecond, Second, Day, Month, month, value, dayofyear,
 using Statistics: mean
 # using Printf: @sprintf
 """
-    loadSPAC(folder::String, prefix::String)
+    loadSPAC(folder::String, prefix::String;
+            # OPTIONAL ARGUMENTS ARE:
+            simulate_isotopes::Bool = true,
+            canopy_evolution  = "meteoveg.csv",
+            Δz_thickness_m    = "soil_discretization.csv",
+            root_distribution = "soil_discretization.csv",
+            IC_soil           = "soil_discretization.csv",
+            IC_scalar         = "initial_conditions.csv",
+            storm_durations_h = "meteo_storm_durations.csv")
 
-Define instance of SPAC model by loading different input files for LWFBrook90:
-- `meteoveg.csv`
-- `param.csv`
-- `meteo_storm_durations.csv`
-- `initial_conditions.csv`
-- `soil_horizons.csv`
+Create instance of SPAC model by loading different input files for LWFBrook90 from folder `folder`` with the names:
+- `[PREFIX]_meteoveg.csv`
+- `[PREFIX]_meteo_iso.csv` (needed for isotopic)
+- `[PREFIX]_param.csv`
+- `[PREFIX]_meteo_storm_durations.csv`
+- `[PREFIX]_initial_conditions.csv`
+- `[PREFIX]_soil_horizons.csv`
 
 These files were created with an R script `generate_LWFBrook90jl_Input.R` that
 takes the same arguements as the R function `LWFBrook90R::run_LWFB90()` and generates
 the corresponding input files for LWFBrook90.jl.
 
-Optional arguments:
-- `suffix::String = ""`
-- `simulate_isotopes::Bool = true`
-- `compute_intermediate_quantities::Bool = true"`
-- `canopy_evolution  = nothing`
-- `Δz_thickness_m    = "soil_discretization.csv"`
-- `root_distribution = "soil_discretization.csv"`
-- `IC_soil           = "soil_discretization.csv"`
+Soil discretization can be provided as vector with the thickness of each cell, e.g: `Δz_thickness_m = fill(0.04, 20)`.
+
+Root distribution can be provided as arguments to function `Rootden_beta_()` as  `(beta = 0.98, )` or `(beta = 0.98, z_rootMax_m=-0.5)`.
+
+Meteo storm durations can be provided as vector for each month, e.g.: `[4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]`
+
+Initial conditions in the soil can be provided as NamedTuple `IC_soil = (PSIM_init_kPa = -7.0, delta18O_init_permil = -9.0, delta2H_init_permil = -11.0)`
+
+Canopy evolution can be provided as NamedTuple, giving the constant values of DENSEF, HEIGHT, SAI and dynamic evolution of LAI:
+
+    canopy_evolution = (DENSEF = 100,
+                        HEIGHT = 25,
+                        SAI = 100,
+                        LAI = (DOY_Bstart = 120,
+                                Bduration  = 21,
+                                DOY_Cstart = 270,
+                                Cduration  = 60,
+                                LAI_perc_BtoC = 100,
+                                LAI_perc_CtoB = 20))
+
+The vegetation season in terms of LAI is defined by defining the year into 4 parts:
+A->B, B->B+, B+->C, C->C+, C+->A where A is the start of the year (January 1st).
+effectively giving the 4 parts: C+->B, B->B+, B+->C, C->C+.
+The position and durationof these periods are defined in days by parameters: DOY\\_Bstart, Bduration, DOY\\_Cstart, and Cduration.
+LAI (in percent) is constant from C+->B and B+->C (given by LAI\\_perc\\_CtoB and LAI\\_perc\\_BtoC)
+and a simple linear interpolation is done for in\\_between (i.e. budburst and leaffall).
+
+Initial conditions of states other than soil can be provided as NamedTuple, e.g.:
+
+    IC_scalar = (amount = (u_GWAT_init_mm = 0,
+                           u_INTS_init_mm = 0,
+                           u_INTR_init_mm = 0,
+                           u_SNOW_init_mm = 0,
+                           u_CC_init_MJ_per_m2 = 0,
+                           u_SNOWLQ_init_mm =  0),
+                d18O    = (u_GWAT_init_permil = -13.,
+                           u_INTS_init_permil = -13.,
+                           u_INTR_init_permil = -13.,
+                           u_SNOW_init_permil = -13.),
+                d2H     = (u_GWAT_init_permil = -95.,
+                           u_INTS_init_permil = -95.,
+                           u_INTR_init_permil = -95.,
+                           u_SNOW_init_permil = -95.))
 """
 function loadSPAC(folder::String, prefix::String;
-    suffix::String = "",
     simulate_isotopes::Bool = true,
-    compute_intermediate_quantities::Bool = true,
-    canopy_evolution  = nothing,
+    # compute_intermediate_quantities::Bool = true,
+    canopy_evolution  = "meteoveg.csv",
     Δz_thickness_m    = "soil_discretization.csv",
     root_distribution = "soil_discretization.csv",  #either "soil_discretization.csv" or (beta = 0.97, z_rootMax_m = nothing)
-    IC_soil           = "soil_discretization.csv")  #either "soil_discretization.csv" or (PSIM_init_kPa = -6.3, delta18O_init_permil = -10., delta2H_init_permil = -95.)
+    IC_soil           = "soil_discretization.csv",  #either "soil_discretization.csv" or (PSIM_init_kPa = -6.3, delta18O_init_permil = -10., delta2H_init_permil = -95.)
+    IC_scalar         = "initial_conditions.csv",
+        #either "initial_conditions.csv" or IC_scalar = (amount = (u_GWAT_init_mm = 0, ...),
+        #                                                d18O   = (u_GWAT_init_permil = -13., ...),
+        #                                                d2H    = (u_GWAT_init_permil = -95., ...))
+    storm_durations_h = "meteo_storm_durations.csv")  #either "meteo_storm_durations.csv" or [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
+
 
     ## Define solver options
     solver_options =
@@ -44,35 +93,45 @@ function loadSPAC(folder::String, prefix::String;
         )
 
     ## Define paths of all input files
-    input_file_XXXX = prefix*"_XXXX"*suffix*".csv"
+    input_file_XXXX = prefix*"_XXXX"*".csv"
     path_meteoveg           = joinpath(folder, replace(input_file_XXXX, "XXXX" => "meteoveg"))
     path_param              = joinpath(folder, replace(input_file_XXXX, "XXXX" => "param"))
     # unused path_precdat   = joinpath(folder, replace(input_file_XXXX, "XXXX" => "precdat"))
     path_storm_durations    = joinpath(folder, replace(input_file_XXXX, "XXXX" => "meteo_storm_durations"))
     path_initial_conditions = joinpath(folder, replace(input_file_XXXX, "XXXX" => "initial_conditions"))
     path_soil_horizons      = joinpath(folder, replace(input_file_XXXX, "XXXX" => "soil_horizons"))
+    path_soil_discretization = joinpath(folder, replace(input_file_XXXX, "XXXX" => "soil_discretization"))
 
     ## Load time-varying atmospheric forcing
-    reference_date, tspan, input_meteoveg, meteo_iso_forcing, storm_durations =
-        init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes)
+    reference_date, input_meteoveg, meteo_iso_forcing, storm_durations =
+        init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes, storm_durations_h)
+
+    tspan = extrema(input_meteoveg.days)
 
     meteo_forcing = input_meteoveg[:, [:days, :GLOBRAD, :TMAX, :TMIN, :VAPPRES, :WIND, :PRECIN]]
+    @assert all(meteo_forcing.GLOBRAD .>= 0) "Error in vegetation parameters: GLOBRAD must be above 0."
+    # @assert all(meteo_forcing.TMAX    .> 0) "Error in vegetation parameters: TMAX must be above 0."
+    # @assert all(meteo_forcing.TMIN    .> 0) "Error in vegetation parameters: TMIN must be above 0."
+    @assert all(meteo_forcing.VAPPRES .>= 0) "Error in vegetation parameters: VAPPRES must be above 0."
+    @assert all(meteo_forcing.WIND    .>= 0) "Error in vegetation parameters: WIND must be above 0."
+    @assert all(meteo_forcing.PRECIN  .>= 0) "Error in vegetation parameters: PRECIN must be above 0."
 
     ## Load time-varying vegetation parameters
-    if (isnothing(canopy_evolution))
+    if (canopy_evolution == "meteoveg.csv")
         # Use DataFrame from meteoveg.csv
         if ("DENSEF" in names(input_meteoveg) && "HEIGHT" in names(input_meteoveg) &&
             "LAI"    in names(input_meteoveg) && "SAI"    in names(input_meteoveg))
-
             _to_use_canopy_evolution = input_meteoveg[:, [:days, :DENSEF, :HEIGHT, :LAI, :SAI]] # store DataFrame in SPAC
+            # Assert validity of vegetation values
+            @assert all(_to_use_canopy_evolution.LAI .> 0) "Error in vegetation parameters: LAI must be above 0%."
         else
-            @warn  """
+            error("""
                 Input_meteoveg is expected to contain one or multiple of the columns: :DENSEF, :HEIGHT, :LAI, or :SAI.
                 Please check your input files with the current documentation and possibly contact the developer team if the error persists.
                 If it does not contain the columns please provide a parametrization to loadSPAC(, canopy_evolution::NamedTuple = ())
                 with the named tuple:
                 `(DENSEF = 100, HEIGHT = 25, SAI = 100, LAI = (DOY_Bstart, Bduration, DOY_Cstart, Cduration, LAI_perc_BtoC, LAI_perc_CtoB))`
-                """
+                """)
         end
     else
         # Use received parameter from arguments to loadSPAC()
@@ -85,13 +144,34 @@ function loadSPAC(folder::String, prefix::String;
         @assert keys(canopy_evolution.LAI) == (:DOY_Bstart, :Bduration, :DOY_Cstart, :Cduration, :LAI_perc_BtoC, :LAI_perc_CtoB)
 
         _to_use_canopy_evolution = canopy_evolution # store parameter arguments in SPAC
+        # Assert validity of vegetation values
+        @assert all(_to_use_canopy_evolution.LAI.LAI_perc_BtoC > 0) "Error in vegetation parameters: LAI must be above 0%."
+        @assert all(_to_use_canopy_evolution.LAI.LAI_perc_CtoB > 0) "Error in vegetation parameters: LAI must be above 0%."
     end
+
+    # Assert validity of vegetation values
+    @assert all(_to_use_canopy_evolution.DENSEF .> 5) "DENSEF (in meteoveg.csv or canopy_evolution argument) should not be set lower than 5% as it affects aerodynamics."
+    @assert all(_to_use_canopy_evolution.HEIGHT .> 0) "Error in vegetation parameters: HEIGHT must be above 0%."
+    @assert all(_to_use_canopy_evolution.SAI .> 0) "Error in vegetation parameters: SAI must be above 0%."
 
     ## Load space-varying soil data
     soil_horizons = init_soil(path_soil_horizons)
 
     ## Load initial conditions of scalar state variables
-    IC_scalar = init_IC(path_initial_conditions)
+    if IC_scalar isa NamedTuple
+        if isfile(path_initial_conditions) @warn "Requested to overwrite initial conditions. Values in $path_initial_conditions are ignored." end
+        IC_scalar =
+            DataFrame(u_GWAT_init_mm      = [IC_scalar.amount.u_GWAT_init_mm     ,IC_scalar.d18O.u_GWAT_init_permil ,IC_scalar.d2H.u_GWAT_init_permil],
+                      u_INTS_init_mm      = [IC_scalar.amount.u_INTS_init_mm     ,IC_scalar.d18O.u_INTS_init_permil ,IC_scalar.d2H.u_INTS_init_permil],
+                      u_INTR_init_mm      = [IC_scalar.amount.u_INTR_init_mm     ,IC_scalar.d18O.u_INTR_init_permil ,IC_scalar.d2H.u_INTR_init_permil],
+                      u_SNOW_init_mm      = [IC_scalar.amount.u_SNOW_init_mm     ,IC_scalar.d18O.u_SNOW_init_permil ,IC_scalar.d2H.u_SNOW_init_permil],
+                      u_CC_init_MJ_per_m2 = [IC_scalar.amount.u_CC_init_MJ_per_m2,NaN                               ,NaN                             ],
+                      u_SNOWLQ_init_mm    = [IC_scalar.amount.u_SNOWLQ_init_mm   ,NaN                               ,NaN                             ])
+    elseif IC_scalar == "initial_conditions.csv"
+        IC_scalar = init_IC(path_initial_conditions)
+    else
+        error("Unknown format for argument `IC_scalar`: $IC_scalar")
+    end
 
     ## Load soil discretizations either from `soil_discretizations.csv`
     ## or then use provided Δz_thickness_m which also requires IC and root distribution parameters
@@ -109,7 +189,7 @@ function loadSPAC(folder::String, prefix::String;
 
     if Δz_thickness_m isa Vector
         # Define soil discretiztion freely
-        @warn "loadSPAC(...; Δz_thickness_m = ...) provided. Ignoring `soil_discretization.csv`, i.e. also overwriting root distribution and initial conditions."
+        if isfile(path_soil_discretization) @warn "loadSPAC(...; Δz_thickness_m = ...) provided. Ignoring `soil_discretization.csv`, i.e. also overwriting root distribution and initial conditions." end
         interfaces_m = -vcat(0, cumsum(Δz_thickness_m))
         soil_discretization = DataFrame(Upper_m           = interfaces_m[Not(end)],
                                     Lower_m               = interfaces_m[Not(1)],
@@ -132,7 +212,6 @@ function loadSPAC(folder::String, prefix::String;
         overwrite_IC!(soil_discretization, _to_use_IC_soil, simulate_isotopes)
 
     elseif Δz_thickness_m == "soil_discretization.csv"
-        path_soil_discretization = joinpath(folder, replace(input_file_XXXX, "XXXX" => "soil_discretization"))
         if isfile(path_soil_discretization)
             soil_discretization = LWFBrook90.read_path_soil_discretization(path_soil_discretization)
             # Assert type stability by executing disallowmissing!
@@ -326,20 +405,12 @@ function p_MONTHN(t::Float64, reference::DateTime)
     month(reference + Day(floor(t)))
 end
 
-function init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes = true)
+function init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes = true, storm_durations_h)
+
+    # Load daily values of meteo and precipitation isotopes
     if (simulate_isotopes)
         path_meteoiso = replace(path_meteoveg, "meteoveg" => "meteoiso")
     end
-    # if (simulate_isotopes && prefix == "2021-09-23-DAV")
-    #     # TODO(bernhard): hardcoded overriding of Davos example data
-    #     path_meteoiso = joinpath("2021-09-23_onlyDavos2020/2021-09-23-DAV-isoInput", "2021-10-04-DAV_meteoIso"*suffix*".csv")
-    #         path_initial_conditions = joinpath("2021-09-23_onlyDavos2020/2021-09-23-DAV-isoInput",
-    #                                             "2021-09-23-DAV_initial_conditions_tracers.csv")
-    #         path_param              = joinpath("2021-09-23_onlyDavos2020/2021-09-23-DAV-isoInput",
-    #                                             "2021-09-23-DAV_paramIso.csv")
-    # end
-
-
     meteo_forcing, reference_date = read_path_meteoveg(path_meteoveg)
 
     if (simulate_isotopes)
@@ -350,24 +421,22 @@ function init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes = t
         meteo_iso_forcing = nothing
     end
 
-    tspan = extrema(meteo_forcing.days)
-    # tspan = convert.(Int64, extrema(meteo_forcing.days))
-
-    # Load precipitation subdaily details
+    # Load parameter for subdaily model of precipitation
     #' @param storm_durations a [1,12]-matrix of precipitation durations (hours) for each month.
-    storm_durations = read_path_storm_durations(path_storm_durations)
-    #' @param precdat A matrix of precipitation interval data with 5 columns:
-    #'                   year, month, day, interval-number (1:precint), prec.
-    # input_precdat = DataFrame(a = Nothing, b = Nothing)
-    # TODO(bernhard): currently not implemented.
-    #                 Only using PRECIN (resolution daily).
-    #                 PRECDAT would allow to have smaller resolution (would require changes).
-    # unused: input_precdat = read(path_precdat, DataFrame;
-    # unused:           missingstring = "-999",
-    # unused:           skipto=2, header=["year","month","day","interval_number","prec"], delim=',',
-    # unused:           ignorerepeated=true)
+    if storm_durations_h isa Vector
+        @assert length(storm_durations_h) == 12 "Wrong format for argument `storm_durations_h`: $storm_durations_h. It must be a vector of length 12."
+        storm_durations = DataFrame(
+            month             = ["January", "Februrary", "March", "April", "May", "June",
+                                 "July", "August", "September", "October", "November", "December"],
+            storm_durations_h = storm_durations_h)
+            # storm_durations_h = [4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0])
+        if isfile(path_storm_durations) @warn "Requested to overwrite storm durations. Values in $path_storm_durations are ignored." end
+    elseif storm_durations_h == "meteo_storm_durations.csv"
+        storm_durations = read_path_storm_durations(path_storm_durations)
+    else
+        error("Unknown format for argument `meteo_storm_durations`: $storm_durations_h")
+    end
 
-    # Assert that no missing
     # Impose type of Float64 instead of Float64?
     disallowmissing!(meteo_forcing)
     if (simulate_isotopes)
@@ -375,7 +444,7 @@ function init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes = t
     end
     disallowmissing!(storm_durations, [:month, :storm_durations_h])
 
-    return reference_date, tspan, meteo_forcing, meteo_iso_forcing, storm_durations
+    return reference_date, meteo_forcing, meteo_iso_forcing, storm_durations
 end
 
 function init_IC(path_initial_conditions; simulate_isotopes = true)
@@ -392,27 +461,50 @@ end
 
 # path_meteoveg = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_meteoveg.csv"
 function read_path_meteoveg(path_meteoveg)
-    parsing_types =
-        Dict(:dates          => DateTime,
-            :globrad_MJDayM2 => Float64,
-            :tmax_degC       => Float64,
-            :tmin_degC       => Float64,
-            :vappres_kPa     => Float64,
-            :windspeed_ms    => Float64,
-            :prec_mmDay      => Float64,
-            :densef_percent  => Float64,
-            :height_percent  => Float64,
-            :lai_percent     => Float64,
-            :sai_percent     => Float64)
 
+    if (File(path_meteoveg).cols == 7)
+        # [:dates, :globrad_MJDayM2, :tmax_degC, :tmin_degC, :vappres_kPa, :windspeed_ms, :prec_mmDay]
+        # accomodate case when canopy_evolution is provided manually:
+        parsing_types =
+            Dict(:dates          => DateTime,
+                :globrad_MJDayM2 => Float64,
+                :tmax_degC       => Float64,
+                :tmin_degC       => Float64,
+                :vappres_kPa     => Float64,
+                :windspeed_ms    => Float64,
+                :prec_mmDay      => Float64)
+    else
+        parsing_types =
+            Dict(:dates          => DateTime,
+                :globrad_MJDayM2 => Float64,
+                :tmax_degC       => Float64,
+                :tmin_degC       => Float64,
+                :vappres_kPa     => Float64,
+                :windspeed_ms    => Float64,
+                :prec_mmDay      => Float64,
+                :densef_percent  => Float64,
+                :height_percent  => Float64,
+                :lai_percent     => Float64,
+                :sai_percent     => Float64)
+    end
+    # input_meteoveg = DataFrame(File(path_meteoveg;
+    #     skipto=3, delim=',', ignorerepeated=false,
+    #     # Be strict about loading NA's -> error if NA present
+    #     types=parsing_types, missingstring = nothing, strict=true))
+    # input_meteoveg.dates = DateTime.(input_meteoveg.dates)
+    # ipnut_meteove = transform(input_meteove, :dates = DateTime.(:dates))
     input_meteoveg = @linq DataFrame(File(path_meteoveg;
         skipto=3, delim=',', ignorerepeated=false,
         # Be strict about loading NA's -> error if NA present
         types=parsing_types, missingstring = nothing, strict=true))  |>
         transform(:dates = DateTime.(:dates))
-
     expected_names = [String(k) for k in keys(parsing_types)]
     assert_colnames_as_expected(input_meteoveg, path_meteoveg, expected_names)
+    # DataFrame(dates = "YYYY-MM-DD", globrad_MJDayM2 = "MJ/Day/m2",
+    #     tmax_degC = "degree C", tmin_degC = "degree C", vappres_kPa = "kPa",
+    #     windspeed_ms = "m per s", prec_mmDay = "mm per day",
+    #     densef_percent = "percent", height_percent = "percent",
+    #     lai_percent = "percent", sai_percent = "percent")
 
     # Assert units:
     assert_unitsHeader_as_expected(path_meteoveg,
@@ -420,12 +512,10 @@ function read_path_meteoveg(path_meteoveg)
         tmax_degC = "degree C", tmin_degC = "degree C", vappres_kPa = "kPa",
         windspeed_ms = "m per s", prec_mmDay = "mm per day",
         densef_percent = "percent", height_percent = "percent",
-        lai_percent = "percent", sai_percent = "percent"))
+        lai_percent = "percent", sai_percent = "percent")[[1], 1:ncol(input_meteoveg)])
 
     # Assert validity of values
-    @assert all(input_meteoveg.densef_percent .> 5) """
-        Densef_percent in meteoveg.csv should not be set lower than 5% as it affects aerodynamics.
-    """
+    # ...
 
     # Assert that no gaps
     @assert all(diff(input_meteoveg.dates) .== Millisecond(86400000)) "There are gaps in the forcing file. The file ($path_meteoveg) needs to have a value for each data from start until the end."
@@ -439,17 +529,27 @@ function read_path_meteoveg(path_meteoveg)
     input_meteoveg = @linq input_meteoveg |>
         where(:dates .>= starting_date, :dates .<= stopping_date)
 
-    rename!(input_meteoveg,
-        :globrad_MJDayM2 => :GLOBRAD,
-        :tmax_degC       => :TMAX,
-        :tmin_degC       => :TMIN,
-        :vappres_kPa     => :VAPPRES,
-        :windspeed_ms    => :WIND,
-        :prec_mmDay      => :PRECIN,
-        :densef_percent  => :DENSEF,
-        :height_percent  => :HEIGHT,
-        :lai_percent     => :LAI,
-        :sai_percent     => :SAI)
+    if (File(path_meteoveg).cols == 7)
+        rename!(input_meteoveg,
+            :globrad_MJDayM2 => :GLOBRAD,
+            :tmax_degC       => :TMAX,
+            :tmin_degC       => :TMIN,
+            :vappres_kPa     => :VAPPRES,
+            :windspeed_ms    => :WIND,
+            :prec_mmDay      => :PRECIN)
+    else
+        rename!(input_meteoveg,
+            :globrad_MJDayM2 => :GLOBRAD,
+            :tmax_degC       => :TMAX,
+            :tmin_degC       => :TMIN,
+            :vappres_kPa     => :VAPPRES,
+            :windspeed_ms    => :WIND,
+            :prec_mmDay      => :PRECIN,
+            :densef_percent  => :DENSEF,
+            :height_percent  => :HEIGHT,
+            :lai_percent     => :LAI,
+            :sai_percent     => :SAI)
+    end
 
     # Transform times from DateTimes to simulation time (Float of Days)
     reference_date = starting_date
@@ -882,9 +982,12 @@ function assert_colnames_as_expected(input_df, input_path, expected_names)
 end
 
 function assert_unitsHeader_as_expected(path, expected_units)
-    @assert DataFrame(File(path;skipto=2,limit=1)) == expected_units """
+    actual_units = DataFrame(File(path;skipto=2,limit=1,types=String))
+    @assert actual_units == expected_units """
     Unexpected units in input file $path. Expected units:
-    $expected_units"""
+    $expected_units
+    Received units:
+    $actual_units"""
 end
 
 function assert_unitsColumn_as_expected(path, expected_units)

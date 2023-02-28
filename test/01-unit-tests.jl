@@ -236,7 +236,6 @@ end
         p_WETINF = [1])
 end
 
-# @testset "adding-soil-layers" begin
 Δz_m_data = [
             [fill(0.5, 4);],
             [fill(0.02, 100);],
@@ -262,18 +261,18 @@ end
 
     ####################
     ## Discretize soil parameters and interpolate discretized root distribution
-    # Define refinement of grid with soil_output_depths
+    # Define refinement of grid with soil_output_depths_m
     if length(Δz_m) == 4
-        soil_output_depths = [-0.95, -1.05, -1.15, -1.25, -1.35]
+        soil_output_depths_m = [-0.95, -1.05, -1.15, -1.25, -1.35]
     else
-        soil_output_depths = soil_output_depths = zeros(Float64, 0)
+        soil_output_depths_m = soil_output_depths_m = zeros(Float64, 0)
     end
     refined_soil_discretizationDF, IDEPTH_idx, QDEPTH_idx =
         LWFBrook90.refine_soil_discretization(
             # parametrizedSPAC.soil_discretization.df,
             soil_discretization,
             parametrizedSPAC.pars.soil_horizons,
-            soil_output_depths,
+            soil_output_depths_m,
             parametrizedSPAC.pars.params[:IDEPTH_m],
             parametrizedSPAC.pars.params[:QDEPTH_m])
 
@@ -338,7 +337,7 @@ end
     ####################
 
     # Check if defined layers correspond to requested
-    expected_NLAYER = length(Δz_m) + 2*length(soil_output_depths) + 1 # +1 because we needed to add one at 0.005 m for the IDEPTH_m
+    expected_NLAYER = length(Δz_m) + 2*length(soil_output_depths_m) + 1 # +1 because we needed to add one at 0.005 m for the IDEPTH_m
     @test nrow(refined_soil_discretizationDF) == expected_NLAYER
     @test p.p_soil.NLAYER                     == expected_NLAYER
 end
@@ -413,4 +412,112 @@ end
     elseif ([fill(0.01, 200);] == Δz_m)
         @test simulation.parametrizedSPAC.soil_discretization.df.Rootden_ ≈ [0.050000000000000044, 0.050000000000000044, 0.04749999999999999, 0.04512500000000008, 0.04286875000000001, 0.0407253125, 0.03868904687500008, 0.03675459453125007, 0.034916864804687475, 0.033171021564453174, 0.031512470486230404, 0.029936846961919006, 0.02844000461382301, 0.027018004383131844, 0.02566710416397522, 0.024383748955776552, 0.023164561507987735, 0.022006333432588177, 0.020906016760958934, 0.019860715922910943, 0.01886768012676543, 0.01792429612042712, 0.017028081314405807, 0.016176677248685434, 0.01536784338625119, 0.01459945121693862, 0.013869478656091783, 0.01317600472328695, 0.012517204487122902, 0.011891344262766612, 0.011296777049628282, 0.010731938197146795, 0.010195341287289605, 0.009685574222925042, 0.00920129551177884, 0.00874123073618982, 0.008304169199380373, 0.007888960739411255, 0.0074945127024408364, 0.00711978706731875, 0.006763797713952857, 0.0064256078282550755, 0.006104327436842416, 0.005799111065000306, 0.005509155511750241, 0.005233697736162779, 0.004972012849354557, 0.00472341220688699, 0.004487241596542457, 0.004262879516715445, 0.004049735540879507, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     end
+end
+
+@testset "bare-minimum provided to loadSPAC" begin
+    Δz_m = fill(0.1, 11)
+    parametrizedSPAC = loadSPAC(
+        # "test-assets/DAV2020-bare-minimum/", "DAV2020-minimal";
+        "../examples/DAV2020-bare-minimum/", "DAV2020-minimal";
+        simulate_isotopes = true,
+        Δz_thickness_m = Δz_m,
+        root_distribution = (beta = 0.77, z_rootMax_m = -0.5),
+        IC_soil = (PSIM_init_kPa = -7.0, delta18O_init_permil = -10.11111, delta2H_init_permil = -91.1111),
+        canopy_evolution = (DENSEF = 100, HEIGHT = 25, SAI = 100,
+                                        LAI = (DOY_Bstart = 120,
+                                            Bduration  = 21,
+                                            DOY_Cstart = 270,
+                                            Cduration  = 60,
+                                            LAI_perc_BtoC = 95,
+                                            LAI_perc_CtoB = 70)),
+        storm_durations_h = [5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44],
+        IC_scalar = (amount = (u_GWAT_init_mm = 1.,
+                               u_INTS_init_mm = 13.7,
+                               u_INTR_init_mm = 0.,
+                               u_SNOW_init_mm = 22.222,
+                               u_CC_init_MJ_per_m2 = 0.101010,
+                               u_SNOWLQ_init_mm =  0.),
+                    d18O    = (u_GWAT_init_permil = -11.111,
+                               u_INTS_init_permil = -12.222,
+                               u_INTR_init_permil = -13.333,
+                               u_SNOW_init_permil = -14.444),
+                    d2H     = (u_GWAT_init_permil = -95.111,
+                               u_INTS_init_permil = -95.222,
+                               u_INTR_init_permil = -95.333,
+                               u_SNOW_init_permil = -95.444)));
+
+    simulation = setup(parametrizedSPAC, soil_output_depths_m = [-1.0755, -1.096]);
+    # Test soil discretization
+    ## Δz
+    actual_interfaces = cumsum(simulation.ODEProblem.p.p_soil.p_THICK)
+    # we specified IDEPTH at 33.3cm, which means a layer should have been added to have an interface at 333cm:
+    # further we specified a soil horizon ending at 3cm this requires another layer at 30mm
+    # lastly we requested an output value at a depths of -1.0755, -1.094 m,
+    #         hence for -1075.5mm two interfaces added (-1075.5mm, -1080.5mm) to have 5mm thick layer at that depth
+    #         hence for -1094.0mm one interface added (-1094.0mm) and not (-1099.0mm) as we already had one at 1100mm which is close enought
+    @test parametrizedSPAC.pars.params.IDEPTH_m ≈ 0.333
+
+    @test sum(simulation.ODEProblem.p.p_soil.p_THICK[simulation.ODEProblem.p.p_INFRAC .!= 0.0]) ≈ 333.0
+
+    @test any(actual_interfaces .- 0.00001 .<  333.0 .< actual_interfaces .+ 0.00001)
+    @test any(actual_interfaces .- 0.00001 .<   30.0 .< actual_interfaces .+ 0.00001)
+    @test any(actual_interfaces .- 0.00001 .< 1075.5 .< actual_interfaces .+ 0.00001)
+    @test any(actual_interfaces .- 0.00001 .< 1080.5 .< actual_interfaces .+ 0.00001)
+    @test any(actual_interfaces .- 0.00001 .< 1096.0 .< actual_interfaces .+ 0.00001)
+
+    ## root_distribution
+    simulation.parametrizedSPAC.soil_discretization.df.Rootden_ ≈
+        [
+         0.0926733195274138,
+         0.0926733195274138,
+         0.0067898780051124374,
+         0.0004974726659130013,
+         3.64482326699056e-5,
+         3.64482326699056e-5,
+         2.6704455456272315e-6,
+         0.0,
+         0.0,
+         0.0,
+         0.0,
+         0.0,
+         0.0,
+         0.0,
+         0.0,
+         0.0
+        ]
+
+    ## initial conditions
+    (_, u_aux_PSIM, _, _, _) = # (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+        LWFBrook90.KPT.derive_auxiliary_SOILVAR(simulation.ODEProblem.u0.SWATI.mm,
+                                                simulation.ODEProblem.p.p_soil);
+    @test all(u_aux_PSIM .≈ -7.0)
+    @test all(simulation.ODEProblem.u0.SWATI.d18O .== fill(-10.11111, simulation.ODEProblem.p.p_soil.NLAYER))
+    @test all(simulation.ODEProblem.u0.SWATI.d2H  .== fill(-91.1111, simulation.ODEProblem.p.p_soil.NLAYER))
+    # Test canopy evolution
+    @test simulation.ODEProblem.p.p_LAI(1) ≈ parametrizedSPAC.pars.params.MAXLAI * 70/100
+    @test simulation.ODEProblem.p.p_LAI(180) ≈ parametrizedSPAC.pars.params.MAXLAI * 95/100
+    # Test storm durations
+    @test simulation.ODEProblem.p.p_DURATN == fill(5.44, 12)
+
+    # Test scalar initial conditions
+    @test parametrizedSPAC.pars.IC_scalar.u_INTS_init_mm[1] == 13.7
+    @test simulation.ODEProblem.u0.INTS.mm                  == 13.7
+    @test parametrizedSPAC.pars.IC_scalar.u_SNOW_init_mm[1] == 22.222
+    @test simulation.ODEProblem.u0.SNOW.mm                  == 22.222
+    @test parametrizedSPAC.pars.IC_scalar.u_CC_init_MJ_per_m2[1] == 0.101010
+    @test simulation.ODEProblem.u0.CC.MJm2                       == 0.101010
+
+    @test parametrizedSPAC.pars.IC_scalar.u_INTS_init_mm[2] == -12.222
+    @test simulation.ODEProblem.u0.INTS.d18O                == -12.222
+    @test parametrizedSPAC.pars.IC_scalar.u_SNOW_init_mm[2] == -14.444
+    @test simulation.ODEProblem.u0.SNOW.d18O                == -14.444
+
+    @test simulation.ODEProblem.u0.GWAT.d18O == -11.111
+    @test simulation.ODEProblem.u0.INTS.d18O == -12.222
+    @test simulation.ODEProblem.u0.INTR.d18O == -13.333
+    @test simulation.ODEProblem.u0.SNOW.d18O == -14.444
+    @test simulation.ODEProblem.u0.GWAT.d2H  == -95.111
+    @test simulation.ODEProblem.u0.INTS.d2H  == -95.222
+    @test simulation.ODEProblem.u0.INTR.d2H  == -95.333
+    @test simulation.ODEProblem.u0.SNOW.d2H  == -95.444
 end

@@ -100,7 +100,7 @@ end
 """
     refine_soil_discretization(
         Δz,
-        soil_output_depths,
+        soil_output_depths_m,
         IDEPTH_m, #=modified_SPAC.pars.params[:IDEPTH_m],
         QDEPTH_m)
 
@@ -114,12 +114,12 @@ function refine_soil_discretization(
     # Δz::Vector,
     prior_soil_discretization::DataFrame, #Δz, TODO: simplify this function so that it uses only Δz, not the full DF soil_discretization
     input_soil_horizons::DataFrame,
-    soil_output_depths::Vector,
+    soil_output_depths_m::Vector,
     IDEPTH_m::Real, # = modified_SPAC.pars.params[:IDEPTH_m],
     QDEPTH_m::Real) # = modified_SPAC.pars.params[:QDEPTH_m])
 
     # input_soil_horizons: Physical description of soil domain, with horizons
-    # soil_output_depths:  Requested depths where the user wants to have the state variables, e.g. to compare with measurements
+    # soil_output_depths_m:  Requested depths where the user wants to have the state variables, e.g. to compare with measurements
     # IDEPTH_m depth over which infiltration is distributed, [m] "IDEPTH_m determines the
     #        number of soil layers over which infiltration is distributed when INFEXP is
     #        greater than 0."
@@ -146,13 +146,13 @@ function refine_soil_discretization(
     ############
     # 1) Check if discretization needs to be refined
     # 1a) Find out which layers need to be added
-    @assert all(abs.(diff(soil_output_depths)) .>= ε) """
-        Requested soil_output_depths (additional layers) must be further away than $ε m.
-        Requested were: $(soil_output_depths)
+    @assert all(abs.(diff(soil_output_depths_m)) .>= ε) """
+        Requested soil_output_depths_m (additional layers) must be further away than $ε m.
+        Requested were: $(soil_output_depths_m)
     """
 
-    # To accomodate requested soil_output_depths
-    layers_to_insert = soil_output_depths
+    # To accomodate requested soil_output_depths_m
+    layers_to_insert = soil_output_depths_m
     interfaces_for_layers = reverse(sort(vcat(layers_to_insert, layers_to_insert .- ε)))
 
     # To accomodate current parameter settings (e.g. infiltration depth)
@@ -173,7 +173,7 @@ function refine_soil_discretization(
 
     needed_interfaces = zeros(Float64, 0)
     for layer in all_potentially_needed_interfaces
-        if !any(abs.(layer .- existing_interfaces) .< ε)
+        if !any(abs.(layer .- existing_interfaces) .< ε * 0.5) # 0.5 as
             # insert the layer if none (!any() of the already existing layers is close enough)
             append!(needed_interfaces, layer)
         end
@@ -189,7 +189,7 @@ function refine_soil_discretization(
     if length(needed_interfaces) != 0
         @warn "Adding interfaces to soil discretization at depths $needed_interfaces, to allow for either requested IDEPTH/QDEPTH:  $(IDEPTH_m)m/$(QDEPTH_m)m, "*
               "or to accomodate physically defined soil horizons: $(unique(vcat(input_soil_horizons[!,"Upper_m"], input_soil_horizons[!,"Lower_m"])))"*
-              ifelse(length(soil_output_depths)==0,".",", or `soil_output_depths`=$soil_output_depths.")
+              ifelse(length(soil_output_depths_m)==0,".",", or `soil_output_depths_m`=$soil_output_depths_m.")
     end
 
     # Add them to the DataFrame and copy the properties of the cell above.

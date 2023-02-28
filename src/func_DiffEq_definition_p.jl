@@ -7,7 +7,7 @@ Generate vector p needed for ODE() problem in DiffEq.jl package.
 - `parametrizedSPAC::SPAC`: Instance of a definition of a SPAC-model (soil-plant-atmosphere continuum)
 - `compute_intermediate_quantities::...`: TODO argument description.
 - `simulate_isotopes::...`: TODO argument description.
-- `soil_output_depths`: vector of depths at which state variables should be extractable (negative numeric values [in meter])
+- `soil_output_depths_m`: vector of depths at which state variables should be extractable (negative numeric values [in meter])
 """
 function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEPTH_idx)
 
@@ -842,14 +842,12 @@ function make_absolute_from_relative(;
 
     aboveground_absolute = DataFrame(
         days     = aboveground_relative.days,
-        # assert a minimum value for p_DENSEF of 0.050:
-        DENSEF_  = max.(0.050, aboveground_relative.DENSEF./100 .* p_DENSEF_baseline_),
+        DENSEF_  = aboveground_relative.DENSEF./100 .* p_DENSEF_baseline_,
         HEIGHT_m = aboveground_relative.HEIGHT./100 .* p_HEIGHT_baseline_m,
-        LAI_     = aboveground_relative.LAI./100 .* p_MAXLAI,
-        SAI_     = aboveground_relative.SAI./100 .* p_SAI_baseline_,
+        LAI_     = aboveground_relative.LAI./100    .* p_MAXLAI,
+        SAI_     = aboveground_relative.SAI./100    .* p_SAI_baseline_,
         AGE_years= p_AGE_baseline_yrs
     )
-
     return (AboveGround = aboveground_absolute,)
 end
 
@@ -861,9 +859,9 @@ Take canopy evolution defined as DF and generate parameters continuous in time.
 """
 function interpolate_aboveground_veg(
     veg_evolution_Aboveground::DataFrame)
-    # veg_evolution_Belowground::DataFrame
 
-    @assert allequal(veg_evolution_Aboveground.AGE_years) # TODO: up Julia requirement to 1.8 for this
+    @assert all(isequal(first(veg_evolution_Aboveground.AGE_years)), veg_evolution_Aboveground.AGE_years) #
+    # @assert allequal(veg_evolution_Aboveground.AGE_years) # TODO: up Julia requirement to 1.8 for this allequal
     time_range = range(minimum(veg_evolution_Aboveground.days), maximum(veg_evolution_Aboveground.days), length=length(veg_evolution_Aboveground.days))
 
     p_DENSEF  = extrapolate(scale(interpolate(veg_evolution_Aboveground.DENSEF_  ,(BSpline(Constant{Previous}()))), time_range) ,0)

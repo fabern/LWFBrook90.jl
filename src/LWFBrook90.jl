@@ -175,16 +175,33 @@ include("../examples/func_run_example.jl") # defines RelativeDaysFloat2DateTime
 #     end
 # end
 
+
+
+"""
+    function setup(parametrizedSPAC::SPAC;
+                   requested_tspan = nothing,
+                   soil_output_depths_m::Vector = zeros(Float64, 0))
+
+Takes the definition of SPAC model and discretize to a system of ODEs that can be solved by
+the package DifferentialEquations.jl
+
+If needed, the computational grid of the soil is refined to output values at specific depths,
+e.g. by doing `setup(SPAC; soil_output_depths_m = [-0.35, -0.42, -0.48, -1.05])`.
+
+The argument `requested_tspan` is a tuple defining the duration of the simulation with a start-
+and an end-day relative to the reference date: `setup(SPAC; requested_tspan = (0,150))`.
+Note that the reference date given by the `SPAC.reference_date`.
+"""
 function setup(parametrizedSPAC::SPAC;
                 requested_tspan = nothing,
-                soil_output_depths::Vector = zeros(Float64, 0), # e.g. # soil_output_depths = [-0.35, -0.42, -0.48, -1.05]
-        )
-    @assert all(soil_output_depths .< 0)
+                soil_output_depths_m::Vector = zeros(Float64, 0)) # e.g. # soil_output_depths_m = [-0.35, -0.42, -0.48, -1.05]
+
+    @assert all(soil_output_depths_m .< 0)
 
     # This function prepares a discretizedSPAC, which is a container for a DifferentialEquations::ODEProblem.
     # A discretizedSPAC stores:
         # Its needed input:
-            # - SPAC (that contains arguments `requested_tspan` and `soil_output_depths`)
+            # - SPAC (that contains arguments `requested_tspan` and `soil_output_depths_m`)
             #        (hence setup(discreteSPAC.parametrizedSPAC) works as expected)
         # And derived fields:
             # - ODEProblem
@@ -193,7 +210,7 @@ function setup(parametrizedSPAC::SPAC;
 
     # To prepare the ODE we do:
         # make time dependent parameter
-        # refine the soil discretization as needed for soil_output_depths or infiltration depths...
+        # refine the soil discretization as needed for soil_output_depths_m or infiltration depths...
         # modify the simulation time span `tspan`
 
     modifiedSPAC = deepcopy(parametrizedSPAC); # make a copy to put into DiscretizedSPAC
@@ -204,7 +221,7 @@ function setup(parametrizedSPAC::SPAC;
     # refined_Δz, IDEPTH_idx, QDEPTH_idx =
     #     LWFBrook90.refine_soil_discretization(
     #         Δz,
-    #         soil_output_depths,
+    #         soil_output_depths_m,
     #         modifiedSPAC.pars.params[:IDEPTH_m],
     #         modifiedSPAC.pars.params[:QDEPTH_m])
     refined_soil_discretizationDF, IDEPTH_idx, QDEPTH_idx =
@@ -212,7 +229,7 @@ function setup(parametrizedSPAC::SPAC;
             # modifiedSPAC.soil_discretization.Δz,
             modifiedSPAC.soil_discretization.df,
             modifiedSPAC.pars.soil_horizons,
-            soil_output_depths,
+            soil_output_depths_m,
             modifiedSPAC.pars.params[:IDEPTH_m],
             modifiedSPAC.pars.params[:QDEPTH_m])
 

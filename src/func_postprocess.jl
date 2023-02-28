@@ -877,7 +877,7 @@ end
 
 Returns a 2D matrix of volumetric soil moisture values (m3/m3) with soil layers as rows and time steps as columns.
 The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
-that are both optionally provided as numeric vectors, e.g. depths_to_read_out_mm = [100, 150] or saveat = 1:1.0:100
+that are both optionally provided as numeric vectors, e.g. depths_to_read_out_mm = [100, 150] or days_to_read_out_d = 1:1.0:100
 """
 function get_θ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
     solution = simulation.ODESolution

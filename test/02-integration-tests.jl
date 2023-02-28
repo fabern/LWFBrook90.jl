@@ -99,8 +99,8 @@ end
         simulate_isotopes = simulate_isotopes,
         root_distribution = (beta = 0.90, z_rootMax_m = nothing));
 
-    @test_throws AssertionError simulation = setup(model; soil_output_depths = [0.02, 0.42])
-    @test_throws "Requested soil_output_depths (additional layers)" simulation = setup(model; soil_output_depths = [-0.03, -0.11, -0.112])
+    @test_throws AssertionError simulation = setup(model; soil_output_depths_m = [0.02, 0.42])
+    @test_throws "Requested soil_output_depths_m (additional layers)" simulation = setup(model; soil_output_depths_m = [-0.03, -0.11, -0.112])
 end
 
 @testset "$site-θ-ψ-aboveground-states" for site in ["BEA-2016" "DAV-2020"]

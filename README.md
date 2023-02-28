@@ -22,9 +22,9 @@ LWFBrook90.jl is an implementation of the existing LWF-BROOK90 rewritten entirel
 
 Processes and state variables of the model in LWF-BROOK90 are summarised visually in Figure 1 below.
 LWFBrook90.jl is developed with the following objectives in mind:
-- [ ] support for stable isotopes (δ¹⁸O and δ²H) by including transport equation and fractionation processes
+- [x] support for stable isotopes (δ¹⁸O and δ²H) by including transport equation ~~and fractionation processes~~
 - [ ] efficient parameter estimation (optimizing computational costs)
-- [ ] model flexibility for alternative processes parametrizations (possibly resulting in a [flexible model framework](https://presentations.copernicus.org/EGU2020/EGU2020-17975_presentation.pdf))
+- [x] model flexibility for alternative processes parametrizations ~~(possibly resulting in a [flexible model framework](https://presentations.copernicus.org/EGU2020/EGU2020-17975_presentation.pdf))~~
 
 
 

@@ -12,43 +12,48 @@ To install LWFBrook90.jl open a Julia REPL, enter the Pkg REPL by pressing `]` a
 (@v1.7) pkg> add LWFBrook90
 (@v1.7) pkg> status
 ```
-Dependencies of LWFBrookJulia.jl should automatically be installed. After that hit `Ctrl-C` to quit the Pkg REPL and return to the default Julia REPL.
+Dependencies of LWFBrook90.jl should automatically be installed. After that hit `Ctrl-C` to quit the Pkg REPL and return to the default Julia REPL.
 
 ### Usage
 Check out a step-by-step in guide for a simulation in section [Example](@ref)
 
 The steps in a typical simulation script are:
 - load the package `using LWFBrook90`
-- load the package dependency `using OrdinaryDiffEq: solve, Tsit5`
-- read input data
-- set up model options
-- set up an `ODE` problem (`u0`,`tspan`, `p`) and solve it with DifferentialEquations.jl
-- plot and/or postprocess simulation results
+- read input data `model = loadSPAC()`
+    - optional arguments in `loadSPAC()` can be used to define model parameters (-> type `?loadSPAC` to see documentation)
+- pre-process model for simulation `simulation = setup(model)`
+- compute simulation `simulate!(simulation)`
+- post-process and plot simulation results
 
-LWFBrook90.jl can output additional quantities in daily resolution derived during simulation. Monthly or yearly quantities can be derived in the post processing.
-For performance reasons, e.g. for Bayesian parameter estimation, computation of these additional quantities can also be deactivated during simulation, and they could be calculated in a post-processing step from the state vector.
-
-
+LWFBrook90.jl outputs quantities in daily resolution.
+Monthly or yearly quantities can be derived in the post processing.
+~~For performance reasons, e.g. for Bayesian parameter estimation, computation of these additional quantities can also be deactivated during simulation, and they could be calculated in a post-processing step from the state vector.~~
 
 ## Input data
 
 ### Overview of input data
-To run a simulation following input data are needed
+To run a simulation following input files are needed in a single folder
 - `soil_horizons.csv` - containing the hydraulic parameters of the different soil horizons
+- `param.csv` - containing scalar model parameters
 - `meteoveg.csv` - containing daily values of meteorologic variables and stand properties
 - `meteoiso.csv` - containing isotopic signatures of aggregate precipitation samples
-- `meteo_storm_durations.csv` - containing parameters of sub-daily storm/precipitation event patterns for each month
 - `initial_conditions.csv` - containing initial conditions of scalar state variables
 - `soil_discretization.csv` - containing the initial conditions of the soil water status in the form of the soil matric potential (kPa) and the initial isotopic signatures (vector state variables); continuously defined parameters of relative root density distributions; as well as the definition of the numerical discretization of the soil domain (nodes with upper and lower limits).
-- `param.csv` - containing further scalar model parameters
+- `meteo_storm_durations.csv` - containing parameters of sub-daily storm/precipitation event patterns for each month
+
+Of these only the CSV files for the parameters `soil_horizons.csv` and `param.csv` and the forcings `meteoveg.csv`, `meteoiso.csv` are absolutely needed. The remaing can be provided by the user as arguments to `loadSPAC()` in the Julia script:
+- `soil_discretizations.csv` not needed if `Δz_thickness_m`, `root_distribution`, and `IC_soil` provided.
+- `initial_conditions.csv`: not needed if `IC_scalar` provided.
+- `meteo_storm_durations.csv`: not needed if `storm_durations_h` provided.
+- Similarly columns with vegetation parameters are not mandatory in `meteoveg.csv`, if the user provides `loadSPAC(canopy_evolution = ...)`. Further `meteo_storm_durations`
 
 The structure of the input CSV's is illustrated by the example input data sets `isoBEA2010-18-*` or `DAV2020-bare-minimum` or `DAV2020-full` located in the folder `examples/`, as well as below in this documentation. Please follow these examples closely when generating your own input files, including the exact column names and header lines containing the units.
 
-For convenience, input files can be generated from a script that sets up a simulation with the R package [LWFBrook90R (v0.4.3)](https://github.com/pschmidtwalter/LWFBrook90R#usage). Instead of running the simulation with `run_LWFB90()`, the same arguments can be used to generate the input files for LWFBrook90.jl using the R function provided in the file `generate_LWFBrook90jl_Input.R`. Note that the input file `meteoiso.csv` needs to be generated separately and the files containing the initial conditions (`initial_conditions.csv` and `soil_discretization.csv`) also need to be extended manually with the isotope values (see structure of these input files below).
+For convenience, input CSV files can be generated from a script that sets up a simulation with the R package [LWFBrook90R (v0.4.3)](https://github.com/pschmidtwalter/LWFBrook90R#usage). Instead of running the simulation with `run_LWFB90()`, the same arguments can be used to generate the input files for LWFBrook90.jl using the R function provided in the file `generate_LWFBrook90jl_Input.R`. Note that the input file `meteoiso.csv` needs to be generated separately and the files containing the initial conditions (`initial_conditions.csv` and `soil_discretization.csv`) also need to be extended manually with the isotope values (see structure of these input files below).
 
-To load load input data and prepare a simulation follow the instructions in section [Example](@ref) or alternatively use the sample script `main_with_isotopes.jl`. NOTE: these will shortly be replace with Jupyter-notebooks generated with Literate.jl (TODO).
+To load input data and prepare a simulation follow the instructions in section [Example](@ref) or alternatively use the sample script `main_with_isotopes.jl`. NOTE: these will be replaced with Jupyter-notebooks generated with Literate.jl (TODO).
 
-In case you're unfamiliar to Julia, there are various ways to run a script such as `main.jl`: One possibility is to open the Julia REPL and run the script using `include(“main.jl”)`. Alternatively, the editor VS Code in combination with the Julia extension ([julia-vscode.org](https://www.julia-vscode.org)), provides a complete IDE for programming in Julia.
+In case you're unfamiliar with Julia, there are various ways to run a script such as `main.jl`: One possibility is to open the Julia REPL and run the script using `include(“main.jl”)`. Alternatively, the editor VS Code in combination with the Julia extension ([julia-vscode.org](https://www.julia-vscode.org)), provides a complete IDE for programming in Julia.
 
 ### Structure of input data
 ```@setup read_csv_inputs
