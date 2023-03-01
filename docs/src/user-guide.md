@@ -12,10 +12,10 @@ To install LWFBrook90.jl open a Julia REPL, enter the Pkg REPL by pressing `]` a
 (@v1.7) pkg> add LWFBrook90
 (@v1.7) pkg> status
 ```
-Dependencies of LWFBrook90.jl should automatically be installed. After that hit `Ctrl-C` to quit the Pkg REPL and return to the default Julia REPL.
+Dependencies of LWFBrook90.jl should automatically be installed. After that hit `Ctrl-C` to quit the Pkg REPL and return to the default Julia REPL. Now the installation can be tested with a single line `using LWFBrook90; run_example()`.
 
 ### Usage
-Check out a step-by-step in guide for a simulation in section [Example](@ref)
+Check out a step-by-step guide for a simulation in section [Example manual](@ref) or [Example Script 01](@ref)
 
 The steps in a typical simulation script are:
 - load the package `using LWFBrook90`

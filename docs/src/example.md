@@ -1,10 +1,9 @@
-# Example
+# Example manual
 
 Example data from Beatenberg is located in subfolder `examples/`. WSL is acknowledged for providing the input data (see section [Acknowledgments](@ref)).
 
 ## Step-by-step instructions
-To run the example simulation simulation simply call LWFBrook90.run_example().
-To run your own simulations: follow the step-by-step instructiosn below.
+To run your own simulations: follow the step-by-step instructions below.
 
 Load packages:
 ```Julia

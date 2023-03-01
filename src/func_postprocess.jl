@@ -5,7 +5,7 @@
 
 Plots the amount results of a SPAC Simulation. By default both above and belowground.
 The user can override this with the second argument isotope as one of `:aboveground`, `:belowground`, or `:above_and_belowground`.
-RWUcentroid can have values of either :dontShowRWUcentroid or :showRWUcentroid.
+RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroid`.
 """
 @userplot PlotAmounts
 @recipe function f(plam::PlotAmounts)
@@ -360,7 +360,7 @@ end
 
 Plots the isotope results of a SPAC Simulation. By default both δ18O and δ2H.
 The user can override this with the second argument isotope as one of `:d18O`, `:d2H`, or `:d18O_and_d2H`.
-RWUcentroid can have values of either :dontShowRWUcentroid or :showRWUcentroid.
+RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroid`.
 """
 @userplot PlotIsotopes
 @recipe function f(pliso::PlotIsotopes)
