@@ -47,7 +47,7 @@ export INFPAR, ITER
 using ..KPT
 
 """
-    INFPAR(p_INFEXP, p_ILAYER, p_soil, NLAYER)
+    INFPAR(p_INFEXP, p_ILAYER, p_soil)
 
 Compute fraction of infiltration to each soil layer.
 
@@ -55,19 +55,18 @@ Compute fraction of infiltration to each soil layer.
 - `p_INFEXP`: infiltration exponent: 0 all to top, 1 uniform with depth, >1.0=more at bottom than at top
 - `p_ILAYER`: number of layers over which infiltration is distributed
 - `p_soil`
-- `NLAYER`
 """
-function INFPAR(p_INFEXP, p_ILAYER, p_soil, NLAYER)
-    p_INFRAC = fill(NaN, NLAYER) # fraction of infiltration to each layer
+function INFPAR(p_INFEXP, p_ILAYER, p_soil)
+    p_INFRAC = fill(NaN, p_soil.NLAYER) # fraction of infiltration to each layer
     if p_INFEXP <= 0
         p_INFRAC[1]         = 1
-        p_INFRAC[2:NLAYER] .= 0
+        p_INFRAC[2:p_soil.NLAYER] .= 0
     else
         THICKT =    sum(p_soil.p_THICK[1:p_ILAYER])
         THICKA = cumsum(p_soil.p_THICK[1:p_ILAYER])
 
         p_INFRAC[1]         = (THICKA[1]/THICKT)^p_INFEXP - (0/THICKT)^p_INFEXP
-        for i=2:NLAYER
+        for i=2:p_soil.NLAYER
             if (i <= p_ILAYER)
                 p_INFRAC[i] = (THICKA[i]/THICKT)^p_INFEXP - (THICKA[i-1]/THICKT)^p_INFEXP
             else

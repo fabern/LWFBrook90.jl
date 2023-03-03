@@ -101,13 +101,13 @@ function run_example()
 
     ####################
     # Define simulation model by reading in system definition and input data
-    model = SPAC(input_path, input_prefix;
+    model = loadSPAC(input_path, input_prefix;
                  simulate_isotopes = contains(input_prefix, "iso"));
     ####################
 
     ####################
     # Prepare simulation by discretizing spatial domain
-    simulation = LWFBrook90.discretize(model; tspan = (0,100));
+    simulation = LWFBrook90.setup(model; tspan = (0,100));
 
     # Solve ODE:
     LWFBrook90.simulate!(simulation)
@@ -118,7 +118,7 @@ function run_example()
     return (
         Dict(["solution" => sol_LWFBrook90,
         "solutionDates" => LWFBrook90.RelativeDaysFloat2DateTime.(sol_LWFBrook90.t,
-            simulation.continuous_SPAC.reference_date),
+            simulation.parametrizedSPAC.reference_date),
         "thickness" => sol_LWFBrook90.prob.p.p_soil.p_THICK,
         "NLAYER" => sol_LWFBrook90.prob.p.p_soil.NLAYER])
     )

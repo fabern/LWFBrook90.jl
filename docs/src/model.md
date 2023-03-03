@@ -69,9 +69,9 @@ The model is implemented based code from the R package LWFBrook90R and its Fortr
 LWFBrook90.jl is 100% implemented in Julia. It defines the dynamical system in terms of ordinary differential equations and corresponding (time-varying) parameters and makes use of the package DifferentialEquations.jl for solving the evolution of the system state for a specified time `tspan` and intial conditions `u0`.
 
 LWFBrook90.jl is developed with the following objectives in mind:
-- [ ] support for stable isotopes (δ¹⁸O and δ²H) by including transport equation and fractionation processes
+- [x] support for stable isotopes (δ¹⁸O and δ²H) by including transport equation ~~and fractionation processes~~
 - [ ] efficient parameter estimation (optimizing computational costs)
-- [ ] model flexibility for alternative processes parametrizations (possibly resulting in a [flexible model framework](https://presentations.copernicus.org/EGU2020/EGU2020-17975_presentation.pdf))
+- [x] model flexibility for alternative processes parametrizations ~~(possibly resulting in a [flexible model framework](https://presentations.copernicus.org/EGU2020/EGU2020-17975_presentation.pdf))~~
 
 Currently two mode of operation are distinguished by the flag `compute_intermediate_quantities = true`. It determines wheter additional, non-essential quantities are computed during simulation. The intent is to optimize computational cost.
 
@@ -131,11 +131,8 @@ Description of BROOK90 implementation from Ecoshift (TODO: rework this to pertai
 ### Implementation roadmap
 
 Some ideas for future development include:
-- include models of transport and fractionation processes
+- include models for fractionation processes
 - include transport processes within tree stems
 - test use of parameter estimation procedures (check external Julia packages)
 - refactor code supporting model flexibility
   - distinguish Mualem-van Genuchten and Clapp-Hornberger parametrizations more cleanly and reduce redundundancy in code
-  - split LWFBrook90 code into sub-models:
-    - one sub-model that precisely reproduces what LWFBrook90R did (w.r.t to adaptive time stepping, operator splitting in state variable updates and manual resetting of variables)
-    - another sub-model that implements improved implementations of adaptive time stepping (using DiffEq.jl solution domain validity callbacks) and continuous, subdaily variable updates for all state variables

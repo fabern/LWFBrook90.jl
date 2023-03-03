@@ -1,0 +1,96 @@
+param_id,x
+### Isotope transport parameters  -------,NA
+### TODO,42
+### TODO2,42
+VXYLEM_mm, 20
+DISPERSIVITY_mm, 40
+### Meteorologic site parameters -------,NA
+LAT_DEG,47
+ESLOPE_DEG,0
+ASPECT_DEG,0
+ALB,0.2
+ALBSN,0.5
+C1,0.25
+C2,0.5
+C3,0.2
+WNDRAT,0.3
+FETCH,5000
+Z0W,0.005
+ZW,2
+### Canopy parameters -------,NA
+MAXLAI,3
+DENSEF_baseline_,1
+SAI_baseline_,1
+AGE_baseline_yrs,100
+HEIGHT_baseline_m,25
+LWIDTH,0.1
+Z0G,0.00325
+Z0S,0.001
+LPC,4
+CZS,0.13
+CZR,0.05
+HS,1
+HR,10
+ZMINH,2
+RHOTP,2
+NN,2.5
+### Interception parameters -------,NA
+FRINTLAI,0.06
+FSINTLAI,0.04
+FRINTSAI,0.06
+FSINTSAI,0.04
+CINTRL,0.15
+CINTRS,0.15
+CINTSL,0.6
+CINTSS,0.6
+RSTEMP,-0.5
+### Snowpack parameters -------,NA
+MELFAC,1.5
+CCFAC,0.3
+LAIMLT,0.2
+SAIMLT,0.5
+GRDMLT,0.35
+MAXLQF,0.05
+KSNVP,0.3
+SNODEN,0.3
+### Leaf evaporation parameters (affecting PE) -------,NA
+GLMAX,0.00868
+GLMIN,0.0003
+CR,0.5
+RM,1000
+R5,287
+CVPD,2
+TL,0
+T1,10
+T2,30
+TH,40
+### Plant parameters (affecting soil-water supply) -------,NA
+MXKPL,15.64
+MXRTLN,3000
+INITRLEN,12
+INITRDEP,0.25
+RGRORATE,0.03
+RGROPER,30
+FXYLEM,0.5
+PSICR,-1.03942
+RTRAD,0.35
+NOOUTF,1
+### Soil parameters -------,NA
+IDEPTH_m,0.4
+QDEPTH_m,0
+RSSA,795.29579
+RSSB,1
+INFEXP,0.45
+BYPAR,0
+QFPAR,1
+QFFC,0
+IMPERV,0
+DSLOPE,0
+LENGTH_SLOPE,200
+DRAIN,0.51
+GSC,0
+GSP,0
+### Numerical solver parameters -------,NA
+DTIMAX,0.5
+DSWMAX,0.05
+DPSIMAX,0.0005

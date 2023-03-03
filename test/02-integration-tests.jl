@@ -24,9 +24,85 @@ if basename(pwd()) != "test"; cd("test"); end
     @test soil_horizons isa DataFrame
 end
 @testset "trial2" begin
-    res = SPAC("test-assets/DAV-2020/input-files/", "DAV_LW1_def"; simulate_isotopes = false)
+    res = loadSPAC("test-assets/DAV-2020/input-files/", "DAV_LW1_def"; simulate_isotopes = false)
     @test res isa SPAC
 end
+@testset "loadSPAC()-parametrization of root distribution and IC" begin
+    # input_path = "test-assets/Hammel-2001/input-files-ISO"
+    # input_prefix = "Hammel_loam-NLayer-27-RESET=FALSE"
+    input_prefix = "isoBEAdense2010-18-reset-FALSE";
+    input_path = "../examples/isoBEAdense2010-18-reset-FALSE-input/";
+    simulate_isotopes = true
+
+    model = loadSPAC(input_path, input_prefix; simulate_isotopes = simulate_isotopes);
+    @test model.pars.root_distribution == "soil_discretization.csv"
+    @test model.pars.IC_soil == "soil_discretization.csv"
+    @test length(model.soil_discretization.Δz) == 21
+    model = loadSPAC(input_path, input_prefix; simulate_isotopes = simulate_isotopes,
+                    root_distribution = (beta = 0.90, z_rootMax_m = nothing));
+    @test model.pars.root_distribution == (beta = 0.90, z_rootMax_m = nothing)
+    @test model.pars.IC_soil == "soil_discretization.csv"
+    model = loadSPAC(input_path, input_prefix; simulate_isotopes = simulate_isotopes,
+                    IC_soil           = (PSIM_init_kPa = -12., delta18O_init_permil = -22., delta2H_init_permil = -88.));
+    @test all(model.soil_discretization.df.uAux_PSIM_init_kPa .== -12.)
+    model = loadSPAC(input_path, input_prefix; simulate_isotopes = simulate_isotopes,
+                    root_distribution = (beta = 0.90, z_rootMax_m = nothing),
+                    IC_soil           = (PSIM_init_kPa = -12., delta18O_init_permil = -22., delta2H_init_permil = -88.));
+    model
+    model = loadSPAC(input_path, input_prefix; simulate_isotopes = simulate_isotopes,
+                    Δz_thickness_m = [0.5, 0.5],
+                    root_distribution = (beta = 0.90, z_rootMax_m = nothing),
+                    IC_soil           = (PSIM_init_kPa = -12., delta18O_init_permil = -22., delta2H_init_permil = -88.));
+    @test nrow(model.soil_discretization.df) == 2
+    @test model.soil_discretization.df.Rootden_ ≈ [0.019896924495853598, 0.00010254427616865014]
+    @test model.soil_discretization.df.uAux_PSIM_init_kPa == [-12., -12.]
+    @test model.soil_discretization.df.u_delta18O_init_permil == [-22., -22.]
+    @test model.soil_discretization.df.u_delta2H_init_permil  == [-88., -88.]
+    @test_throws ErrorException loadSPAC(input_path, input_prefix; simulate_isotopes = simulate_isotopes,
+                    Δz_thickness_m = [0.5, 0.5]);
+    @test_throws ErrorException loadSPAC(input_path, input_prefix; simulate_isotopes = simulate_isotopes,
+                    Δz_thickness_m = [0.5, 0.5],
+                    IC_soil           = (PSIM_init_kPa = -12., delta18O_init_permil = -22., delta2H_init_permil = -88.));
+    @test_throws ErrorException loadSPAC(input_path, input_prefix; simulate_isotopes = simulate_isotopes,
+                    Δz_thickness_m = [0.5, 0.5],
+                    root_distribution = (beta = 0.90, z_rootMax_m = nothing));
+end
+
+@testset "loadSPAC()-manual_soil_discretization" begin
+    input_prefix = "isoBEAdense2010-18-reset-FALSE";
+    input_path = "../examples/isoBEAdense2010-18-reset-FALSE-input/";
+    simulate_isotopes = true
+    Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5); 0.1]; # grid spacing (heterogenous), meter (N=21)
+
+    # TODO: make this work without parametric root distribution (use)
+    @test_throws "no parametric root_distribution provided" loadSPAC(input_path, input_prefix; Δz_thickness_m = Δz_m)
+    @test_throws "no parametric soil initial conditions" loadSPAC(input_path, input_prefix; Δz_thickness_m = Δz_m, root_distribution = (beta = 0.98))
+    # TODO: once it works without parametric root and IC, below two tests can be simplified by removign the two arguments
+
+    # Check extension
+    @test loadSPAC(input_path, "isoBEAdense2010-18-reset-FALSE";
+        root_distribution = (beta = 0.98, ), IC_soil = (PSIM_init_kPa = -7.0, delta18O_init_permil = -9.0, delta2H_init_permil = -11.0),
+        # test is about these added 10cm below soil_horizon:
+        Δz_thickness_m = [Δz_m; 0.1]).soil_discretization.df.Lower_m[end] ≈ -1.3
+    @test loadSPAC(input_path, "isoBEAdense2010-18-reset-FALSE";
+        root_distribution = (beta = 0.98, ), IC_soil = (PSIM_init_kPa = -7.0, delta18O_init_permil = -9.0, delta2H_init_permil = -11.0),
+        # test is about these added 10cm below soil_horizon:
+        Δz_thickness_m = [Δz_m; 100]).soil_discretization.df.Lower_m[end] ≈ -101.2
+
+    @test_logs (:warn, r"soil horizon will be extended") match_mode=:any loadSPAC(input_path, "isoBEAdense2010-18-reset-FALSE";
+        root_distribution = (beta = 0.98, ), IC_soil = (PSIM_init_kPa = -7.0, delta18O_init_permil = -9.0, delta2H_init_permil = -11.0),
+        # test is about these added 10cm below soil_horizon:
+        Δz_thickness_m = [Δz_m; 0.7]);
+
+    model = loadSPAC(
+        input_path, input_prefix;
+        simulate_isotopes = simulate_isotopes,
+        root_distribution = (beta = 0.90, z_rootMax_m = nothing));
+
+    @test_throws AssertionError simulation = setup(model; soil_output_depths_m = [0.02, 0.42])
+    @test_throws "Requested soil_output_depths_m (additional layers)" simulation = setup(model; soil_output_depths_m = [-0.03, -0.11, -0.112])
+end
+
 @testset "$site-θ-ψ-aboveground-states" for site in ["BEA-2016" "DAV-2020"]
     out_figure_string = "test-assets/$site/out"
     folder_with_sim_input_and_ref_output = "test-assets/$site"

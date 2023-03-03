@@ -130,7 +130,7 @@ K(\psi)   = K_s\frac{\left[ 1- (-\alpha\psi)^{n-1} (1 + (-\alpha \psi)^n)^{-m} \
 ```
 source: Shao, Y. and Irannejad, P.: On the Choice of Soil Hydraulic Models in Land-Surface Schemes, Boundary Layer Meterol., 90, 83–115, https://doi.org/10.1023/A:1001786023282, 1999.
 """
-Base.@kwdef struct MualemVanGenuchtenSHP <: AbstractSoilHydraulicParams
+Base.@kwdef mutable struct MualemVanGenuchtenSHP <: AbstractSoilHydraulicParams
     # Soil hydraulic parameters: Mualem-van Genuchten
     # Input fields
     "Saturation volumetric soil water content [m³ m⁻³]"
@@ -161,7 +161,7 @@ end
 function Base.show(io::IO, shp::MualemVanGenuchtenSHP)
     # function Base.show(io::IO, mime::MIME"text/plain", shp::MualemVanGenuchtenSHP)
     print(io,
-        @sprintf("(θ from θr=%.3f to θs=%.3f, Ks =% 7.1f, STONEF=%.1f, l=%.1f, n=%.1f, α=% 5.1f)",
+        @sprintf("(θ from θr=%.3f to θs=%.3f, Ks =% 8.1f, STONEF=%.1f, l=%.1f, n=%.1f, α=% 7.1f)",
                 shp.p_θr, shp.p_THSAT,
                 shp.p_KSAT,
                 shp.p_STONEF,

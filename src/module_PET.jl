@@ -215,8 +215,8 @@ function LWFBrook90_CANOPY(p_fT_HEIGHT,
 
     # Parameters independent of snow depth or other state variables
     # but dependent on thinning factor densef with which partial thinning of the forest by cutting can be simulated
-    p_fT_SAIeff = p_fT_DENSEF*p_fT_SAI        # effective stem area index, m2/m2 (NOTE: not dependent on state u_SNOW)
-    p_fT_RTLEN  = p_fT_DENSEF*p_MXRTLN        # root length per unit land area, m/m2
+    p_fT_SAIeff  = p_fT_DENSEF*p_fT_SAI       # effective stem area index, m2/m2 (NOTE: not dependent on state u_SNOW)
+    p_fT_RTLENeff= p_fT_DENSEF*p_MXRTLN       # root length per unit land area, m/m2
     KPL      = max(p_fT_DENSEF*p_MXKPL, 1E-8) # plant conductivity, mm d-1 MPa-1
     p_fT_RPLANT = 1 / KPL                     # plant resistivity to water flow, MPa d/mm
 
@@ -247,7 +247,7 @@ function LWFBrook90_CANOPY(p_fT_HEIGHT,
                       0.00001)
 
     return (p_fu_HEIGHTeff, p_fu_LAIeff,
-            p_fT_SAIeff, p_fT_RTLEN, p_fT_RPLANT)
+            p_fT_SAIeff, p_fT_RTLENeff, p_fT_RPLANT)
 end
 
 """
@@ -315,7 +315,7 @@ value of z0g is replaced by the parameter Z0S before ROUGH is entered.
 The reference height at which weather variables are known, za (ZA), is set to a fixed amount
 (ZMINH) above h. It thus is assumed to move up and down if h changes through the year.
 """
-function ROUGH(p_fu_HEIGHTeff, p_ZMINH, p_fu_LAIeff, p_fT_SAIeff, p_CZS, p_CZR, p_HS, p_HR, p_LPC, p_fT_DENSEF, p_fu_Z0GS)
+function ROUGH(p_fu_HEIGHTeff, p_ZMINH, p_fu_LAIeff, p_fT_SAIeff, p_CZS, p_CZR, p_HS, p_HR, p_LPC, p_fu_Z0GS)#, p_fT_DENSEF)
     if (p_fu_HEIGHTeff >= p_HR)
         p_fu_Z0C = p_CZR * p_fu_HEIGHTeff
     elseif (p_fu_HEIGHTeff <= p_HS)

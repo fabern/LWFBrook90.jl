@@ -5,7 +5,7 @@
 
 Plots the amount results of a SPAC Simulation. By default both above and belowground.
 The user can override this with the second argument isotope as one of `:aboveground`, `:belowground`, or `:above_and_belowground`.
-RWUcentroid can have values of either :dontShowRWUcentroid or :showRWUcentroid.
+RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroid`.
 """
 @userplot PlotAmounts
 @recipe function f(plam::PlotAmounts)
@@ -92,7 +92,7 @@ RWUcentroid can have values of either :dontShowRWUcentroid or :showRWUcentroid.
     row_RWU_centroid_mm = sum(RWU_percent .* y_center; dims=1)
 
     # reduce how deep to plot soil:
-    soil_discr_to_plot = simulation.soil_discretization#[simulation.soil_discretization.Lower_m .>= -0.2, :]
+    soil_discr_to_plot = simulation.parametrizedSPAC.soil_discretization.df#[simulation.soil_discretization.Lower_m .>= -0.2, :]
 
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
         get_auxiliary_variables(simulation, days_to_read_out_d = days_to_read_out_d);
@@ -360,7 +360,7 @@ end
 
 Plots the isotope results of a SPAC Simulation. By default both δ18O and δ2H.
 The user can override this with the second argument isotope as one of `:d18O`, `:d2H`, or `:d18O_and_d2H`.
-RWUcentroid can have values of either :dontShowRWUcentroid or :showRWUcentroid.
+RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroid`.
 """
 @userplot PlotIsotopes
 @recipe function f(pliso::PlotIsotopes)
@@ -726,7 +726,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
     # # NOTE: --> sets attributes only when they don't already exist
     # # NOTE: :=  sets attributes even when they already exist
     @series begin
-        yguide := "PREC [mm]"
+        yguide := ""
         # seriestype := :bar
         # legend := false
         subplot := 1
@@ -735,7 +735,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
         x1, y11
     end
     @series begin
-        yguide := "PREC [mm]"
+        yguide := ""
         # seriestype := :bar
         # legend := false
         subplot := 2
@@ -744,7 +744,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
         x1, y12
     end
     @series begin
-        yguide := "PREC [mm]"
+        yguide := ""
         # seriestype := :bar
         # legend := false
         subplot := 3
@@ -753,7 +753,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
         x1, y13
     end
     @series begin
-        yguide := "PREC [mm]"
+        yguide := ""
         # seriestype := :bar
         # legend := false
         subplot := 4
@@ -762,7 +762,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
         x1, y14
     end
     @series begin
-        yguide := "PREC [mm]"
+        yguide := ""
         # seriestype := :bar
         # legend := false
         subplot := 5
@@ -771,7 +771,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
         x1, y15
     end
     @series begin
-        yguide := "PREC [mm]"
+        yguide := ""
         # seriestype := :bar
         # legend := false
         subplot := 6
@@ -780,7 +780,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
         x2, y21
     end
     @series begin
-        yguide := "PREC [mm]"
+        yguide := ""
         # seriestype := :bar
         # legend := false
         subplot := 7
@@ -789,7 +789,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
         x2, y22
     end
     @series begin
-        yguide := "PREC [mm]"
+        yguide := ""
         # seriestype := :bar
         # legend := false
         subplot := 8
@@ -798,7 +798,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
         x3, y31
     end
     @series begin
-        yguide := "PREC [mm]"
+        yguide := ""
         # seriestype := :bar
         # legend := false
         subplot := 9
@@ -807,7 +807,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
         x3, y32
     end
     @series begin
-        yguide := "PREC [mm]"
+        yguide := ""
         # seriestype := :bar
         # legend := false
         subplot := 10
@@ -877,7 +877,7 @@ end
 
 Returns a 2D matrix of volumetric soil moisture values (m3/m3) with soil layers as rows and time steps as columns.
 The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
-that are both optionally provided as numeric vectors, e.g. depths_to_read_out_mm = [100, 150] or saveat = 1:1.0:100
+that are both optionally provided as numeric vectors, e.g. depths_to_read_out_mm = [100, 150] or days_to_read_out_d = 1:1.0:100
 """
 function get_θ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
     solution = simulation.ODESolution
