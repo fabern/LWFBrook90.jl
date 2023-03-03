@@ -28,20 +28,21 @@ end
 
 # b) generate examples
 OUTPUT_markdown_for_Docs = joinpath(@__DIR__, "src/generated")
-OUTPUT_scripts_for_examp =
+OUTPUT_scripts_for_examp = joinpath(@__DIR__, "src/generated")
 
 # For Literate.jl use following formatting in the files:
     # # A markdown H1 title
     # A non-code markdown normal line
     ## A comment within the code chunk
 
-# Literate.markdown(joinpath(@__DIR__, "../examples/scripts/main.jl"), OUTPUT_folder; name = "example", documenter = true, preprocess = update_date)
-# Literate.script(  joinpath(@__DIR__, "../examples/scripts/main.jl"), OUTPUT_folder; name = "example", documenter = true, preprocess = update_date)
-# Literate.notebook(joinpath(@__DIR__, "../examples/scripts/main.jl"), OUTPUT_folder; name = "example", documenter = true, preprocess = update_date)
+            # Literate.markdown(joinpath(@__DIR__, "../examples/scripts/main.jl"), OUTPUT_markdown_for_Docs; name = "example", documenter = true, preprocess = update_date)
+            # Literate.script(  joinpath(@__DIR__, "../examples/scripts/main.jl"), OUTPUT_scripts_for_examp; name = "example", documenter = true, preprocess = update_date)
+            # Literate.notebook(joinpath(@__DIR__, "../examples/scripts/main.jl"), OUTPUT_folder; name = "example", documenter = true, preprocess = update_date)
 
-Literate.markdown(joinpath(@__DIR__, "../examples/scripts/example-script-01.jl"), OUTPUT_folder; name = "example-script-01", documenter = true, preprocess = update_date)
-Literate.script(  joinpath(@__DIR__, "../examples/scripts/example-script-01.jl"), OUTPUT_folder; name = "example-script-01", documenter = true, preprocess = update_date)
-# Literate.notebook(joinpath(@__DIR__, "../examples/scripts/example-script-01.jl"), OUTPUT_folder; name = "example-script-01", documenter = true, preprocess = update_date)
+#TODO: fix this:
+Literate.markdown(joinpath(@__DIR__, "../examples/scripts/example-script-01.jl"), OUTPUT_markdown_for_Docs; name = "example-script-01", documenter = true, preprocess = update_date)
+#TODO: fix this: Literate.script(  joinpath(@__DIR__, "../examples/scripts/example-script-01.jl"), OUTPUT_scripts_for_examp; name = "example-script-01", documenter = true, preprocess = update_date)
+            # Literate.notebook(joinpath(@__DIR__, "../examples/scripts/example-script-01.jl"), OUTPUT_folder; name = "example-script-01", documenter = true, preprocess = update_date)
 #### end code for Literate.jl
 
 
