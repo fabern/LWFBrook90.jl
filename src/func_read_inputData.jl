@@ -123,7 +123,7 @@ function loadSPAC(folder::String, prefix::String;
             "LAI"    in names(input_meteoveg) && "SAI"    in names(input_meteoveg))
             _to_use_canopy_evolution = input_meteoveg[:, [:days, :DENSEF, :HEIGHT, :LAI, :SAI]] # store DataFrame in SPAC
             # Assert validity of vegetation values
-            @assert all(_to_use_canopy_evolution.LAI .> 0) "Error in vegetation parameters: LAI must be above 0%."
+            @assert all(_to_use_canopy_evolution.LAI .>= 0) "Error in vegetation parameters: LAI must be above 0%."
         else
             error("""
                 Input_meteoveg is expected to contain one or multiple of the columns: :DENSEF, :HEIGHT, :LAI, or :SAI.
@@ -145,8 +145,8 @@ function loadSPAC(folder::String, prefix::String;
 
         _to_use_canopy_evolution = canopy_evolution # store parameter arguments in SPAC
         # Assert validity of vegetation values
-        @assert all(_to_use_canopy_evolution.LAI.LAI_perc_BtoC > 0) "Error in vegetation parameters: LAI must be above 0%."
-        @assert all(_to_use_canopy_evolution.LAI.LAI_perc_CtoB > 0) "Error in vegetation parameters: LAI must be above 0%."
+        @assert all(_to_use_canopy_evolution.LAI.LAI_perc_BtoC >= 0) "Error in vegetation parameters: LAI must be above 0%."
+        @assert all(_to_use_canopy_evolution.LAI.LAI_perc_CtoB >= 0) "Error in vegetation parameters: LAI must be above 0%."
     end
 
     # Assert validity of vegetation values
@@ -850,10 +850,9 @@ function read_path_soil_horizons(path_soil_horizons)
     ClappHornberger_expected_column_names =
         ["HorizonNr","Upper_m","Lower_m","thsat_volFrac","thetaf_volFrac","psif_kPa","bexp_","kf_mmDay","wtinf_","gravel_volFrac"]
 
-
-    if String.(propertynames(File(path_soil_horizons))) == MualVanGen_expected_column_names
+    if strip.(String.(propertynames(File(path_soil_horizons)))) == MualVanGen_expected_column_names
         FLAG_MualVanGen = 1
-    elseif String.(propertynames(File(path_soil_horizons))) == ClappHornberger_expected_column_names
+    elseif strip.(String.(propertynames(File(path_soil_horizons)))) == ClappHornberger_expected_column_names
         FLAG_MualVanGen = 0
     else
         error("""

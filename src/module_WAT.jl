@@ -58,7 +58,7 @@ Compute fraction of infiltration to each soil layer.
 """
 function INFPAR(p_INFEXP, p_ILAYER, p_soil)
     p_INFRAC = fill(NaN, p_soil.NLAYER) # fraction of infiltration to each layer
-    if p_INFEXP <= 0
+    if (p_INFEXP <= 0 || p_ILAYER <= 0)
         p_INFRAC[1]         = 1
         p_INFRAC[2:p_soil.NLAYER] .= 0
     else

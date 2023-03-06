@@ -225,8 +225,8 @@ function refine_soil_discretization(
     # Define IDEPTH_idx and QDEPTH_idx (to be used internally instead of IDEPTH_m and QDEPTH_m)
     is_infiltration_layer_BOOLEAN = -IDEPTH_m .<= refined_soil_discr[!,"Lower_m"]
     is_SRFL_layer_BOOLEAN         = -QDEPTH_m .<= refined_soil_discr[!,"Lower_m"]
-    IDEPTH_idx = sum(is_infiltration_layer_BOOLEAN) # lowest node where Bottom_m is below IDEPTH_m
-    QDEPTH_idx = sum(is_SRFL_layer_BOOLEAN)         # lowest node where Bottom_m is below QDEPTH_m
+    IDEPTH_idx = sum(is_infiltration_layer_BOOLEAN) # lowest node where Lower_m is below IDEPTH_m
+    QDEPTH_idx = sum(is_SRFL_layer_BOOLEAN)         # lowest node where Lower_m is below QDEPTH_m
 
     if (-IDEPTH_m < refined_soil_discr[end,"Lower_m"]) ||
         (-QDEPTH_m < refined_soil_discr[end,"Lower_m"])
@@ -607,7 +607,7 @@ function HammelKennel_transient_root_density(;
         end
     end
 
-    # 2) In all cases provide relative density as interpolated funciton in depth and time (even when constant through time)
+    # 2) In all cases provide relative density as interpolated function in depth and time (even when constant through time)
     p_fT_RELDEN =  extrapolate(interpolate((timepoints, 1:NLAYER), p_RELDEN_2Darray,
                                         (Gridded(Constant{Next}()), NoInterp()), # 1st dimension: ..., 2nd dimension NoInterp()
                                         ), Flat()) # extrapolate flat, alternative: Throw()
