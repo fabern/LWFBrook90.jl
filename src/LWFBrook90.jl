@@ -212,7 +212,9 @@ function remakeSPAC(parametrizedSPAC::SPAC;
     # dump(kwargs) # kwargs contains NamedTuples to be modified
     modifiedSPAC = deepcopy(parametrizedSPAC)
     for curr_change in keys(kwargs)
-        @assert values(kwargs)[curr_change] isa NamedTuple """
+        @assert values(kwargs)[curr_change] isa NamedTuple ||
+            # expect a NamedTuple of values to ovewrite, or in the case of IC_scalar a DataFrame
+            (curr_change == :IC_scalar && values(kwargs)[curr_change] isa DataFrame) """
         Argument $curr_change is not a NamedTuple. Append single values with comma, e.g. (beta=12,)
         """
         if (curr_change     == :soil_toplayer)
@@ -223,6 +225,10 @@ function remakeSPAC(parametrizedSPAC::SPAC;
             modifiedSPAC = remake_params(           modifiedSPAC, values(kwargs)[curr_change])
         elseif (curr_change == :root_distribution)
             modifiedSPAC = remake_root_distribution(modifiedSPAC, values(kwargs)[curr_change])
+        elseif (curr_change == :IC_soil)
+            modifiedSPAC = remake_IC_soil(modifiedSPAC, values(kwargs)[curr_change])
+        elseif (curr_change == :IC_scalar)
+            modifiedSPAC = remake_IC_scalar(modifiedSPAC, values(kwargs)[curr_change])
         else
             error("Unknown argument provided to remake(): $curr_change")
         end
@@ -263,7 +269,7 @@ function remake_root_distribution(spac, changesNT)
     for (key, val) in zip(keys(changesNT), changesNT)
         @assert key ∈ allowed_names "Unclear how to remake '$key' provided to params."
     end
-    # create new params reusing the old no and only overwriting whats defined by changesNT
+    # create new root_distribution reusing the old no and only overwriting whats defined by changesNT
     new_root_distribution = (;spac.pars.root_distribution..., changesNT...) # https://stackoverflow.com/a/60883705
     spac.pars = (;spac.pars..., root_distribution = new_root_distribution)
     return spac
@@ -276,6 +282,27 @@ function remake_params(spac, changesNT)
     # create new params reusing the old no and only overwriting whats defined by changesNT
     new_params = (;spac.pars.params..., changesNT...) # https://stackoverflow.com/a/60883705
     spac.pars = (;spac.pars..., params = new_params)
+    return spac
+end
+function remake_IC_soil(spac, changesNT)
+    allowed_names = keys(spac.pars.IC_soil)
+    for (key, val) in zip(keys(changesNT), changesNT)
+        @assert key ∈ allowed_names "Unclear how to remake '$key' provided to params."
+    end
+    # create new IC_soil reusing the old no and only overwriting whats defined by changesNT
+    new_IC_soil = (;spac.pars.IC_soil..., changesNT...) # https://stackoverflow.com/a/60883705
+    spac.pars = (;spac.pars..., IC_soil = new_IC_soil)
+    return spac
+end
+function remake_IC_scalar(spac, newICsoil_DF)
+    @assert all(
+        names(newICsoil_DF) .==
+            ["u_GWAT_init_mm", "u_INTS_init_mm", "u_INTR_init_mm", "u_SNOW_init_mm", "u_CC_init_MJ_per_m2", "u_SNOWLQ_init_mm"]) """
+    Unexpected column names in remake_IC_scalar().
+    """
+    # overwrite the entire DataFrame
+    # create new pars with an overwritten IC_scalar
+    spac.pars = (;spac.pars..., IC_scalar = newICsoil_DF)
     return spac
 end
 
