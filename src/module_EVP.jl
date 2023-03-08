@@ -177,9 +177,13 @@ function PLNTRES(NLAYER, p_soil, p_fT_RTLENeff, p_fT_RELDEN, p_RTRAD, p_fT_RPLAN
             RROOTI[i] = (p_fT_RPLANT - RXYLEM) / RTFRAC[i]
             # rhizosphere resistance for layer
             RTDENI = RTFRAC[i] * 0.001 * p_fT_RTLENeff / D[i] # .001 is (mm/mm2)/(m/m2) conversion
-            DELT = p_PI * p_RTRAD ^ 2 * RTDENI
+                     # RTDENI in mm/mm3 i.e. mm length of roots per mm3 of soil
+            DELT = p_PI * p_RTRAD ^ 2 * RTDENI # DELT in mm3 roots per mm3 of soil
             ALPHA[i] = (1 / (8 * p_PI * RTDENI)) * (DELT - 3 - 2 * (log(DELT)) / (1 - DELT))
+                    # ALPHA now in mm3 of soil / mm of root
             ALPHA[i] = ALPHA[i] * 0.001 * p_RHOWG / D[i] # .001 is MPa/kPa conversion
+                    # ALPHA now in mm3 of soil / mm of root * MPa/kPa * kPa/mm / mm soil
+                    # ALPHA now in MPa
         end
     end
     return (RXYLEM, RROOTI, ALPHA)
@@ -325,6 +329,7 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
             if (FLAG[i] == 0)
                 RI[i] = p_fT_RROOTI[i] + p_fT_ALPHA[i] / p_fu_KK[i]
                 SUM = SUM + 1.0 / RI[i]
+                # 1 ./ sum((1 ./ (p_fT_RROOTI .+ p_fT_ALPHA ./ p_fu_KK))[FLAG .== 0])
             else
                 ATRANI[i] = 0.0
             end
@@ -349,10 +354,16 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
 
         # soil water supply rate, assumed constant over day
         SUPPLY = (PSIT / 1000 - p_PSICR - p_RHOWG * p_fu_DISPC) / (RT + p_fT_RXYLEM)
+                # PSIT                  in kPa
+                # PSICR                 in MPa
+                # RHOWG                 in MPa/m
+                # DISPC                 in m
+                # RT and RXYLEM must be in [MPa d/mm]  to get:
+                # SUPPLY                in mm/day
         # transpiration rate limited by either PTR or SUPPLY
 
         if J == 1
-        # daytime, PTR is average of a half sine over daytime
+            # daytime, PTR is average of a half sine over daytime
             R = (2 / p_PI) * (SUPPLY / p_fu_PTR)
             if R <= 0
                 ATR = 0.
@@ -362,7 +373,7 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
                 ATR = p_fu_PTR
             end
         else
-        # nighttime, PTR assumed constant over nighttime
+            # nighttime, PTR assumed constant over nighttime
             if (SUPPLY <= 0) || (p_fu_PTR <= 0)
                 ATR = 0.
             else
