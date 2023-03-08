@@ -608,8 +608,18 @@ function HammelKennel_transient_root_density(;
     end
 
     # 2) In all cases provide relative density as interpolated function in depth and time (even when constant through time)
-    p_fT_RELDEN =  extrapolate(interpolate((timepoints, 1:NLAYER), p_RELDEN_2Darray,
-                                        (Gridded(Constant{Next}()), NoInterp()), # 1st dimension: ..., 2nd dimension NoInterp()
-                                        ), Flat()) # extrapolate flat, alternative: Throw()
+    if NLAYER > 1
+        p_fT_RELDEN =  extrapolate(interpolate((timepoints, 1:NLAYER), p_RELDEN_2Darray,
+                                            (Gridded(Constant{Next}()), NoInterp()), # 1st dimension: ..., 2nd dimension NoInterp()
+                                            ), Flat()) # extrapolate flat, alternative: Throw()
+        extrapolate(interpolate((timepoints, 1:NLAYER), p_RELDEN_2Darray,
+                                            (Gridded(Constant{Next}()), NoInterp()), # 1st dimension: ..., 2nd dimension NoInterp()
+                                            ), Flat()) # extrapolate flat, alternative: Throw()
+    else
+        p_fT_RELDEN_1arg = extrapolate(scale(interpolate(p_RELDEN_2Darray[:,1], (BSpline(Constant{Next}()))), timepoints) ,Flat())
+        function p_fT_RELDEN(t, ignored)
+            p_fT_RELDEN_1arg(t)
+        end
+    end
     return p_fT_RELDEN
 end
