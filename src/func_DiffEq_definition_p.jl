@@ -707,10 +707,10 @@ function interpolate_meteo(;
     # # NOTE: PRECIN is already in mm/day from the input data set. No transformation is needed for p_PREC.
 
     # # Interpolate input data with consideration of baselines
-    # p_LAI     = extrapolate(interpolate((canopy_evolution.days  .- 0.00001, ), canopy_evolution.LAI./100 .* p_MAXLAI,              Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
-    # p_SAI     = extrapolate(interpolate((canopy_evolution.days  .- 0.00001, ), canopy_evolution.SAI./100 .* p_SAI_baseline_,       Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
-    # p_DENSEF  = extrapolate(interpolate((canopy_evolution.days  .- 0.00001, ), canopy_evolution.DENSEF./100 .* p_DENSEF_baseline_, Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
-    # p_HEIGHT  = extrapolate(interpolate((canopy_evolution.days  .- 0.00001, ), canopy_evolution.HEIGHT./100 .* p_HEIGHT_baseline_m,Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_LAI     = extrapolate(interpolate((canopy_evolution.days  .- 0.00001, ), canopy_evolution.LAI_rel./100 .* p_MAXLAI,              Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_SAI     = extrapolate(interpolate((canopy_evolution.days  .- 0.00001, ), canopy_evolution.SAI_rel./100 .* p_SAI_baseline_,       Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_DENSEF  = extrapolate(interpolate((canopy_evolution.days  .- 0.00001, ), canopy_evolution.DENSEF_rel./100 .* p_DENSEF_baseline_, Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_HEIGHT  = extrapolate(interpolate((canopy_evolution.days  .- 0.00001, ), canopy_evolution.HEIGHT_rel./100 .* p_HEIGHT_baseline_m,Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
 
     ### Quickfix:
     @assert 1==length(unique(diff(meteo_forcing.days))) """
@@ -781,10 +781,10 @@ function generate_canopy_timeseries_relative(canopy_evolution; days, reference_d
     if canopy_evolution isa NamedTuple
         # Setup DataFrame
         canopy_evolutionDF = DataFrame(days   = days,
-                                        DENSEF = canopy_evolution.DENSEF,
-                                        HEIGHT = canopy_evolution.HEIGHT,
-                                        LAI = NaN,
-                                        SAI = canopy_evolution.SAI)
+                                        DENSEF_rel = canopy_evolution.DENSEF_rel,
+                                        HEIGHT_rel = canopy_evolution.HEIGHT_rel,
+                                        LAI_rel = NaN,
+                                        SAI_rel = canopy_evolution.SAI_rel)
 
         # Generate LAI time series
         # a) Derive dates for determination of day of year (DOY)
@@ -792,25 +792,25 @@ function generate_canopy_timeseries_relative(canopy_evolution; days, reference_d
 
         # b) Define evolution in terms of DOY
         knots = #[1,    # manual extrapolation to 1 and 366 days
-                [canopy_evolution.LAI.DOY_Bstart,
-                canopy_evolution.LAI.DOY_Bstart + canopy_evolution.LAI.Bduration,
-                canopy_evolution.LAI.DOY_Cstart,
-                canopy_evolution.LAI.DOY_Cstart + canopy_evolution.LAI.Cduration]
+                [canopy_evolution.LAI_rel.DOY_Bstart,
+                canopy_evolution.LAI_rel.DOY_Bstart + canopy_evolution.LAI_rel.Bduration,
+                canopy_evolution.LAI_rel.DOY_Cstart,
+                canopy_evolution.LAI_rel.DOY_Cstart + canopy_evolution.LAI_rel.Cduration]
                 #366]   # manual extrapolation to 1 and 366 days
 
         @assert 1 ≤ knots[1] ≤ knots[2] ≤ knots[3] ≤ knots[4] ≤ 366 "DOY of LAI are not ordered."
-        values = # [canopy_evolution.LAI.LAI_perc_CtoB,
-                [canopy_evolution.LAI.LAI_perc_CtoB,
-                canopy_evolution.LAI.LAI_perc_BtoC,
-                canopy_evolution.LAI.LAI_perc_BtoC,
-                canopy_evolution.LAI.LAI_perc_CtoB]
-                # canopy_evolution.LAI.LAI_perc_CtoB]
+        values = # [canopy_evolution.LAI_rel.LAI_perc_CtoB,
+                [canopy_evolution.LAI_rel.LAI_perc_CtoB,
+                canopy_evolution.LAI_rel.LAI_perc_BtoC,
+                canopy_evolution.LAI_rel.LAI_perc_BtoC,
+                canopy_evolution.LAI_rel.LAI_perc_CtoB]
+                # canopy_evolution.LAI_rel.LAI_perc_CtoB]
         # plot(linear_interpolation(knots, values; extrapolation_bc=Flat()).(Dates.dayofyear.(dates)))
         # plot(linear_interpolation(knots, values).(Dates.dayofyear.(dates)))
         # plot(linear_interpolation(knots, values).(-100:400))
 
         # c) Interpolate between DOY to generat time series
-        canopy_evolutionDF.LAI = linear_interpolation(knots, values; extrapolation_bc=Flat()).(dayofyear.(dates))
+        canopy_evolutionDF.LAI_rel = linear_interpolation(knots, values; extrapolation_bc=Flat()).(dayofyear.(dates))
 
     elseif canopy_evolution isa DataFrame
         canopy_evolutionDF      = canopy_evolution
@@ -842,10 +842,10 @@ function make_absolute_from_relative(;
 
     aboveground_absolute = DataFrame(
         days     = aboveground_relative.days,
-        DENSEF_  = aboveground_relative.DENSEF./100 .* p_DENSEF_baseline_,
-        HEIGHT_m = aboveground_relative.HEIGHT./100 .* p_HEIGHT_baseline_m,
-        LAI_     = aboveground_relative.LAI./100    .* p_MAXLAI,
-        SAI_     = aboveground_relative.SAI./100    .* p_SAI_baseline_,
+        DENSEF_  = aboveground_relative.DENSEF_rel./100 .* p_DENSEF_baseline_,
+        HEIGHT_m = aboveground_relative.HEIGHT_rel./100 .* p_HEIGHT_baseline_m,
+        LAI_     = aboveground_relative.LAI_rel./100    .* p_MAXLAI,
+        SAI_     = aboveground_relative.SAI_rel./100    .* p_SAI_baseline_,
         AGE_years= p_AGE_baseline_yrs
     )
     return (AboveGround = aboveground_absolute,)

@@ -424,8 +424,8 @@ end
         Δz_thickness_m = Δz_m,
         root_distribution = (beta = 0.77, z_rootMax_m = -0.5),
         IC_soil = (PSIM_init_kPa = -7.0, delta18O_init_permil = -10.11111, delta2H_init_permil = -91.1111),
-        canopy_evolution = (DENSEF = 100, HEIGHT = 25, SAI = 100,
-                                        LAI = (DOY_Bstart = 120,
+        canopy_evolution = (DENSEF_rel = 100, HEIGHT_rel = 100, SAI_rel    = 100,
+                                        LAI_rel = (DOY_Bstart = 120,
                                             Bduration  = 21,
                                             DOY_Cstart = 270,
                                             Cduration  = 60,
@@ -531,8 +531,8 @@ end
             Δz_thickness_m = Δz_m,
             root_distribution = (beta = 0.77, z_rootMax_m = -0.5),
             IC_soil = (PSIM_init_kPa = -7.0, delta18O_init_permil = -10.11111, delta2H_init_permil = -91.1111),
-            canopy_evolution = (DENSEF = 100, HEIGHT = 25, SAI = 100,
-                                            LAI = (DOY_Bstart = 120,
+            canopy_evolution = (DENSEF_rel = 100, HEIGHT_rel = 100, SAI_rel    = 100,
+                                            LAI_rel = (DOY_Bstart = 120,
                                                 Bduration  = 21,
                                                 DOY_Cstart = 270,
                                                 Cduration  = 60,
@@ -673,9 +673,9 @@ end
     @test all(values(remSPAC_10.parametrizedSPAC.pars.params[keys(to_change)]) .≈ values(Dict(pairs(to_change),)))
     # test ODEProblem:
     if discrSPAC.parametrizedSPAC.pars.canopy_evolution isa DataFrame
-        max_relative_LAI = maximum(discrSPAC.parametrizedSPAC.pars.canopy_evolution.LAI)/100
+        max_relative_LAI = maximum(discrSPAC.parametrizedSPAC.pars.canopy_evolution.LAI_rel)/100
     elseif discrSPAC.parametrizedSPAC.pars.canopy_evolution isa NamedTuple
-        max_relative_LAI = discrSPAC.parametrizedSPAC.pars.canopy_evolution.LAI.LAI_perc_BtoC/100
+        max_relative_LAI = discrSPAC.parametrizedSPAC.pars.canopy_evolution.LAI_rel.LAI_perc_BtoC/100
     else
         error("...")
     end
@@ -687,8 +687,8 @@ end
     to_change = (DOY_Bstart = 115,)
     remSPAC_11  = remakeSPAC(discrSPAC, LAI = to_change)
     # test parametrizedSPAC:
-    @test remSPAC_11.parametrizedSPAC.pars.canopy_evolution.LAI.DOY_Bstart != discrSPAC.parametrizedSPAC.pars.canopy_evolution.LAI.DOY_Bstart
-    @test remSPAC_11.parametrizedSPAC.pars.canopy_evolution.LAI.DOY_Bstart == to_change.DOY_Bstart
+    @test remSPAC_11.parametrizedSPAC.pars.canopy_evolution.LAI_rel.DOY_Bstart != discrSPAC.parametrizedSPAC.pars.canopy_evolution.LAI_rel.DOY_Bstart
+    @test remSPAC_11.parametrizedSPAC.pars.canopy_evolution.LAI_rel.DOY_Bstart == to_change.DOY_Bstart
     # test ODEProblem:
     LAI_t = remSPAC_11.ODEProblem.p.p_LAI(1:364)
     @test (to_change.DOY_Bstart) == findfirst(LAI_t .> minimum(LAI_t))
@@ -713,7 +713,7 @@ end
     # - cintrl                       # CINTRL                                all in parametrizedSPAC.pars.params
     # - alb, albsn                   # ALB, ALBSN                            all in parametrizedSPAC.pars.params
     # - rssa                         # RSSA                                  all in parametrizedSPAC.pars.params
-    # - budburstdoy (i.e. LAI(t))    # DOY_Bstart, DOY_Cstart, LAI_perc_CtoB all in parametrizedSPAC.pars.canopy_evolution.LAI
+    # - budburstdoy (i.e. LAI(t))    # DOY_Bstart, DOY_Cstart, LAI_perc_CtoB all in parametrizedSPAC.pars.canopy_evolution.LAI_rel
     # - psicr, fxylem, mxkpl         # PSICR, FXYLEM, MXKPL                  all in parametrizedSPAC.pars.params
     # - maxlai                       # MAXLAI                                all in parametrizedSPAC.pars.params
     # - maxrootdepth, betaroot       # beta, z_rootMax_m                     all in parametrizedSPAC.pars.root_distribution

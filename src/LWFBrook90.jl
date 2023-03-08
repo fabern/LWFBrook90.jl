@@ -54,8 +54,8 @@ An instance of a soil-plant-atmopsheric continuum model with the following field
         - `NamedTuple`: (PSIM\_init, δ18O\_init, δ2H\_init), containing constant values for the initial conditions
         - [NOT IMPELMENTED:]`NamedTuple`: (PSIM\_init, δ18O\_init, δ2H\_init), containing functions of the initial values with argument Δz
         - or String: `"soil_discretization.csv"` meaning that it must be defined in `soil_discretizations.csv`
-    - `pars.canopy_evolution`: canopy parameters (LAI, SAI, DENSEF, HEIGHT). Either:
-        - `NamedTuple`: (DENSEF = 100, HEIGHT = 25, SAI = 100, LAI = (DOY\_Bstart, Bduration, DOY\_Cstart, Cduration, LAI\_perc\_BtoC, LAI\_perc\_CtoB)), containing constant values and parameters for LAI\_relative interpolation
+    - `pars.canopy_evolution`: canopy parameters (LAI, SAI, DENSEF, HEIGHT) as relative in percent. Either:
+        - `NamedTuple`: (DENSEF_rel = 100, HEIGHT_rel = 100, SAI_rel = 100, LAI_rel = (DOY\_Bstart, Bduration, DOY\_Cstart, Cduration, LAI\_perc\_BtoC, LAI\_perc\_CtoB)), containing constant values and parameters for LAI\_relative interpolation
         - or DataFrame: with daily values
     - `pars.soil_horizons`: DataFrame containing description of soil layers/horizons and soil hydraulic parameters
 """
@@ -193,7 +193,7 @@ parameter.
 
 Possible kwargs are:
 - `soil_toplayer = (beta = ... , )`
-- `LAI = (DOY_Bstart = ... , )`
+- `LAI_rel = (DOY_Bstart = ... , )`
 - `params = (beta = ... , )`
 - `root_distribution = (beta = ... , )`
 """

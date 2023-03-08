@@ -53,8 +53,8 @@ input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
     model2 = loadSPAC(input_path, input_prefix;
                 simulate_isotopes = false,
                 root_distribution = (beta = 0.97, z_rootMax_m = nothing),
-                canopy_evolution = (DENSEF = 100, HEIGHT = 25, SAI = 100,
-                                    LAI = (DOY_Bstart = 120,
+                canopy_evolution = (DENSEF_rel = 100, HEIGHT_rel = 100, SAI_rel    = 100,
+                                    LAI_rel = (DOY_Bstart = 120,
                                            Bduration  = 21,
                                            DOY_Cstart = 270,
                                            Cduration  = 60,

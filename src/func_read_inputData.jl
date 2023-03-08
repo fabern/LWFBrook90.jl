@@ -37,10 +37,10 @@ Initial conditions in the soil can be provided as NamedTuple `IC_soil = (PSIM_in
 
 Canopy evolution can be provided as NamedTuple, giving the constant values of DENSEF, HEIGHT, SAI and dynamic evolution of LAI:
 
-    canopy_evolution = (DENSEF = 100,
-                        HEIGHT = 25,
-                        SAI = 100,
-                        LAI = (DOY_Bstart = 120,
+    canopy_evolution = (DENSEF_rel = 100,
+                        HEIGHT_rel = 100,
+                        SAI_rel    = 100,
+                        LAI_rel = (DOY_Bstart = 120,
                                 Bduration  = 21,
                                 DOY_Cstart = 270,
                                 Cduration  = 60,
@@ -84,14 +84,6 @@ function loadSPAC(folder::String, prefix::String;
         #                                                d2H    = (u_GWAT_init_permil = -95., ...))
     storm_durations_h = "meteo_storm_durations.csv")  #either "meteo_storm_durations.csv" or [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
 
-
-    ## Define solver options
-    solver_options =
-        (#Reset                           = false, # currently only Reset = 0 implemented
-         compute_intermediate_quantities = true,   # Flag whether ODE containes additional quantities than only states
-         simulate_isotopes               = simulate_isotopes
-        )
-
     ## Define paths of all input files
     input_file_XXXX = prefix*"_XXXX"*".csv"
     path_meteoveg           = joinpath(folder, replace(input_file_XXXX, "XXXX" => "meteoveg"))
@@ -101,6 +93,18 @@ function loadSPAC(folder::String, prefix::String;
     path_initial_conditions = joinpath(folder, replace(input_file_XXXX, "XXXX" => "initial_conditions"))
     path_soil_horizons      = joinpath(folder, replace(input_file_XXXX, "XXXX" => "soil_horizons"))
     path_soil_discretization = joinpath(folder, replace(input_file_XXXX, "XXXX" => "soil_discretization"))
+
+    ## Define solver options
+    solver_options =
+        (#Reset                           = false, # currently only Reset = 0 implemented
+         compute_intermediate_quantities = true,   # Flag whether ODE containes additional quantities than only states
+         simulate_isotopes               = simulate_isotopes
+        )
+
+    ## Load model input parameters
+    params, solver_opts = init_param(path_param; simulate_isotopes = simulate_isotopes)
+
+    solver_options = merge(solver_options, solver_opts) # append to manually provided solver options
 
     ## Load time-varying atmospheric forcing
     reference_date, input_meteoveg, meteo_iso_forcing, storm_durations =
@@ -119,40 +123,48 @@ function loadSPAC(folder::String, prefix::String;
     ## Load time-varying vegetation parameters
     if (canopy_evolution == "meteoveg.csv")
         # Use DataFrame from meteoveg.csv
-        if ("DENSEF" in names(input_meteoveg) && "HEIGHT" in names(input_meteoveg) &&
-            "LAI"    in names(input_meteoveg) && "SAI"    in names(input_meteoveg))
-            _to_use_canopy_evolution = input_meteoveg[:, [:days, :DENSEF, :HEIGHT, :LAI, :SAI]] # store DataFrame in SPAC
+        if ("DENSEF_rel" in names(input_meteoveg) && "HEIGHT_rel" in names(input_meteoveg) &&
+            "LAI_rel"    in names(input_meteoveg) && "SAI_rel"    in names(input_meteoveg))
+            _to_use_canopy_evolution = input_meteoveg[:, [:days, :DENSEF_rel, :HEIGHT_rel, :LAI_rel, :SAI_rel]] # store DataFrame in SPAC
             # Assert validity of vegetation values
-            @assert all(_to_use_canopy_evolution.LAI .>= 0) "Error in vegetation parameters: LAI must be above 0%."
+            @assert all(_to_use_canopy_evolution.LAI_rel .>= 0) "Error in vegetation parameters: LAI must be above 0%."
         else
             error("""
-                Input_meteoveg is expected to contain one or multiple of the columns: :DENSEF, :HEIGHT, :LAI, or :SAI.
+                Input_meteoveg is expected to contain one or multiple of the columns: :DENSEF_re, :HEIGHT_rel, :LAI_rel, or :SAI_rel.
                 Please check your input files with the current documentation and possibly contact the developer team if the error persists.
                 If it does not contain the columns please provide a parametrization to loadSPAC(, canopy_evolution::NamedTuple = ())
-                with the named tuple:
-                `(DENSEF = 100, HEIGHT = 25, SAI = 100, LAI = (DOY_Bstart, Bduration, DOY_Cstart, Cduration, LAI_perc_BtoC, LAI_perc_CtoB))`
+                with the NamedTuple containing relative values in percent:
+                `(DENSEF_rel = 100, HEIGHT_rel = 100, SAI_rel = 100, LAI_rel = (DOY_Bstart, Bduration, DOY_Cstart, Cduration, LAI_perc_BtoC, LAI_perc_CtoB))`
                 """)
         end
     else
         # Use received parameter from arguments to loadSPAC()
-        if ("DENSEF" in names(input_meteoveg) && "HEIGHT" in names(input_meteoveg) &&
-            "LAI"    in names(input_meteoveg) && "SAI"    in names(input_meteoveg))
+        if ("DENSEF_rel" in names(input_meteoveg) && "HEIGHT_rel" in names(input_meteoveg) &&
+            "LAI_rel"    in names(input_meteoveg) && "SAI_rel"    in names(input_meteoveg))
             @warn "Received canopy_evolution in loadSPAC(), overwriting values from `meteoveg.csv`."
         end
         @assert canopy_evolution isa NamedTuple
-        @assert keys(canopy_evolution) == (:DENSEF, :HEIGHT, :SAI, :LAI)
-        @assert keys(canopy_evolution.LAI) == (:DOY_Bstart, :Bduration, :DOY_Cstart, :Cduration, :LAI_perc_BtoC, :LAI_perc_CtoB)
+        @assert keys(canopy_evolution) == (:DENSEF_rel, :HEIGHT_rel, :SAI_rel, :LAI_rel)
+        @assert keys(canopy_evolution.LAI_rel) == (:DOY_Bstart, :Bduration, :DOY_Cstart, :Cduration, :LAI_perc_BtoC, :LAI_perc_CtoB)
 
         _to_use_canopy_evolution = canopy_evolution # store parameter arguments in SPAC
         # Assert validity of vegetation values
-        @assert all(_to_use_canopy_evolution.LAI.LAI_perc_BtoC >= 0) "Error in vegetation parameters: LAI must be above 0%."
-        @assert all(_to_use_canopy_evolution.LAI.LAI_perc_CtoB >= 0) "Error in vegetation parameters: LAI must be above 0%."
+        @assert all(_to_use_canopy_evolution.LAI_rel.LAI_perc_BtoC >= 0) "Error in vegetation parameters: LAI must be above 0%."
+        @assert all(_to_use_canopy_evolution.LAI_rel.LAI_perc_CtoB >= 0) "Error in vegetation parameters: LAI must be above 0%."
+
+        # NOTE: that values in canopy_evolution have to be relative express in percent
+        #       Absolute values are derived in combination with:
+        #           params.DENSEF_baseline_
+        #           params.SAI_baseline_
+        #           params.AGE_baseline_yrs
+        #           params.HEIGHT_baseline_m
+        #           params.MAXLAI
     end
 
     # Assert validity of vegetation values
-    @assert all(_to_use_canopy_evolution.DENSEF .> 5) "DENSEF (in meteoveg.csv or canopy_evolution argument) should not be set lower than 5% as it affects aerodynamics."
-    @assert all(_to_use_canopy_evolution.HEIGHT .> 0) "Error in vegetation parameters: HEIGHT must be above 0%."
-    @assert all(_to_use_canopy_evolution.SAI .> 0) "Error in vegetation parameters: SAI must be above 0%."
+    @assert all(_to_use_canopy_evolution.DENSEF_rel .> 5) "DENSEF (in meteoveg.csv or canopy_evolution argument) should not be set lower than 5% as it affects aerodynamics."
+    @assert all(_to_use_canopy_evolution.HEIGHT_rel .> 0) "Error in vegetation parameters: HEIGHT must be above 0%."
+    @assert all(_to_use_canopy_evolution.SAI_rel .> 0) "Error in vegetation parameters: SAI must be above 0%."
 
     ## Load space-varying soil data
     soil_horizons = init_soil(path_soil_horizons)
@@ -264,11 +276,6 @@ function loadSPAC(folder::String, prefix::String;
     # (in such a case emit a warning)
     extended_soil_horizons = extend_lowest_horizon(soil_horizons, soil_discretization)
 
-    ## Load model input parameters
-    params, solver_opts = init_param(path_param; simulate_isotopes = simulate_isotopes)
-
-    solver_options = merge(solver_options, solver_opts) # append to manually provided solver options
-
     ## Make time dependent input parameters continuous in time (interpolate)
     (meteo_forcing_cont, meteo_iso_forcing_cont) =
         LWFBrook90.interpolate_meteo(;
@@ -319,10 +326,10 @@ function Base.show(io::IO, mime::MIME"text/plain", model::SPAC; show_SPAC_title=
     println(io, "\n===== CANOPY EVOLUTION:===============")
     if model.pars.canopy_evolution isa DataFrame
         println(io, "model.pars.canopy_evolution was loaded form meteoveg.csv")
-        # println(io, show_avg_and_range(model.pars.canopy_evolution.DENSEF,"DENSEF            (%): "))
-        # println(io, show_avg_and_range(model.pars.canopy_evolution.HEIGHT,"HEIGHT            (%): "))
-        # println(io, show_avg_and_range(model.pars.canopy_evolution.LAI,"LAI            (%): "))
-        # println(io, show_avg_and_range(model.pars.canopy_evolution.SAI,"SAI            (%): "))
+        # println(io, show_avg_and_range(model.pars.canopy_evolution.DENSEF_rel,"DENSEF            (%): "))
+        # println(io, show_avg_and_range(model.pars.canopy_evolution.HEIGHT_rel,"HEIGHT            (%): "))
+        # println(io, show_avg_and_range(model.pars.canopy_evolution.LAI_rel,"LAI            (%): "))
+        # println(io, show_avg_and_range(model.pars.canopy_evolution.SAI_rel,"SAI            (%): "))
     else
         println(io, model.pars.canopy_evolution)
     end
@@ -545,10 +552,10 @@ function read_path_meteoveg(path_meteoveg)
             :vappres_kPa     => :VAPPRES,
             :windspeed_ms    => :WIND,
             :prec_mmDay      => :PRECIN,
-            :densef_percent  => :DENSEF,
-            :height_percent  => :HEIGHT,
-            :lai_percent     => :LAI,
-            :sai_percent     => :SAI)
+            :densef_percent  => :DENSEF_rel,
+            :height_percent  => :HEIGHT_rel,
+            :lai_percent     => :LAI_rel,
+            :sai_percent     => :SAI_rel)
     end
 
     # Transform times from DateTimes to simulation time (Float of Days)
