@@ -1,3 +1,21 @@
+function get_RWU_centroid(rows_RWU_mmDay, y_center)
+    # old solution, that gives bad values when some RWU is negative:
+    RWU_percent = rows_RWU_mmDay ./ sum(rows_RWU_mmDay; dims = 1)
+    RWUcentroidLabel = "mean RWU depth"
+    if (any(RWU_percent .< 0))
+        @warn "Some root water outfluxes detected. Centroid of RWU is  based only on uptakes."
+        rows_RWU_mmDay_onlyUptake = ifelse.(rows_RWU_mmDay.>0,rows_RWU_mmDay, 0)
+        RWU_percent_onlyUptake = rows_RWU_mmDay_onlyUptake ./ sum(rows_RWU_mmDay_onlyUptake; dims = 1)
+        RWU_percent = RWU_percent_onlyUptake
+        # RWU_percent = min.(0,rows_RWU_mmDay) ./ sum(min.(0,rows_RWU_mmDay); dims = 1)
+
+        RWUcentroidLabel = "mean RWU depth\n(based on uptake only)"
+    end
+
+    return (row_RWU_centroid_mm = sum(RWU_percent .* y_center; dims=1),
+            RWUcentroidLabel)
+end
+
 """
     plotamounts(simulation::DiscretizedSPAC)
     plotamounts(simulation::DiscretizedSPAC, compartments::Symbol)
@@ -88,8 +106,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     col_RWU_amt  = [sol(t).RWU.mmday for t in days_to_read_out_d]
     col_XYL_amt  = [sol(t).XYLEM.mm  for t in days_to_read_out_d]
 
-    RWU_percent = rows_RWU_mmDay ./ sum(rows_RWU_mmDay; dims = 1)
-    row_RWU_centroid_mm = sum(RWU_percent .* y_center; dims=1)
+    row_RWU_centroid_mm, RWUcentroidLabel = get_RWU_centroid(rows_RWU_mmDay, y_center)
 
     # reduce how deep to plot soil:
     soil_discr_to_plot = simulation.parametrizedSPAC.soil_discretization.df#[simulation.soil_discretization.Lower_m .>= -0.2, :]
@@ -234,9 +251,9 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
             @series begin
                 #plot!(x, row_RWU_centroid_mm', yflip=true, color=:white, label = "")
                 color := :white
-                label := "mean RWU depth"
-                # bg_legend --> colorant"rgba(100%,100%,100%,0.8)";legend := :bottomright
-                bg_legend --> colorant"rgba(100%,100%,100%,0.0)";legend := :bottomright; fg_legend --> :transparent; legendfontcolor := :white
+                label := RWUcentroidLabel
+                #bg_legend --> colorant"rgba(100%,100%,100%,0.8)";legend := :bottomright
+                bg_legend --> colorant"rgba(100%,100%,100%,0.0)"; legend := :bottomright; fg_legend --> :transparent; legendfontcolor := :white
                 yflip := true; yticks := y_soil_ticks
                 yguide := "Depth [mm]"; colorbar_title := "pF = log₁₀(-ψₘ hPa)"
                 subplot := 4
@@ -451,8 +468,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     row_XYL_d2H   = reduce(hcat, [sol(t).XYLEM.d2H for t in days_to_read_out_d])
 
     rows_RWU_mmDay  = reduce(hcat, [sol(t).TRANI.mmday   for t in days_to_read_out_d])
-    RWU_percent = rows_RWU_mmDay ./ sum(rows_RWU_mmDay; dims = 1)
-    row_RWU_centroid_mm = sum(RWU_percent .* y_center; dims=1)
+    row_RWU_centroid_mm, RWUcentroidLabel = get_RWU_centroid(rows_RWU_mmDay, y_center)
 
     # # 1b) define some plot arguments based on the extracted data
     # # color scheme:
@@ -574,8 +590,9 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
         if (RWUcentroid == :showRWUcentroid)
             @series begin
                 color := :white
-                label := "" #"mean RWU depth"
-                #bg_legend --> colorant"rgba(100%,100%,100%,0.0)";legend := :right; fg_legend --> :transparent; legendfontcolor := :white
+                label := "mean RWU depth"
+                bg_legend --> colorant"rgba(100%,100%,100%,0.0)"; legend := :right;       fg_legend --> :transparent; legendfontcolor := :white
+                # bg_legend --> colorant"rgba(100%,100%,100%,0.0)"; legend := :bottomright; fg_legend --> :transparent; legendfontcolor := :white
                 yflip := true; yticks := (y_ticks, y_labels)
                 yguide := "Depth [mm]"; colorbar_title := "δ18O [‰]"
                 subplot := idx_d18O_SWAT
@@ -601,8 +618,9 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
         if (RWUcentroid == :showRWUcentroid)
             @series begin
                 color := :white
-                label := "" #"mean RWU depth"
-                #bg_legend --> colorant"rgba(100%,100%,100%,0.0)";legend := :right; fg_legend --> :transparent; legendfontcolor := :white
+                label := RWUcentroidLabel
+                bg_legend --> colorant"rgba(100%,100%,100%,0.0)";legend := :right; fg_legend --> :transparent; legendfontcolor := :white
+                #bg_legend --> colorant"rgba(100%,100%,100%,0.0)"; legend := :right; fg_legend --> :transparent; legendfontcolor := :white
                 yflip := true; yticks := (y_ticks, y_labels)
                 yguide := "Depth [mm]"; colorbar_title := "δ2H [‰]"
                 subplot := idx_d2H_SWAT
