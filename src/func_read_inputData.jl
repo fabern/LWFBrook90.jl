@@ -300,6 +300,7 @@ function loadSPAC(folder::String, prefix::String;
         )
 end
 
+function Base.show(io::IO, ::MIME"text/plain", models::Vector{DiscretizedSPAC}) print(io, "Array of $(length(models)) DiscretizedSPAC. Not showing details...")  # https://discourse.julialang.org/t/9589
 function Base.show(io::IO, mime::MIME"text/plain", model::SPAC; show_SPAC_title=true)
     if (show_SPAC_title) println(io, "SPAC model:") end
 

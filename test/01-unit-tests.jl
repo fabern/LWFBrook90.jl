@@ -563,31 +563,32 @@ end
     ICscalar_tochange = copy(discrSPAC.parametrizedSPAC.pars.IC_scalar)
     ICscalar_tochange.u_INTR_init_mm = [1.3, -10, -90.]
     ICscalar_tochange.u_GWAT_init_mm = [10, -10, -90.]
-    remSPAC_1  = remakeSPAC(discrSPAC,
+    remSPAC_0  = remakeSPAC(discrSPAC,
         IC_soil = (PSIM_init_kPa = -3.0, delta18O_init_permil = -15.55, ),
         IC_scalar = ICscalar_tochange);
     # test parametrizedSPAC:
-    @test remSPAC_1.parametrizedSPAC.pars.IC_scalar.u_INTR_init_mm == [1.3, -10, -90.]
-    @test remSPAC_1.parametrizedSPAC.pars.IC_scalar.u_GWAT_init_mm == [10, -10, -90.]
-    @test remSPAC_1.parametrizedSPAC.pars.IC_soil.PSIM_init_kPa == -3.0
-    @test remSPAC_1.parametrizedSPAC.pars.IC_soil.delta18O_init_permil == -15.55
+    @test remSPAC_0.parametrizedSPAC.pars.IC_scalar.u_INTR_init_mm == [1.3, -10, -90.]
+    @test remSPAC_0.parametrizedSPAC.pars.IC_scalar.u_GWAT_init_mm == [10, -10, -90.]
+    @test remSPAC_0.parametrizedSPAC.pars.IC_soil.PSIM_init_kPa == -3.0
+    @test remSPAC_0.parametrizedSPAC.pars.IC_soil.delta18O_init_permil == -15.55
     # test ODEProblem:
-    @test remSPAC_1.ODEProblem.u0.INTR.mm    == 1.3
-    @test remSPAC_1.ODEProblem.u0.INTR.d18O  == -10
-    @test remSPAC_1.ODEProblem.u0.INTR.d2H   == -90
-    @test remSPAC_1.ODEProblem.u0.GWAT.mm    == 10
-    @test remSPAC_1.ODEProblem.u0.GWAT.d18O  == -10
-    @test remSPAC_1.ODEProblem.u0.GWAT.d2H   == -90
+    @test remSPAC_0.ODEProblem.u0.INTR.mm    == 1.3
+    @test remSPAC_0.ODEProblem.u0.INTR.d18O  == -10
+    @test remSPAC_0.ODEProblem.u0.INTR.d2H   == -90
+    @test remSPAC_0.ODEProblem.u0.GWAT.mm    == 10
+    @test remSPAC_0.ODEProblem.u0.GWAT.d18O  == -10
+    @test remSPAC_0.ODEProblem.u0.GWAT.d2H   == -90
     (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
         LWFBrook90.KPT.derive_auxiliary_SOILVAR(
-            remSPAC_1.ODEProblem.u0.SWATI.mm,
-            remSPAC_1.ODEProblem.p.p_soil);
+            remSPAC_0.ODEProblem.u0.SWATI.mm,
+            remSPAC_0.ODEProblem.p.p_soil);
     @test all(u_aux_PSIM .≈ -3.0)
-    @test all(remSPAC_1.ODEProblem.u0.SWATI.d18O .≈ -15.55)
+    @test all(remSPAC_0.ODEProblem.u0.SWATI.d18O .≈ -15.55)
 
     # TEST CHANGES TO SOIL HYDRAULICS ################################################################
     remSPAC_1  = remakeSPAC(discrSPAC, soil_toplayer = (ths_ = 0.4,))
     # test parametrizedSPAC:
+    @test names(discrSPAC.parametrizedSPAC.soil_discretization.df) == names(remSPAC_1.parametrizedSPAC.soil_discretization.df)
     @test remSPAC_1.parametrizedSPAC.pars.soil_horizons.shp[1].p_THSAT != discrSPAC.parametrizedSPAC.pars.soil_horizons.shp[1].p_THSAT
     @test remSPAC_1.parametrizedSPAC.pars.soil_horizons.shp[1].p_THSAT == 0.4
     # test ODEProblem:

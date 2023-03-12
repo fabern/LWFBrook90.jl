@@ -275,9 +275,9 @@ function map_soil_horizons_to_discretization(soil_horizons, computational_grid)
     # end
 
     nlayer_before_join = nrow(computational_grid2)
-    computational_grid2 = innerjoin(computational_grid2,
-                                    rename(soil_horizons, :Upper_m => :Horizon_Upper_m, :Lower_m => :Horizon_Lower_m, ),
-                                    makeunique=true,
+    computational_grid2 = innerjoin(computational_grid2[:, [:Upper_m, :Lower_m, :Rootden_, :uAux_PSIM_init_kPa, :u_delta18O_init_permil, :u_delta2H_init_permil, :HorizonNr]], # remove old horizon limits and shp
+                                    rename(soil_horizons, :Upper_m => :Horizon_Upper_m, :Lower_m => :Horizon_Lower_m, ), # append new horizons and shp
+                                    makeunique=false,
                                     #select(soil_horizons, Not([:Upper_m,:Lower_m])),
                                     on = :HorizonNr)
                                     # NOTE: not using leftjoin becaus it transforms types to Union{Missing, Float64} instead of only Float64

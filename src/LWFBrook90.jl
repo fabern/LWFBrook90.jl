@@ -192,10 +192,15 @@ that are provided as kwargs. This is useful running the same model with a range 
 parameter.
 
 Possible kwargs are:
-- `soil_toplayer = (beta = ... , )`
-- `LAI_rel = (DOY_Bstart = ... , )`
-- `params = (beta = ... , )`
-- `root_distribution = (beta = ... , )`
+- `soil_toplayer = (ths_ = 0.4, Ksat_mmday = 3854.9, alpha_ = 7.11,)`
+- `LAI = (DOY_Bstart = 115,)`
+- `root_distribution = (beta = 0.88, z_rootMax_m = -0.6,)`
+- `params = (DRAIN=.33, BYPAR=1, IDEPTH_m=0.67, INFEXP=0.33,
+            ALB=0.15, ALBSN=0.7, RSSA=720., PSICR=-1.6, FXYLEM=0.4, MXKPL=16.5, MAXLAI=9.999,
+            GLMAX=.00801, R5=235., CVPD=1.9, CINTRL=0.18,)`
+- `IC_soil = (PSIM_init_kPa = -3.0, delta18O_init_permil = -15.55, )`
+- `IC_scalar = ICscalar_tochange`
+
 """
 function remakeSPAC(discrSPAC::DiscretizedSPAC;
                 requested_tspan = nothing,
@@ -259,7 +264,7 @@ function remake_LAI(spac, changesNT)
     for (key, val) in zip(keys(changesNT), changesNT)
         @assert key ∈ LAI_names "Unclear how to remake '$key' provided to soil_layers."
     end
-    # create new LAI reusing the old no and overwriting whats defined
+    # create new LAI reusing the old one and overwriting whats defined
     new_LAI_pars = (;spac.pars.canopy_evolution.LAI..., changesNT...) # https://stackoverflow.com/a/60883705
     spac.pars = (;spac.pars...,
                   canopy_evolution = (;spac.pars.canopy_evolution..., LAI = new_LAI_pars))
@@ -270,7 +275,7 @@ function remake_root_distribution(spac, changesNT)
     for (key, val) in zip(keys(changesNT), changesNT)
         @assert key ∈ allowed_names "Unclear how to remake '$key' provided to params."
     end
-    # create new root_distribution reusing the old no and only overwriting whats defined by changesNT
+    # create new root_distribution reusing the old one and only overwriting whats defined by changesNT
     new_root_distribution = (;spac.pars.root_distribution..., changesNT...) # https://stackoverflow.com/a/60883705
     spac.pars = (;spac.pars..., root_distribution = new_root_distribution)
     return spac
@@ -280,7 +285,7 @@ function remake_params(spac, changesNT)
     for (key, val) in zip(keys(changesNT), changesNT)
         @assert key ∈ allowed_names "Unclear how to remake '$key' provided to params."
     end
-    # create new params reusing the old no and only overwriting whats defined by changesNT
+    # create new params reusing the old one and only overwriting whats defined by changesNT
     new_params = (;spac.pars.params..., changesNT...) # https://stackoverflow.com/a/60883705
     spac.pars = (;spac.pars..., params = new_params)
     return spac
@@ -290,7 +295,7 @@ function remake_IC_soil(spac, changesNT)
     for (key, val) in zip(keys(changesNT), changesNT)
         @assert key ∈ allowed_names "Unclear how to remake '$key' provided to params."
     end
-    # create new IC_soil reusing the old no and only overwriting whats defined by changesNT
+    # create new IC_soil reusing the old one and only overwriting whats defined by changesNT
     new_IC_soil = (;spac.pars.IC_soil..., changesNT...) # https://stackoverflow.com/a/60883705
     spac.pars = (;spac.pars..., IC_soil = new_IC_soil)
     return spac
