@@ -265,9 +265,9 @@ function remake_LAI(spac, changesNT)
         @assert key ∈ LAI_names "Unclear how to remake '$key' provided to soil_layers."
     end
     # create new LAI reusing the old one and overwriting whats defined
-    new_LAI_pars = (;spac.pars.canopy_evolution.LAI..., changesNT...) # https://stackoverflow.com/a/60883705
+    new_LAI_pars = (;spac.pars.canopy_evolution.LAI_rel..., changesNT...) # https://stackoverflow.com/a/60883705
     spac.pars = (;spac.pars...,
-                  canopy_evolution = (;spac.pars.canopy_evolution..., LAI = new_LAI_pars))
+                  canopy_evolution = (;spac.pars.canopy_evolution..., LAI_rel = new_LAI_pars))
     return spac
 end
 function remake_root_distribution(spac, changesNT)
