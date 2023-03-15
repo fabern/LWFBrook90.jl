@@ -323,9 +323,12 @@ the package DifferentialEquations.jl
 If needed, the computational grid of the soil is refined to output values at specific depths,
 e.g. by doing `setup(SPAC; soil_output_depths_m = [-0.35, -0.42, -0.48, -1.05])`.
 
-The argument `requested_tspan` is a tuple defining the duration of the simulation with a start-
-and an end-day relative to the reference date: `setup(SPAC; requested_tspan = (0,150))`.
-Note that the reference date given by the `SPAC.reference_date`.
+The argument `requested_tspan` is a tuple defining the duration of the simulation either
+with a start- and an end-day relative to the reference date: `setup(SPAC; requested_tspan = (0,150))`.
+or alternatively as a tuple of 2 DataTime's.
+Note that the reference date given by the `SPAC.reference_date` refers to the day 0.
+Further note that it is possible to provide a tspan not starting at 0, e.g. (120,150).
+In that case, initial conditions are applied tspan[1], but atmospheric forcing is correctly taken into account.
 """
 function setup(parametrizedSPAC::SPAC;
                 requested_tspan = nothing,
@@ -333,6 +336,16 @@ function setup(parametrizedSPAC::SPAC;
 
     @assert all(soil_output_depths_m .< 0)
 
+    if requested_tspan[1] isa DateTime
+        requested_tspan = LWFBrook90.DateTime2RelativeDaysFloat.(
+            requested_tspan, parametrizedSPAC.reference_date)
+    end
+    if (!isnothing(requested_tspan) && !(requested_tspan[1] ≈ 0))
+        @warn """
+        Requested time span doesn't start at 0. This is supported and correctly takes into account atmospheric forcing.
+        Note, however, that initial conditions are applied to t=$(requested_tspan[1]), i.e. at $(parametrizedSPAC.reference_date + Dates.Day(requested_tspan[1])).
+        """
+    end
     # This function prepares a discretizedSPAC, which is a container for a DifferentialEquations::ODEProblem.
     # A discretizedSPAC stores:
         # Its needed input:

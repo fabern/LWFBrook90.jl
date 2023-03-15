@@ -106,7 +106,9 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     col_RWU_amt  = [sol(t).RWU.mmday for t in days_to_read_out_d]
     col_XYL_amt  = [sol(t).XYLEM.mm  for t in days_to_read_out_d]
 
-    row_RWU_centroid_mm, RWUcentroidLabel = get_RWU_centroid(rows_RWU_mmDay, y_center)
+    if (RWUcentroid == :showRWUcentroid)
+        row_RWU_centroid_mm, RWUcentroidLabel = get_RWU_centroid(rows_RWU_mmDay, y_center)
+    end
 
     # reduce how deep to plot soil:
     soil_discr_to_plot = simulation.parametrizedSPAC.soil_discretization.df#[simulation.soil_discretization.Lower_m .>= -0.2, :]
@@ -468,7 +470,9 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     row_XYL_d2H   = reduce(hcat, [sol(t).XYLEM.d2H for t in days_to_read_out_d])
 
     rows_RWU_mmDay  = reduce(hcat, [sol(t).TRANI.mmday   for t in days_to_read_out_d])
-    row_RWU_centroid_mm, RWUcentroidLabel = get_RWU_centroid(rows_RWU_mmDay, y_center)
+    if (RWUcentroid == :showRWUcentroid)
+        row_RWU_centroid_mm, RWUcentroidLabel = get_RWU_centroid(rows_RWU_mmDay, y_center)
+    end
 
     # # 1b) define some plot arguments based on the extracted data
     # # color scheme:
