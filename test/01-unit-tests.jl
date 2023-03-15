@@ -383,7 +383,7 @@ end
                       root_distribution = (beta = 0.95, ),
                       IC_soil = (PSIM_init_kPa = -7.0, delta18O_init_permil = -9.0, delta2H_init_permil = -11.0))
     # parametrizedSPAC.pars.root_distribution
-    simulation = setup(parametrizedSPAC)
+    simulation = setup(parametrizedSPAC, ε = 0.005)
 
     # plot(simulation.parametrizedSPAC.soil_discretization.df.Rootden_, simulation.parametrizedSPAC.soil_discretization.df.Lower_m)
     if ([0.5, 0.5, 0.5, 0.5] == Δz_m)
@@ -403,7 +403,7 @@ end
                       Δz_thickness_m = Δz_m,
                       root_distribution = (beta = 0.95, z_rootMax_m = -0.5),
                       IC_soil = (PSIM_init_kPa = -7.0, delta18O_init_permil = -9.0, delta2H_init_permil = -11.0))
-    simulation = setup(parametrizedSPAC);
+    simulation = setup(parametrizedSPAC, ε = 0.005)
 
     # plot(simulation.soil_discretization.Rootden_, simulation.soil_discretization.Lower_m)
     if ([0.5, 0.5, 0.5, 0.5] == Δz_m)
@@ -447,7 +447,8 @@ end
                                u_INTR_init_permil = -95.333,
                                u_SNOW_init_permil = -95.444)));
 
-    simulation = setup(parametrizedSPAC, soil_output_depths_m = [-1.0755, -1.096]);
+    @test_throws AssertionError simulation = setup(parametrizedSPAC, soil_output_depths_m = [-1.0755, -1.096])
+    simulation                             = setup(parametrizedSPAC, soil_output_depths_m = [-1.0755, -1.096], ε = 0.005);
     # Test soil discretization
     ## Δz
     actual_interfaces = cumsum(simulation.ODEProblem.p.p_soil.p_THICK)
@@ -686,7 +687,7 @@ end
 
     # TEST CHANGES TO BUDBURST ################################################################
     to_change = (DOY_Bstart = 115,)
-    remSPAC_11  = remakeSPAC(discrSPAC, LAI = to_change)
+    remSPAC_11  = remakeSPAC(discrSPAC, LAI_rel = to_change)
     # test parametrizedSPAC:
     @test remSPAC_11.parametrizedSPAC.pars.canopy_evolution.LAI_rel.DOY_Bstart != discrSPAC.parametrizedSPAC.pars.canopy_evolution.LAI_rel.DOY_Bstart
     @test remSPAC_11.parametrizedSPAC.pars.canopy_evolution.LAI_rel.DOY_Bstart == to_change.DOY_Bstart

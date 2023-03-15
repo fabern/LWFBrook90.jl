@@ -116,7 +116,15 @@ function refine_soil_discretization(
     input_soil_horizons::DataFrame,
     soil_output_depths_m::Vector,
     IDEPTH_m::Real, # = modified_SPAC.pars.params[:IDEPTH_m],
-    QDEPTH_m::Real) # = modified_SPAC.pars.params[:QDEPTH_m])
+    QDEPTH_m::Real; # = modified_SPAC.pars.params[:QDEPTH_m])
+
+    # Define what is close enough for soil_output_depths_m (also minimal thickness of layers to create with this procedure)
+    # ε = 0.005     # thickness of layer to be inserted, [m]
+    # ε = 0.010   # thickness of layer to be inserted, [m]
+    # ε = 0.020   # thickness of layer to be inserted, [m]
+    # ε = 0.025   # thickness of layer to be inserted, [m]
+    ε = 0.050   # thickness of layer to be inserted, [m]
+    )
 
     # input_soil_horizons: Physical description of soil domain, with horizons
     # soil_output_depths_m:  Requested depths where the user wants to have the state variables, e.g. to compare with measurements
@@ -127,11 +135,7 @@ function refine_soil_discretization(
     #        layers over which wetness is calculated to determine source area (SRFL)
     #        parameters."
 
-    # Define what is close enough (also minimal thickness of layers to create with this procedure)
-    ε = 0.005     # thickness of layer to be inserted, [m]
-    # ε = 0.010   # thickness of layer to be inserted, [m]
-    # ε = 0.025   # thickness of layer to be inserted, [m]
-    # ε = 0.050   # thickness of layer to be inserted, [m]
+
 
     # IF WE WANT TO SUPPORT Δz as argument instead of soil_discretization_DF:
     # if prior_soil_discretization isa DataFrame
@@ -147,7 +151,7 @@ function refine_soil_discretization(
     # 1) Check if discretization needs to be refined
     # 1a) Find out which layers need to be added
     @assert all(abs.(diff(soil_output_depths_m)) .>= ε) """
-        Requested soil_output_depths_m (additional layers) must be further away than $ε m.
+        Requested soil_output_depths_m (additional layers) must be further away from each other than $ε m.
         Requested were: $(soil_output_depths_m)
     """
 
@@ -178,7 +182,7 @@ function refine_soil_discretization(
             append!(needed_interfaces, layer)
         end
     end
-    # Check again that needed_interfaces themselves are space widely enough:
+    # Check again that needed_interfaces themselves are spaced widely enough:
     if length(needed_interfaces)>0
         needed_interfaces = needed_interfaces[
             [true;                                    # keep first one for sure

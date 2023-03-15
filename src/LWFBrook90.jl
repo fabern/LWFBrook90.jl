@@ -193,7 +193,7 @@ parameter.
 
 Possible kwargs are:
 - `soil_toplayer = (ths_ = 0.4, Ksat_mmday = 3854.9, alpha_ = 7.11,)`
-- `LAI = (DOY_Bstart = 115,)`
+- `LAI_rel = (DOY_Bstart = 115,)`
 - `root_distribution = (beta = 0.88, z_rootMax_m = -0.6,)`
 - `params = (DRAIN=.33, BYPAR=1, IDEPTH_m=0.67, INFEXP=0.33,
             ALB=0.15, ALBSN=0.7, RSSA=720., PSICR=-1.6, FXYLEM=0.4, MXKPL=16.5, MAXLAI=9.999,
@@ -225,7 +225,7 @@ function remakeSPAC(parametrizedSPAC::SPAC;
         """
         if (curr_change     == :soil_toplayer)
             modifiedSPAC = remake_soil_layers(      modifiedSPAC, values(kwargs)[curr_change])
-        elseif (curr_change == :LAI)
+        elseif (curr_change == :LAI_rel)
             modifiedSPAC = remake_LAI(              modifiedSPAC, values(kwargs)[curr_change])
         elseif (curr_change == :params)
             modifiedSPAC = remake_params(           modifiedSPAC, values(kwargs)[curr_change])
@@ -332,11 +332,14 @@ In that case, initial conditions are applied tspan[1], but atmospheric forcing i
 """
 function setup(parametrizedSPAC::SPAC;
                 requested_tspan = nothing,
-                soil_output_depths_m::Vector = zeros(Float64, 0)) # e.g. # soil_output_depths_m = [-0.35, -0.42, -0.48, -1.05]
+                soil_output_depths_m::Vector = zeros(Float64, 0), # e.g. # soil_output_depths_m = [-0.35, -0.42, -0.48, -1.05]
+                # Define what is close enough for soil_output_depths_m
+                ε = 0.050   # thickness of layer to be inserted, [m]
+                )
 
     @assert all(soil_output_depths_m .< 0)
 
-    if requested_tspan[1] isa DateTime
+    if (!isnothing(requested_tspan) && requested_tspan[1] isa DateTime)
         requested_tspan = LWFBrook90.DateTime2RelativeDaysFloat.(
             requested_tspan, parametrizedSPAC.reference_date)
     end
@@ -379,7 +382,8 @@ function setup(parametrizedSPAC::SPAC;
             modifiedSPAC.pars.soil_horizons,
             soil_output_depths_m,
             modifiedSPAC.pars.params[:IDEPTH_m],
-            modifiedSPAC.pars.params[:QDEPTH_m])
+            modifiedSPAC.pars.params[:QDEPTH_m];
+            ε = ε)
     Δz_refined = refined_soil_discretizationDF.Upper_m - refined_soil_discretizationDF.Lower_m
     # if rootden (and initial conditions were given parametrically redo them):
     modifiedSPAC.pars.root_distribution
