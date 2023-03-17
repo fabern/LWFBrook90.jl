@@ -3,6 +3,7 @@ module LWFBrook90
 using SciMLBase       # instead of loading the full DifferentialEquations
 using OrdinaryDiffEq  # instead of loading the full DifferentialEquations
 using DiffEqCallbacks # instead of loading the full DifferentialEquations
+using ProgressLogging
 using RecipesBase, PlotUtils, Measures
 using LinearAlgebra
 using StatsBase: mean, weights
@@ -12,7 +13,7 @@ using Dates: now, Day, dayofyear
 using Printf: @sprintf
 using Interpolations: interpolate, extrapolate, NoInterp, Gridded, Constant, Next, Previous, Flat, Throw, scale, BSpline, linear_interpolation
 
-# TODO(bernhard): make sure we have documentation for these exported variables
+# DEVELOPERS: EXPORTED ELEMENTS CONSTITUTE THE API AND SHOULD REMAIN DOCUMENTED.
 export SPAC, DiscretizedSPAC, loadSPAC, setup, simulate!, remakeSPAC
 export run_simulation
 export Rootden_beta_
@@ -23,7 +24,6 @@ export get_δsoil,     get_θ,     get_ψ,  get_W, get_SWATI, get_K
 export get_deltasoil, get_theta, get_psi
 # read out results for aboveground/scalar variables
 export get_aboveground, get_δ, get_delta # get_mm
-
 
 @doc raw"""
     SPAC
@@ -313,9 +313,9 @@ function remake_IC_scalar(spac, newICsoil_DF)
 end
 
 """
-    function setup(parametrizedSPAC::SPAC;
-                   requested_tspan = nothing,
-                   soil_output_depths_m::Vector = zeros(Float64, 0))
+    setup(parametrizedSPAC::SPAC;
+        requested_tspan = nothing,
+        soil_output_depths_m::Vector = zeros(Float64, 0))
 
 Takes the definition of SPAC model and discretize to a system of ODEs that can be solved by
 the package DifferentialEquations.jl
@@ -468,7 +468,7 @@ function setup(parametrizedSPAC::SPAC;
     ####################
 
     ####################
-    # Define ODE problem which consists of
+    # Define ODE problem which consists at the least of
     #   - definition of right-hand-side (RHS) function f
     #   - definition of callback function cb
     #   - u0:     initial condition of states
@@ -493,22 +493,53 @@ function setup(parametrizedSPAC::SPAC;
         modifiedSPAC.tspan = requested_tspan
     end
 
+    # Seperate updating of different states (INTS, INTR, SNOW, CC, SNOWLQ are updated once per
+    # day while GWAT and SWATI are updated continuously) is implemented by means of operator
+    # splitting using a callback function for the daily updates and a ODE RHS (right hand
+    # side) for the continuous update.
+
     cb_func = define_LWFB90_cb() # define callback functions
     @assert !any(ismissing.(u0)) """
     There are missing values in the provided initial conditions `u0`. Please correct!"""
 
-    # Define ODE problem which consists of
-    #   - definition of right-hand-side (RHS) function f
-    #   - definition of callback function cb
-    #   - u0:     initial condition of states
-    #   - tspan:  definition of simulation time span
-    #   - p:      parameters
+    # Note that we require some workarounds for LWFBrook90.jl.
+    # Namely:
+    # - to accomodate a state vector (array) that contains NaNs, e.g. isotopic concentrations
+    #   that are undefined when a compartment is empty (e.g. SNOW = 0mm, δ_SNOW = NA):
+    #   a1) modify `unstable_check` (to not use these NaN)
+    #   a2) modify `internalnorm` for adaptive time stepping
+    # - to set default solver algorithm
+    # - to set default time stepping criteria
+    # Note that documentation for solve()-arguemnts can be found at:
+    # https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/#solver_options
     ode_LWFBrook90 =
-        ODEProblem(LWFBrook90.f_LWFBrook90R,
-                    u0,
-                    tspan_to_use,
-                    p,
-                    callback=cb_func)
+        ODEProblem(LWFBrook90.f_LWFBrook90R, u0, tspan_to_use, p;
+                    callback = cb_func,
+                    # below the default value for keyword-arguments for solve(),
+                    # note they can still be overwritten when calling solve() (or simulate!())
+                    # arguments for solve(), can still be overwritten
+                    progress_name = "SPAC simulating...",
+                    progress = true,
+                    saveat = tspan_to_use[1] : 1 : tspan_to_use[2], # in days -> i.e. daily output
+                    save_everystep = true, # saves additionally to saveat
+                    alg=Tsit5(), reltol = 1e-5,
+                    adaptive = true, internalnorm = LWFBrook90.norm_to_use, # fix adaptivity norm for NAs
+                    unstable_check = LWFBrook90.unstable_check_function,         # fix instability norm for NAs
+                    dt    = 1e-3,                            # dt is initial dt, but can be changed adaptively
+                    dtmax = 60/60/24, # 60min max time step
+                    )
+    # former kwargs included:
+        # reltol = 1e-5, # abstol = 1e-6, # default: abstol = 1e-6, reltol = 1e-3
+        # tstops = sol_working.t, #[0.223, 0.4],
+        # tstops = tspan[1]:0.00001:tspan[2], adaptive = false
+        # ImplicitEuler(autodiff=false);  # for stiff problems (~6.7s for 2.5days of Hammel_loam-NLayer-103)
+        # Rodas4P(autodiff=false);        # for stiff problems (~3.2s for 2.5days of Hammel_loam-NLayer-103)
+        # TRBDF2(autodiff=false);
+        # Rosenbrock23(autodiff=false);   # for stiff problems   (~2.3s for 2.5days of Hammel_loam-NLayer-103)
+        # Tsit5(); abstol = 1e-6, reltol = 1e-4, # Tsit5 recommended for non-stiff problems (~ 12.4s for 2.5days of Hammel_loam-NLayer-103)
+        # Tsit5(); abstol = 1e-6, reltol = 1e-5, # Tsit5 recommended for non-stiff problems (~ 20.9s for 2.5days of Hammel_loam-NLayer-103)
+        # Tsit5(); # Tsit5 recommended for non-stiff problems (~ 6.4s for 2.5days of Hammel_loam-NLayer-103)
+        # AutoTsit5(Rosenbrock23(autodiff=false)); reltol = 1e-5, # recommended for problems of unknown stiffnes: (~5.0s)
     ####################
 
     return DiscretizedSPAC(;
@@ -531,28 +562,49 @@ function Base.show(io::IO, mime::MIME"text/plain", discSPAC::DiscretizedSPAC)
     # println(io, show_avg_and_range(model.canopy_evolution.p_SAI.itp.itp.coefs,    "SAI         (m2/m2): "))
 end
 
-function simulate!(s::DiscretizedSPAC)
-    sol_SPAC = solve_LWFB90(s.ODEProblem);
-    s.ODESolution = sol_SPAC;
 
-    @assert (SciMLBase.successful_retcode(sol_SPAC)) "Problem with simulation: Return code of simulation was '$(sol_SPAC.retcode)'"
+"""
+    simulate!(s::DiscretizedSPAC; kwargs...)
 
-    # also save datetimes
+Simulates a SPAC model and stores the solution in s.ODESolution.
+
+`kwargs...` are passed through to solve(SciML::ODEProblem; ...) and are
+documented under https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/#solver_options
+"""
+function simulate!(s::DiscretizedSPAC; kwargs...)
+    if (:saveat ∈ keys(s.ODEProblem.kwargs))
+        @info """
+          Start of simulation at $(now()).
+                Saving intermediate results (`saveat=`) at: $(values(s.ODEProblem.kwargs)[:saveat]) days
+        """
+    else
+         @info "  Start of simulation at $(now())."
+    end
+
+    @time s.ODESolution = solve(s.ODEProblem; kwargs...)
+
+    @info "  Time steps for solving: $(s.ODESolution.destats.naccept) ($(s.ODESolution.destats.naccept) accepted out of $(s.ODESolution.destats.nreject + s.ODESolution.destats.naccept) total)"
+    @info "  End of simulation at $(now())."
+
+    @assert (SciMLBase.successful_retcode(s.ODESolution)) "Problem with simulation: Return code of simulation was '$(s.ODESolution.retcode)'"
+
+    # also store datetimes
     s.ODESolution_datetime = LWFBrook90.RelativeDaysFloat2DateTime.(s.ODESolution.t, s.parametrizedSPAC.reference_date)
     return nothing
 end
+
 
 ############################################################################################
 ############################################################################################
 ############################################################################################
 
 @doc raw"""
-    run_simulation(args)
+    run_simulation(args) (deprecated!)
 
 Runs a simulation defined by input files within a folder and returns solved DiscretizedSPAC.
 
-The function run_simulation() takes as single argument a vector of two or three strings defining
-the input_path and input_prefix of a series of input definition files (and "true"/"false" whether
+The function `run_simulation()` takes as single argument a vector of two or three strings defining
+the `input_path` and `input_prefix` of a series of input definition files (and `true`/`false` whether
 to simulate isotopes).
 The function loads these files, runs the simulation and returns the solution object and input arguments
 """
@@ -594,8 +646,6 @@ function run_simulation(args)
     # Solve ODE:
     LWFBrook90.simulate!(simulation)
     # plot(simulation.ODESolution)
-    sol_LWFBrook90 = simulation.ODESolution
-
     # simulation.solver_options.simulate_isotopes
     ####################
 
@@ -614,8 +664,8 @@ function run_simulation(args)
     #     size=(1000,1400), dpi = 300, leftmargin = 15mm);
     # plot!(pl2, link = :x)
 
-    @info sol_LWFBrook90.destats
-    @info "Time steps for solving: $(sol_LWFBrook90.destats.naccept) ($(sol_LWFBrook90.destats.naccept) accepted out of $(sol_LWFBrook90.destats.nreject + sol_LWFBrook90.destats.naccept) total)"
+    @info simulation.ODESolution.destats
+    @info "Time steps for solving: $(simulation.ODESolution.destats.naccept) ($(simulation.ODESolution.destats.naccept) accepted out of $(simulation.ODESolution.destats.nreject + simulation.ODESolution.destats.naccept) total)"
     @show now()
 
     return (simulation, input_prefix, input_path)

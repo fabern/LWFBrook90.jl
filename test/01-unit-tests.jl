@@ -274,7 +274,8 @@ end
             parametrizedSPAC.pars.soil_horizons,
             soil_output_depths_m,
             parametrizedSPAC.pars.params[:IDEPTH_m],
-            parametrizedSPAC.pars.params[:QDEPTH_m])
+            parametrizedSPAC.pars.params[:QDEPTH_m],
+            ε = 0.005)
 
     # Discretize the model in space as `soil_discretization`
     final_soil_discretizationDF = LWFBrook90.map_soil_horizons_to_discretization(parametrizedSPAC.pars.soil_horizons, refined_soil_discretizationDF)#computational_grid)

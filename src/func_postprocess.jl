@@ -899,7 +899,7 @@ end
 
 Returns a 2D matrix of volumetric soil moisture values (m3/m3) with soil layers as rows and time steps as columns.
 The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
-that are both optionally provided as numeric vectors, e.g. depths_to_read_out_mm = [100, 150] or days_to_read_out_d = 1:1.0:100
+that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `days_to_read_out_d = 1:1.0:100`
 """
 function get_θ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
     solution = simulation.ODESolution
@@ -921,7 +921,7 @@ end
 
 Returns a 2D matrix of soil matric potential (kPa) with soil layers as rows and time steps as columns.
 The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
-that are both optionally provided as numeric vectors, e.g. depths_to_read_out_mm = [100, 150] or saveat = 1:1.0:100
+that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `saveat = 1:1.0:100`
 """
 function get_ψ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
     solution = simulation.ODESolution
@@ -943,7 +943,7 @@ end
 
 Returns a 2D matrix of soil wetness (-) with soil layers as rows and time steps as columns.
 The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
-that are both optionally provided as numeric vectors, e.g. depths_to_read_out_mm = [100, 150] or saveat = 1:1.0:100
+that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `saveat = 1:1.0:100`
 """
 function get_WETNES(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
     solution = simulation.ODESolution
@@ -966,7 +966,7 @@ end
 Returns a 2D matrix of soil water volumes contained in discretized layers (mm) with soil layers as rows and time steps as columns.
 Note that the values depend on the thickness of the layers and thus on the discretization.
 The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
-that are both optionally provided as numeric vectors, e.g. depths_to_read_out_mm = [100, 150] or saveat = 1:1.0:100
+that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `saveat = 1:1.0:100`
 """
 function get_SWATI(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
     solution = simulation.ODESolution
@@ -988,7 +988,7 @@ end
 
 Returns a 2D matrix of soil hydraulic conductivities (mm/day) with soil layers as rows and time steps as columns.
 The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
-that are both optionally provided as numeric vectors, e.g. depths_to_read_out_mm = [100, 150] or saveat = 1:1.0:100
+that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `saveat = 1:1.0:100`
 """
 function get_K(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
     solution = simulation.ODESolution
@@ -1012,7 +1012,7 @@ end
 Returns tuple of two 2D matrices of isotopic signatures of soil water (δ in permil) for d18O and d2H.
 The 2D matrix with soil layers as rows and time steps as columns can be accessed with `.d18O` and `.d2H`, respectively.
 The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
-that are both optionally provided as numeric vectors, e.g. depths_to_read_out_mm = [100, 150] or saveat = 1:1.0:100
+that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `saveat = 1:1.0:100`
 """
 function get_δsoil(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
     solution = simulation.ODESolution

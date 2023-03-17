@@ -380,7 +380,7 @@ end
 """
     DateTime2RelativeDaysFloat(x,reference_DateTime)
 
-Transforms DateTimes `x` to simulation time
+Transforms DateTimes `x` to simulation time in days since reference date.
 """
 function DateTime2RelativeDaysFloat(x::DateTime, reference::DateTime)
     ms2days = 1.0/(24.0*3600.0*1000.0) # to convert milliseconds to days
@@ -389,7 +389,7 @@ end
 """
     RelativeDaysFloat2DateTime(t, reference_DateTime)
 
-Transforms simulation time `t` to DateTimes
+Transforms simulation time `t` in days since reference date to DateTimes.
 """
 function RelativeDaysFloat2DateTime(t::Float64, reference::DateTime)
     # reference + Day(floor(t))

@@ -409,10 +409,10 @@ end
 
 """
     Rootden_beta_(
-    β;
-    Δz_m,
-    z_rootMax_m = maximum(cumsum(Δz_m)),
-    z_Upper_m = 0)
+        β;
+        Δz_m,
+        z_rootMax_m = maximum(cumsum(Δz_m)),
+        z_Upper_m = 0)
 
 Define the relative root density in each discretized soil layer based on the beta model from
 (Gale and Grigal, 1987).
