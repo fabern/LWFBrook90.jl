@@ -84,6 +84,8 @@ model_modified =
                                        u_INTR_init_permil = -95.333,
                                        u_SNOW_init_permil = -95.444)));
 
+# Documentation can be accessed by typing: `?loadSPAC`, `?setup`, `?simulate!`, `?plotisotopes`, etc.
+
 # The objects `model` and `model_modified` are instances of a `SPAC()` (soil-plant-atmosphere continuum)
 # and contain fully specified simulations. To run them they need to be transformed into a
 # system of ODES and solved by calling `setup()` and `simulate()`:

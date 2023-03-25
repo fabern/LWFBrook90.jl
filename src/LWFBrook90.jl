@@ -192,7 +192,7 @@ that are provided as kwargs. This is useful running the same model with a range 
 parameter.
 
 Possible kwargs are:
-- `soil_toplayer = (ths_ = 0.4, Ksat_mmday = 3854.9, alpha_ = 7.11,)`
+- `soil_horizons = (ths_ = 0.4, Ksat_mmday = 3854.9, alpha_ = 7.11,)`
 - `LAI_rel = (DOY_Bstart = 115,)`
 - `root_distribution = (beta = 0.88, z_rootMax_m = -0.6,)`
 - `params = (DRAIN=.33, BYPAR=1, IDEPTH_m=0.67, INFEXP=0.33,
@@ -200,6 +200,11 @@ Possible kwargs are:
             GLMAX=.00801, R5=235., CVPD=1.9, CINTRL=0.18,)`
 - `IC_soil = (PSIM_init_kPa = -3.0, delta18O_init_permil = -15.55, )`
 - `IC_scalar = ICscalar_tochange`
+
+When the argument `soil_horizons` contains scalar values, the parameter of the toplayer are set
+to this value and parameter of all other layers are modified proportionally. Alternatively,
+the argument `soil_horizons` can be provided with a vector or vectors with a value for each soil
+horizon. A mix of vectors and scalars is also possible.
 
 """
 function remakeSPAC(discrSPAC::DiscretizedSPAC;
@@ -223,8 +228,8 @@ function remakeSPAC(parametrizedSPAC::SPAC;
             (curr_change == :IC_scalar && values(kwargs)[curr_change] isa DataFrame) """
         Argument $curr_change is not a NamedTuple. Append single values with comma, e.g. (beta=12,)
         """
-        if (curr_change     == :soil_toplayer)
-            modifiedSPAC = remake_soil_layers(      modifiedSPAC, values(kwargs)[curr_change])
+        if (curr_change     == :soil_horizons)
+            modifiedSPAC = remake_soil_horizons(    modifiedSPAC, values(kwargs)[curr_change])
         elseif (curr_change == :LAI_rel)
             modifiedSPAC = remake_LAI(              modifiedSPAC, values(kwargs)[curr_change])
         elseif (curr_change == :params)
@@ -232,9 +237,9 @@ function remakeSPAC(parametrizedSPAC::SPAC;
         elseif (curr_change == :root_distribution)
             modifiedSPAC = remake_root_distribution(modifiedSPAC, values(kwargs)[curr_change])
         elseif (curr_change == :IC_soil)
-            modifiedSPAC = remake_IC_soil(modifiedSPAC, values(kwargs)[curr_change])
+            modifiedSPAC = remake_IC_soil(          modifiedSPAC, values(kwargs)[curr_change])
         elseif (curr_change == :IC_scalar)
-            modifiedSPAC = remake_IC_scalar(modifiedSPAC, values(kwargs)[curr_change])
+            modifiedSPAC = remake_IC_scalar(        modifiedSPAC, values(kwargs)[curr_change])
         else
             error("Unknown argument provided to remake(): $curr_change")
         end
@@ -243,15 +248,31 @@ function remakeSPAC(parametrizedSPAC::SPAC;
                 requested_tspan = requested_tspan,
                 soil_output_depths_m = soil_output_depths_m)
 end
-function remake_soil_layers(spac, changesNT)
+function remake_soil_horizons(spac, changesNT)
     shp_names = Dict(:ths_       => :p_THSAT,
                      :Ksat_mmday => :p_KSAT,
                      :alpha_     => :p_MvGα)
     for (key, val) in zip(keys(changesNT), changesNT)
-        @assert key ∈ keys(shp_names) "Unclear how to remake '$key' provided to LAI."
-        ratio = val/getproperty(spac.pars.soil_horizons.shp[1], shp_names[key])
-        for shp in spac.pars.soil_horizons.shp
-            setproperty!(shp, shp_names[key], ratio * getproperty(shp, shp_names[key]))
+        @assert key ∈ keys(shp_names) "Unclear how to remake '$key' provided to soil_horizons."
+        N_horizons = length(spac.pars.soil_horizons.shp)
+        if length(val) == 1
+            # if only 1 value: modify toplayer to value and all horizons proportionally
+            ratio = val/getproperty(spac.pars.soil_horizons.shp[1], shp_names[key])
+            target = fill(NaN, N_horizons)
+            for idx in 1:N_horizons
+                target[idx] = ratio * getproperty(spac.pars.soil_horizons.shp[idx], shp_names[key])
+            end
+        else
+            # if more than 1 value: modify all the layers accordingly
+            @assert length(val) == N_horizons """
+                Argument '$key' provided to soil_horizons, must either be a single value (for the toplayer) or a vector of length $(N_horizons) (for each soil horizon).
+                """
+            target = val
+        end
+
+        # update values with target values
+        for idx in 1:N_horizons
+            setproperty!(spac.pars.soil_horizons.shp[idx], shp_names[key], target[idx])
         end
     end
     return spac
@@ -262,7 +283,7 @@ function remake_LAI(spac, changesNT)
         """
     LAI_names = [:DOY_Bstart,:Bduration ,:DOY_Cstart,:Cduration ,:LAI_perc_BtoC,:LAI_perc_CtoB]
     for (key, val) in zip(keys(changesNT), changesNT)
-        @assert key ∈ LAI_names "Unclear how to remake '$key' provided to soil_layers."
+        @assert key ∈ LAI_names "Unclear how to remake '$key' provided to LAI."
     end
     # create new LAI reusing the old one and overwriting whats defined
     new_LAI_pars = (;spac.pars.canopy_evolution.LAI_rel..., changesNT...) # https://stackoverflow.com/a/60883705

@@ -588,30 +588,49 @@ end
     @test all(remSPAC_0.ODEProblem.u0.SWATI.d18O .≈ -15.55)
 
     # TEST CHANGES TO SOIL HYDRAULICS ################################################################
-    remSPAC_1  = remakeSPAC(discrSPAC, soil_toplayer = (ths_ = 0.4,))
-    # test parametrizedSPAC:
-    @test names(discrSPAC.parametrizedSPAC.soil_discretization.df) == names(remSPAC_1.parametrizedSPAC.soil_discretization.df)
-    @test remSPAC_1.parametrizedSPAC.pars.soil_horizons.shp[1].p_THSAT != discrSPAC.parametrizedSPAC.pars.soil_horizons.shp[1].p_THSAT
-    @test remSPAC_1.parametrizedSPAC.pars.soil_horizons.shp[1].p_THSAT == 0.4
-    # test ODEProblem:
-    @test remSPAC_1.ODEProblem.p.p_soil.p_THSAT[1] == 0.4
-    @test remSPAC_1.ODEProblem.p.p_soil.p_THSAT[end] != discrSPAC.parametrizedSPAC.pars.soil_horizons.shp[end].p_THSAT
+    # all horizons proportionally (with `soil_horizons=(ths_ = 0.4)`)
+        remSPAC_1  = remakeSPAC(discrSPAC, soil_horizons = (ths_ = 0.4,))
+        # test parametrizedSPAC:
+        @test names(discrSPAC.parametrizedSPAC.soil_discretization.df) == names(remSPAC_1.parametrizedSPAC.soil_discretization.df)
+        @test remSPAC_1.parametrizedSPAC.pars.soil_horizons.shp[1].p_THSAT != discrSPAC.parametrizedSPAC.pars.soil_horizons.shp[1].p_THSAT
+        @test remSPAC_1.parametrizedSPAC.pars.soil_horizons.shp[1].p_THSAT == 0.4
+        # test ODEProblem:
+        @test remSPAC_1.ODEProblem.p.p_soil.p_THSAT[1] == 0.4
+        @test remSPAC_1.ODEProblem.p.p_soil.p_THSAT[end] != discrSPAC.parametrizedSPAC.pars.soil_horizons.shp[end].p_THSAT
 
-    remSPAC_2  = remakeSPAC(discrSPAC, soil_toplayer = (Ksat_mmday = 3854.9,))
-    # test parametrizedSPAC:
-    @test remSPAC_2.parametrizedSPAC.pars.soil_horizons.shp[1].p_KSAT != discrSPAC.parametrizedSPAC.pars.soil_horizons.shp[1].p_KSAT
-    @test remSPAC_2.parametrizedSPAC.pars.soil_horizons.shp[1].p_KSAT == 3854.9
-    # test ODEProblem:
-    @test remSPAC_2.ODEProblem.p.p_soil.p_KSAT[1] == 3854.9
-    @test remSPAC_2.ODEProblem.p.p_soil.p_KSAT[end] != discrSPAC.parametrizedSPAC.pars.soil_horizons.shp[end].p_KSAT
+        remSPAC_2  = remakeSPAC(discrSPAC, soil_horizons = (Ksat_mmday = 3854.9,))
+        # test parametrizedSPAC:
+        @test remSPAC_2.parametrizedSPAC.pars.soil_horizons.shp[1].p_KSAT != discrSPAC.parametrizedSPAC.pars.soil_horizons.shp[1].p_KSAT
+        @test remSPAC_2.parametrizedSPAC.pars.soil_horizons.shp[1].p_KSAT == 3854.9
+        # test ODEProblem:
+        @test remSPAC_2.ODEProblem.p.p_soil.p_KSAT[1] == 3854.9
+        @test remSPAC_2.ODEProblem.p.p_soil.p_KSAT[end] != discrSPAC.parametrizedSPAC.pars.soil_horizons.shp[end].p_KSAT
 
-    remSPAC_3  = remakeSPAC(discrSPAC, soil_toplayer = (alpha_ = 7.11,)) # we modify alpha as this scales h (it seems we are off by some orders in SCH)
-    # test parametrizedSPAC:
-    @test remSPAC_3.parametrizedSPAC.pars.soil_horizons.shp[1].p_MvGα != discrSPAC.parametrizedSPAC.pars.soil_horizons.shp[1].p_MvGα
-    @test remSPAC_3.parametrizedSPAC.pars.soil_horizons.shp[1].p_MvGα == 7.11
-    # test ODEProblem:
-    @test remSPAC_3.ODEProblem.p.p_soil.p_MvGα[1] == 7.11
-    @test remSPAC_3.ODEProblem.p.p_soil.p_MvGα[end] != discrSPAC.parametrizedSPAC.pars.soil_horizons.shp[end].p_MvGα
+        remSPAC_3  = remakeSPAC(discrSPAC, soil_horizons = (alpha_ = 7.11,)) # we modify alpha as this scales h (it seems we are off by some orders in SCH)
+        # test parametrizedSPAC:
+        @test remSPAC_3.parametrizedSPAC.pars.soil_horizons.shp[1].p_MvGα != discrSPAC.parametrizedSPAC.pars.soil_horizons.shp[1].p_MvGα
+        @test remSPAC_3.parametrizedSPAC.pars.soil_horizons.shp[1].p_MvGα == 7.11
+        # test ODEProblem:
+        @test remSPAC_3.ODEProblem.p.p_soil.p_MvGα[1] == 7.11
+        @test remSPAC_3.ODEProblem.p.p_soil.p_MvGα[end] != discrSPAC.parametrizedSPAC.pars.soil_horizons.shp[end].p_MvGα
+    # all horizons independently (with `soil_horizons=(ths_ = [0.4, 0.3, 0.3, 0.2])`) containing vectors for each soil_horizons
+        @test_throws AssertionError remSPAC_1b  = remakeSPAC(discrSPAC, soil_horizons = (ths_ = [0.4, 0.3, 0.3, 0.2], ))
+        remSPAC_1b  = remakeSPAC(discrSPAC, soil_horizons = (ths_ = [0.4, 0.3, 0.2], Ksat_mmday = 3801, ))
+        # test parametrizedSPAC:
+        @test names(discrSPAC.parametrizedSPAC.soil_discretization.df) == names(remSPAC_1b.parametrizedSPAC.soil_discretization.df)
+        @test remSPAC_1b.parametrizedSPAC.pars.soil_horizons.shp[1].p_THSAT == 0.4
+        @test remSPAC_1b.parametrizedSPAC.pars.soil_horizons.shp[2].p_THSAT == 0.3
+        @test remSPAC_1b.parametrizedSPAC.pars.soil_horizons.shp[3].p_THSAT == 0.2
+
+        @test remSPAC_1b.parametrizedSPAC.pars.soil_horizons.shp[1].p_KSAT ≈ 3801
+        @test remSPAC_1b.parametrizedSPAC.pars.soil_horizons.shp[2].p_KSAT ≈ 3801
+        @test remSPAC_1b.parametrizedSPAC.pars.soil_horizons.shp[3].p_KSAT ≈ 3801
+
+        # test ODEProblem:
+        @test all(remSPAC_1b.ODEProblem.p.p_soil.p_THSAT[[1]]     .== 0.4)
+        @test all(remSPAC_1b.ODEProblem.p.p_soil.p_THSAT[[2:5; ]] .== 0.3)
+        @test all(remSPAC_1b.ODEProblem.p.p_soil.p_THSAT[[6:12;]] .== 0.2)
+        @test all(remSPAC_1b.ODEProblem.p.p_soil.p_KSAT .≈ 3801)
 
     # TEST CHANGES TO FLOW ################################################################
     to_change = (DRAIN=.33, BYPAR=1, IDEPTH_m=0.67, INFEXP=0.33)
