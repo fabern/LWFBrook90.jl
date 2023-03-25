@@ -597,12 +597,12 @@ function simulate!(s::DiscretizedSPAC; assert_retcode = true, kwargs...)
     if (:saveat ∈ keys(kwargs))
         @info """
           Start of simulation at $(now()).
-                Saving intermediate results (`saveat=`) at: $(values(kwargs)[:saveat]) days
+                Saving intermediate results (`saveat=`) between: $(extrema(values(kwargs)[:saveat])) days
         """
     elseif (:saveat ∈ keys(s.ODEProblem.kwargs))
         @info """
           Start of simulation at $(now()).
-                Saving intermediate results (`saveat=`) at: $(values(s.ODEProblem.kwargs)[:saveat]) days
+                Saving intermediate results (`saveat=`) between: $(extrema(values(s.ODEProblem.kwargs)[:saveat])) days
         """
     else
          @info "  Start of simulation at $(now())."

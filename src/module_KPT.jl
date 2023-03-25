@@ -360,8 +360,6 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
             end
         end
 
-        @show (p_WETF, p_MvGα, p_MvGn)
-
         p_PSIF   = FPSIM_MvG(p_WETF, p_MvGα, p_MvGn)  # matric potential at field capacity, kPa
         p_THETAF = FTheta_MvG(p_WETF, p_THSAT, p_θr)  # soil moisture θ at field capacity, m3/m3
         p_Kθfc .= NaN                                 # p_Kθfc is only used as input parameter for setup, not for calculation
