@@ -593,8 +593,13 @@ Simulates a SPAC model and stores the solution in s.ODESolution.
 `kwargs...` are passed through to solve(SciML::ODEProblem; ...) and are
 documented under https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/#solver_options
 """
-function simulate!(s::DiscretizedSPAC; kwargs...)
-    if (:saveat ∈ keys(s.ODEProblem.kwargs))
+function simulate!(s::DiscretizedSPAC; assert_retcode = true, kwargs...)
+    if (:saveat ∈ keys(kwargs))
+        @info """
+          Start of simulation at $(now()).
+                Saving intermediate results (`saveat=`) at: $(values(kwargs)[:saveat]) days
+        """
+    elseif (:saveat ∈ keys(s.ODEProblem.kwargs))
         @info """
           Start of simulation at $(now()).
                 Saving intermediate results (`saveat=`) at: $(values(s.ODEProblem.kwargs)[:saveat]) days
@@ -608,7 +613,9 @@ function simulate!(s::DiscretizedSPAC; kwargs...)
     @info "  Time steps for solving: $(s.ODESolution.destats.naccept) ($(s.ODESolution.destats.naccept) accepted out of $(s.ODESolution.destats.nreject + s.ODESolution.destats.naccept) total)"
     @info "  End of simulation at $(now())."
 
-    @assert (SciMLBase.successful_retcode(s.ODESolution)) "Problem with simulation: Return code of simulation was '$(s.ODESolution.retcode)'"
+    if assert_retcode
+        @assert (SciMLBase.successful_retcode(s.ODESolution)) "Problem with simulation: Return code of simulation was '$(s.ODESolution.retcode)'"
+    end
 
     # also store datetimes
     s.ODESolution_datetime = LWFBrook90.RelativeDaysFloat2DateTime.(s.ODESolution.t, s.parametrizedSPAC.reference_date)
