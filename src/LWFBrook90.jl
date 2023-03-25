@@ -192,7 +192,7 @@ that are provided as kwargs. This is useful running the same model with a range 
 parameter.
 
 Possible kwargs are:
-- `soil_horizons = (ths_ = 0.4, Ksat_mmday = 3854.9, alpha_ = 7.11,)`
+- `soil_horizons = (ths_ = 0.4, Ksat_mmday = 3854.9, alpha_per_m = 7.11, gravel_volFrac = 0.1)`
 - `LAI_rel = (DOY_Bstart = 115,)`
 - `root_distribution = (beta = 0.88, z_rootMax_m = -0.6,)`
 - `params = (DRAIN=.33, BYPAR=1, IDEPTH_m=0.67, INFEXP=0.33,
@@ -249,9 +249,10 @@ function remakeSPAC(parametrizedSPAC::SPAC;
                 soil_output_depths_m = soil_output_depths_m)
 end
 function remake_soil_horizons(spac, changesNT)
-    shp_names = Dict(:ths_       => :p_THSAT,
-                     :Ksat_mmday => :p_KSAT,
-                     :alpha_     => :p_MvGα)
+    shp_names = Dict(:ths_           => :p_THSAT,
+                     :Ksat_mmday     => :p_KSAT,
+                     :alpha_per_m    => :p_MvGα,
+                     :gravel_volFrac => :p_STONEF)
     for (key, val) in zip(keys(changesNT), changesNT)
         @assert key ∈ keys(shp_names) "Unclear how to remake '$key' provided to soil_horizons."
         N_horizons = length(spac.pars.soil_horizons.shp)
