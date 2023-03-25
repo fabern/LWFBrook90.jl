@@ -100,7 +100,6 @@ end
     @test p_soil1.p_PSIG    ≈ [-0.19619999999999999, -0.5886, -1.3734]
     @test p_soil1.p_SWATMAX  ≈ [28.2744, 22.044, 64.944]
     @test p_soil1.p_WETF    ≈ [0.924422821232832, 0.9364352826531043, 0.9400828692513616]
-    @test p_soil1.p_PsiCrit ≈ [-2.001039697148224e72, -7.555263344289398e71, -5.276582923029774e71]
 
     @test p_soil2.p_PSIG   ≈ [-0.5886, -1.7658, -4.1202000000000005]
     @test p_soil2.p_SWATMAX ≈ [84.82319999999999, 66.132, 194.832]
@@ -217,7 +216,6 @@ end
     @test p_soil1.p_PSIG    ≈ [-0.49049999999999994, -1.4714999999999998]
     @test p_soil1.p_SWATMAX  ≈ [43.5, 43.5]
     @test p_soil1.p_WETF    ≈ [0.6114942528735633, 0.6114942528735633]
-    @test p_soil1.p_PsiCrit ≈ [-4.7813122937946886e17, -4.7813122937946886e17]
 
     @test p_soil2.p_PSIG   ≈ [-0.9809999999999999, -2.9429999999999996]
     @test p_soil2.p_SWATMAX ≈ [87.0, 87.0]
@@ -606,7 +604,7 @@ end
         @test remSPAC_2.ODEProblem.p.p_soil.p_KSAT[1] == 3854.9
         @test remSPAC_2.ODEProblem.p.p_soil.p_KSAT[end] != discrSPAC.parametrizedSPAC.pars.soil_horizons.shp[end].p_KSAT
 
-        remSPAC_3  = remakeSPAC(discrSPAC, soil_horizons = (alpha_ = 7.11,)) # we modify alpha as this scales h (it seems we are off by some orders in SCH)
+        remSPAC_3  = remakeSPAC(discrSPAC, soil_horizons = (alpha_per_m = 7.11,)) # we modify alpha as this scales h (it seems we are off by some orders in SCH)
         # test parametrizedSPAC:
         @test remSPAC_3.parametrizedSPAC.pars.soil_horizons.shp[1].p_MvGα != discrSPAC.parametrizedSPAC.pars.soil_horizons.shp[1].p_MvGα
         @test remSPAC_3.parametrizedSPAC.pars.soil_horizons.shp[1].p_MvGα == 7.11

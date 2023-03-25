@@ -1,6 +1,6 @@
 module CONSTANTS
 
-export p_WTOMJ,p_ETOM,p_CPRHO,p_GAMMA,p_CVLQ,p_CVICE,p_LF,p_LS,p_RHOWG,p_SIGMA,p_SC,p_K,p_PI,p_ThCrit
+export p_WTOMJ,p_ETOM,p_CPRHO,p_GAMMA,p_CVLQ,p_CVICE,p_LF,p_LS,p_RHOWG,p_SIGMA,p_SC,p_K,p_PI
 
 const p_WTOMJ  = 0.0864         # WTOMJ  convert Watt to MegaJoule, (MJ m-2 d-1)/(watt/m2) = 86400 s/d * .000001 MJ/J
 const p_ETOM   = 0.4085         # ETOM   (mm water)/(MJ/m2) using Lv 2448 MJ/Mg and density of water 1 Mg/m3 = 1E3 mm/m / (2448 MJ/Mg * 1 Mg/m3)
@@ -20,8 +20,6 @@ const p_PI     = 3.1416         # PI  pi
 # might still use same Pi as used by Fortran code.
 
 # from LWFBrook90R
-const p_ThCrit = 1.E-4  # minimal fraction of water content above residual water content to allow water supply for evapotranspiration
-                        # p_PsiCrit is derived from p_ThCrit
 const p_DTIMIN = 1.e-9  # minimum time step for iteration interval, d
 
 # from LWFBrook90R: additionally:

@@ -219,23 +219,6 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
         error("Unsupported FLAG_MualVanGen: $FLAG_MualVanGen")
     end
 
-    # TODO(bernhard): treat following note:
-    # NOTE(bernhard) the difference between p_PSICR and p_PsiCrit:
-    # p_PSICR (Brook90): PSICR (Canopy parameter) - minimum plant leaf water
-    #    potential, MPa. PSICR is the critical leaf water potential at which stomates
-    #    close. BROOK90 assumes that transpiration is limited by potential
-    #    transpiration (PTRAN) until water uptake at a plant water potential of PSICR
-    #    is less than PTRAN. PSICR can be considered as the water potential at the
-    #    turgor-loss point. PSICR varies from -1.5 to -3.0 MPa for most species and is
-    #    quite species dependent (Hinckley et al. 1978). This parameter is best
-    #    selected from knowledge of the water potential - diffusion resistance relation
-    #    for the species involved. [see KPT-SOILPAR] [see EVP-TBYLAYER]
-    # p_PsiCrit (LWFBrook90):
-    #    Definition: minimum soil matric potential to allow water supply for
-    #    evapotranspiration , Hammel, 2001 (p_PsiCrit = f(ThCrit) = FPSIM(ThCrit))
-    #    use: if (PsiM < PsiCrit) TRANI = 0 # no transpiration
-    #    use: if (PsiM < PsiCrit) SLVP = 0  # no soil evaporation # TODO(bernhard): this seems incorrect
-
     # Documentation from ecoshift:
     # RSSA           (Fixed parameter) - soil evaporation resistance (RSS) at field capacity, s/m. RSSA is the soil surface resistance to soil evaporation at field capacity as defined by PSIF. There is essentially no information on how this parameter varies with the characteristics of the surface soil layer, particularly for forests. RSSA is fixed at 500 s/m following Shuttleworth and Gurney (1990). To eliminate SLVP set RSSA to zero. [see PET-FRSS]
     # RSSB           (Fixed parameter) - exponent in relation of soil evaporation resistance (RSS) to soil water potential (PSIM) in the top layer, dimensionless. There is essentially no information on how this parameter varies. RSSB is fixed at 1.0, which makes RSS directly proportional to PSIM. Setting RSSB = 0 makes the soil evaporation resistance always equal to RSSA. [see PET-FRSS]

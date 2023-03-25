@@ -55,7 +55,7 @@ export SOILPAR_CH, derive_auxiliary_SOILVAR
 export KPT_SOILPAR_Mvg1d, KPT_SOILPAR_Ch1d, FWETNES
 export AbstractSoilHydraulicParams, MualemVanGenuchtenSHP
 using Roots: find_zero, Bisection # to find wetness for a given hydraulic conductivity
-using ..CONSTANTS: p_ThCrit,p_RHOWG # https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
+using ..CONSTANTS: p_RHOWG  # https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
 using DataFrames: DataFrame
 using Printf: @sprintf
 
@@ -210,7 +210,7 @@ abstract type AbstractKptSoilpar end
 Represents a discretized 1D column of soil with Clapp-Hornberger parametrization.
 
 Input fields: p_THICK, p_STONEF, p_THSAT, p_PSIF, p_THETAF, p_KF, p_BEXP, p_WETINF
-Derived fields: NLAYER, p_CHM, p_CHN, p_THETAF, p_PSIG, p_SWATMAX, p_WETF, p_PsiCrit
+Derived fields: NLAYER, p_CHM, p_CHN, p_THETAF, p_PSIG, p_SWATMAX, p_WETF
 """
 struct KPT_SOILPAR_Ch1d{T<:AbstractVector} <: AbstractKptSoilpar
     # Input fields
@@ -229,10 +229,6 @@ struct KPT_SOILPAR_Ch1d{T<:AbstractVector} <: AbstractKptSoilpar
     p_PSIG::T
     p_SWATMAX::T
     p_WETF::T
-    p_PsiCrit::T
-    # p_PsiCrit is the ψ value that corresponds to the constant, critical θ value p_ThCrit
-    # Note that p_PSICR is different!
-
 
     # # Inner constructor:
     function KPT_SOILPAR_Ch1d{T}(;p_THICK, p_STONEF, p_THSAT, p_PSIF, p_THETAF, p_KF, p_BEXP, p_WETINF) where {T<:AbstractVector}
@@ -266,9 +262,6 @@ struct KPT_SOILPAR_Ch1d{T<:AbstractVector} <: AbstractKptSoilpar
         end
         # unused p_WETc = p_WETF .* (1000 .* p_PSICR ./ p_PSIF) .^ (-1 ./ p_BEXP) # wetness at p_PSICR, dimensionless
 
-        # Derive further fields
-        p_PsiCrit = FPSIM_CH(p_ThCrit./p_THSAT, p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN)
-
         # NOTE(bernhard): removed further tasks that were in SOILPAR() in LWFBrook90R
         #                  - computation of p_WETc = p_WETF .* (1000 .* p_PSICR ./ p_PSIF) .^ (-1 ./ p_BEXP) # wetness at p_PSICR, dimensionless
         #                  - test of validity of PSIM (assert that PSIM <= 0, i.e. error("matrix psi must be negative or zero"))
@@ -277,10 +270,11 @@ struct KPT_SOILPAR_Ch1d{T<:AbstractVector} <: AbstractKptSoilpar
         #                       else: u_aux_WETNES = p_WETF .* (u0_aux_PSIM ./ p_PSIF).^(1/.BEXP)
         #                             if u_aux_WETNES[i]>p_WETINF[i]: u_aux_WETNES[i] = (1 + p_CHM[i])/2 + 0.5*sqrt(p_CHN[i]^2 - 2*p_CHN[i] + 1 + 4 * u0_aux_PSIM[i]/p_CHM[i])
         #                  - computation of u_aux_SWATI = u_aux_WETNES .* p_SWATMAX
+        #                  - computation of p_PsiCrit = FPSIM_CH(p_ThCrit./p_THSAT, p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN)
 
         # Instantiate
         new(p_THICK, p_STONEF, p_THSAT, p_PSIF, p_THETAF, p_KF, p_BEXP, p_WETINF,
-            NLAYER, p_CHM, p_CHN, p_PSIG, p_SWATMAX, p_WETF, p_PsiCrit)
+            NLAYER, p_CHM, p_CHN, p_PSIG, p_SWATMAX, p_WETF)
     end
 end
 KPT_SOILPAR_Ch1d(;p_THICK::T, p_STONEF::T, p_THSAT::T, p_PSIF::T, p_THETAF::T, p_KF::T, p_BEXP::T, p_WETINF::T) where {T<:AbstractVector} =
@@ -291,7 +285,7 @@ KPT_SOILPAR_Ch1d(;p_THICK::T, p_STONEF::T, p_THSAT::T, p_PSIF::T, p_THETAF::T, p
 Represents a discretized 1D column of soil with Mualem-van Genuchten parametrization.
 
 Input fields: p_THICK, p_STONEF, p_THSAT, p_Kθfc, p_KSAT, p_MvGα, p_MvGn, p_MvGl, p_θr
-Derived fields: p_PSIF, p_THETAF, p_PSIG, p_SWATMAX, p_WETF, p_PsiCrit
+Derived fields: p_PSIF, p_THETAF, p_PSIG, p_SWATMAX, p_WETF
 """
 struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
     # Input fields
@@ -311,9 +305,6 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
     p_PSIG::T    # gravity potential negative down from surface, kPa
     p_SWATMAX::T  # maximum water storage for layer, mm
     p_WETF::T    # wetness at field capacity, dimensionless
-    p_PsiCrit::T
-    # p_PsiCrit is the ψ value that corresponds to the constant, critical θ value p_ThCrit
-    # Note that p_PSICR is different!
 
 
     # # Inner constructor:
@@ -322,9 +313,6 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
         @assert size(p_THICK) == size(p_STONEF) == size(p_THSAT) == size(p_Kθfc) ==
                 size(p_KSAT) == size(p_MvGα) == size(p_MvGn) == size(p_MvGl) == size(p_θr)
         @assert !any(isnan.(p_Kθfc))
-
-        # Derive fields
-        p_PsiCrit = FPSIM_MvG(p_ThCrit./(p_THSAT .- p_θr), p_MvGα, p_MvGn)
 
         # # Variant A: used to be SOILPAR()
         # # removed...
@@ -372,6 +360,8 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
             end
         end
 
+        @show (p_WETF, p_MvGα, p_MvGn)
+
         p_PSIF   = FPSIM_MvG(p_WETF, p_MvGα, p_MvGn)  # matric potential at field capacity, kPa
         p_THETAF = FTheta_MvG(p_WETF, p_THSAT, p_θr)  # soil moisture θ at field capacity, m3/m3
         p_Kθfc .= NaN                                 # p_Kθfc is only used as input parameter for setup, not for calculation
@@ -382,10 +372,11 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
         #                  - derivation of state dependent parameters u_aux_WETNES and u_aux_SWATI
         #                       - u_aux_WETNES[i] = FWETNES_MvG(u_aux_PSIM[i], p_MvGα[i], p_MvGn[i])
         #                       - u_aux_SWATI[i] = FTheta_MvG(u_aux_WETNES[i], p_THSAT[i], p_θr[i]) * p_SWATMAX[i]/p_THSAT[i]
+        #                  - computation of p_PsiCrit = FPSIM_CH(p_ThCrit./p_THSAT, p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN)
 
         # Instantiate
         new(p_THICK,p_STONEF,p_THSAT,p_Kθfc,p_KSAT,p_MvGα,p_MvGn,p_MvGl,p_θr,
-            NLAYER, p_PSIF, p_THETAF,p_PSIG,p_SWATMAX,p_WETF,p_PsiCrit)
+            NLAYER, p_PSIF, p_THETAF,p_PSIG,p_SWATMAX,p_WETF)
     end
 end
 KPT_SOILPAR_Mvg1d(;p_THICK::T, p_STONEF::T, p_THSAT::T, p_Kθfc::T, p_KSAT::T, p_MvGα::T, p_MvGn::T, p_MvGl::T, p_θr::T) where {T<:AbstractVector} =

@@ -80,9 +80,12 @@ function MSBSETVARS(# arguments
         p_fu_RSS = LWFBrook90.PET.FRSS(p_RSSA, p_RSSB, u_aux_PSIM[1], p_soil)
 
         # check for zero or negative p_fu_RSS (TODO: not done in LWFBrook90)
-        #if (p_fu_RSS < 0.000001)
-        #    error("p_fu_RSS is very small or negative. Run ends. Check p_RSSA and p_RSSB values.")
-        #end
+        if (p_fu_RSS < 0.000001)
+           error("""
+            p_fu_RSS is very small or negative ($p_fu_RSS). Run ends.
+            Happended at PSIM: $(u_aux_PSIM[1])kPa.
+            Check p_RSSA ($p_RSSA) and p_RSSB ($p_RSSB) values.""")
+        end
     end
 
     # snow surface energy balance (is performed even when SNOW=0 in case snow is added during day)
