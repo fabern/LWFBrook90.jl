@@ -61,50 +61,50 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     end
 
     # 1) prepare data to plot
-    sol = simulation.ODESolution
+    solu = simulation.ODESolution
 
-    # 1a) extract data from solution object `sol`
+    # 1a) extract data from solution object `solu`
         # # Two ways to extract data from soil object: using `[]` or `()`
-        # u_SWATI = reduce(hcat, [sol[t_idx].SWATI.mm  for t_idx = eachindex(sol)])
-        # u_SWATI = reduce(hcat, [sol(t_days).SWATI.mm for t_days = days_to_read_out_d])
+        # u_SWATI = reduce(hcat, [solu[t_idx].SWATI.mm  for t_idx = eachindex(solu)])
+        # u_SWATI = reduce(hcat, [solu(t_days).SWATI.mm for t_days = days_to_read_out_d])
 
         # days_to_read_out_d decides which points to use:
         # days_to_read_out_d = nothing # read out all simulation steps
         days_to_read_out_d = :daily  # read out only daily values
         if isnothing(days_to_read_out_d)
-            days_to_read_out_d = sol.t # warning this can
+            days_to_read_out_d = solu.t # warning this can
             error("Too many output times requested. This easily freezes the program...")
         elseif days_to_read_out_d == :daily
-            days_to_read_out_d = unique(round.(sol.t))
+            days_to_read_out_d = unique(round.(solu.t))
         end
-        t_ref = sol.prob.p.REFERENCE_DATE
+        t_ref = solu.prob.p.REFERENCE_DATE
         x = RelativeDaysFloat2DateTime.(days_to_read_out_d, t_ref);
-        y_center = cumsum(sol.prob.p.p_soil.p_THICK) - sol.prob.p.p_soil.p_THICK/2
+        y_center = cumsum(solu.prob.p.p_soil.p_THICK) - solu.prob.p.p_soil.p_THICK/2
 
     # Some hardcoded options:
-    xlimits = RelativeDaysFloat2DateTime.(sol.prob.tspan, t_ref)
+    xlimits = RelativeDaysFloat2DateTime.(solu.prob.tspan, t_ref)
     # color_scheme = :default # https://docs.juliaplots.org/latest/generated/colorschemes
     # color_scheme = :heat
     color_scheme = :blues
 
     true_to_check_colorbar = true; # set this flag to false for final plot, true for debugging.
     tick_function = (x1, x2) -> PlotUtils.optimize_ticks(x1, x2; k_min = 4)
-    y_soil_ticks = tick_function(0., round(maximum(cumsum(sol.prob.p.p_soil.p_THICK))))[1]
-    y_ticks    = [-500;       -300;       -200;       -100;          y_soil_ticks;             (maximum(cumsum(sol.prob.p.p_soil.p_THICK)) .+ [    100;      250;     400])]
+    y_soil_ticks = tick_function(0., round(maximum(cumsum(solu.prob.p.p_soil.p_THICK))))[1]
+    y_ticks    = [-500;       -300;       -200;       -100;          y_soil_ticks;             (maximum(cumsum(solu.prob.p.p_soil.p_THICK)) .+ [    100;      250;     400])]
     y_labels   = ["PREC";   "INTS";     "INTR";     "SNOW";     round.(y_soil_ticks; digits=0);                                                "GWAT";    "RWU";     "XYLEM"]
 
 
     # Results
-    rows_SWAT_amt  = reduce(hcat, [sol(t).SWATI.mm    for t in days_to_read_out_d]) ./ sol.prob.p.p_soil.p_THICK
-    rows_RWU_mmDay = reduce(hcat, [sol(t).TRANI.mmday for t in days_to_read_out_d])
+    rows_SWAT_amt  = reduce(hcat, [solu(t).SWATI.mm    for t in days_to_read_out_d]) ./ solu.prob.p.p_soil.p_THICK
+    rows_RWU_mmDay = reduce(hcat, [solu(t).TRANI.mmday for t in days_to_read_out_d])
     row_NaN       = fill(NaN, 1,length(x))
-    row_PREC_amt = reshape(sol.prob.p.p_PREC.(days_to_read_out_d), 1, :)
-    col_INTS_amt = [sol(t).INTS.mm for t in days_to_read_out_d]
-    col_INTR_amt = [sol(t).INTR.mm   for t in days_to_read_out_d]
-    col_SNOW_amt = [sol(t).SNOW.mm   for t in days_to_read_out_d]
-    col_GWAT_amt = [sol(t).GWAT.mm   for t in days_to_read_out_d]
-    col_RWU_amt  = [sol(t).RWU.mmday for t in days_to_read_out_d]
-    col_XYL_amt  = [sol(t).XYLEM.mm  for t in days_to_read_out_d]
+    row_PREC_amt = reshape(solu.prob.p.p_PREC.(days_to_read_out_d), 1, :)
+    col_INTS_amt = [solu(t).INTS.mm for t in days_to_read_out_d]
+    col_INTR_amt = [solu(t).INTR.mm   for t in days_to_read_out_d]
+    col_SNOW_amt = [solu(t).SNOW.mm   for t in days_to_read_out_d]
+    col_GWAT_amt = [solu(t).GWAT.mm   for t in days_to_read_out_d]
+    col_RWU_amt  = [solu(t).RWU.mmday for t in days_to_read_out_d]
+    col_XYL_amt  = [solu(t).XYLEM.mm  for t in days_to_read_out_d]
 
     if (RWUcentroid == :showRWUcentroid)
         row_RWU_centroid_mm, RWUcentroidLabel = get_RWU_centroid(rows_RWU_mmDay, y_center)
@@ -212,8 +212,8 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
         end
 
         # rows_SWAT_amt0 = u_aux_θ
-        rows_SWAT_amt1 = u_SWATI ./sol.prob.p.p_soil.p_THICK  # mm per mm of soil thickness
-        rows_SWAT_amt2 = u_SWATI ./ sol.prob.p.p_soil.p_THICK ./ (1 .- sol.prob.p.p_soil.p_STONEF)
+        rows_SWAT_amt1 = u_SWATI ./solu.prob.p.p_soil.p_THICK  # mm per mm of soil thickness
+        rows_SWAT_amt2 = u_SWATI ./ solu.prob.p.p_soil.p_THICK ./ (1 .- solu.prob.p.p_soil.p_STONEF)
         # mm per mm of fine soil thickness (assuming gravel fraction contains no water)
         rows_ψₘpF  = log10.(u_aux_PSIM  .* -10) #(from kPa to log10(hPa))
         rows_ψₜₒₜpF = log10.(u_aux_PSITI .* -10) #(from kPa to log10(hPa))
@@ -413,31 +413,31 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     end
 
     # 1) prepare data to plot
-    sol = simulation.ODESolution
+    solu = simulation.ODESolution
 
-    # 1a) extract data from solution object `sol`
+    # 1a) extract data from solution object `solu`
         # # Two ways to extract data from soil object: using `[]` or `()`
-        # u_SWATI = reduce(hcat, [sol[t_idx].SWATI.mm  for t_idx = eachindex(sol)])
-        # u_SWATI = reduce(hcat, [sol(t_days).SWATI.mm for t_days = days_to_read_out_d])
+        # u_SWATI = reduce(hcat, [solu[t_idx].SWATI.mm  for t_idx = eachindex(solu)])
+        # u_SWATI = reduce(hcat, [solu(t_days).SWATI.mm for t_days = days_to_read_out_d])
 
         # days_to_read_out_d decides which points to use:
         # days_to_read_out_d = nothing # read out all simulation steps
         days_to_read_out_d = :daily  # read out only daily values
         if isnothing(days_to_read_out_d)
-            days_to_read_out_d = sol.t # warning this can
+            days_to_read_out_d = solu.t # warning this can
             error("Too many output times requested. This easily freezes the program...")
         elseif days_to_read_out_d == :daily
-            days_to_read_out_d = unique(round.(sol.t))
+            days_to_read_out_d = unique(round.(solu.t))
         end
-        t_ref = sol.prob.p.REFERENCE_DATE
+        t_ref = solu.prob.p.REFERENCE_DATE
         x = RelativeDaysFloat2DateTime.(days_to_read_out_d, t_ref);
-        y_center = cumsum(sol.prob.p.p_soil.p_THICK) - sol.prob.p.p_soil.p_THICK/2
+        y_center = cumsum(solu.prob.p.p_soil.p_THICK) - solu.prob.p.p_soil.p_THICK/2
 
-    simulate_isotopes = sol.prob.p.simulate_isotopes
+    simulate_isotopes = solu.prob.p.simulate_isotopes
     @assert simulate_isotopes "Provided DiscretizedSPAC() did not simulate isotopes"
 
     # Some hardcoded options:
-    xlimits = RelativeDaysFloat2DateTime.(sol.prob.tspan, t_ref)
+    xlimits = RelativeDaysFloat2DateTime.(solu.prob.tspan, t_ref)
 
     clims_d18O = (-16, -6)
     clims_d2H  = (-125, -40)
@@ -448,28 +448,28 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     color_scheme = :heat
 
     # Results
-    row_PREC_amt = sol.prob.p.p_PREC.(days_to_read_out_d)
-    # rows_SWAT_amt = sol[sol.prob.p.row_idx_SWATI, 1, :]./sol.prob.p.p_soil.p_THICK;
-    rows_SWAT_amt  = reduce(hcat, [sol(t).SWATI.mm   for t in days_to_read_out_d]) ./ sol.prob.p.p_soil.p_THICK
-    rows_SWAT_d18O = reduce(hcat, [sol(t).SWATI.d18O for t in days_to_read_out_d])
-    rows_SWAT_d2H  = reduce(hcat, [sol(t).SWATI.d2H  for t in days_to_read_out_d])
+    row_PREC_amt = solu.prob.p.p_PREC.(days_to_read_out_d)
+    # rows_SWAT_amt = solu[solu.prob.p.row_idx_SWATI, 1, :]./solu.prob.p.p_soil.p_THICK;
+    rows_SWAT_amt  = reduce(hcat, [solu(t).SWATI.mm   for t in days_to_read_out_d]) ./ solu.prob.p.p_soil.p_THICK
+    rows_SWAT_d18O = reduce(hcat, [solu(t).SWATI.d18O for t in days_to_read_out_d])
+    rows_SWAT_d2H  = reduce(hcat, [solu(t).SWATI.d2H  for t in days_to_read_out_d])
     row_NaN       = fill(NaN, 1,length(x))
-    row_PREC_d18O = reshape(sol.prob.p.p_δ18O_PREC.(days_to_read_out_d), 1, :)
-    row_INTS_d18O = reduce(hcat, [sol(t).INTS.d18O for t in days_to_read_out_d])
-    row_INTR_d18O = reduce(hcat, [sol(t).INTR.d18O for t in days_to_read_out_d])
-    row_SNOW_d18O = reduce(hcat, [sol(t).SNOW.d18O for t in days_to_read_out_d])
-    row_GWAT_d18O = reduce(hcat, [sol(t).GWAT.d18O for t in days_to_read_out_d])
-    row_RWU_d18O  = reduce(hcat, [sol(t).RWU.d18O for t in days_to_read_out_d])
-    row_XYL_d18O  = reduce(hcat, [sol(t).XYLEM.d18O for t in days_to_read_out_d])
-    row_PREC_d2H  = reshape(sol.prob.p.p_δ2H_PREC.(days_to_read_out_d), 1, :)
-    row_INTS_d2H  = reduce(hcat, [sol(t).INTS.d2H for t in days_to_read_out_d])
-    row_INTR_d2H  = reduce(hcat, [sol(t).INTR.d2H for t in days_to_read_out_d])
-    row_SNOW_d2H  = reduce(hcat, [sol(t).SNOW.d2H for t in days_to_read_out_d])
-    row_GWAT_d2H  = reduce(hcat, [sol(t).GWAT.d2H for t in days_to_read_out_d])
-    row_RWU_d2H   = reduce(hcat, [sol(t).RWU.d2H for t in days_to_read_out_d])
-    row_XYL_d2H   = reduce(hcat, [sol(t).XYLEM.d2H for t in days_to_read_out_d])
+    row_PREC_d18O = reshape(solu.prob.p.p_δ18O_PREC.(days_to_read_out_d), 1, :)
+    row_INTS_d18O = reduce(hcat, [solu(t).INTS.d18O for t in days_to_read_out_d])
+    row_INTR_d18O = reduce(hcat, [solu(t).INTR.d18O for t in days_to_read_out_d])
+    row_SNOW_d18O = reduce(hcat, [solu(t).SNOW.d18O for t in days_to_read_out_d])
+    row_GWAT_d18O = reduce(hcat, [solu(t).GWAT.d18O for t in days_to_read_out_d])
+    row_RWU_d18O  = reduce(hcat, [solu(t).RWU.d18O for t in days_to_read_out_d])
+    row_XYL_d18O  = reduce(hcat, [solu(t).XYLEM.d18O for t in days_to_read_out_d])
+    row_PREC_d2H  = reshape(solu.prob.p.p_δ2H_PREC.(days_to_read_out_d), 1, :)
+    row_INTS_d2H  = reduce(hcat, [solu(t).INTS.d2H for t in days_to_read_out_d])
+    row_INTR_d2H  = reduce(hcat, [solu(t).INTR.d2H for t in days_to_read_out_d])
+    row_SNOW_d2H  = reduce(hcat, [solu(t).SNOW.d2H for t in days_to_read_out_d])
+    row_GWAT_d2H  = reduce(hcat, [solu(t).GWAT.d2H for t in days_to_read_out_d])
+    row_RWU_d2H   = reduce(hcat, [solu(t).RWU.d2H for t in days_to_read_out_d])
+    row_XYL_d2H   = reduce(hcat, [solu(t).XYLEM.d2H for t in days_to_read_out_d])
 
-    rows_RWU_mmDay  = reduce(hcat, [sol(t).TRANI.mmday   for t in days_to_read_out_d])
+    rows_RWU_mmDay  = reduce(hcat, [solu(t).TRANI.mmday   for t in days_to_read_out_d])
     if (RWUcentroid == :showRWUcentroid)
         row_RWU_centroid_mm, RWUcentroidLabel = get_RWU_centroid(rows_RWU_mmDay, y_center)
     end
@@ -569,10 +569,10 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     # 3b) Heatmap (containing SWATI and other compartments)
     # y_labels   = ["INTS"; ""; "INTR"; ""; "SNOW"; ""; round.(y_center); "";             "GWAT"]
     # y_soil_ticks = optimize_ticks(extrema(y_center)...; k_min = 4)[1]
-    # y_soil_ticks = optimize_ticks(0., round(maximum(cumsum(sol.prob.p.p_soil.p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
-    y_extended = [-500; -350; -300; -250; -200; -150; -100; -50;         y_center;             (maximum(cumsum(sol.prob.p.p_soil.p_THICK)) .+ [50; 100; 150; 250; 300;400])]
-    y_soil_ticks = tick_function(0., round(maximum(cumsum(sol.prob.p.p_soil.p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
-    y_ticks    = [-500;       -300;       -200;       -100;          y_soil_ticks;             (maximum(cumsum(sol.prob.p.p_soil.p_THICK)) .+ [    100;      250;     400])]
+    # y_soil_ticks = optimize_ticks(0., round(maximum(cumsum(solu.prob.p.p_soil.p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
+    y_extended = [-500; -350; -300; -250; -200; -150; -100; -50;         y_center;             (maximum(cumsum(solu.prob.p.p_soil.p_THICK)) .+ [50; 100; 150; 250; 300;400])]
+    y_soil_ticks = tick_function(0., round(maximum(cumsum(solu.prob.p.p_soil.p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
+    y_ticks    = [-500;       -300;       -200;       -100;          y_soil_ticks;             (maximum(cumsum(solu.prob.p.p_soil.p_THICK)) .+ [    100;      250;     400])]
     y_labels   = ["PREC";   "INTS";     "INTR";     "SNOW";     round.(y_soil_ticks; digits=0);                                                "GWAT";    "RWU";     "XYLEM"]
     z2_extended = [row_PREC_d18O; row_NaN; row_INTS_d18O; row_NaN; row_INTR_d18O; row_NaN; row_SNOW_d18O; row_NaN; rows_SWAT_d18O; row_NaN; row_GWAT_d18O; row_NaN; row_RWU_d18O; row_NaN; row_XYL_d18O]
     z3_extended = [row_PREC_d2H;  row_NaN; row_INTS_d2H;  row_NaN; row_INTR_d2H;  row_NaN; row_SNOW_d2H;  row_NaN; rows_SWAT_d2H;  row_NaN; row_GWAT_d2H;  row_NaN; row_RWU_d2H;  row_NaN; row_XYL_d2H ]
@@ -676,9 +676,9 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
     end
 
     # 1) prepare data to plot
-    sol = simulation.ODESolution;
+    solu = simulation.ODESolution;
 
-    # 1a) extract data from solution object `sol`
+    # 1a) extract data from solution object `solu`
     # 1a) i) forcing (wind, vappres, globrad, tmax, tmin, prec, lai, )
     x1  = simulation.ODESolution_datetime;
     y11 = simulation.ODESolution.prob.p.p_WIND.(simulation.ODESolution.t);      lbl11 = "p_WIND [m/s]";
