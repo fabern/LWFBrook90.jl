@@ -19,10 +19,6 @@ using FileIO
 
 # this script either writes out or tests against reference test cases
 task = ["test", "overwrite"][1]
-
-# TODO(bernhard): while below testset works consistently on MacBook Pro,
-#                 in the GithubActions the values are slightly different.
-#                 TODO: investigate why. (DiffEq.jl, integration testing, set some seed?)
 # Note, in order to have the regression testset work consistently on MacBook Pro and on the
 # CI machine (through GithubActions), make sure to test always with the same PRNG (random
 # number generator). According to
@@ -34,8 +30,7 @@ task = ["test", "overwrite"][1]
 #     ]
 #     activate .
 #     test
-# TODO(bernhard): however, above `test` still yields different results in CI and fails, therefore:
-# Current workaround, do not run these tests on CI (GithubActions)
+#  or simply julia --project=. test/runtests.jl
 is_a_CI_system = issubset(["GITHUB_ACTION"], collect(keys(ENV))) # checks if ENV["GITHUB_ACTION"] exists
 @show is_a_CI_system
 
@@ -75,28 +70,24 @@ if basename(pwd()) != "test"; cd("test"); end
     if task == "test"
         loaded = load(fname)
 
-        if !is_a_CI_system
-            # Test input example_result
-            # @test loaded["currSPAC"]   == currSPAC
-            @test loaded["currSPAC"].forcing == currSPAC.forcing
-            # @test loaded["currSPAC"].pars == currSPAC.pars
-            @test loaded["currSPAC"].reference_date == currSPAC.reference_date
-            # @test loaded["currSPAC"].soil_discretization == currSPAC.soil_discretization
-            @test loaded["currSPAC"].solver_options == currSPAC.solver_options
-            @test loaded["currSPAC"].tspan == currSPAC.tspan
+        # Test input example_result
+        # @test loaded["currSPAC"]   == currSPAC
+        @test loaded["currSPAC"].forcing == currSPAC.forcing
+        # @test loaded["currSPAC"].pars == currSPAC.pars
+        @test loaded["currSPAC"].reference_date == currSPAC.reference_date
+        # @test loaded["currSPAC"].soil_discretization == currSPAC.soil_discretization
+        @test loaded["currSPAC"].solver_options == currSPAC.solver_options
+        @test loaded["currSPAC"].tspan == currSPAC.tspan
 
-            # Test scalar results
-            @test all(loaded["u_ref"]      .≈ u_ref)
-            @test all(isapprox.(Matrix(loaded["u_δ"]), Matrix(u_δ), nans=true)) # NOTE: δ_RWU can be NaN if no water taken up, hence nans=true
-            # Test vector results
-            @test all(loaded["u_SWATI"]    .≈ u_SWATI)
-            @test all(loaded["u_aux_PSIM"] .≈ u_aux_PSIM)
-            @test all(loaded["u_aux_θ"]    .≈ u_aux_θ)
-            @test all(loaded["u_δsoil"].d18O .≈ u_δsoil.d18O)
-            @test all(loaded["u_δsoil"].d2H .≈ u_δsoil.d2H)
-        else
-            @warn "Regression tests deactivated on CI system."
-        end
+        # Test scalar results
+        @test all(loaded["u_ref"]      .≈ u_ref)
+        @test all(isapprox.(Matrix(loaded["u_δ"]), Matrix(u_δ), nans=true)) # NOTE: δ_RWU can be NaN if no water taken up, hence nans=true
+        # Test vector results
+        @test all(loaded["u_SWATI"]    .≈ u_SWATI)
+        @test all(loaded["u_aux_PSIM"] .≈ u_aux_PSIM)
+        @test all(loaded["u_aux_θ"]    .≈ u_aux_θ)
+        @test all(loaded["u_δsoil"].d18O .≈ u_δsoil.d18O)
+        @test all(loaded["u_δsoil"].d2H .≈ u_δsoil.d2H)
     elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
         # overwrite output
         jldsave(fname, compress=false;
