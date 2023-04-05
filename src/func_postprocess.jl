@@ -192,7 +192,6 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
             labels := ["INTS" "INTR" "SNOW" "GWAT" "XYL"]
             ylab := "Amount [mm]"
             seriestype := :line
-            # legend := false
             subplot := 2
             bg_legend --> colorant"rgba(100%,100%,100%,0.8)"; legend := :topright
             # and other arguments:
@@ -202,13 +201,22 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     if (compartments == :belowground || compartments == :above_and_belowground)
         @series begin
             title := "Belowground"
-            labels := ["total SWAT" reduce(hcat, horizon_labels)]
+            labels := "total SWAT"
             ylab := "Amount [mm]"
             seriestype := :line
             subplot := 3
-            bg_legend --> colorant"rgba(100%,100%,100%,0.8)"; legend := :topright
+            #bg_legend --> colorant"rgba(100%,100%,100%,0.8)"; legend := :topright
             # and other arguments:
-            x, hcat(col_sumSWATI_amt[:], reduce(hcat, cols_sumSWATIperLayer_amt))
+            x, col_sumSWATI_amt[:]
+        end
+        # somehow we need a for loop to get the labelling in the correct order
+        for it in 1:length(cols_sumSWATIperLayer_amt)
+            @series begin
+                subplot := 3
+                seriestype := :line
+                labels := horizon_labels[it]
+                x, cols_sumSWATIperLayer_amt[it]
+            end
         end
 
         # rows_SWAT_amt0 = u_aux_θ
@@ -368,7 +376,6 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
         #       e.g. plots_heatmap_edges: plot(t = :heatmap, x[1:50], y_center, z[:,1:50]) # works
         #       e.g. plots_heatmap_edges: plot(t = :plots_heatmap, x[1:50], y_center, z[:,1:50]) # doesn't work
         #       e.g. plots_heatmap_edges: plot(t = :plots_heatmap_edges, x[1:50], y_center, z[:,1:50]) # doesn't work either
-
     end
 end
 
@@ -661,10 +668,10 @@ end
 Plots the forcing, states and major fluxes as results of a SPAC Simulation.
 """
 @userplot PlotForcingAndStates
-@recipe function f(plam::PlotForcingAndStates)
+@recipe function f(plfor::PlotForcingAndStates)
     # 0) parse input arguments
-    if length(plam.args) == 1
-        simulation = plam.args[1]
+    if length(plfor.args) == 1
+        simulation = plfor.args[1]
     else
         error("plotforcingandstates requires an unnamed first argument of type DiscretizedSPAC. Other arguments to plot() should be separated by `;`.")
     end
@@ -747,96 +754,29 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
     # # 3) generate plots
     # # NOTE: --> sets attributes only when they don't already exist
     # # NOTE: :=  sets attributes even when they already exist
-    @series begin
-        yguide := ""
-        # seriestype := :bar
-        # legend := false
-        subplot := 1
-        label := lbl11
-        # and other arguments:
-        x1, y11
+
+    # WORKAROUND:
+    # somehow we need a for loop to get the labelling in the correct order
+    function own_plotseries(yguide, subplot, labels, x, y)
+        for it in 1:size(y,2)
+            @series begin
+                yguide := yguide
+                subplot := subplot
+                labels := labels[it]
+                x, y[:,it]
+            end
+        end
     end
-    @series begin
-        yguide := ""
-        # seriestype := :bar
-        # legend := false
-        subplot := 2
-        label := lbl12
-        # and other arguments:
-        x1, y12
-    end
-    @series begin
-        yguide := ""
-        # seriestype := :bar
-        # legend := false
-        subplot := 3
-        label := lbl13
-        # and other arguments:
-        x1, y13
-    end
-    @series begin
-        yguide := ""
-        # seriestype := :bar
-        # legend := false
-        subplot := 4
-        label := lbl14
-        # and other arguments:
-        x1, y14
-    end
-    @series begin
-        yguide := ""
-        # seriestype := :bar
-        # legend := false
-        subplot := 5
-        label := lbl15
-        # and other arguments:
-        x1, y15
-    end
-    @series begin
-        yguide := ""
-        # seriestype := :bar
-        # legend := false
-        subplot := 6
-        label := lbl21
-        # and other arguments:
-        x2, y21
-    end
-    @series begin
-        yguide := ""
-        # seriestype := :bar
-        # legend := false
-        subplot := 7
-        label := lbl22
-        # and other arguments:
-        x2, y22
-    end
-    @series begin
-        yguide := ""
-        # seriestype := :bar
-        # legend := false
-        subplot := 8
-        label := lbl31
-        # and other arguments:
-        x3, y31
-    end
-    @series begin
-        yguide := ""
-        # seriestype := :bar
-        # legend := false
-        subplot := 9
-        label := lbl32
-        # and other arguments:
-        x3, y32
-    end
-    @series begin
-        yguide := ""
-        # seriestype := :bar
-        # legend := false
-        subplot := 10
-        label := lbl41
-        # and other arguments:
-        x4, y41
-    end
+    own_plotseries("", 1, [lbl11], x1, y11)
+    own_plotseries("", 2, [lbl12], x1, y12)
+    own_plotseries("", 3, [lbl13], x1, y13)
+    own_plotseries("", 4, lbl14, x1, y14)
+    own_plotseries("", 5, [lbl15], x1, y15)
+    own_plotseries("", 6, lbl21, x2, y21)
+    own_plotseries("", 7, [lbl22], x2, y22)
+    own_plotseries("", 8, lbl31, x3, y31)
+    own_plotseries("", 9, lbl32, x3, y32)
+    own_plotseries("", 10, lbl41, x4, y41)
 end
 
 
