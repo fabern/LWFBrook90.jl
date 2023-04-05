@@ -16,7 +16,7 @@
 simulate_LWFBrook90.jl_input_folder_withLWFBrook90R <-
   function(folder="input_LWFBrook90R",prefix="BEA2016-reset-FALSE",
            refine_discr_factor = 1,
-           verbose = TRUE){
+           verbose = TRUE, fct_soil_materials = identity){
     # refine_discr_factor: a factor that divides each discretized cell into that many subcells
     # folder="input_LWFBrook90R"
     # prefix="BEA2016-reset-FALSE"
@@ -28,6 +28,9 @@ simulate_LWFBrook90.jl_input_folder_withLWFBrook90R <-
     require(LWFBrook90R)
     require(data.table)
     require(dplyr)
+
+    # check for version
+    stopifnot(packageVersion("LWFBrook90R") == "0.5.2")
 
     # read input files ###########################################################
     meteo_file              <- file.path(folder, paste0(prefix, "_meteoveg.csv"))
@@ -73,6 +76,8 @@ simulate_LWFBrook90.jl_input_folder_withLWFBrook90R <-
              gravel = gravel_volFrac,
              upper = Upper_m,
              lower = Lower_m)
+
+    soil_materials <- fct_soil_materials(soil_materials) # apply user-specified transformations
 
     soil_layers = read_table_skip_subheader(file = soil_layers_file, sep=",")  %>%
       rename(upper = Upper_m,
@@ -228,7 +233,7 @@ simulate_LWFBrook90.jl_input_folder_withLWFBrook90R <-
     # No need to have the actual materials and layers, just the nrow(.) should work
     test_params$soil_materials <- data.frame(rep(1,nrow(soil_materials)))
     test_params$soil_nodes <- data.frame(rep(1,nrow(soil_layers_increased)))
-    test_params$intrainini
+
     # Fix meteo by using absolute values of densef, height, lai, and add age
     meteo2 <- meteo %>%
       mutate(age = param$AGE_baseline_yrs + as.numeric(dates - dates[1],"days")/365,
@@ -269,13 +274,14 @@ simulate_LWFBrook90.jl_input_folder_withLWFBrook90R <-
                            output_log = verbose#,
                            # timelimit = Inf
     )
+    stopifnot(sim_out$error_code == 0)
 
     # postprocess simulation #####################################################
+    # note: copied from LWFBrook90R (github.com/pschmidtwalter/LWFBrook90R)
     # daily outputs
-    sim_out$daily_output <- data.table::data.table(sim_out$daily_output)
-    data.table::setnames(sim_out$daily_output,
-                         names(sim_out$daily_output),
-                         c('yr','mo','da','doy','rfal','rint','sfal','sint','rthr','rsno',
+    sim_out$output <- data.table::data.table(sim_out$output)
+    data.table::setnames(sim_out$output, names(sim_out$output),
+                         c('yr','mo','da','doy','rfal','rint','sfal','sint','rthr','sthr','rsno',
                            'rnet','smlt','snow','swat','gwat','intr', 'ints','evap','tran','irvp',
                            'isvp','slvp','snvp','pint','ptran','pslvp','flow','seep',
                            'srfl','slfl','byfl','dsfl','gwfl','vrfln','safrac',
@@ -285,9 +291,9 @@ simulate_LWFBrook90.jl_input_folder_withLWFBrook90R <-
     sim_out$layer_output <- data.table::rbindlist(lapply(seq(dim(sim_out$layer_output)[3]),
                                                         function(x) data.frame(sim_out$layer_output[ , , x])),
                                                  idcol = "nl")
-    data.table::setnames(sim_out$layer_output, paste0("X", 1:16),
-                         c('yr','mo','da','doy','swati','theta','wetnes','psimi','psiti','infl',
-                           'byfl','tran','slvp','vrfl','dsfl','ntfl'))
+    data.table::setnames(sim_out$layer_output, paste0("X", 1:14),
+                         c('yr','mo','da','doy','swati','theta','wetnes','psimi','infl', # 'psiti' and 'slvp' removed since 0.4.5
+                           'byfl','tran','vrfl','dsfl','ntfl'))
 
     sim_out$layer_output <- sim_out$layer_output[order(sim_out$layer_output$yr,
                                                      sim_out$layer_output$doy,
