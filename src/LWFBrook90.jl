@@ -128,7 +128,7 @@ include("func_DiffEq_definition_ode.jl")
 include("func_MSB_functions.jl")
 include("func_postprocess.jl")
 
-include("../examples/func_run_example.jl") # defines RelativeDaysFloat2DateTime
+include("../examples/func_run_example.jl")
 
 # struct DiscretizedSoilDomain{T <: AbstractVector}
 #     # Input fields
