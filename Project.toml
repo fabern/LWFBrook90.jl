@@ -34,7 +34,7 @@ BenchmarkTools = "1"
 CSV = "0.8, 0.9, 0.10"
 ComponentArrays = "0.13"
 DataFrames = "0.22, 1.1"
-DataFramesMeta = "0.6, 0.7, 0.8, 0.9, 0.10, 0.11, 0.12, 0.13"
+DataFramesMeta = "0.6, 0.7, 0.8, 0.9, 0.10, 0.11, 0.12, 0.13, 0.14"
 DiffEqCallbacks = "2"
 FileIO = "1"
 Interpolations = "0.13, 0.14"
@@ -51,8 +51,8 @@ UnPack = "1"
 julia = "1"
 
 [extras]
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["Test", "JLD2"]
