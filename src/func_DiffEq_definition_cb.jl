@@ -13,15 +13,18 @@ function define_LWFB90_cb()
     #     (u,t,integrator) -> nothing;    # TODO(bernhard): this can be used to implement the corrector step of Lai-2015 (or Li-2021-J_Hydrol.pdf) after DiffEq.jl is used for the predictor step
     #     func_everystep=true, func_start=false)
 
-    cb_check_balance_errors = PeriodicCallback(LWFBrook90R_check_balance_errors!,  1.0;
+    cb_check_balance_errors = PeriodicCallback(
+                                LWFBrook90R_check_balance_errors!,  1.0;
                                 initial_affect = false, # we do not need to check balance errors at the initial conditions...
                                 save_positions=(false,false));
 
-    cb_INTS_INTR_SNOW_amounts = PeriodicCallback(LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!,  1.0;
+    cb_INTS_INTR_SNOW_amounts = PeriodicCallback(
+                                LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!,  1.0;
                                 initial_affect = true,
                                 save_positions=(false,false));
 
-    cb_INTS_INTR_SNOW_deltas = PeriodicCallback(LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!,  1.0;
+    cb_INTS_INTR_SNOW_deltas = PeriodicCallback(
+                                LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!,  1.0;
                                initial_affect = true,
                                save_positions=(false,false));
 
@@ -293,20 +296,9 @@ end
 
 function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
 
-
     @unpack simulate_isotopes = integrator.p
 
     if simulate_isotopes
-        ## C) state dependent parameters:
-        # Calculate parameters:
-        #  - solar parameters depending on DOY
-        #  - canopy parameters depending on DOY and u_SNOW
-        #  - roughness parameters depending on u_SNOW
-        #  - plant resistance components depending on u_SNOW
-        #  - weather data depending on DOY and u_SNOW
-        #  - fraction of precipitation as snowfall depending on DOY
-        #  - snowpack temperature, potential snow evaporation and soil evaporation resistance depending on u_SNOW
-
         # Parse states
         u_INTS     = integrator.u.INTS.mm
         u_INTR     = integrator.u.INTR.mm
@@ -354,28 +346,28 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         # u_δ¹⁸O_Xylem = integrator.u.XYLEM.d18O
         # u_δ²H_Xylem  = integrator.u.XYLEM.d2H
 
-        # Variant 1) works but really much slower
-        # p_fu_δ18O_SLFL, p_fu_δ2H_SLFL,
-        # _,                u_δ18O_INTS, u_δ2H_INTS,
-        # _,            u_δ18O_INTR, u_δ2H_INTR,
-        # u_SNOW_iso_update, u_δ18O_SNOW, u_δ2H_SNOW =
-        #     compute_isotope_U_of_INTS_INTR_SNOW_and_SLFL(
-        # (p_fu_δ18O_SLFL, p_fu_δ2H_SLFL,
-        # u_δ18O_INTS, u_δ2H_INTS,
-        # u_δ18O_INTR, u_δ2H_INTR,
-        # u_δ18O_SNOW, u_δ2H_SNOW) =
-        #     compute_isotope_U_of_INTS_INTR_SNOW_and_SLFL(
-        #         u_INTS, u_δ18O_INTS, u_δ2H_INTS, u_INTR, u_δ18O_INTR, u_δ2H_INTR, u_SNOW, u_δ18O_SNOW, u_δ2H_SNOW,
-        #         p_δ2H_PREC(integrator.t), p_δ18O_PREC(integrator.t), p_fT_TADTM[1], p_VAPPRES(integrator.t),
-        #         # for INTS (in: SINT; out: ISVP):
-        #         aux_du_SINT[1], aux_du_ISVP[1], p_DTP,
-        #         # for INTR (in: RINT; out: IRVP):
-        #         aux_du_RINT[1], aux_du_IRVP[1],
-        #         # for SNOW (in: STHR, RSNO (both δ_PREC); out: SMLT, SNVP (δ_SNOW and fractionated)):
-        #         NaN, p_fu_STHR[1], aux_du_RSNO[1], aux_du_SMLT[1], aux_du_SNVP[1],
-        #         # to compute isotopic signature of soil infiltration: SLFL
-        #         p_fu_RNET[1])
-        # # END variant 1
+            # Variant 1) works but really much slower
+            # p_fu_δ18O_SLFL, p_fu_δ2H_SLFL,
+            # _,                u_δ18O_INTS, u_δ2H_INTS,
+            # _,            u_δ18O_INTR, u_δ2H_INTR,
+            # u_SNOW_iso_update, u_δ18O_SNOW, u_δ2H_SNOW =
+            #     compute_isotope_U_of_INTS_INTR_SNOW_and_SLFL(
+            # (p_fu_δ18O_SLFL, p_fu_δ2H_SLFL,
+            # u_δ18O_INTS, u_δ2H_INTS,
+            # u_δ18O_INTR, u_δ2H_INTR,
+            # u_δ18O_SNOW, u_δ2H_SNOW) =
+            #     compute_isotope_U_of_INTS_INTR_SNOW_and_SLFL(
+            #         u_INTS, u_δ18O_INTS, u_δ2H_INTS, u_INTR, u_δ18O_INTR, u_δ2H_INTR, u_SNOW, u_δ18O_SNOW, u_δ2H_SNOW,
+            #         p_δ2H_PREC(integrator.t), p_δ18O_PREC(integrator.t), p_fT_TADTM[1], p_VAPPRES(integrator.t),
+            #         # for INTS (in: SINT; out: ISVP):
+            #         aux_du_SINT[1], aux_du_ISVP[1], p_DTP,
+            #         # for INTR (in: RINT; out: IRVP):
+            #         aux_du_RINT[1], aux_du_IRVP[1],
+            #         # for SNOW (in: STHR, RSNO (both δ_PREC); out: SMLT, SNVP (δ_SNOW and fractionated)):
+            #         NaN, p_fu_STHR[1], aux_du_RSNO[1], aux_du_SMLT[1], aux_du_SNVP[1],
+            #         # to compute isotopic signature of soil infiltration: SLFL
+            #         p_fu_RNET[1])
+            # # END variant 1
 
         # Variant 2) resulting in no effect (but is fast, so not generating any allocation problems)
         p_fu_δ2H_SLFL[1]   = p_δ2H_PREC(integrator.t)
@@ -388,123 +380,123 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         u_δ18O_SNOW         = p_δ18O_PREC(integrator.t)
         # # END variant 2
 
-        # # Variant 3) trying to unwrap variant 1) by reducing allocations. Currently not working and also not faster than 1)
-        # R_std_2H  = LWFBrook90.ISO.R_VSMOW²H
-        # R_std_18O = LWFBrook90.ISO.R_VSMOW¹⁸O
-        # # For SNOW ( do this before INTS as it uses u_δ2H_INTS as input)
-        # inflow = [p_fu_STHR[1]; aux_du_RSNO[1]]
-        # outflow = [aux_du_SMLT[1]]
-        # u⁺ = u_SNOW
-        # u₀ = u_INTR - p_DTP * (sum(inflow) - sum(outflow)) # [mm]
-        # E  = aux_du_SNVP[1]
-        # ## δ2H
-        # δ₀ = u_δ2H_SNOW
-        # x₀  = (δ₀/1000 + 1)*R_std_2H / (1 + (δ₀/1000 + 1)*R_std_2H)
-        # δin = [u_δ2H_INTS;  p_δ2H_PREC(integrator.t)]
-        # xin = (δin ./ 1000. .+ fill(1.,(2)))
-        # xin = xin  .* R_std_2H ./ ((δin ./ 1000. .+ 1.) .* R_std_2H .+ 1. )
-        # if u₀ < 0.001 && u⁺ > 0.001 # instead of u₀ == 0
-        #     # Edge cases:
-        #     x⁺ = sum(xin .* inflow) / sum(inflow)
-        #     u_δ2H_SNOW = 1000 * (x⁺/(1-x⁺)/R_std_2H - 1)
-        # elseif u⁺ > 0.001 # mm water = 1 µm water
-        #     x⁺ = (x₀ * u₀ + p_DTP * (sum(xin .* inflow) - sum(x₀ .* outflow)) ) / u⁺
-        #     u_δ2H_SNOW = 1000 * (x⁺/(1-x⁺)/R_std_2H - 1)
-        # else
-        #     x⁺ = NaN
-        #     u_δ2H_SNOW = NaN
-        # end
-        # #TODO(bernhard): include fractionation due to evaporation
-        # ## δ18O
-        # δ₀ = u_δ18O_SNOW
-        # x₀  = (δ₀/1000 + 1)*R_std_18O / (1 + (δ₀/1000 + 1)*R_std_18O)
-        # δin = [u_δ18O_INTS,  p_δ18O_PREC(integrator.t)]
-        # xin = (δin./1000. .+ 1).*R_std_18O ./ (1 .+ (δin./1000. .+ 1).*R_std_18O)
-        # if u₀ < 0.001 && u⁺ > 0.001 # instead of u₀ == 0
-        #     # Edge cases:
-        #     x⁺ = sum(xin .* inflow) / sum(inflow)
-        # elseif u⁺ > 0.001 # mm water = 1 µm water
-        #     x⁺ = (x₀ * u₀ + p_DTP * (sum(xin .* inflow) - sum(x₀ .* outflow)) ) / u⁺
-        # else
-        #     x⁺ = NaN
-        # end
-        # u_δ18O_SNOW = 1000 * (x⁺/(1-x⁺)/R_std_18O - 1)
-        # #TODO(bernhard): include fractionation due to evaporation
-        # # For INTS
-        # inflow = [aux_du_SINT[1]]
-        # outflow = [0]
-        # u⁺ = u_INTS
-        # u₀ = u_INTS - p_DTP * (sum(inflow) - sum(outflow)) # [mm]
-        # E  = aux_du_ISVP[1]
-        # ## δ2H
-        # δ₀ = u_δ2H_INTS
-        # x₀  = (δ₀/1000 + 1)*R_std_2H / (1 + (δ₀/1000 + 1)*R_std_2H)
-        # δin = p_δ2H_PREC(integrator.t)
-        # xin = (δin./1000. .+ 1).*R_std_2H ./ (1 .+ (δin./1000. .+ 1).*R_std_2H)
-        # if u₀ < 0.001 && u⁺ > 0.001 # instead of u₀ == 0
-        #     # Edge cases:
-        #     x⁺ = sum(xin .* inflow) / sum(inflow)
-        # elseif u⁺ > 0.001 # mm water = 1 µm water
-        #     x⁺ = (x₀ * u₀ + p_DTP * (sum(xin .* inflow) - sum(x₀ .* outflow)) ) / u⁺
-        # else
-        #     x⁺ = NaN
-        # end
-        # u_δ2H_INTS = 1000 * (x⁺/(1-x⁺)/R_std_2H - 1)
-        # #TODO(bernhard): include fractionation due to evaporation
-        # ## δ18O
-        # δ₀ = u_δ18O_INTS
-        # x₀  = (δ₀/1000 + 1)*R_std_18O / (1 + (δ₀/1000 + 1)*R_std_18O)
-        # δin = p_δ18O_PREC(integrator.t)
-        # xin = (δin./1000. .+ 1).*R_std_18O ./ (1 .+ (δin./1000. .+ 1).*R_std_18O)
-        # if u₀ < 0.001 && u⁺ > 0.001 # instead of u₀ == 0
-        #     # Edge cases:
-        #     x⁺ = sum(xin .* inflow) / sum(inflow)
-        # elseif u⁺ > 0.001 # mm water = 1 µm water
-        #     x⁺ = (x₀ * u₀ + p_DTP * (sum(xin .* inflow) - sum(x₀ .* outflow)) ) / u⁺
-        # else
-        #     x⁺ = NaN
-        # end
-        # u_δ18O_INTS = 1000 * (x⁺/(1-x⁺)/R_std_18O - 1)
-        # #TODO(bernhard): include fractionation due to evaporation
-        # # For INTR
-        # inflow = [aux_du_RINT[1]]
-        # outflow = [0]
-        # u⁺ = u_INTR
-        # u₀ = u_INTR - p_DTP * (sum(inflow) - sum(outflow)) # [mm]
-        # E  = aux_du_IRVP[1]
-        # ## δ2H
-        # δ₀ = u_δ2H_INTR
-        # x₀  = (δ₀/1000 + 1)*R_std_2H / (1 + (δ₀/1000 + 1)*R_std_2H)
-        # δin = p_δ2H_PREC(integrator.t)
-        # xin = (δin./1000. .+ 1).*R_std_2H ./ (1 .+ (δin./1000. .+ 1).*R_std_2H)
-        # if u₀ < 0.001 && u⁺ > 0.001 # instead of u₀ == 0
-        #     # Edge cases:
-        #     x⁺ = sum(xin .* inflow) / sum(inflow)
-        # elseif u⁺ > 0.001 # mm water = 1 µm water
-        #     x⁺ = (x₀ * u₀ + p_DTP * (sum(xin .* inflow) - sum(x₀ .* outflow)) ) / u⁺
-        # else
-        #     x⁺ = NaN
-        # end
-        # u_δ2H_INTR = 1000 * (x⁺/(1-x⁺)/R_std_2H - 1)
-        # #TODO(bernhard): include fractionation due to evaporation
-        # ## δ18O
-        # δ₀ = u_δ18O_INTR
-        # x₀  = (δ₀/1000 + 1)*R_std_18O / (1 + (δ₀/1000 + 1)*R_std_18O)
-        # δin = p_δ18O_PREC(integrator.t)
-        # xin = (δin./1000. .+ 1).*R_std_18O ./ (1 .+ (δin./1000. .+ 1).*R_std_18O)
-        # if u₀ < 0.001 && u⁺ > 0.001 # instead of u₀ == 0
-        #     # Edge cases:
-        #     x⁺ = sum(xin .* inflow) / sum(inflow)
-        # elseif u⁺ > 0.001 # mm water = 1 µm water
-        #     x⁺ = (x₀ * u₀ + p_DTP * (sum(xin .* inflow) - sum(x₀ .* outflow)) ) / u⁺
-        # else
-        #     x⁺ = NaN
-        # end
-        # u_δ18O_INTR = 1000 * (x⁺/(1-x⁺)/R_std_18O - 1)
-        # #TODO(bernhard): include fractionation due to evaporation
-        # p_fu_δ2H_SLFL   = p_δ2H_PREC(integrator.t)
-        # p_fu_δ18O_SLFL   = p_δ18O_PREC(integrator.t)
-        # # END variant 1
+            # # Variant 3) trying to unwrap variant 1) by reducing allocations. Currently not working and also not faster than 1)
+            # R_std_2H  = LWFBrook90.ISO.R_VSMOW²H
+            # R_std_18O = LWFBrook90.ISO.R_VSMOW¹⁸O
+            # # For SNOW ( do this before INTS as it uses u_δ2H_INTS as input)
+            # inflow = [p_fu_STHR[1]; aux_du_RSNO[1]]
+            # outflow = [aux_du_SMLT[1]]
+            # u⁺ = u_SNOW
+            # u₀ = u_INTR - p_DTP * (sum(inflow) - sum(outflow)) # [mm]
+            # E  = aux_du_SNVP[1]
+            # ## δ2H
+            # δ₀ = u_δ2H_SNOW
+            # x₀  = (δ₀/1000 + 1)*R_std_2H / (1 + (δ₀/1000 + 1)*R_std_2H)
+            # δin = [u_δ2H_INTS;  p_δ2H_PREC(integrator.t)]
+            # xin = (δin ./ 1000. .+ fill(1.,(2)))
+            # xin = xin  .* R_std_2H ./ ((δin ./ 1000. .+ 1.) .* R_std_2H .+ 1. )
+            # if u₀ < 0.001 && u⁺ > 0.001 # instead of u₀ == 0
+            #     # Edge cases:
+            #     x⁺ = sum(xin .* inflow) / sum(inflow)
+            #     u_δ2H_SNOW = 1000 * (x⁺/(1-x⁺)/R_std_2H - 1)
+            # elseif u⁺ > 0.001 # mm water = 1 µm water
+            #     x⁺ = (x₀ * u₀ + p_DTP * (sum(xin .* inflow) - sum(x₀ .* outflow)) ) / u⁺
+            #     u_δ2H_SNOW = 1000 * (x⁺/(1-x⁺)/R_std_2H - 1)
+            # else
+            #     x⁺ = NaN
+            #     u_δ2H_SNOW = NaN
+            # end
+            # #TODO(bernhard): include fractionation due to evaporation
+            # ## δ18O
+            # δ₀ = u_δ18O_SNOW
+            # x₀  = (δ₀/1000 + 1)*R_std_18O / (1 + (δ₀/1000 + 1)*R_std_18O)
+            # δin = [u_δ18O_INTS,  p_δ18O_PREC(integrator.t)]
+            # xin = (δin./1000. .+ 1).*R_std_18O ./ (1 .+ (δin./1000. .+ 1).*R_std_18O)
+            # if u₀ < 0.001 && u⁺ > 0.001 # instead of u₀ == 0
+            #     # Edge cases:
+            #     x⁺ = sum(xin .* inflow) / sum(inflow)
+            # elseif u⁺ > 0.001 # mm water = 1 µm water
+            #     x⁺ = (x₀ * u₀ + p_DTP * (sum(xin .* inflow) - sum(x₀ .* outflow)) ) / u⁺
+            # else
+            #     x⁺ = NaN
+            # end
+            # u_δ18O_SNOW = 1000 * (x⁺/(1-x⁺)/R_std_18O - 1)
+            # #TODO(bernhard): include fractionation due to evaporation
+            # # For INTS
+            # inflow = [aux_du_SINT[1]]
+            # outflow = [0]
+            # u⁺ = u_INTS
+            # u₀ = u_INTS - p_DTP * (sum(inflow) - sum(outflow)) # [mm]
+            # E  = aux_du_ISVP[1]
+            # ## δ2H
+            # δ₀ = u_δ2H_INTS
+            # x₀  = (δ₀/1000 + 1)*R_std_2H / (1 + (δ₀/1000 + 1)*R_std_2H)
+            # δin = p_δ2H_PREC(integrator.t)
+            # xin = (δin./1000. .+ 1).*R_std_2H ./ (1 .+ (δin./1000. .+ 1).*R_std_2H)
+            # if u₀ < 0.001 && u⁺ > 0.001 # instead of u₀ == 0
+            #     # Edge cases:
+            #     x⁺ = sum(xin .* inflow) / sum(inflow)
+            # elseif u⁺ > 0.001 # mm water = 1 µm water
+            #     x⁺ = (x₀ * u₀ + p_DTP * (sum(xin .* inflow) - sum(x₀ .* outflow)) ) / u⁺
+            # else
+            #     x⁺ = NaN
+            # end
+            # u_δ2H_INTS = 1000 * (x⁺/(1-x⁺)/R_std_2H - 1)
+            # #TODO(bernhard): include fractionation due to evaporation
+            # ## δ18O
+            # δ₀ = u_δ18O_INTS
+            # x₀  = (δ₀/1000 + 1)*R_std_18O / (1 + (δ₀/1000 + 1)*R_std_18O)
+            # δin = p_δ18O_PREC(integrator.t)
+            # xin = (δin./1000. .+ 1).*R_std_18O ./ (1 .+ (δin./1000. .+ 1).*R_std_18O)
+            # if u₀ < 0.001 && u⁺ > 0.001 # instead of u₀ == 0
+            #     # Edge cases:
+            #     x⁺ = sum(xin .* inflow) / sum(inflow)
+            # elseif u⁺ > 0.001 # mm water = 1 µm water
+            #     x⁺ = (x₀ * u₀ + p_DTP * (sum(xin .* inflow) - sum(x₀ .* outflow)) ) / u⁺
+            # else
+            #     x⁺ = NaN
+            # end
+            # u_δ18O_INTS = 1000 * (x⁺/(1-x⁺)/R_std_18O - 1)
+            # #TODO(bernhard): include fractionation due to evaporation
+            # # For INTR
+            # inflow = [aux_du_RINT[1]]
+            # outflow = [0]
+            # u⁺ = u_INTR
+            # u₀ = u_INTR - p_DTP * (sum(inflow) - sum(outflow)) # [mm]
+            # E  = aux_du_IRVP[1]
+            # ## δ2H
+            # δ₀ = u_δ2H_INTR
+            # x₀  = (δ₀/1000 + 1)*R_std_2H / (1 + (δ₀/1000 + 1)*R_std_2H)
+            # δin = p_δ2H_PREC(integrator.t)
+            # xin = (δin./1000. .+ 1).*R_std_2H ./ (1 .+ (δin./1000. .+ 1).*R_std_2H)
+            # if u₀ < 0.001 && u⁺ > 0.001 # instead of u₀ == 0
+            #     # Edge cases:
+            #     x⁺ = sum(xin .* inflow) / sum(inflow)
+            # elseif u⁺ > 0.001 # mm water = 1 µm water
+            #     x⁺ = (x₀ * u₀ + p_DTP * (sum(xin .* inflow) - sum(x₀ .* outflow)) ) / u⁺
+            # else
+            #     x⁺ = NaN
+            # end
+            # u_δ2H_INTR = 1000 * (x⁺/(1-x⁺)/R_std_2H - 1)
+            # #TODO(bernhard): include fractionation due to evaporation
+            # ## δ18O
+            # δ₀ = u_δ18O_INTR
+            # x₀  = (δ₀/1000 + 1)*R_std_18O / (1 + (δ₀/1000 + 1)*R_std_18O)
+            # δin = p_δ18O_PREC(integrator.t)
+            # xin = (δin./1000. .+ 1).*R_std_18O ./ (1 .+ (δin./1000. .+ 1).*R_std_18O)
+            # if u₀ < 0.001 && u⁺ > 0.001 # instead of u₀ == 0
+            #     # Edge cases:
+            #     x⁺ = sum(xin .* inflow) / sum(inflow)
+            # elseif u⁺ > 0.001 # mm water = 1 µm water
+            #     x⁺ = (x₀ * u₀ + p_DTP * (sum(xin .* inflow) - sum(x₀ .* outflow)) ) / u⁺
+            # else
+            #     x⁺ = NaN
+            # end
+            # u_δ18O_INTR = 1000 * (x⁺/(1-x⁺)/R_std_18O - 1)
+            # #TODO(bernhard): include fractionation due to evaporation
+            # p_fu_δ2H_SLFL   = p_δ2H_PREC(integrator.t)
+            # p_fu_δ18O_SLFL   = p_δ18O_PREC(integrator.t)
+            # # END variant 3
 
         ####################################################################
         # Return results from callback
@@ -533,10 +525,8 @@ end
 
 
 function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
-
     # Define flag to switch between different methods
-    use_method = ["numerical_ForwardEuler",
-                  "analytical"][1]
+    use_method = ["numerical_ForwardEuler", "analytical"][1]
     # Note that the method "numerical_ForwardEuler" has been implemented more efficiently and
     # with diffusive fluxes in LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!().
     # The code below relating to "numerical_ForwardEuler" is redundant... the code relating
@@ -564,30 +554,17 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
         #     p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p[2]
         @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
             p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_fT_RELDEN,
-            p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p
+            p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE                = integrator.p
 
         ## C) state dependent parameters or intermediate results:
-        # These were computed in the callback and are kept constant in between two
-        # callbacks.
-        # TODO(bernharf): unpack these....
-        # (p_fu_δ18O_SLFL, p_fu_δ2H_SLFL, p_fT_TADTM[1], p_fu_RNET[1], aux_du_SMLT[1], aux_du_SLVP[1],
-        #     p_fu_STHR[1], aux_du_RSNO[1], aux_du_SNVP[1],
-        #     aux_du_SINT[1], aux_du_ISVP[1], aux_du_RINT[1], aux_du_IRVP[1], u_SNOW_old[1]) = integrator.p[3][1]
-        # aux_du_TRANI = integrator.p[3][2]
-        # du_NTFLI     = integrator.p[3][3][:,1]
-        # aux_du_VRFLI = integrator.p[3][3][:,2]
-        # aux_du_DSFLI = integrator.p[3][3][:,3]
-        # aux_du_INFLI = integrator.p[3][3][:,4]
-        # u_aux_WETNES = integrator.p[3][3][:,5]
-        # du_GWFL      = integrator.p[3][4][1]
-        # du_SEEP      = integrator.p[3][4][2]
+        # These were computed in the callback and are kept constant in between two callbacks.
         @unpack p_fu_δ18O_SLFL, p_fu_δ2H_SLFL, p_fT_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
             p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
             aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old = integrator.p
-        @unpack aux_du_TRANI = integrator.p         # mm/day
+        @unpack aux_du_TRANI                                       = integrator.p # mm/day
         @unpack aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, du_NTFLI = integrator.p # all in mm/day
-        @unpack u_aux_WETNES = integrator.p         # all in mm/day
-        @unpack du_GWFL, du_SEEP = integrator.p     # all in mm/day
+        @unpack u_aux_WETNES                                       = integrator.p # mm/day
+        @unpack du_GWFL, du_SEEP                                   = integrator.p # all in mm/day
 
         u_δ18O_GWAT  = integrator.u.GWAT.d18O
         u_δ2H_GWAT   = integrator.u.GWAT.d2H
@@ -601,19 +578,18 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
 
         if use_method == "numerical_ForwardEuler"
             du_δ18O_GWAT, du_δ2H_GWAT, du_δ18O_SWATI, du_δ2H_SWATI =
-                compute_isotope_du_GWAT_SWATI(
+                compute_isotope_GWAT_SWATI("numerical-du", NaN,
                     # for GWAT:
-                    u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT,
+                    u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT, NaN,NaN,
                     # for SWATI:
                     du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI,  # (non-fractionating)
                     aux_du_SLVP[1], p_fT_TADTM[1], p_VAPPRES(integrator.t), p_δ2H_PREC(integrator.t), p_δ18O_PREC(integrator.t), u_aux_WETNES, # (fractionating)
                     u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, 0, 0) #EffectiveDiffusivity_18O, EffectiveDiffusivity_2H)
-
             # update δ values of GWAT and SWATI
-            # du[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d18O]   = du_δ18O_GWAT     #TODO(bernhard)
-            # du[integrator.p[1][4].row_idx_scalars.GWAT, integrator.p[1][4].col_idx_d2H ]   = du_δ2H_GWAT      #TODO(bernhard)
-            # du[idx_u_vector_isotopes_d18O]      = du_δ18O_SWATI    #TODO(bernhard)
-            # du[idx_u_vector_isotopes_d2H]       = du_δ2H_SWATI     #TODO(bernhard)
+            # du.GWAT.d18O = du_δ18O_GWAT     #TODO(bernhard)
+            # du.GWAT.d2H  = du_δ2H_GWAT      #TODO(bernhard)
+            # du.SWATI.d18O      = du_δ18O_SWATI    #TODO(bernhard)
+            # du.SWATI.d2H       = du_δ2H_SWATI     #TODO(bernhard)
 
             # Since we update this in the callback we can't overwrite `du` and let DiffEq.jl do
             # the work, so we need to update `u` instead of `du`
@@ -628,14 +604,14 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
             # └ @ SciMLBase ~/.julia/packages/SciMLBase/BoNUy/src/integrator_interface.jl:345
             # TODO(bernhard): we can force the solving by using force_dtmin = true
             u_δ18O_GWAT, u_δ2H_GWAT, u_δ18O_SWATI, u_δ2H_SWATI =
-                compute_isotope_u_GWAT_SWATI(integrator,
+                compute_isotope_GWAT_SWATI("analytical-u", integrator,
+                # compute_isotope_u_GWAT_SWATI(integrator,
                     # for GWAT:
                     u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT, du_GWFL[1], du_SEEP[1],
                     # for SWATI:
                     du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI,  # (non-fractionating)
                     aux_du_SLVP[1], p_fT_TADTM[1], p_VAPPRES(integrator.t), p_δ2H_PREC(integrator.t), p_δ18O_PREC(integrator.t), u_aux_WETNES, # (fractionating)
                     u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, 0, 0) #EffectiveDiffusivity_18O, EffectiveDiffusivity_2H)
-
             integrator.u.GWAT.d18O   = u_δ18O_GWAT
             integrator.u.GWAT.d2H    = u_δ2H_GWAT
             integrator.u.SWATI.d18O   = u_δ18O_SWATI
@@ -650,7 +626,7 @@ end
 
 
 function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
-    # This callback function gets called after an integration time step:
+    # This callback function gets called after each integration time step:
     #   +______+
     #   |      |     the solve() function uses the f function to integrate uᵏ to uᵏ⁺¹
     #   tᵏ     tᵏ⁺¹
@@ -691,10 +667,11 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         p_THSAT  = p_soil.p_THSAT
 
         # FLOW state variables (i.e. amounts, already updated from tᵏ to tᵏ⁺¹)
-        u_SWATIᵏ⁺¹ = integrator.u.SWATI.mm # @view integrator.u[    integrator.p[1][4].row_idx_SWATI, 1]
+        u_SWATIᵏ⁺¹ = integrator.u.SWATI.mm     # @view integrator.u[    integrator.p[1][4].row_idx_SWATI, 1]
         u_SWATIᵏ   = integrator.uprev.SWATI.mm # @view integrator.uprev[integrator.p[1][4].row_idx_SWATI, 1]                 # of time step before
-        u_GWATᵏ⁺¹  = integrator.u.GWAT.mm #integrator.u[1]
+        u_GWATᵏ⁺¹  = integrator.u.GWAT.mm      #integrator.u[1]
 
+        #TODO(bernhard): check that u_aux_θ_tminus1 and u_aux_θ are indeed different
         # θᵏ       = u_aux_θ_tminus1 # # TODO(bernhard): u_aux_θ_tminus1 is not saved, workaraound below:
         _,_,_,θᵏ⁺¹[:],_ = LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATIᵏ⁺¹, p_soil)
         _,_,_,θᵏ[:],_   = LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATIᵏ, p_soil)  # of time step before
@@ -723,7 +700,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         #                 and save into auxiliary states, but this would grow the state vector by at least 5*NLAYER
         @unpack aux_du_TRANI = integrator.p         # mm/day
         @unpack aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, du_NTFLI = integrator.p # all in mm/day
-        # @unpack u_aux_WETNES = integrator.p         # all in mm/day
+        # @unpack u_aux_WETNES = integrator.p       # all in mm/day
         @unpack du_GWFL, du_SEEP = integrator.p     # all in mm/day
 
         ## B) time dependent parameters
@@ -740,8 +717,8 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
             aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old = integrator.p
 
         # Define quantities needed for transport equation (advection dispersion/diffusion equation)
-        δ¹⁸Oᵏ   = integrator.uprev.SWATI.d18O # @view integrator.uprev[integrator.p[1][4].row_idx_SWATI, integrator.p[1][4].col_idx_d18O]  # of time step before
-        δ²Hᵏ    = integrator.uprev.SWATI.d2H # @view integrator.uprev[integrator.p[1][4].row_idx_SWATI, integrator.p[1][4].col_idx_d2H]   # of time step before
+        δ¹⁸Oᵏ   = integrator.uprev.SWATI.d18O # of time step before
+        δ²Hᵏ    = integrator.uprev.SWATI.d2H  # of time step before
         # ## unused: Note: transform the deltas into isotope-amount fraction x, a.k.a. isotopic abundance, a.k.a. atom fraction
         # Convert to concentrations:
         C_¹⁸Oᵏ   .= LWFBrook90.ISO.δ_to_C(δ¹⁸Oᵏ, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O) # kg/m3
@@ -773,7 +750,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
             # ##################
             # ##################
             # 0) Define conditions for isotope calculations:
-            Tc = p_fT_TADTM[1]  # °C, average daytime air temperature
+            # Tc = p_fT_TADTM[1]  # °C, average daytime air temperature
             # h = min(1.0, p_fT_VAPPRES / LWFBrook90.PET.ESAT(Tc)[1]) # -, relative humidity of the atmosphere (vappress_atm/1 atm)
             # γ = 1.0          # -, thermodynamic activity coefficient of evaporating water
             # # X_INTS = 0.5  # -, turbulence incex of the atmosphere above the evaporating water
@@ -815,20 +792,20 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         D_²H_ᵏ⁺¹  .= D⁰_²H  .* τw .* θᵏ⁺¹ .+ p_DISPERSIVITY .* abs.(q) # m²/day
 
         # Define concentrations of source/sink terms in transport equation (TRANI, DSFLI, INFLI, SLVP)
-        ### Define δ signature of in- and outflows
-        # TODO(bernhard) for debugging:
+        ### Define δ signature of in- and outflows (TRANI, DSFLI, INFLI)
+        # TODO(bernhard) for debugging: use p_δ18O_PREC instead of p_fu_δ18O_SLFL
         δ18O_INFLI = p_δ18O_PREC(integrator.t)#TODO(bernhard): debug remove workaround and set again = p_fu_δ18O_SLFL
         δ2H_INFLI  = p_δ2H_PREC(integrator.t) #TODO(bernhard): debug remove workaround and set again = p_fu_δ2H_SLFL
 
-        C_¹⁸O_INFLI = LWFBrook90.ISO.δ_to_C.(δ18O_INFLI, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O) # for debugging use: LWFBrook90.ISO.δ_to_C.(p_δ18O_PREC(integrator.tprev), LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O)
+        C_¹⁸O_INFLI = LWFBrook90.ISO.δ_to_C.(δ18O_INFLI, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O)
         # C_¹⁸O_TRANI = C_¹⁸Oᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
         # C_¹⁸O_DSFL  = C_¹⁸Oᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
-        C_²H_INFLI  = LWFBrook90.ISO.δ_to_C.(δ2H_INFLI,  LWFBrook90.ISO.R_VSMOW²H,  LWFBrook90.ISO.Mi_²H) # for debugging use: LWFBrook90.ISO.δ_to_C.(p_δ2H_PREC(integrator.tprev), LWFBrook90.ISO.R_VSMOW²H,  LWFBrook90.ISO.Mi_²H)
+        C_²H_INFLI  = LWFBrook90.ISO.δ_to_C.(δ2H_INFLI,  LWFBrook90.ISO.R_VSMOW²H,  LWFBrook90.ISO.Mi_²H)
         # C_²H_TRANI  = C_²Hᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
         # C_²H_DSFL   = C_²Hᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
         # TODO(bernhard): for TRANI and DSFL we are instead using Cᵏ⁺¹ (i.e. use the concentrations in the LHS in the implicit scheme...)
 
-        ### Compute δ signature of evaporating flux
+        ### Compute δ signature of evaporating flux (SLVP)
         δ¹⁸O_SLVP = u_δ18O_SWATI[1] # TODO(bernhard): disabling evaporation fractionation (TODO: should yield solution similar to Stumpp 2012 model)
         δ²H_SLVP  = u_δ2H_SWATI[1]  # TODO(bernhard): disabling evaporation fractionation (TODO: should yield solution similar to Stumpp 2012 model)
         # Equation derived based on Gonfiantini (see 60 lines above in comment)
@@ -850,7 +827,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
 
         ### Prepare terms to evaluate linear system to be solved
         Δt = integrator.t - integrator.tprev # days
-        # TODO(bernhard): below dz and Δz can be computed once only when setting up the simulation
+        # TODO(bernhard): below dz and Δz could be computed once only when setting up the simulation
         Δz = integrator.p.p_soil.p_THICK / 1000 # m
         # z_center = (cumsum(Δz) .+ cumsum([0; Δz[1:NLAYER-1]]))/2 # m
         dz = diff((cumsum(Δz) .+ cumsum([0; Δz[1:NLAYER-1]]))/2)   # m
@@ -1082,14 +1059,16 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         C_²H_Xylem  = LWFBrook90.ISO.δ_to_x(u_δ2H_XYLEM,  LWFBrook90.ISO.R_VSMOW²H)  # -, isotope amounts
 
 
-        #                     D_at_interface                                    .*   dC/dz_at_interface
+        #                     D_at_interface                                     .*   dC/dz_at_interface
         diff¹⁸O_upp .= [0; (D_¹⁸O_ᵏ⁺¹[1:NLAYER-1] + D_¹⁸O_ᵏ⁺¹[2:NLAYER]) /2]     .* [0; [(C_¹⁸Oᵏ[i] - C_¹⁸Oᵏ[i-1]) / dz[i-1] for i ∈ 2:length(C_¹⁸Oᵏ)]]    # flux in m/d (D: m2/d, dx/dz: m-1)
         diff¹⁸O_low .= [   (D_¹⁸O_ᵏ⁺¹[1:NLAYER-1] + D_¹⁸O_ᵏ⁺¹[2:NLAYER]) /2; 0]  .* [   [(C_¹⁸Oᵏ[i] - C_¹⁸Oᵏ[i-1]) / dz[i-1] for i ∈ 2:length(C_¹⁸Oᵏ)]; 0] # flux in m/d (D: m2/d, dx/dz: m-1)
         diff²H_upp  .= [0; (D_²H_ᵏ⁺¹[1:NLAYER-1]  + D_²H_ᵏ⁺¹[2:NLAYER] ) /2]     .* [0; [(C_²Hᵏ[i]  - C_²Hᵏ[i-1] ) / dz[i-1] for i ∈ 2:length(C_²Hᵏ )]]    # flux in m/d (D: m2/d, dx/dz: m-1)
         diff²H_low  .= [   (D_²H_ᵏ⁺¹[1:NLAYER-1]  + D_²H_ᵏ⁺¹[2:NLAYER] ) /2; 0]  .* [   [(C_²Hᵏ[i]  - C_²Hᵏ[i-1] ) / dz[i-1] for i ∈ 2:length(C_²Hᵏ )]; 0] # flux in m/d (D: m2/d, dx/dz: m-1)
 
-        # TODO(bernhard): below C's are not at interface but in the middle of the cell... best would be to use an upwind scheme and use the correct C based on the sign of aux_du_VRFLI
-        #                     q_at_interface                                    .*   C_at_interface
+        # NOTE(bernhard): NOTE below Concentrations's are not at interface but in the
+        #                 middle of the cell... best would be to use an upwind scheme and
+        #                 use the correct C based on the sign of aux_du_VRFLI
+        #                     q_at_interface           .*   C_at_interface
         qCᵢ¹⁸O_upp  .= [0; aux_du_VRFLI[1:(NLAYER-1)]] .* [0; C_¹⁸Oᵏ[1:(NLAYER-1)]]
         qCᵢ¹⁸O_low  .=     aux_du_VRFLI[1:(NLAYER)]    .*     C_¹⁸Oᵏ[1:(NLAYER)]
         qCᵢ²H_upp   .= [0; aux_du_VRFLI[1:(NLAYER-1)]] .* [0; C_²Hᵏ[1:(NLAYER-1)]]
@@ -1098,27 +1077,27 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         Cᵢ¹⁸O_INFLI = LWFBrook90.ISO.δ_to_x.(p_δ18O_PREC(integrator.t), LWFBrook90.ISO.R_VSMOW¹⁸O)  # TODO(bernhard): for debugging, remove this again and replace with δ18O_INFLI
         # Cᵢ¹⁸O_INFLI = δ18O_INFLI
         # Cᵢ¹⁸O_INFLI = ifelse(sum(aux_du_INFLI) == 0, 0, δ18O_INFLI) # in case there is no inflow δ18O_INFLI was set to NaN, set it to zero for below equation
-        Cᵢ¹⁸O_TRANI = ifelse.(aux_du_TRANI .< 0,
-                              C_¹⁸O_Xylem,
-                              C_¹⁸Oᵏ)
-                             # Under root water uptake assume no fractionation occurring, i.e. outflux composition equal to storage composition C_¹⁸Oᵏ
-                             # however if aux_du_TRANI is negative for some layers it means water from the root xylem flows out into the soil domain
-                             # This is hereby accounted for the the isotope balance in soil water, as well as for the Xylem and δ_RWU
-        Cᵢ¹⁸O_DSFL  = C_¹⁸Oᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
-        C_¹⁸O_SLVP .= 0
-        C_¹⁸O_SLVP[1]  = LWFBrook90.ISO.δ_to_x.(δ¹⁸O_SLVP, LWFBrook90.ISO.R_VSMOW¹⁸O)
         Cᵢ²H_INFLI = LWFBrook90.ISO.δ_to_x.(p_δ2H_PREC(integrator.t),  LWFBrook90.ISO.R_VSMOW²H )   # TODO(bernhard): for debugging, remove this again and replace with δ2H_INFLI
         # Cᵢ²H_INFLI = δ2H_INFLI
         # Cᵢ²H_INFLI = ifelse(sum(aux_du_INFLI) == 0, 0, δ2H_INFLI) # in case there is no inflow δ2H_INFLI was set to NaN, set it to zero for below equation
-        Cᵢ²H_TRANI = C_²Hᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
+
+        # Cᵢ¹⁸O_TRANI = C_¹⁸Oᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
+        # Cᵢ²H_TRANI = C_²Hᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
+        Cᵢ¹⁸O_TRANI = ifelse.(aux_du_TRANI .< 0,
+                              C_¹⁸O_Xylem,
+                              C_¹⁸Oᵏ)
         Cᵢ²H_TRANI = ifelse.(aux_du_TRANI .< 0,
                               C_²H_Xylem,
                               C_²Hᵏ)
-                             # Under root water uptake assume no fractionation occurring, i.e. outflux composition equal to storage composition C_²Hᵏ
+                             # Under root water uptake assume no fractionation occurring, i.e. outflux composition equal to storage composition C_¹⁸Oᵏ
                              # however if aux_du_TRANI is negative for some layers it means water from the root xylem flows out into the soil domain
                              # This is hereby accounted for the the isotope balance in soil water, as well as for the Xylem and δ_RWU
-        Cᵢ²H_DSFL  = C_²Hᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
-        C_²H_SLVP    .= 0
+
+        Cᵢ¹⁸O_DSFL = C_¹⁸Oᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
+        Cᵢ²H_DSFL  = C_²Hᵏ  # no fractionation occurring, i.e. outflux composition equal to storage composition
+        C_¹⁸O_SLVP .= 0  # setting all elements except [1] to 0 removes effect of evaporation flux from equation
+        C_²H_SLVP  .= 0  # setting all elements except [1] to 0 removes effect of evaporation flux from equation
+        C_¹⁸O_SLVP[1] = LWFBrook90.ISO.δ_to_x.(δ¹⁸O_SLVP, LWFBrook90.ISO.R_VSMOW¹⁸O)
         C_²H_SLVP[1]  = LWFBrook90.ISO.δ_to_x.(δ²H_SLVP,  LWFBrook90.ISO.R_VSMOW²H )
 
         # 3) Some other terms in the isotope balance equation
