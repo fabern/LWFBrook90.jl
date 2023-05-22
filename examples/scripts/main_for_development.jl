@@ -8,7 +8,7 @@ using Measures
 using CSV: read, File
 using Dates: DateTime, Millisecond, Second, Day, Month, month, value, dayofyear, format
 using DataFrames: DataFrame, rename, sort!# ,select
-using DataFramesMeta#: @linq, transform, DataFramesMeta
+using DataFramesMeta
 
         # # TODO: make a test out of this:
         # parametrizedSPAC = loadSPAC("../../../LWF-Brook90.jl-calibration/Meteo-Data/DAV_LW1_def/", "DAV_LW1_def"; simulate_isotopes = true);
@@ -643,11 +643,12 @@ input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
     # using Gadfly, Cairo #,Fontconfig
     # using CSV
 
-    # input_meteoveg = @linq DataFrame(File(path_meteoveg;
+    # input_meteoveg = @chain DataFrame(File(path_meteoveg;
     #     skipto=3, delim=',', ignorerepeated=false,
     #     # Be strict about loading NA's -> error if NA present
-    #     types=parsing_types, missingstring = nothing, strict=true))  |>
+    #     types=parsing_types, missingstring = nothing, strict=true))
     #     transform(:dates = DateTime.(:dates))
+    #     end
 
     if (input_prefix == "DAV2010-2021" || input_prefix == "DAV_LW1_def");
         # File("../../../LWF-Brook90.jl-calibration/Isotope-Data/2-combined-deposition/outputs/DAV2010-2021_meteoiso.csv")

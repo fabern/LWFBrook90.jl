@@ -1,6 +1,6 @@
 using CSV: read, File
-using DataFrames: DataFrame, rename, sort!# ,select
-using DataFramesMeta#: @linq, transform, DataFramesMeta
+using DataFrames: DataFrame, rename, sort!, transform!# ,select
+using DataFramesMeta
 using Dates: DateTime, Millisecond, Second, Day, Month, month, value, dayofyear, format
 using Statistics: mean
 # using Printf: @sprintf
@@ -501,11 +501,12 @@ function read_path_meteoveg(path_meteoveg)
     #     types=parsing_types, missingstring = nothing, strict=true))
     # input_meteoveg.dates = DateTime.(input_meteoveg.dates)
     # ipnut_meteove = transform(input_meteove, :dates = DateTime.(:dates))
-    input_meteoveg = @linq DataFrame(File(path_meteoveg;
+    input_meteoveg = @chain begin DataFrame(File(path_meteoveg;
         skipto=3, delim=',', ignorerepeated=false,
         # Be strict about loading NA's -> error if NA present
-        types=parsing_types, missingstring = nothing, strict=true))  |>
-        transform(:dates = DateTime.(:dates))
+        types=parsing_types, missingstring = nothing, strict=true))
+        transform(:dates => (d) -> DateTime.(d), renamecols = false)
+    end
     expected_names = [String(k) for k in keys(parsing_types)]
     assert_colnames_as_expected(input_meteoveg, path_meteoveg, expected_names)
     # DataFrame(dates = "YYYY-MM-DD", globrad_MJDayM2 = "MJ/Day/m2",
@@ -534,8 +535,7 @@ function read_path_meteoveg(path_meteoveg)
     starting_date = maximum(minimum,[input_meteoveg[:,"dates"]])
     stopping_date = minimum(maximum,[input_meteoveg[:,"dates"]])
 
-    input_meteoveg = @linq input_meteoveg |>
-        where(:dates .>= starting_date, :dates .<= stopping_date)
+    input_meteoveg = filter(:dates => (d) -> d .>= starting_date && d .<= stopping_date, input_meteoveg)
 
     if (File(path_meteoveg).cols == 7)
         rename!(input_meteoveg,
@@ -562,9 +562,10 @@ function read_path_meteoveg(path_meteoveg)
     # Transform times from DateTimes to simulation time (Float of Days)
     reference_date = starting_date
 
-    input_meteoveg = @linq input_meteoveg |>
-        transform(:dates = DateTime2RelativeDaysFloat.(:dates, reference_date)) |>
+    input_meteoveg = @chain input_meteoveg begin
+        transform(:dates => (d) -> DateTime2RelativeDaysFloat.(d, reference_date), renamecols = false)
         rename(Dict(:dates => :days))
+        end
 
     return input_meteoveg, reference_date
 end
@@ -601,10 +602,11 @@ function read_path_meteoiso(path_meteoiso,
                     Symbol("d18O.Piso.AI")     => Float64,
                     Symbol("d2H.Piso.AI")      => Float64)
 
-        input_meteoiso = @linq DataFrame(File(path_meteoiso; header = 4,
+        input_meteoiso = @chain begin DataFrame(File(path_meteoiso; header = 4,
                     skipto=5, delim=',', ignorerepeated=true,
                     # Don't be strict, allow for NA as missing. Treat this later with disallowmissing!.
                     types=parsing_types, missingstring = ["","NA"]))
+                    end
         select!(input_meteoiso, Not([:Column1]))
     else
         # else the dataframe should be of the following structure:
@@ -644,8 +646,9 @@ function read_path_meteoiso(path_meteoiso,
         #       able to interpolate between the first and last day of the first month.
         input_meteoiso_first = deepcopy(input_meteoiso[1,:])
         input_meteoiso_first.dates = floor(input_meteoiso_first.dates, Month)
-        input_meteoiso = @linq input_meteoiso |>
-                transform(:dates = ceil.(:dates, Month))
+        input_meteoiso = @chain input_meteoiso begin
+                transform(:dates => (d) -> ceil.(d, Month), renamecols = false)
+                end
         push!(input_meteoiso, input_meteoiso_first) # repeat the first
         sort!(input_meteoiso, [:dates])
 
@@ -668,9 +671,10 @@ function read_path_meteoiso(path_meteoiso,
     #####
 
     # Transform times from DateTimes to simulation time (Float of Days)
-    input_meteoiso = @linq input_meteoiso |>
-        transform(:dates = DateTime2RelativeDaysFloat.(:dates, input_meteoveg_reference_date)) |>
+    input_meteoiso = @chain input_meteoiso begin
+        transform(:dates => (d) -> DateTime2RelativeDaysFloat.(d, input_meteoveg_reference_date), renamecols = false)
         rename(Dict(:dates => :days))
+        end
 
     # Check period
     # Check if overlap with meteoveg exists
@@ -688,8 +692,9 @@ function read_path_meteoiso(path_meteoiso,
         it will be cropped to the period determined by the other meteorologic inputs going from
         $(input_meteoveg_reference_date + Day(startday_veg)) to $(input_meteoveg_reference_date + Day(stopday_veg)).
         """
-        # input_meteoiso = @linq input_meteoiso |>
+        # input_meteoiso = @chain input_meteoiso begin
         #    where(:days .>= startday, :days .<= endday) # Acutally not needed to crop
+        #    end
         input_meteoveg_mod = input_meteoveg #Not needed to crop
     elseif ((stopday_iso < stopday_veg) | (startday_iso > startday_veg))
         @warn """
@@ -700,8 +705,7 @@ function read_path_meteoiso(path_meteoiso,
         Simulation period will be limited to the period when isotopic signatures are available.
         Note that the initial conditions will be applied to the beginning of the new simulation period.
         """
-        input_meteoveg_mod = @linq input_meteoveg |>
-            where(:days .>= startday, :days .<= endday)
+        input_meteoveg_mod = filter(:days => (d) -> d .>= startday && d .<= endday, input_meteoveg)
     else
         input_meteoveg_mod = input_meteoveg #Not needed to crop
     end
