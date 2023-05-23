@@ -1210,10 +1210,17 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # Since we update this in the callback we can't overwrite `du` and let DiffEq.jl do
         # the work, so we need to update `u` instead of `du`
         # Using a simple forward Euler update:
-        integrator.u.GWAT.d18O   += integrator.dt * du_δ18O_GWAT     #TODO(bernhard)
-        integrator.u.GWAT.d2H    += integrator.dt * du_δ2H_GWAT      #TODO(bernhard)
-        integrator.u.SWATI.d18O .+= integrator.dt * du_δ18O_SWATI    #TODO(bernhard)
-        integrator.u.SWATI.d2H  .+= integrator.dt * du_δ2H_SWATI     #TODO(bernhard)
+
+        integrator.u.GWAT.d18O   += Δt * du_δ18O_GWAT     #TODO(bernhard)
+        integrator.u.GWAT.d2H    += Δt * du_δ2H_GWAT      #TODO(bernhard)
+        integrator.u.SWATI.d18O .+= Δt * du_δ18O_SWATI    #TODO(bernhard)
+        integrator.u.SWATI.d2H  .+= Δt * du_δ2H_SWATI     #TODO(bernhard)
+
+        # END SOLVING VARIANT B
+        ################
+        ################
+        ################
+
         ###
         ### end method from compute_isotope_GWAT_SWATI()
 
@@ -1248,11 +1255,11 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # if δ¹⁸O_RWU is NaN, it means aux_du_TRANI is zero
         du_δ¹⁸O_Xylem = ifelse(isnan(δ¹⁸O_RWU), 0.0, sum(aux_du_TRANI) / p_VXYLEM * (δ¹⁸O_RWU - u_δ¹⁸O_Xylem))
         du_δ²H_Xylem  = ifelse(isnan(δ²H_RWU), 0.0, sum(aux_du_TRANI) / p_VXYLEM * (δ²H_RWU  - u_δ²H_Xylem))
-        integrator.u.XYLEM.d18O += integrator.dt * du_δ¹⁸O_Xylem
-        integrator.u.XYLEM.d2H  += integrator.dt * du_δ²H_Xylem
+        integrator.u.XYLEM.d18O += Δt * du_δ¹⁸O_Xylem
+        integrator.u.XYLEM.d2H  += Δt * du_δ²H_Xylem
         # b) Precise solution (Analytical integration over dt)
-        # u_δ¹⁸O_Xylem = u_δ18O_RWU + (u_δ¹⁸O_Xylem - u_δ18O_RWU)*exp(-sum(aux_du_TRANI)/p_VXYLEM * integrator.dt) #TODO: this should be using δ_to_x() and back
-        # u_δ²H_Xylem  = u_δ2H_RWU  + (u_δ²H_Xylem  - u_δ2H_RWU )*exp(-sum(aux_du_TRANI)/p_VXYLEM * integrator.dt) #TODO: this should be using δ_to_x() and back
+        # u_δ¹⁸O_Xylem = u_δ18O_RWU + (u_δ¹⁸O_Xylem - u_δ18O_RWU)*exp(-sum(aux_du_TRANI)/p_VXYLEM * Δt) #TODO: this should be using δ_to_x() and back
+        # u_δ²H_Xylem  = u_δ2H_RWU  + (u_δ²H_Xylem  - u_δ2H_RWU )*exp(-sum(aux_du_TRANI)/p_VXYLEM * Δt) #TODO: this should be using δ_to_x() and back
     end
 
     return nothing
