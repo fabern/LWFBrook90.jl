@@ -187,35 +187,34 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     if (compartments == :aboveground || compartments == :above_and_belowground)
         # plot(x, [col_INTS_amt col_INTR_amt col_SNOW_amt col_GWAT_amt col_XYL_amt],
         #      labels = ["INTS" "INTR" "SNOW" "GWAT" "XYL"], ylab = "Amount [mm]")
-        @series begin
-            title := "Aboveground"
-            labels := ["INTS" "INTR" "SNOW" "GWAT" "XYL"]
-            ylab := "Amount [mm]"
-            seriestype := :line
-            subplot := 2
-            bg_legend --> colorant"rgba(100%,100%,100%,0.8)"; legend := :topright
-            # and other arguments:
-            x, [col_INTS_amt col_INTR_amt col_SNOW_amt col_GWAT_amt col_XYL_amt]
+        # somehow we need a for loop to get the labelling in the correct order
+        aboveground_labels = ["INTS" "INTR" "SNOW" "GWAT" "XYL"]
+        aboveground_values = [col_INTS_amt col_INTR_amt col_SNOW_amt col_GWAT_amt col_XYL_amt]
+        for it in 1:5
+            @series begin
+                title := "Aboveground"
+                ylab := "Amount [mm]"
+                subplot := 2
+                seriestype := :line
+                bg_legend --> colorant"rgba(100%,100%,100%,0.8)"; legend := :topright
+                labels := aboveground_labels[it]
+                x, aboveground_values[:, it]
+            end
         end
     end
     if (compartments == :belowground || compartments == :above_and_belowground)
-        @series begin
-            title := "Belowground"
-            labels := "total SWAT"
-            ylab := "Amount [mm]"
-            seriestype := :line
-            subplot := 3
-            #bg_legend --> colorant"rgba(100%,100%,100%,0.8)"; legend := :topright
-            # and other arguments:
-            x, col_sumSWATI_amt[:]
-        end
         # somehow we need a for loop to get the labelling in the correct order
-        for it in 1:length(cols_sumSWATIperLayer_amt)
+        belowground_labels = ["total SWAT" permutedims(horizon_labels)]
+        belowground_values = [col_sumSWATI_amt[:] reduce(hcat, cols_sumSWATIperLayer_amt)]
+        for it in 1:length(belowground_labels)
             @series begin
+                title := "Belowground"
+                ylab := "Amount [mm]"
                 subplot := 3
                 seriestype := :line
-                labels := horizon_labels[it]
-                x, cols_sumSWATIperLayer_amt[it]
+                bg_legend --> colorant"rgba(100%,100%,100%,0.8)"; legend := :topleft
+                labels := belowground_labels[it]
+                x, belowground_values[:, it]
             end
         end
 
