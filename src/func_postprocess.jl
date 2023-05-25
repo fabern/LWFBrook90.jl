@@ -103,8 +103,19 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     col_INTR_amt = [solu(t).INTR.mm   for t in days_to_read_out_d]
     col_SNOW_amt = [solu(t).SNOW.mm   for t in days_to_read_out_d]
     col_GWAT_amt = [solu(t).GWAT.mm   for t in days_to_read_out_d]
-    col_RWU_amt  = [solu(t).RWU.mmday for t in days_to_read_out_d]
+    col_RWU_mmDay  = [solu(t).RWU.mmday for t in days_to_read_out_d]
     col_XYL_amt  = [solu(t).XYLEM.mm  for t in days_to_read_out_d]
+
+    # For water balance errors
+        # plot: INFL,                        TRAN/RWU,        SLVP,         DSFL, VRFL
+        # i.e.: (slfl-byfl)                  rows_RWU_mmDay,  cum_d_slvp    dsfl, vrfln
+        # from  u.accum.slfl - u.accum.byfl
+    col_BALERD_SWAT  = [solu(t).accum.BALERD_SWAT  for t in days_to_read_out_d]
+    col_BALERD_total = [solu(t).accum.BALERD_total for t in days_to_read_out_d]
+    col_INFL_mmDay = [solu(t).accum.slfl - solu(t).accum.byfl for t in days_to_read_out_d]
+    col_SLVP_mmDay = [solu(t).accum.cum_d_slvp                for t in days_to_read_out_d]
+    col_DSFL_mmDay = [solu(t).accum.dsfl                      for t in days_to_read_out_d]
+    col_VRFLN_mmDay= [solu(t).accum.vrfln                     for t in days_to_read_out_d]
 
     if (RWUcentroid == :showRWUcentroid)
         row_RWU_centroid_mm, RWUcentroidLabel = get_RWU_centroid(rows_RWU_mmDay, y_center)
@@ -145,10 +156,12 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
         lay = RecipesBase.@layout([ °{0.80w} _ ; #1 have no colorbar
                                     °{0.80w} _ ; #2 have no colorbar
                                     °{0.80w} _ ; #3 have no colorbar
-                                    ° ; #4
-                                    ° ; #5
+                                    °{0.80w} _ ; #4 have no colorbar
+                                    °{0.80w} _ ; #5 have no colorbar
                                     ° ; #6
-                                    ° ;]) #7
+                                    ° ; #7
+                                    ° ; #8
+                                    ° ;]) #9
         layout --> lay
 
         size --> (1000,2100)
@@ -218,6 +231,36 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
             end
         end
 
+        belowground2_labels = ["INFL"         "SLVP"         "DSFL"         "VRFLN"         "RWU_mmDay"]
+        belowground2_values = [col_INFL_mmDay col_SLVP_mmDay col_DSFL_mmDay col_VRFLN_mmDay col_RWU_mmDay]
+        for it in 1:length(belowground2_labels)
+            @series begin
+                # title := "Belowground"
+                ylab := "Flux [mm/day]"
+                subplot := 4
+                seriestype := :line
+                bg_legend --> colorant"rgba(100%,100%,100%,0.8)"; legend := :topleft
+                labels := belowground2_labels[it]
+                x, belowground2_values[:, it]
+            end
+        end
+        # plot(days_to_read_out_d, [col_BALERD_SWAT col_BALERD_total],
+        #      legend = :outerright,
+        #      labels = ["BALERD_SWAT" "BALERD_total"],
+        #      ylabel = "Water balance error [mm]")
+        belowground3_labels = ["BALERD_SWAT" "BALERD_total"]
+        belowground3_values = [col_BALERD_SWAT col_BALERD_total]
+        for it in 1:length(belowground3_labels)
+            @series begin
+                # title := "Belowground"
+                ylab := "Water balance error [mm]"
+                subplot := 5
+                seriestype := :line
+                bg_legend --> colorant"rgba(100%,100%,100%,0.8)"; legend := :topleft
+                labels := belowground3_labels[it]
+                x, belowground3_values[:, it]
+            end
+        end
         # rows_SWAT_amt0 = u_aux_θ
         rows_SWAT_amt1 = u_SWATI ./solu.prob.p.p_soil.p_THICK  # mm per mm of soil thickness
         rows_SWAT_amt2 = u_SWATI ./ solu.prob.p.p_soil.p_THICK ./ (1 .- solu.prob.p.p_soil.p_STONEF)
@@ -232,7 +275,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
         #     colorbar := true_to_check_colorbar; # clims := clims_d2H
         #     yguide := "Depth [mm]"; colorbar_title := "ψₘ [kPa]"
         #     c := cgrad(color_scheme,  rev = false)
-        #     subplot := 4
+        #     subplot := 5
         #     # and other arguments:
         #     x, y_center, u_aux_PSIM;
         # end
@@ -242,7 +285,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
         #     colorbar := true_to_check_colorbar; # clims := clims_d2H
         #     yguide := "Depth [mm]"; colorbar_title := "ψₜ [kPa]"
         #     c := cgrad(color_scheme,  rev = true)
-        #     subplot := 5
+        #     subplot := 6
         #     # and other arguments:
         #     x, y_center, u_aux_PSITI;
         # end
@@ -252,7 +295,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
             colorbar := true_to_check_colorbar; # clims := clims_d2H
             yguide := "Depth [mm]"; colorbar_title := "pF = log₁₀(-ψₘ hPa)"
             c := cgrad(color_scheme,  rev = true)
-            subplot := 4
+            subplot := 6
             # and other arguments:
             x, y_center, rows_ψₘpF
         end
@@ -265,7 +308,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
                 bg_legend --> colorant"rgba(100%,100%,100%,0.0)"; legend := :bottomright; fg_legend --> :transparent; legendfontcolor := :white
                 yflip := true; yticks := y_soil_ticks
                 yguide := "Depth [mm]"; colorbar_title := "pF = log₁₀(-ψₘ hPa)"
-                subplot := 4
+                subplot := 6
                 x, row_RWU_centroid_mm'
             end
         end
@@ -275,7 +318,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
         #     colorbar := true_to_check_colorbar; # clims := clims_d2H
         #     yguide := "Depth [mm]"; colorbar_title := "pF = log₁₀(-ψₜₒₜ hPa)" #colorbar_title := "pF = \nlog₁₀(-ψ hPa)"
         #     c := cgrad(color_scheme,  rev = true)
-        #     subplot := 5
+        #     subplot := 7
         #     # and other arguments:
         #     x, y_center, rows_ψₜₒₜpF
         # end
@@ -285,7 +328,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
         #     colorbar := true_to_check_colorbar; # clims := clims_d2H
         #     yguide := "Depth [mm]"; colorbar_title := "SWATI [mm]"
         #     c := cgrad(color_scheme,  rev = false)
-        #     subplot := 5
+        #     subplot := 7
         #     # and other arguments:
         #     x, y_center, u_SWATI;                 # deactivated u_SWATI as it is resolution dependent!
         # end
@@ -295,7 +338,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
             colorbar := true_to_check_colorbar; # clims := clims_d2H
             yguide := "Depth [mm]"; colorbar_title := "Wetness [-]"
             c := cgrad(color_scheme,  rev = false)
-            subplot := 5
+            subplot := 7
             # and other arguments:
             x, y_center, u_aux_WETNES;
         end
@@ -305,17 +348,28 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
             colorbar := true_to_check_colorbar; # clims := clims_d2H
             yguide := "Depth [mm]"; colorbar_title := "θ [m3/m3]\n(of fine soil volume)" #colorbar_title := "θ [m3/m3]\n(fine soil)" # "θ [m3/m3]"
             c := cgrad(color_scheme,  rev = false)
-            subplot := 6
+            subplot := 8
             # and other arguments:
             x, y_center, u_aux_θ;
         end
+        # rows_RWU = rows_RWU_mmDay ./ solu.prob.p.p_soil.p_THICK
+        # @series begin
+        #     seriestype := :heatmap
+        #     yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
+        #     colorbar := true_to_check_colorbar; # clims := clims_d2H
+        #     yguide := "Depth [mm]"; colorbar_title := "RWU [mm water/day per mm soil depth]"
+        #     c := :diverging_bwr_20_95_c54_n256; clim := maximum(abs.(rows_RWU)) .* (-1, 1)
+        #     subplot := 8
+        #     # and other arguments:
+        #     x, y_center, rows_RWU;
+        # end
         @series begin
             seriestype := :heatmap
             yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
             colorbar := true_to_check_colorbar; # clims := clims_d2H
             yguide := "Depth [mm]"; colorbar_title := "θ [m3/m3]\n(of total volume, incl stonef)" #colorbar_title := "θ [-]\n(total, incl stonef)"
             c := cgrad(color_scheme,  rev = false)
-            subplot := 7
+            subplot := 9
             # and other arguments:
             x, y_center, rows_SWAT_amt1;
         end
@@ -325,7 +379,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
         #     colorbar := true_to_check_colorbar
         #     yguide := "Depth [mm]"; colorbar_title := "θ [-] (fine soil 2)"#colorbar_title := "θ [-]\n(fine soil 2)"
         #     c := cgrad(color_scheme,  rev = false)
-        #     subplot := 8
+        #     subplot := 10
         #     # and other arguments:
         #     x, y_center, rows_SWAT_amt2           # deactivated: as it was same as `x, y_center, u_aux_θ;`
         # end
@@ -335,7 +389,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
         #     colorbar := true_to_check_colorbar; # clims := clims_d2H
         #     yguide := "Depth [mm]"; colorbar_title := "K [mm/day]"
         #     c := cgrad(color_scheme,  rev = false)
-        #     subplot := 8
+        #     subplot := 10
         #     # and other arguments:
         #     x, y_center, p_fu_KK;
         #     # x, y_center, log10.(p_fu_KK);
