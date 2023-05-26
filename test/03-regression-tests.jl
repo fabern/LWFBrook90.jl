@@ -100,12 +100,9 @@ if basename(pwd()) != "test"; cd("test"); end
                  u_δsoil    = u_δsoil)...)
         # if (false)
         #     using Plots, Measures
-        #     git_status_string = "__git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
-        #         ifelse(length(Base.read(`git status --porcelain`, String))==0, "+gitclean","+gitdirty")*
-        #         "__"
-        #     pl1 = plotamounts(example, :above_and_belowground, :showRWUcentroid)
-        #     pl2 = plotisotopes(example, :d18O)
-        #     pl3 = plotforcingandstates(example)
+        #     pl1 = plotamounts(example_result, :above_and_belowground, :showRWUcentroid)
+        #     pl2 = plotisotopes(example_result, :d18O, :showRWUcentroid)
+        #     pl3 = plotforcingandstates(example_result)
         #     savefig(plot(pl1, size=(1000,700), dpi=300),  fname*git_status_string*"_amts.png")
         #     savefig(plot(pl2, size=(1000,1400), dpi=300), fname*git_status_string*"_d18O-d2H.png")
         #     savefig(plot(pl3, size=(1000,1400), dpi=300), fname*git_status_string*"_forcing.png")
