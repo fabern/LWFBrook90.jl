@@ -40,6 +40,7 @@ using LWFBrook90
 ## Read in input data
 #src input_path = "../isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
 input_path = "examples/DAV2020-full/"; input_prefix = "DAV2020-full";
+input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
 model = loadSPAC(input_path, input_prefix; simulate_isotopes = false);
 model = loadSPAC(input_path, input_prefix; simulate_isotopes = true);
 model
@@ -47,7 +48,7 @@ model
 # If wanted, arguments can be supplied to modify the loaded SPAC (e.g. for parameter estimation), hence requiring less input CSVs.
 ## Read in providing arguments, requiring less CSVs
 model_modified =
-    loadSPAC("examples/DAV2020-bare-minimum/", "DAV2020-minimal";
+    loadSPAC(input_path, input_prefix;
         simulate_isotopes = true,
         Δz_thickness_m    = [fill(0.04, 5); # grid spacing (heterogenous), meter (N=21)
                              fill(0.05, 5); # write Δ in VSCode by typing \Delta and hit shift

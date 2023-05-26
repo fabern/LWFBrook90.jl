@@ -1,0 +1,5 @@
+The file `meteoiso.csv` is a combination of data from Piso.AI (see below) up to end of 2020.
+From 2021 on these are isotope measurements of the LWF Deposition samples.
+
+    #Data produced with Piso.AI v1.2020 and downloaded on 2022-07-01.
+    #Please cite Nelson Basler Kahmen; PNAS 2021 Vol. 118 No. 26 e2024107118 when using these data.

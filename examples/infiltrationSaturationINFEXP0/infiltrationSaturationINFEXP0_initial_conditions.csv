@@ -1,0 +1,8 @@
+param_id,amount,u_delta18O_init_permil,u_delta2H_init_permil
+### Initial conditions (of vector states) -------,NA,NA,NA
+u_GWAT_init_mm,1,-13,-95
+u_INTS_init_mm,0,-13,-95
+u_INTR_init_mm,0,-13,-95
+u_SNOW_init_mm,0,-13,-95
+u_CC_init_MJ_per_m2,0,NA,NA
+u_SNOWLQ_init_mm,0,NA,NA
