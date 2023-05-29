@@ -6,12 +6,12 @@ using Dates
 using DataFrames
 using Measures
 using CSV: read, File
-using Dates: DateTime, Millisecond, Second, Day, Month, month, value, dayofyear, format
+using Dates: DateTime, Millisecond, Second, Day, Month, month, value, dayofyear, format, today
 using DataFrames: DataFrame, rename, sort!# ,select
 using DataFramesMeta
-
+using Plots
         # # TODO: make a test out of this:
-        # parametrizedSPAC = loadSPAC("../../../LWF-Brook90.jl-calibration/Meteo-Data/DAV_LW1_def/", "DAV_LW1_def"; simulate_isotopes = true);
+        # parametrizedSPAC = loadSPAC("../../../LWF-Brook90.jl-calibration/Input-Meteo-Data/DAV_LW1_def/", "DAV_LW1_def"; simulate_isotopes = true);
         # Δz = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5)]; # grid spacing (heterogenous), meter (N=20)
         # soil_output_depths_m = zeros(Float64, 0)
         # parametrizedSPAC.tspan
@@ -38,20 +38,17 @@ using DataFramesMeta
         # DS.ODEProblem.tspan
         # # simulate!(DS); # with ArrayParition this simulating all the days takes about 167.115807 seconds (762.30 M allocations: 53.365 GiB, 6.18% gc time, 12.43% compilation time) Time steps for solving: 295894 (295894 accepted out of 314371 total)
 
-
-input_prefix = "isoBEAdense2010-18-reset-FALSE";
-input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
-# input_prefix = "DAV_LW1_def";
-# input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/DAV_LW1_def/";
-# function run_main_with_isotopes(;input_prefix, input_path)
+function run_main_with_isotopes(;input_prefix, input_path)
     ####################
     # Define simulation model by reading in system definition and input data
     simulate_isotopes = true
     model = loadSPAC(input_path, input_prefix; simulate_isotopes = simulate_isotopes);
     model = loadSPAC(input_path, input_prefix; simulate_isotopes = simulate_isotopes,
+                    IC_soil = (PSIM_init_kPa = -6.3, delta18O_init_permil = -13.0, delta2H_init_permil = -95.0),
                     root_distribution = (beta = 0.90, z_rootMax_m = nothing));
     model2 = loadSPAC(input_path, input_prefix;
                 simulate_isotopes = false,
+                IC_soil = (PSIM_init_kPa = -6.3, delta18O_init_permil = -13.0, delta2H_init_permil = -95.0),
                 root_distribution = (beta = 0.97, z_rootMax_m = nothing),
                 canopy_evolution = (DENSEF_rel = 100, HEIGHT_rel = 100, SAI_rel    = 100,
                                     LAI_rel = (DOY_Bstart = 120,
@@ -61,39 +58,31 @@ input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
                                            LAI_perc_BtoC = 100,
                                            LAI_perc_CtoB = 20)));
     simulation  = setup(model; soil_output_depths_m = [-0.03, -0.11]);
-    ####################
 
-    ####################
     # Prepare simulation by discretizing spatial domain
     Δz_m = nothing
-    if (input_prefix == "isoBEAdense2010-18-reset-FALSE")
+    if (input_prefix == "isoBEAdense2010-18-reset-FALSE" || contains(input_prefix, r"infiltrationSaturation"))
         Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5); 0.1]; # grid spacing (heterogenous), meter (N=21)
+        Δz_m = [fill(0.02, 10); fill(0.025, 10); fill(0.03, 10); fill(0.035, 10); 0.1]; # grid spacing (heterogenous), meter (N=21)
     elseif (input_prefix == "DAV_LW1_def")
         # Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 5)]; # grid spacing (heterogenous), meter (N=20)
         Δz_m = [fill(0.04, 5); fill(0.05, 5); fill(0.06, 5); fill(0.07, 11)]; # grid spacing (heterogenous), meter (N=20)
+    else #"SCH-2023-03"
+        Δz_m = [fill(0.05, 42);]; # grid spacing (heterogenous), meter (N=20)
     end
-
-    # simulation = LWFBrook90.setup(model; Δz = Δz_m, tspan = (0,10));
     model3 = loadSPAC(input_path, input_prefix;
         Δz_thickness_m = Δz_m,
         root_distribution = (beta = 0.98, ),
         IC_soil = (PSIM_init_kPa = -7.0, delta18O_init_permil = -9.0, delta2H_init_permil = -11.0))
-    model3
-    simulation3
     simulation3 = setup(model3, soil_output_depths_m = [-0.03, -0.11]);
-    simulation3
-    # @run Base.show(IOContext(stdout, :limit => true), "text/plain", model3)
-    # @run Base.show(IOContext(stdout, :limit => true), "text/plain", simulation3)
+    model = loadSPAC(input_path, input_prefix; simulate_isotopes = simulate_isotopes,
+                    Δz_thickness_m = Δz_m,
+                    IC_soil = (PSIM_init_kPa = -6.3, delta18O_init_permil = -13.0, delta2H_init_permil = -95.0),
+                    root_distribution = (beta = 0.90, z_rootMax_m = nothing));
+    simulation  = setup(model; soil_output_depths_m = [-0.03, -0.11], requested_tspan = (0,300));
+    ####################
 
-    setup(model3)
-
-    simulation = LWFBrook90.setup(model;
-                                        Δz = (thickness_m = Δz_m,
-                                              functions = (rootden = ((Δz_m)->LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)),
-                                                           PSIM_init = ((Δz_m)->fill(-6.3, length(Δz_m))),
-                                                           δ18Ο_init = ((Δz_m)->ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.)),
-                                                           δ2Η_init  = ((Δz_m)->ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.))),
-                                        tspan = (0,300)));
+    ####################
     # using Plots; display(heatmap(simulation.ODEProblem.p.p_fT_RELDEN', ylabel = "SOIL LAYER", xlabel = "Time (days)", yflip=true, colorbar_title = "Root density"))
         # # TODO
         # remake = function(parameterisedSPAC::SPAC; Δz_thickness_m::AbstractVector)
@@ -262,12 +251,14 @@ input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
 
     ####################
     # Plotting simulation object (using provided functions)
-    # fname = joinpath(
-    #     out_dir,
-    #     input_prefix*"_NLAYER+" * string(simulation.ODESolution.prob.p.p_soil.NLAYER)*
-    #     # "-git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
-    #     # ifelse(length(Base.read(`git status --porcelain`, String))==0, "+gitclean","+gitdirty")*
-    #     "-iso+"*string(simulation.ODEProblem.p.simulate_isotopes))
+    out_dir = "gitignored/out/$(today())"
+    mkpath(out_dir)
+    fname = joinpath(
+        out_dir,
+        input_prefix*"_NLAYER+" * string(simulation.ODESolution.prob.p.p_soil.NLAYER)*
+        # "-git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
+        # ifelse(length(Base.read(`git status --porcelain`, String))==0, "+gitclean","+gitdirty")*
+        "-iso+"*string(simulation.ODEProblem.p.simulate_isotopes))
 
     # 0a) Amounts
     pl1 = plotamounts(simulation, :above_and_belowground, :showRWUcentroid)
@@ -444,7 +435,7 @@ input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
                     xlabel = "",#"Date",
                     ylabel = "Depth [mm]");
         pl_ψ = heatmap(x, y,
-                    # u_aux_PSIM', colorbar_title = "ψ_m [kPa]",
+                    # u_aux_PSIM', colorbar_title = "ψ_m [kPa]", clims = ψ_pF_limits, c=cgrad(:inferno, rev=false),
                     log10.(-10 .* u_aux_PSIM),  colorbar_title = "pF = log₁₀(-ψ hPa)", clims = ψ_pF_limits, c=cgrad(:inferno, rev=false),
                     yflip = true,
                     xlabel = "",#"Date",
@@ -651,15 +642,15 @@ input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
     #     end
 
     if (input_prefix == "DAV2010-2021" || input_prefix == "DAV_LW1_def");
-        # File("../../../LWF-Brook90.jl-calibration/Isotope-Data/2-combined-deposition/outputs/DAV2010-2021_meteoiso.csv")
-        # File("../../../LWF-Brook90.jl-calibration/Meteo-Data/DAV2010-2021/DAV2010-2021_meteoiso.csv")
-        dat_δ_soilSol   = DataFrame(File("../../../LWF-Brook90.jl-calibration/Isotope-Data/3-LWF-soil-solution/outputs/DAV-2022-07_soilsolutioniso.csv";header=1,skipto=3))
-        dat_δ_soilbulk  = DataFrame(File("../../../LWF-Brook90.jl-calibration/Isotope-Data/4-LWF-xylem-bulksoil/outputs/DAV-2022-07_bulksoiliso.csv";header=1,skipto=3))
-        dat_δ_xylem     = DataFrame(File("../../../LWF-Brook90.jl-calibration/Isotope-Data/4-LWF-xylem-bulksoil/outputs/DAV-2022-07_xylemiso.csv";header=1,skipto=3))
-        dat_ψ_tensiometer= DataFrame(File("../../../LWF-Brook90.jl-calibration/Soil-Data/1-LWF-tensiometer/DAV-2022-07_tensiometer.csv";header=1,skipto=3))
-        dat_θ_EC5Waldner = DataFrame(File("../../../LWF-Brook90.jl-calibration/Soil-Data/2-LWF-EC5-Waldner/outputs/DAV-2022-07_ec5-Waldner.csv";header=1,skipto=3))
-        dat_ψ_tensiomark = DataFrame(File("../../../LWF-Brook90.jl-calibration/Soil-Data/3-LWF-Tensiomark-EC5-Meusburger/outputs/DAV-2022-07_tensiomark-Meusburger.csv";header=1,skipto=3))
-        dat_ψ_tensiomarkAVG= DataFrame(File("../../../LWF-Brook90.jl-calibration/Soil-Data/3-LWF-Tensiomark-EC5-Meusburger/outputs/DAV-2022-07_tensiomarkAVG-Meusburger.csv";header=1,skipto=3))
+        # File("../../../LWF-Brook90.jl-calibration/Calibration-Isotope-Data/2-combined-deposition/outputs/DAV2010-2021_meteoiso.csv")
+        # File("../../../LWF-Brook90.jl-calibration/Input-Meteo-Data/DAV2010-2021/DAV2010-2021_meteoiso.csv")
+        dat_δ_soilSol   = DataFrame(File("../../../LWF-Brook90.jl-calibration/Calibration-Isotope-Data/3-LWF-soil-solution/outputs/DAV-2022-07_soilsolutioniso.csv";header=1,skipto=3))
+        dat_δ_soilbulk  = DataFrame(File("../../../LWF-Brook90.jl-calibration/Calibration-Isotope-Data/4-LWF-xylem-bulksoil/outputs/DAV-2022-07_bulksoiliso.csv";header=1,skipto=3))
+        dat_δ_xylem     = DataFrame(File("../../../LWF-Brook90.jl-calibration/Calibration-Isotope-Data/4-LWF-xylem-bulksoil/outputs/DAV-2022-07_xylemiso.csv";header=1,skipto=3))
+        dat_ψ_tensiometer= DataFrame(File("../../../LWF-Brook90.jl-calibration/Calibration-Soil-Data/1-LWF-tensiometer/DAV-2022-07_tensiometer.csv";header=1,skipto=3))
+        dat_θ_EC5Waldner = DataFrame(File("../../../LWF-Brook90.jl-calibration/Calibration-Soil-Data/2-LWF-EC5-Waldner/outputs/DAV-2022-07_ec5-Waldner.csv";header=1,skipto=3))
+        dat_ψ_tensiomark = DataFrame(File("../../../LWF-Brook90.jl-calibration/Calibration-Soil-Data/3-LWF-Tensiomark-EC5-Meusburger/outputs/DAV-2022-07_tensiomark-Meusburger.csv";header=1,skipto=3))
+        dat_ψ_tensiomarkAVG= DataFrame(File("../../../LWF-Brook90.jl-calibration/Calibration-Soil-Data/3-LWF-Tensiomark-EC5-Meusburger/outputs/DAV-2022-07_tensiomarkAVG-Meusburger.csv";header=1,skipto=3))
 
         # # a) Using Wide data sets:
         # df = unstack(dat_ψ_tensiomarkAVG, :depth_cm, :psi_kPa)
@@ -692,9 +683,9 @@ input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
 
         @chain dat_ψ_tensiometer[1:100,:]   scatter(convert.(DateTime, _.dates), _.psim_median_kPa, group = _.depth_cm .* 10)
         pl_ψ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(simulation.ODESolution.t, simulation.parametrizedSPAC.reference_date),
-            # -LWFBrook90.get_ψ(simulation; depth_to_read_out_mm = depth_to_read_out_mm) .+ 1, yaxis = :log, yflip = true,
-            LWFBrook90.get_ψ(simulation; depth_to_read_out_mm = depth_to_read_out_mm),  ylabel = "ψ\n[kPa]",
-            # log10.(-10 .* LWFBrook90.get_ψ(simulation; depth_to_read_out_mm = depth_to_read_out_mm)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
+            # -LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm) .+ 1, yaxis = :log, yflip = true,
+            LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm),  ylabel = "ψ\n[kPa]",
+            # log10.(-10 .* LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
             labels = string.(depth_to_read_out_mm) .* "mm",
             xlabel = "Date",
             legend = :outerright)
@@ -729,9 +720,9 @@ input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
                 color_palette = col_palette,
                 marker = (0.3, :o), markerstrokewidth = 0)
         pl_ψ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(simulation.ODESolution.t, simulation.parametrizedSPAC.reference_date),
-            # -LWFBrook90.get_ψ(simulation; depth_to_read_out_mm = depth_to_read_out_mm) .+ 1, yaxis = :log, yflip = true,
-            LWFBrook90.get_ψ(simulation; depth_to_read_out_mm = depth_to_read_out_mm)',  ylabel = "ψ\n[kPa]",
-            # log10.(-10 .* LWFBrook90.get_ψ(simulation; depth_to_read_out_mm = depth_to_read_out_mm)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
+            # -LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm) .+ 1, yaxis = :log, yflip = true,
+            LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm)',  ylabel = "ψ\n[kPa]",
+            # log10.(-10 .* LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
             labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
             xlabel = "Date", legend = :outerright, color_palette = col_palette,
             linewidth = 3)
@@ -747,7 +738,7 @@ input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
                 color_palette = col_palette,
                 marker = (0.3, :o), markerstrokewidth = 0)
         pl_ψ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(simulation.ODESolution.t, simulation.parametrizedSPAC.reference_date),
-            log10.(-10 .* LWFBrook90.get_ψ(simulation; depth_to_read_out_mm = depth_to_read_out_mm))',  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
+            log10.(-10 .* LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm))',  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
             labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
             xlabel = "Date", legend = :outerright, color_palette = col_palette,
             linewidth = 3)
@@ -771,9 +762,9 @@ input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
                 marker = (0.3, :o), markerstrokewidth = 0)
 
         pl_ψ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(simulation.ODESolution.t, simulation.parametrizedSPAC.reference_date),
-            # -LWFBrook90.get_ψ(simulation; depth_to_read_out_mm = depth_to_read_out_mm) .+ 1, yaxis = :log, yflip = true,
-            LWFBrook90.get_ψ(simulation; depth_to_read_out_mm = depth_to_read_out_mm)',  ylabel = "ψ\n[kPa]",
-            # log10.(-10 .* LWFBrook90.get_ψ(simulation; depth_to_read_out_mm = depth_to_read_out_mm)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
+            # -LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm) .+ 1, yaxis = :log, yflip = true,
+            LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm)',  ylabel = "ψ\n[kPa]",
+            # log10.(-10 .* LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
             labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
             xlabel = "Date", legend = :outerright, color_palette = col_palette,
             linewidth = 3)
@@ -791,7 +782,7 @@ input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
                 color_palette = col_palette,
                 marker = (0.3, :o), markerstrokewidth = 0)
         pl_ψ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(simulation.ODESolution.t, simulation.parametrizedSPAC.reference_date),
-            log10.(-10 .* LWFBrook90.get_ψ(simulation; depth_to_read_out_mm = depth_to_read_out_mm))',  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
+            log10.(-10 .* LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm))',  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
             labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
             xlabel = "Date", legend = :outerright, color_palette = col_palette,
             linewidth = 3)
@@ -817,8 +808,8 @@ input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
                 color_palette = col_palette,
                 marker = (0.3, :o), markerstrokewidth = 0)
         pl_ψ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(simulation.ODESolution.t, simulation.parametrizedSPAC.reference_date),
-            # log10.(-10 .* LWFBrook90.get_ψ(simulation; depth_to_read_out_mm = depth_to_read_out_mm)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
-            LWFBrook90.get_ψ(simulation; depth_to_read_out_mm = depth_to_read_out_mm)',  ylabel = "ψ [kPa]",
+            # log10.(-10 .* LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
+            LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm)',  ylabel = "ψ [kPa]",
             labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
             xlabel = "Date", legend = :outerright, color_palette = col_palette,
             linewidth = 3)
@@ -841,7 +832,7 @@ input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
                 color_palette = col_palette,
                 marker = (0.7, :o), markerstrokewidth = 0)
         pl_δsoil = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(simulation.ODESolution.t, simulation.parametrizedSPAC.reference_date),
-            LWFBrook90.get_δsoil(simulation; depth_to_read_out_mm = depth_to_read_out_mm  .+ 0.01).d18O',
+            LWFBrook90.get_δsoil(simulation; depths_to_read_out_mm = depth_to_read_out_mm  .+ 0.01).d18O',
             ylabel = "δ18O [permil]",
             labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
             xlabel = "Date", legend = :outerright, color_palette = col_palette,
@@ -910,16 +901,27 @@ end
 # input_path = "examples/isoBEA2010-18-reset-FALSE-input/";
 input_prefix = "isoBEAdense2010-18-reset-FALSE";
 input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
+run_main_with_isotopes(;input_prefix = input_prefix, input_path = input_path)
 # input_prefix = "BEA2010-2021";
-# input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/BEA2010-2021/";
+# input_path = "../../../LWF-Brook90.jl-calibration/Input-Meteo-Data/BEA2010-2021/";
 # input_prefix = "LAU2010-2021";
-# input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/LAU2010-2021/";
+# input_path = "../../../LWF-Brook90.jl-calibration/Input-Meteo-Data/LAU2010-2021/";
 # input_prefix = "LAE2010-2021";
-# input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/LAE2010-2021/";
+# input_path = "../../../LWF-Brook90.jl-calibration/Input-Meteo-Data/LAE2010-2021/";
 # input_prefix = "DAV2010-2021";
-# input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/DAV2010-2021/";
+# input_path = "../../../LWF-Brook90.jl-calibration/Input-Meteo-Data/DAV2010-2021/";
 # input_prefix = "WaldLab";
-# input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/WaldLab/";
+# input_path = "../../../LWF-Brook90.jl-calibration/Input-Meteo-Data/WaldLab/";
 input_prefix = "DAV_LW1_def";
-input_path = "../../../LWF-Brook90.jl-calibration/Meteo-Data/DAV_LW1_def/";
+input_path = "../../../LWF-Brook90.jl-calibration/Input-Meteo-Data/DAV_LW1_def/";
+run_main_with_isotopes(;input_prefix = input_prefix, input_path = input_path)
+input_prefix = "SCH-2023-03";
+input_path = "../../../LWF-Brook90.jl-calibration/pgm-calibrate-HYPERION/input/";
+run_main_with_isotopes(;input_prefix = input_prefix, input_path = input_path)
+
+input_prefix = "infiltrationSaturationINFEXP0";
+input_path = "examples/infiltrationSaturationINFEXP0/";
+run_main_with_isotopes(;input_prefix = input_prefix, input_path = input_path)
+input_prefix = "infiltrationSaturationINFEXP1";
+input_path = "examples/infiltrationSaturationINFEXP1/";
 run_main_with_isotopes(;input_prefix = input_prefix, input_path = input_path)

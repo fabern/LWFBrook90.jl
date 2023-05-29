@@ -86,6 +86,42 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     # color_scheme = :default # https://docs.juliaplots.org/latest/generated/colorschemes
     # color_scheme = :heat
     color_scheme = :blues
+    """
+        cgrad_two_separate_gradients_at_mid()
+    """
+    function cgrad_two_separate_gradients_at_mid(z, mid;
+        # colors = [:white, :blue, :red, :black],
+        colors = [colorant"lightblue", colorant"darkblue", :black, :red],
+        up     = maximum(z),
+        down   = minimum(z),
+        kwargs...)
+
+        eps_ = eps()*abs(up - down)        # scale difference that it remains tractable
+        # if mid >= up; mid = up - eps_; end # if red part not in data, correct accordingly
+        if mid >= up;
+            # if red part not in data, use gradient only with blue
+            return cgrad(colors[1:2], [0, 1]; kwargs...)
+        else
+            @assert down <= mid - eps_ < mid <= up
+            values = ([down, mid - eps_, mid, up] .- down) ./ (up - down) # scale to range 0-1
+            @show colors
+            @show values
+            cgrad(colors, values; kwargs...)
+        end
+    end
+            # Not needed if we're moving to Makie...
+            # function log_modulus(x; base = exp(1))
+            #     sign.(x) .* log.(base,  abs.(x) .+ 1)
+            # end
+            # function invlog_modulus(x; base = exp(1))
+            #     sign.(x) .* (base .^ (abs.(x)) .- 1)
+            # end
+            # # rows_ψₘpF_logmodulus  = log10.(u_aux_PSIM) #(from kPa to log10(hPa))
+            # #     # from: https://discourse.julialang.org/t/is-there-a-way-to-plot-negative-numbers-on-a-log-scale/49674/7?u=fabern
+            # #     # as long as it is not yet implemented: https://github.com/JuliaPlots/Plots.jl/issues/1235
+            # # z = sign.(y).*log10.(abs.(y).+1)
+            # # plot(x, z, color = z,
+            # #     yformatter =  x -> "$(sign(x) < 0 ? "-" : "")10^$x")
 
     true_to_check_colorbar = true; # set this flag to false for final plot, true for debugging.
     tick_function = (x1, x2) -> PlotUtils.optimize_ticks(x1, x2; k_min = 4)
@@ -269,36 +305,41 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
         rows_ψₜₒₜpF = log10.(u_aux_PSITI .* -10) #(from kPa to log10(hPa))
         # rows_ψₘpF= log10.(u_aux_PSIM  .* -10 + 0.1) #(from kPa to log10(hPa) and small shift to start at pF = -1 instead of pF = -∞)
 
+        cbar_title = "ψₘ [kPa]"
+        @series begin
+            seriestype := :heatmap
+            yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
+            colorbar := true_to_check_colorbar; # clims := clims_d2H
+            yguide := "Depth [mm]"; colorbar_title := cbar_title
+            c := cgrad_two_separate_gradients_at_mid(u_aux_PSIM, -0.00001) #shows 0 in red
+            # c := cgrad_two_separate_gradients_at_mid(u_aux_PSIM, -0.0)     # shows 0 in blue
+            subplot := 6
+            # and other arguments:
+            x, y_center, u_aux_PSIM;
+        end
+        # cbar_title = "ψₜ [kPa]"
         # @series begin
         #     seriestype := :heatmap
         #     yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
         #     colorbar := true_to_check_colorbar; # clims := clims_d2H
-        #     yguide := "Depth [mm]"; colorbar_title := "ψₘ [kPa]"
-        #     c := cgrad(color_scheme,  rev = false)
-        #     subplot := 5
-        #     # and other arguments:
-        #     x, y_center, u_aux_PSIM;
-        # end
-        # @series begin
-        #     seriestype := :heatmap
-        #     yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
-        #     colorbar := true_to_check_colorbar; # clims := clims_d2H
-        #     yguide := "Depth [mm]"; colorbar_title := "ψₜ [kPa]"
+        #     yguide := "Depth [mm]"; colorbar_title := cbar_title
         #     c := cgrad(color_scheme,  rev = true)
         #     subplot := 6
         #     # and other arguments:
         #     x, y_center, u_aux_PSITI;
         # end
-        @series begin
-            seriestype := :heatmap
-            yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
-            colorbar := true_to_check_colorbar; # clims := clims_d2H
-            yguide := "Depth [mm]"; colorbar_title := "pF = log₁₀(-ψₘ hPa)"
-            c := cgrad(color_scheme,  rev = true)
-            subplot := 6
-            # and other arguments:
-            x, y_center, rows_ψₘpF
-        end
+        # cbar_title = log₁₀(-ψₘ hPa)"
+        # @series begin
+        #     seriestype := :heatmap
+        #     yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
+        #     colorbar := true_to_check_colorbar; # clims := clims_d2H
+        #     yguide := "Depth [mm]"; colorbar_title := cbar_title
+        #     # c := cgrad(color_scheme,  rev = true)
+        #     c := cgrad_two_separate_gradients_at_mid(rows_ψₘpF,)
+        #     subplot := 6
+        #     # and other arguments:
+        #     x, y_center, rows_ψₘpF
+        # end
         if (RWUcentroid == :showRWUcentroid)
             @series begin
                 #plot!(x, row_RWU_centroid_mm', yflip=true, color=:white, label = "")
@@ -307,7 +348,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
                 #bg_legend --> colorant"rgba(100%,100%,100%,0.8)";legend := :bottomright
                 bg_legend --> colorant"rgba(100%,100%,100%,0.0)"; legend := :bottomright; fg_legend --> :transparent; legendfontcolor := :white
                 yflip := true; yticks := y_soil_ticks
-                yguide := "Depth [mm]"; colorbar_title := "pF = log₁₀(-ψₘ hPa)"
+                yguide := "Depth [mm]"; colorbar_title := cbar_title
                 subplot := 6
                 x, row_RWU_centroid_mm'
             end
@@ -337,7 +378,10 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
             yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
             colorbar := true_to_check_colorbar; # clims := clims_d2H
             yguide := "Depth [mm]"; colorbar_title := "Wetness [-]"
-            c := cgrad(color_scheme,  rev = false)
+            # c := cgrad(color_scheme,  rev = false)
+            # c := cgrad_two_separate_gradients_at_mid(u_aux_WETNES, 1.0; down = 0.0, up = 1.0); clims := (0,1)
+            # c := cgrad_two_separate_gradients_at_mid(u_aux_WETNES, 1.0; down = 0.0, up = 1.0)
+            c := cgrad_two_separate_gradients_at_mid(u_aux_WETNES, 1.0)
             subplot := 7
             # and other arguments:
             x, y_center, u_aux_WETNES;
@@ -368,7 +412,10 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
             yflip := true; yticks := y_soil_ticks #(y_ticks, y_labels)
             colorbar := true_to_check_colorbar; # clims := clims_d2H
             yguide := "Depth [mm]"; colorbar_title := "θ [m3/m3]\n(of total volume, incl stonef)" #colorbar_title := "θ [-]\n(total, incl stonef)"
-            c := cgrad(color_scheme,  rev = false)
+            # c := cgrad(color_scheme,  rev = false)
+            # c := cgrad_two_separate_gradients_at_mid(rows_SWAT_amt1, 1.0; down = 0.0, up = 1.0); clims := (0,1)
+            # c := cgrad_two_separate_gradients_at_mid(rows_SWAT_amt1, 1.0; down = 0.0, up = 1.0)
+            c := cgrad_two_separate_gradients_at_mid(rows_SWAT_amt1, 1.0)
             subplot := 9
             # and other arguments:
             x, y_center, rows_SWAT_amt1;
