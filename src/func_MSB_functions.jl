@@ -60,7 +60,7 @@ function MSBSETVARS(# arguments
 
     # calculated weather data
     p_fu_SHEAT = 0.
-    (p_fu_SOLRADC, p_fT_TA, p_fT_TADTM, p_fT_TANTM, UA, p_fu_UADTM, p_fu_UANTM) =
+    (p_fT_SOLRADC, p_fT_TA, p_fT_TADTM, p_fT_TANTM, UA, p_fu_UADTM, p_fu_UANTM) =
         LWFBrook90.PET.WEATHER(p_fT_TMAX, p_fT_TMIN, p_fT_DAYLEN, p_fT_I0HDAY, p_fT_VAPPRES, p_fT_UW, p_fu_ZA, p_fu_DISP, p_fu_Z0, p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_fT_SOLRAD)
     # fraction of precipitation as p_fT_SFAL
     p_fT_SNOFRC= LWFBrook90.SNO.SNOFRAC(p_fT_TMAX, p_fT_TMIN, p_RSTEMP)
@@ -96,7 +96,7 @@ function MSBSETVARS(# arguments
             p_fu_Z0GS, p_fu_Z0C, p_fu_DISPC, p_fu_Z0, p_fu_DISP, p_fu_ZA,
             p_fT_RXYLEM, p_fT_RROOTI, p_fT_ALPHA,
             p_fu_SHEAT,
-            p_fu_SOLRADC, p_fT_TA, p_fT_TADTM, p_fT_TANTM, p_fu_UADTM, p_fu_UANTM,
+            p_fT_SOLRADC, p_fT_TA, p_fT_TADTM, p_fT_TANTM, p_fu_UADTM, p_fu_UANTM,
             p_fT_SNOFRC,
             p_fu_TSNOW,p_fu_PSNVP, p_fu_ALBEDO,p_fu_RSS,
             p_fu_SNOEN)
@@ -133,7 +133,7 @@ new, higher GER is calculated by subroutine SWGE. BROOK90 then weights the dayti
 nighttime rates by the solar daylength (DAYLEN) to obtain average rates for the day, PTRAN,
 GEVP, PINT, GIVP, and TRANI, which are used in later calculations.
 """
-function MSBDAYNIGHT(p_fT_SLFDAY, p_fu_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM, p_fu_UADTM, p_fT_TANTM, p_fu_UANTM,
+function MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM, p_fu_UADTM, p_fT_TANTM, p_fu_UANTM,
                      p_fT_I0HDAY,
                      # for AVAILEN:
                      p_fu_ALBEDO, p_C1, p_C2, p_C3, p_fT_VAPPRES, p_fu_SHEAT, p_CR, p_fu_LAIeff, p_fT_SAIeff,
@@ -164,7 +164,7 @@ function MSBDAYNIGHT(p_fT_SLFDAY, p_fu_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM
 
         # net radiation
         if (J ==1)
-            SLRAD[J] = p_fT_SLFDAY * p_fu_SOLRADC / (p_WTOMJ * p_fT_DAYLEN)
+            SLRAD[J] = p_fT_SLFDAY * p_fT_SOLRADC / (p_WTOMJ * p_fT_DAYLEN)
             TAJ = p_fT_TADTM
             UAJ = p_fu_UADTM
         else
@@ -179,7 +179,7 @@ function MSBDAYNIGHT(p_fT_SLFDAY, p_fu_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM
         #     # no sunrise, assume 50% clouds for longwave
         #     cloud_fraction = 0.5
         # else
-        cloud_fraction = p_fu_SOLRADC / p_fT_I0HDAY
+        cloud_fraction = p_fT_SOLRADC / p_fT_I0HDAY
         # end
         # Available energy above canopy (AA) and at soil/substrate (ASUBS)
         AA, ASUBS =

@@ -127,7 +127,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY, p_fu_HEIGHT, p_fu_LAI, p_fu_SAI,
         p_fu_Z0GS, p_fu_Z0C, p_fu_DISPC, p_fu_Z0, p_fu_DISP, p_fu_ZA,
       p_fT_RXYLEM, p_fT_RROOTI, p_fT_ALPHA,
-      p_fu_SHEAT, p_fu_SOLRADC, p_fT_TA, p_fT_TADTM[1], p_fT_TANTM, p_fu_UADTM, p_fu_UANTM,
+      p_fu_SHEAT, p_fT_SOLRADC, p_fT_TA, p_fT_TADTM[1], p_fT_TANTM, p_fu_UADTM, p_fu_UANTM,
       p_fT_SNOFRC, p_fu_TSNOW, p_fu_PSNVP, p_fu_ALBEDO,p_fu_RSS, p_fu_SNOEN =
       MSBSETVARS(FLAG_MualVanGen, NLAYER, p_soil,
                  # for SUNDS:
@@ -162,7 +162,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     #* * * * *  B E G I N   D A Y - N I G H T   E T   L O O P  * * * * * * * * *
     # Compute day and night rates
     (p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR, p_fu_ATRI) =
-        MSBDAYNIGHT(p_fT_SLFDAY, p_fu_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM[1], p_fu_UADTM, p_fT_TANTM, p_fu_UANTM,
+        MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM[1], p_fu_UADTM, p_fT_TANTM, p_fu_UANTM,
                     p_fT_I0HDAY,
                     # for AVAILEN:
                     p_fu_ALBEDO, p_C1, p_C2, p_C3, p_VAPPRES(integrator.t), p_fu_SHEAT, p_CR, p_fu_LAI, p_fu_SAI,

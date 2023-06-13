@@ -427,14 +427,14 @@ function WEATHER(p_fT_TMAX, p_fT_TMIN, p_fT_DAYLEN, p_fT_I0HDAY, p_fT_VAPPRES, p
     # Get solar radiation
     if (p_fT_SOLRAD < 0.001)
         # if missing: estimate SOLRAD
-        p_fu_SOLRADC = p_RRD * p_fT_I0HDAY
+        p_fT_SOLRADC = p_RRD * p_fT_I0HDAY
     elseif (p_fT_SOLRAD > p_fT_I0HDAY)
         # if larger than potential insolation on horizontal: reduce SOLRAD
-        p_fu_SOLRADC = 0.99 * p_fT_I0HDAY
+        p_fT_SOLRADC = 0.99 * p_fT_I0HDAY
         # NOTE(bernhard) This check was not present in LWFBrook90R
     else
         # else take value from input as is
-        p_fu_SOLRADC = p_fT_SOLRAD
+        p_fT_SOLRADC = p_fT_SOLRAD
     end
 
     p_fT_TA    = (p_fT_TMAX + p_fT_TMIN) / 2 # average temperature for day
@@ -463,7 +463,7 @@ function WEATHER(p_fT_TMAX, p_fT_TMIN, p_fT_DAYLEN, p_fT_I0HDAY, p_fT_VAPPRES, p
     p_fu_UADTM =  UA / (p_fT_DAYLEN + (1 - p_fT_DAYLEN) * p_WNDRAT)
     p_fu_UANTM =  p_WNDRAT * p_fu_UADTM
 
-    return (p_fu_SOLRADC,
+    return (p_fT_SOLRADC,
             p_fT_TA,    # mean temperature for the day, C
             p_fT_TADTM, # average daytime temperature, C
             p_fT_TANTM, # average nighttime temperature, C

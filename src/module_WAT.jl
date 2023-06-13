@@ -570,7 +570,7 @@ function ITER(NLAYER, FLAG_MualVanGen, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSIT
     DTINEW = DTI
 
     for i = 1:NLAYER
-        # prevent too large a change in water content
+        # 1) prevent too large a change in water content, reduce DTI to keep change below p_DSWMAX
         # DTINEW = min(DTINEW, 0.01 * p_DSWMAX * p_SWATMAX[i] / max(0.000001, abs(du_NTFLI[i])))
         DTINEW = min(DTINEW,
                      0.01 * p_DSWMAX * p_soil.p_THICK[i] * p_soil.p_THSAT[i] * (1 - p_soil.p_STONEF[i]) / max(0.000001, abs(du_NTFLI[i])))
@@ -582,7 +582,8 @@ function ITER(NLAYER, FLAG_MualVanGen, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSIT
             available_water = (p_soil.p_θr[i] - u_aux_θ[i]) * p_soil.p_THICK[i] # TODO(bernhard): is ther no STONEF in FLAG_MualVanGen==1. Bug?
         end
 
-        # If water is flowing out of cell: du_NTFLI < 0
+        # 2) If water is flowing out of cell (du_NTFLI < 0), prevent
+        #    a change in water content larger than total available water
         if (du_NTFLI[i] < 0)
             DTINEW = min(DTINEW, available_water/du_NTFLI[i]/1.30)
             if (DTINEW < DTIMIN)
@@ -597,7 +598,7 @@ function ITER(NLAYER, FLAG_MualVanGen, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSIT
                 # end
             end
         end
-        # prevent oscillation of potential gradient
+        # 3) prevent oscillation of gradient in soil water potential
         if (FLAG_MualVanGen == 0)
             if (i < NLAYER)
                 # total potential difference at beginning of iteration
