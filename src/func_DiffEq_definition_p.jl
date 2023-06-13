@@ -844,9 +844,13 @@ function interpolate_aboveground_veg(
     veg_evolution_Aboveground::DataFrame)
 
     @assert allequal(veg_evolution_Aboveground.AGE_years)
+    @assert all(veg_evolution_Aboveground.DENSEF_  .>= 0)    #-
+    @assert all(veg_evolution_Aboveground.HEIGHT_m .>  0.01) #m
+    @assert all(veg_evolution_Aboveground.LAI_     .>= 0)    #-
+    @assert all(veg_evolution_Aboveground.SAI_     .>= 0)    #-
 
     time_range = range(minimum(veg_evolution_Aboveground.days), maximum(veg_evolution_Aboveground.days), length=length(veg_evolution_Aboveground.days))
-
+    
     p_DENSEF  = extrapolate(scale(interpolate(veg_evolution_Aboveground.DENSEF_  ,(BSpline(Constant{Previous}()))), time_range) ,0)
     p_HEIGHT  = extrapolate(scale(interpolate(veg_evolution_Aboveground.HEIGHT_m ,(BSpline(Constant{Previous}()))), time_range) ,0)
     p_LAI     = extrapolate(scale(interpolate(veg_evolution_Aboveground.LAI_     ,(BSpline(Constant{Previous}()))), time_range) ,0)

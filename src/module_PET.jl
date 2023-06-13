@@ -215,7 +215,7 @@ function LWFBrook90_CANOPY(p_fT_HEIGHT,
 
     # Parameters independent of snow depth or other state variables
     # but dependent on thinning factor densef with which partial thinning of the forest by cutting can be simulated
-    p_fT_SAIeff  = p_fT_DENSEF*p_fT_SAI       # effective stem area index, m2/m2 (NOTE: not dependent on state u_SNOW)
+    p_fT_SAIeff  = p_fT_DENSEF*p_fT_SAI       # effective stem area index, m2/m2
     p_fT_RTLENeff= p_fT_DENSEF*p_MXRTLN       # root length per unit land area, m/m2
     KPL      = max(p_fT_DENSEF*p_MXKPL, 1E-8) # plant conductivity, mm d-1 MPa-1
     p_fT_RPLANT = 1 / KPL                     # plant resistivity to water flow, MPa d/mm
@@ -227,7 +227,7 @@ function LWFBrook90_CANOPY(p_fT_HEIGHT,
     #  b   b   b     -------------- -                -
     #  \b  |  /b        CANOPY      | p_fu_HSNO      |
     #   \b | /b                     |                |
-    #----\B|/B-----------------------                | p_fT_HNOSNO (at least 0.01)
+    #----\B|/B-----------------------                | p_fT_HEIGHT (at least 0.01)
     #      |   -         SNOW       | p_fu_SNODEP    |
     #      |                        |                |
     #------|------------------------------------------
@@ -235,13 +235,11 @@ function LWFBrook90_CANOPY(p_fT_HEIGHT,
     #   / /|\\           ...
 
     p_fu_SNODEP = 0.001 * u_SNOW / p_SNODEN         # snow depth (u_SNOW in mm SWE) (p_fu_SNODEP in m)
-
-    p_fT_HNOSNO = max(p_fT_HEIGHT, 0.01)            # height of canopy above soil (i.e. without snow)
-    p_fu_HSNO   = max(p_fT_HNOSNO - p_fu_SNODEP, 0) # height of canopy above snow
-    p_fu_RATIO  = p_fu_HSNO / p_fT_HNOSNO           # fraction of canopy above snow,
+    p_fu_HSNO   = max(p_fT_HEIGHT - p_fu_SNODEP, 0) # height of canopy above snow # HEIGHT was checked to be at least 0.01 m
+    p_fu_RATIO  = p_fu_HSNO / p_fT_HEIGHT           # fraction of canopy above snow,
                                                     # i.e. reducing LAI if leaves are within the snow (e.g. leaves denominated with B in above drawing)
 
-    p_fu_HEIGHTeff = max(p_fu_HSNO,0.01)            # effective canopy height, i.e. above any snow, m, minimum of 0.01 m
+    p_fu_HEIGHTeff = max(p_fu_HSNO, 0.01)            # effective canopy height, i.e. above any snow, m, minimum of 0.01 m
 
     p_fu_LAIeff = max(p_fu_RATIO*p_fT_DENSEF*p_fT_LAI, # effective leaf area index, m2/m2, minimum of 0.00001
                       0.00001)
