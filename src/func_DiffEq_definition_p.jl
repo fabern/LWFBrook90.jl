@@ -843,8 +843,8 @@ Take canopy evolution defined as DF and generate parameters continuous in time.
 function interpolate_aboveground_veg(
     veg_evolution_Aboveground::DataFrame)
 
-    @assert all(isequal(first(veg_evolution_Aboveground.AGE_years)), veg_evolution_Aboveground.AGE_years) #
-    # @assert allequal(veg_evolution_Aboveground.AGE_years) # TODO: up Julia requirement to 1.8 for this allequal
+    @assert allequal(veg_evolution_Aboveground.AGE_years)
+
     time_range = range(minimum(veg_evolution_Aboveground.days), maximum(veg_evolution_Aboveground.days), length=length(veg_evolution_Aboveground.days))
 
     p_DENSEF  = extrapolate(scale(interpolate(veg_evolution_Aboveground.DENSEF_  ,(BSpline(Constant{Previous}()))), time_range) ,0)
