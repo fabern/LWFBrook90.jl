@@ -31,8 +31,6 @@ task = ["test", "overwrite"][1]
 #     activate .
 #     test
 #  or simply julia --project=. test/runtests.jl
-is_a_CI_system = issubset(["GITHUB_ACTION"], collect(keys(ENV))) # checks if ENV["GITHUB_ACTION"] exists
-@show is_a_CI_system
 
 # NOTE: locally one might need to do manually cd("test")
 if basename(pwd()) != "test"; cd("test"); end
@@ -98,7 +96,7 @@ if basename(pwd()) != "test"; cd("test"); end
                  u_aux_PSIM = u_aux_PSIM,
                  u_aux_θ    = u_aux_θ,
                  u_δsoil    = u_δsoil)...)
-        # if (false)
+        # if (true) # Do these manually outside of automatic testing in order not to require Plots pkg
         #     using Plots, Measures
         #     pl1 = plotamounts(example_result, :above_and_belowground, :showRWUcentroid)
         #     pl2 = plotisotopes(example_result, :d18O, :showRWUcentroid)
@@ -108,9 +106,23 @@ if basename(pwd()) != "test"; cd("test"); end
         #     savefig(plot(pl3, size=(1000,1400), dpi=300), fname*git_status_string*"_forcing.png")
         #     #"../examples/DAV2020-full_u_sol_reference.jld2__git+09bca17+gitdirty___forcing.png")
         # end
-        @error "Test overwrites reference solution instead of checking against it."
+        error("Test overwrites reference solution instead of checking against it.")
     else
         # do nothing
+    end
+
+
+    if !is_a_CI_system
+        using Plots, Measures
+        fname_illustrations = "out/$(today())/DAV2020-full_u_sol_reference"
+        mkpath(dirname(fname_illustrations))
+
+        pl1 = plotamounts(example_result, :above_and_belowground, :showRWUcentroid)
+        pl2 = plotisotopes(example_result, :d18O, :showRWUcentroid)
+        pl3 = plotforcingandstates(example_result)
+        savefig(plot(pl1, size=(1000,700), dpi=300),  fname_illustrations*git_status_string*"_amts.png")
+        savefig(plot(pl2, size=(1000,1400), dpi=300), fname_illustrations*git_status_string*"_d18O-d2H.png")
+        savefig(plot(pl3, size=(1000,1400), dpi=300), fname_illustrations*git_status_string*"_forcing.png")
     end
 
 end

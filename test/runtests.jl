@@ -27,10 +27,18 @@ end
 # https://discourse.julialang.org/t/benchmarking-tests-to-ensure-prs-dont-introduce-regressions/8630/6
 # or then https://github.com/maxbennedich/julia-regression-analysis or ...)
 
+# A flag that determines if tests are run on a CI system
+is_a_CI_system = issubset(["GITHUB_ACTION"], collect(keys(ENV))) # checks if ENV["GITHUB_ACTION"] exists
+@show is_a_CI_system
+
+
 Random.seed!(1234)
 
 # cd("test")
-include("01-unit-tests.jl")
+
+# if !is_a_CI_system; include("00-plot-if-not-CI-system.jl"); end
+
+# include("01-unit-tests.jl")
 
 include("02-integration-tests.jl")
 
