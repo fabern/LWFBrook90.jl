@@ -1,8 +1,57 @@
 # F.Bernhard 2022-02-02
 
+# ###################
+# # Reinstall LWFBrook90R for comparison with LWFBrook90Julia
+# # Reinstall either published version (Reset=1) or modified version (Reset=0)
+# run_R_simulations = FALSE
+# run_julia_simulations = FALSE
+Reset = FALSE
+if (Reset){
+  # install.packages("LWFBrook90R")
+  devtools::install(
+    pkg = "~/switchdrive/Documents/Job/Anstellung_2019_WSL/Doktorat/Projects/Soil-water-model/Brook/LWFBrook90R/LWFBrook90R-0.5.2/",
+    reload = TRUE,
+    quick = FALSE,
+    args = getOption("devtools.install.args"),
+    quiet = FALSE,
+    dependencies = NA,
+    upgrade = "never",
+    build_vignettes = FALSE,
+    keep_source = getOption("keep.source.pkgs"),
+    force = FALSE
+  )
+  
+  library(LWFBrook90R)
+  LWFB90version <- paste0(packageVersion("LWFBrook90R"), "")
+}
+if (!Reset){
+  devtools::install(
+    pkg = "~/switchdrive/Documents/Job/Anstellung_2019_WSL/Doktorat/Projects/Soil-water-model/Brook/LWFBrook90R/LWFBrook90R-0.5.2_modReset0/",
+    # pkg = "~/switchdrive/Documents/Job/Anstellung_2019_WSL/Doktorat/Projects/Soil-water-model/Brook/LWFBrook90R/LWFBrook90R-0.4.3_modReset0-and-printing/",
+    # pkg = "~/switchdrive/Documents/Job/Anstellung_2019_WSL/Doktorat/Projects/Soil-water-model/Brook/LWFBrook90R/LWFBrook90R-0.4.3_modReset0/",
+    # pkg = "~/switchdrive/Documents/Job/Anstellung_2019_WSL/Doktorat/Projects/Soil-water-model/Brook/LWFBrook90R/LWFBrook90R",
+    reload = TRUE,
+    quick = FALSE,
+    args = getOption("devtools.install.args"),
+    quiet = FALSE,
+    dependencies = NA,
+    upgrade = "never",
+    build_vignettes = FALSE,
+    keep_source = getOption("keep.source.pkgs"),
+    force = FALSE
+  )
+  
+  library(LWFBrook90R)
+  LWFB90version <- paste0(packageVersion("LWFBrook90R"), "_recompiled_noReset")
+  
+}
+# ##################
+
+
+
+
+
 rm(list=ls())
-# install.packages("LWFBrook90R")
-library(LWFBrook90R)
 # packageVersion("LWFBrook90R")
 # version
 # sessionInfo()
@@ -43,7 +92,6 @@ resB10 <- simulate_LWFBrook90.jl_input_folder_withLWFBrook90R(folder="../test-as
                                                              refine_discr_factor = 10, verbose = TRUE)
 
 ### Outputs
-
 for (iter in list(list(res = resInfiltrationTest, out_dir = "infiltrationSaturationINFEXP0-IntegrationTests-LWFBrook90/output_LWFBrook90R", fname_base = "INFEXPO0"),
                   list(res = res1, out_dir = "BEA-2016-IntegrationTests-LWFBrook90/output_LWFBrook90R", fname_base = "BEA2016-reset-FALSE"),
                   list(res = res2, out_dir = "BEA-2016-IntegrationTests-LWFBrook90/output_LWFBrook90R", fname_base = "BEA2016-reset-FALSE"),
@@ -65,12 +113,12 @@ for (iter in list(list(res = resInfiltrationTest, out_dir = "infiltrationSaturat
                         sprintf("%s_NLAYER%d_LWFBrook90R-%s.png", 
                                 fname_base,
                                 nrow(res$simin$soil_nodes),
-                                packageVersion("LWFBrook90R")))
+                                LWFB90version))
   fnameCSV <- file.path(out_dir,
                         sprintf("%s_NLAYER%d_LWFBrook90R-%s.csv", 
                                 fname_base,
                                 nrow(res$simin$soil_nodes),
-                                packageVersion("LWFBrook90R")))
+                                LWFB90version))
   dir.create(out_dir, showWarnings = F, recursive = T)
   
   # Output *.csvs

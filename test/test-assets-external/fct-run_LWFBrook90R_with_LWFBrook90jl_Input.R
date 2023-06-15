@@ -30,7 +30,7 @@ simulate_LWFBrook90.jl_input_folder_withLWFBrook90R <-
     require(dplyr)
 
     # check for version
-    stopifnot(packageVersion("LWFBrook90R") == "0.5.2")
+    stopifnot(packageVersion("LWFBrook90R") == "0.5.2" | packageVersion("LWFBrook90R") == "0.5.9999")
 
     # read input files ###########################################################
     meteo_file              <- file.path(folder, paste0(prefix, "_meteoveg.csv"))
