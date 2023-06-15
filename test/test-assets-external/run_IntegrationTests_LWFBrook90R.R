@@ -248,4 +248,33 @@ for (iter in list(list(res = resInfiltrationTest, out_dir = "infiltrationSaturat
                              layout_matrix = matrix(c(c(1,2,4),
                                                       c(1,3,5)),
                                                     ncol=3, byrow = T)))
+  # Plot Mass Balance Error
+  BALERR_computations <- res$simout$output %>%
+    tibble() %>%
+    # consider soil domain as control volume
+    mutate(BALERR_SWATI_cumInflow  = cumsum(slfl - byfl),
+           BALERR_SWATI_cumOutflow = cumsum(vrfln + dsfl + tran + slvp)) %>%
+    mutate(BALERR_SWATI_cumInflow  = BALERR_SWATI_cumInflow  - BALERR_SWATI_cumInflow[1],
+           BALERR_SWATI_cumOutflow = BALERR_SWATI_cumOutflow - BALERR_SWATI_cumOutflow[1]) %>%
+    # consider entire model domain as control volume
+    # TODO
+    select(yr, mo, da, doy, swat, BALERR_SWATI_cumInflow, BALERR_SWATI_cumOutflow) %>%
+    # compute error
+    mutate(error_mm = 
+             (BALERR_SWATI_cumInflow - BALERR_SWATI_cumOutflow) -
+             # Note: at position [1] cumInflow/cumOutflow brings us from swat[1] to swat[2] -> hence the lag:
+             #       However the errors seems smaller without the lag.
+             # lag((BALERR_SWATI_cumInflow - BALERR_SWATI_cumOutflow), default=0) -
+             (swat - swat[1]))
+  pl_error <- BALERR_computations %>% 
+    pivot_longer(cols = c(BALERR_SWATI_cumInflow, BALERR_SWATI_cumOutflow, error_mm, swat)) %>%
+    ggplot(data = ., aes(x=doy, color = name)) +
+    geom_line(aes(y=value)) + 
+    facet_grid((name=="error_mm") ~ ., scales = "free_y") + 
+    theme_bw() + labs(y="Cumulative Fluxes or Storage [mm]", x = "Day of Year", color = NULL) +
+    theme(strip.background = element_blank(),
+          strip.text = element_blank(), legend.background = element_blank(),
+          legend.position = c(0.98,0.51), legend.justification = c(1,0))
+  ggsave(filename = gsub(".png","_error.png",fnamePNG), 
+         width = 1200, height = 1000, units = "px", dpi = 220, pl_error)
 }

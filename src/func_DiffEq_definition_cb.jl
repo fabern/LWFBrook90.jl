@@ -1316,11 +1316,19 @@ function LWFBrook90R_check_balance_errors!(integrator)
 
         # c) Compute balance error
         # BALERD_SWAT  = old_SWAT - new_SWAT + INFLI - DSFLI - VRFL(NLAYER) - TRANI - SLVP
-        BALERD_SWAT  = old_SWAT - new_SWAT +
-            (integrator.u.accum.slfl - integrator.u.accum.byfl) - integrator.u.accum.dsfl - integrator.u.accum.vrfln - integrator.u.accum.cum_d_tran - integrator.u.accum.cum_d_slvp
+        accum_qin  = 0 + # corresponds to q(t,0)  in Ireson 2023 eq 16 with additionally sources and sinks
+            (integrator.u.accum.slfl - integrator.u.accum.byfl)
+        accum_qout = integrator.u.accum.vrfln +  # corresponds to q(t,zN) in Ireson 2023 eq 16 with additionally sources and sinks
+            integrator.u.accum.dsfl + 
+            integrator.u.accum.cum_d_tran + 
+            integrator.u.accum.cum_d_slvp 
+        BALERD_SWAT  = (accum_qin - accum_qout) - (new_SWAT - old_SWAT)
+            
         # BALERD_total = old_totalWATER - new_totalWATER + PRECD - EVAPD - FLOWD - SEEPD
-        BALERD_total = old_totalWATER - new_totalWATER +
-            integrator.u.accum.cum_d_prec - integrator.u.accum.cum_d_evap - integrator.u.accum.flow - integrator.u.accum.seep
+        accum_qin_total = integrator.u.accum.cum_d_prec
+        accum_qout_total = integrator.u.accum.cum_d_evap + integrator.u.accum.flow + integrator.u.accum.seep
+        BALERD_total = (accum_qin_total - accum_qout_total) - (new_totalWATER - old_totalWATER)
+
 
         # d) Store balance errors into state vector
         integrator.u.accum.BALERD_SWAT  = BALERD_SWAT

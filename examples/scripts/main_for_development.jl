@@ -404,16 +404,14 @@ function run_main_with_isotopes(;input_prefix, input_path)
         savefig(fname*"_plot-θ-ψ-δ.png")
     end
 
+    # BALERD_SWAT  = [simulation.ODESolution[idx].accum.BALERD_SWAT for idx in eachindex(simulation.ODESolution)]
+    # BALERD_total = [simulation.ODESolution[idx].accum.BALERD_total for idx in eachindex(simulation.ODESolution)]
 
-
-    BALERD_SWAT  = [simulation.ODESolution[idx].accum.BALERD_SWAT for idx in eachindex(simulation.ODESolution)]
-    BALERD_total = [simulation.ODESolution[idx].accum.BALERD_total for idx in eachindex(simulation.ODESolution)]
-
-    plot(simulation.ODESolution_datetime,
-                [BALERD_SWAT BALERD_total],
-                legend = :outerright, labels = ["BALERD_SWAT" "BALERD_total"],
-                ylabel = "Water balance error [mm]")
-    savefig(fname*"_plot-water-balance-error.png")
+    # plot(simulation.ODESolution_datetime,
+    #             [BALERD_SWAT BALERD_total],
+    #             legend = :outerright, labels = ["BALERD_SWAT" "BALERD_total"],
+    #             ylabel = "Water balance error [mm]")
+    # savefig(fname*"_plot-water-balance-error.png")
 
     if (true)
         # Depth-vs-time heatmap plots of θ, ψ, RWU

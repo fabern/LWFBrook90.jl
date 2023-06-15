@@ -131,7 +131,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
 
 
     # Results
-    rows_SWAT_amt  = reduce(hcat, [solu(t).SWATI.mm    for t in days_to_read_out_d]) ./ solu.prob.p.p_soil.p_THICK
+    rows_SWAT_amt  = reduce(hcat, [solu(t).SWATI.mm    for t in days_to_read_out_d])
     rows_RWU_mmDay = reduce(hcat, [solu(t).TRANI.mmday for t in days_to_read_out_d])
     row_NaN       = fill(NaN, 1,length(x))
     row_PREC_amt = reshape(solu.prob.p.p_PREC.(days_to_read_out_d), 1, :)
@@ -152,6 +152,64 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     col_SLVP_mmDay = [solu(t).accum.cum_d_slvp                for t in days_to_read_out_d]
     col_DSFL_mmDay = [solu(t).accum.dsfl                      for t in days_to_read_out_d]
     col_VRFLN_mmDay= [solu(t).accum.vrfln                     for t in days_to_read_out_d]
+    # WB erro defined by Ireson et al. 2023
+    function compute_WB_Ireson2023(solution)
+        # Compute In/Out Fluxes and Storages
+        days = unique(round.(solution.t)) # we have to read this out in a regular grid!
+        dat_daily_cumulativeFluxes_and_Storage = DataFrame(
+            # NOTE: we need not to take differences as these cumulative fluxes were set to 0 
+            #       every day by a solver callback
+            slfl  = [solu(t).accum.slfl for t in days],
+            byfl  = [solu(t).accum.byfl for t in days],
+            vrfln = [solu(t).accum.vrfln for t in days],
+            dsfl  = [solu(t).accum.dsfl for t in days],
+            swat  = vcat([sum(solu(t).SWATI.mm, dims=1) for t in days]...), # storage
+            tran  = [solu(t).accum.cum_d_tran for t in days], 
+            slvp  = [solu(t).accum.cum_d_slvp for t in days], 
+            prec  = [solu(t).accum.cum_d_prec for t in days], 
+            evap  = [solu(t).accum.cum_d_evap for t in days], # evap is sum of irvp, isvp, snvp, slvp, sum(trani)
+            flow  = [solu(t).accum.flow for t in days],       # flow is sum of byfli, dsfli, gwfl
+            seep  = [solu(t).accum.seep for t in days],
+            gwat  = [solu(t).GWAT.mm for t in days], # storage
+            snow  = [solu(t).SNOW.mm for t in days], # storage
+            intr  = [solu(t).INTR.mm for t in days], # storage
+            ints  = [solu(t).INTS.mm for t in days], # storage
+            )
+
+        function compute_error_SWATI(df) # 
+            cumInflow_mm  = cumsum(df.slfl - df.byfl) # =INFL,               corresponds to q(t,0)  in Ireson 2023 eq 16 with additionally sources and sinks
+            cumOutflow_mm = cumsum(df.vrfln + df.dsfl + df.tran + df.slvp) # corresponds to q(t,zN) in Ireson 2023 eq 16 with additionally sources and sinks
+            error_mm = (cumInflow_mm .- cumOutflow_mm) .- (df.swat .- df.swat[1])    
+            return cumInflow_mm, cumOutflow_mm, df.swat, error_mm
+        end
+        function compute_error_ModelDomain(df) # 
+            cumInflow_mm  = cumsum(df.prec)                     # corresponds to q(t,0)  in Ireson 2023 eq 16 with additionally sources and sinks
+            cumOutflow_mm = cumsum(df.evap + df.flow + df.seep) # corresponds to q(t,zN) in Ireson 2023 eq 16 with additionally sources and sinks
+            storage = df.swat .+ df.gwat + df.snow + df.intr + df.ints
+            error_mm = (cumInflow_mm .- cumOutflow_mm) .- (storage .- storage[1])    
+            return cumInflow_mm, cumOutflow_mm, storage, error_mm
+        end
+
+        # Compute Water balance error
+        # a) Cumulative error metric (time evolution of water balance error)
+        cum_qIn_SWATI, cum_qOut_SWATI, storage_SWATI, εB_cumulative_SWATI = compute_error_SWATI(dat_daily_cumulativeFluxes_and_Storage)
+        cum_qIn_ALL, cum_qOut_ALL, storage_ALL, εB_cumulative_ALL = compute_error_ModelDomain(dat_daily_cumulativeFluxes_and_Storage)
+
+        # b) Scalar error metric
+        εB_SWATI = εB_cumulative_SWATI[end]
+        εB_ALL   = εB_cumulative_ALL[end]
+        εR_SWATI = (diff(cum_qIn_SWATI) .- diff(cum_qOut_SWATI)) .- (diff(storage_SWATI)) # mm, Bias error for intervals t = (0,tM), Ireson 2023 eq. 15
+        εR_SWATI = sqrt(sum(εR_SWATI.^2)/length(εR_SWATI))
+        εR_ALL   = (diff(cum_qIn_ALL)   .- diff(cum_qOut_ALL))   .- (diff(storage_ALL))   # mm, Bias error for intervals t = (0,tM), Ireson 2023 eq. 15
+        εR_ALL = sqrt(sum(εR_ALL.^2)/length(εR_ALL))
+
+        return (εB_cumulative_SWATI, εB_cumulative_ALL, εB_SWATI, εB_ALL, εR_SWATI, εR_ALL,
+                    (cum_qIn_SWATI, cum_qOut_SWATI, storage_SWATI, cum_qIn_ALL, cum_qOut_ALL, storage_ALL))
+    end
+    
+    (εB_cumulative_SWATI, εB_cumulative_ALL, εB_SWATI, εB_ALL, εR_SWATI, εR_ALL,
+        (cum_qIn_SWATI, cum_qOut_SWATI, SWATI_total, cum_qIn_ALL, cum_qOut_ALL, ALL_total)) = 
+        compute_WB_Ireson2023(solu);
 
     if (RWUcentroid == :showRWUcentroid)
         row_RWU_centroid_mm, RWUcentroidLabel = get_RWU_centroid(rows_RWU_mmDay, y_center)
@@ -266,31 +324,36 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
                 x, belowground_values[:, it]
             end
         end
-
-        belowground2_labels = ["INFL"         "SLVP"         "DSFL"         "VRFLN"         "RWU_mmDay"]
-        belowground2_values = [col_INFL_mmDay col_SLVP_mmDay col_DSFL_mmDay col_VRFLN_mmDay col_RWU_mmDay]
+        
+        # WB error as defined by Ireson 2023
+        belowground2_labels = ["Inflow SWATI" "Outflow SWATI" "Storage SWATI" "Inflow Model" "Outflow Model" "Storage Model"]
+        belowground2_values = [cum_qIn_SWATI   cum_qOut_SWATI  SWATI_total     cum_qIn_ALL    cum_qOut_ALL    ALL_total]
+        belowground2_linestyles = [:solid :solid :solid :dash :dash :dash]
+        belowground2_colors = [1 2 3 1 2 3] 
         for it in 1:length(belowground2_labels)
             @series begin
                 # title := "Belowground"
-                ylab := "Flux [mm/day]"
+                # ylab := "Storage [mm] or \n Cumulative In-/Outflow [mm]\n(Soilwater, [+ Groundwater + Temporary Storage])"
+                ylab := "Cumulative\nIn-/Outflow or Storage [mm]\nof control volume"
                 subplot := 4
+                color := belowground2_colors[it]
+                linestyle := belowground2_linestyles[it]
                 seriestype := :line
                 bg_legend --> colorant"rgba(100%,100%,100%,0.8)"; legend := :topleft
                 labels := belowground2_labels[it]
                 x, belowground2_values[:, it]
             end
         end
-        # plot(days_to_read_out_d, [col_BALERD_SWAT col_BALERD_total],
-        #      legend = :outerright,
-        #      labels = ["BALERD_SWAT" "BALERD_total"],
-        #      ylabel = "Water balance error [mm]")
-        belowground3_labels = ["BALERD_SWAT" "BALERD_total"]
-        belowground3_values = [col_BALERD_SWAT col_BALERD_total]
+        belowground3_labels = ["εB SWATI" "εB Model"]
+        belowground3_values = [εB_cumulative_SWATI εB_cumulative_ALL]
+        belowground3_linestyles = [:solid :dash]
         for it in 1:length(belowground3_labels)
             @series begin
                 # title := "Belowground"
-                ylab := "Water balance error [mm]"
+                ylab := "Cumulative\nWater Balance\nError εB [mm]"
                 subplot := 5
+                color := 3
+                linestyle := belowground3_linestyles[it]
                 seriestype := :line
                 bg_legend --> colorant"rgba(100%,100%,100%,0.8)"; legend := :topleft
                 labels := belowground3_labels[it]
