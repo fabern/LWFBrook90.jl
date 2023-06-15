@@ -112,17 +112,16 @@ if basename(pwd()) != "test"; cd("test"); end
     end
 
 
-    if !is_a_CI_system
-        using Plots, Measures
-        fname_illustrations = "out/$(today())/DAV2020-full_u_sol_reference"
+    if !is_a_CI_system && plot_flag
+        fname_illustrations = "out/$git_status_string/TESTSET_DAV2020-regressionTest"
         mkpath(dirname(fname_illustrations))
 
         pl1 = plotamounts(example_result, :above_and_belowground, :showRWUcentroid)
         pl2 = plotisotopes(example_result, :d18O, :showRWUcentroid)
         pl3 = plotforcingandstates(example_result)
-        savefig(plot(pl1, size=(1000,700), dpi=300),  fname_illustrations*git_status_string*"_amts.png")
-        savefig(plot(pl2, size=(1000,1400), dpi=300), fname_illustrations*git_status_string*"_d18O-d2H.png")
-        savefig(plot(pl3, size=(1000,1400), dpi=300), fname_illustrations*git_status_string*"_forcing.png")
+        savefig(plot(pl1, size=(1000,1400), dpi=300),  fname_illustrations*"_amts.png")
+        savefig(plot(pl2, size=(1000,1400), dpi=300), fname_illustrations*"_d18O-d2H.png")
+        savefig(plot(pl3, size=(1000,1400), dpi=300), fname_illustrations*"_forcing.png")
     end
 
 end

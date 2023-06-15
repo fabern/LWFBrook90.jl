@@ -143,7 +143,7 @@ end
     # TODO(bernhard): we could run multiple LWFBrook90.jl simulations and compare with the
     # finest LWFBrook90R simulation only.
 
-    if !is_a_CI_system
+    if !is_a_CI_system && plot_flag
         # if some error appears, the following code can be used to plot the solutions
         using Plots, Measures
         # fname_illustrations = "out/$(today())/"
@@ -276,7 +276,7 @@ end
 
     # 2) Plot (optional, not done when testing in CI)
     # Illustrate with a plot what will be compared in the tests below
-    if !is_a_CI_system
+    if !is_a_CI_system && plot_flag
         # if (true) # Do these manually outside of automatic testing in order not to require Plots pkg
         using Plots, Measures
         depth_to_read_out_mm = [100 500 1000 1500 1900]
@@ -284,36 +284,30 @@ end
         
         fname_illustrations = "out/$git_status_string/"
         mkpath(dirname(fname_illustrations))
-        savefig(fname_illustrations*"TESTSET_site-θ-ψ-aboveground-states.png")
 
         # Plot Loam simulations
         pl1 = plot_Hammel_Dense(sim1, ref1, hyd1, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(700,900), dpi=300,
             subtitle = print_timed_statistics(time4, gctime4, gcstats4)*"\n"*git_status_string, topmargin = 15mm)
         pl2 = plot_Hammel_Dense(sim2, ref2, hyd2, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(700,900), dpi=300,
             subtitle = print_timed_statistics(time2, gctime2, gcstats2)*"\n"*git_status_string, topmargin = 15mm)
-        pl3 = plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(700,900), dpi=300,
-            subtitle = print_timed_statistics(time3, gctime3, gcstats3)*"\n"*git_status_string, topmargin = 15mm)
         
         # Plot Sand simulations
         pl4 = plot_Hammel_Dense(sim4, ref4, hyd4, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(700,900), dpi=300,
             subtitle = print_timed_statistics(time4, gctime4, gcstats4)*"\n"*git_status_string, topmargin = 15mm)
         pl5 = plot_Hammel_Dense(sim5, ref5, hyd5, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(700,900), dpi=300,
             subtitle = print_timed_statistics(time5, gctime5, gcstats5)*"\n"*git_status_string, topmargin = 15mm)
-        pl6 = plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(700,900), dpi=300,
-            subtitle = print_timed_statistics(time6, gctime6, gcstats6)*"\n"*git_status_string, topmargin = 15mm)
+
+        # pl3 = plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(700,900), dpi=300,
+        #     subtitle = print_timed_statistics(time3, gctime3, gcstats3)*"\n"*git_status_string, topmargin = 15mm)
+        # pl6 = plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(700,900), dpi=300,
+        #     subtitle = print_timed_statistics(time6, gctime6, gcstats6)*"\n"*git_status_string, topmargin = 15mm)
         
         savefig(pl1, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim1.png")
         savefig(pl2, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim2.png")
-        savefig(pl3, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim3.png")
+        # savefig(pl3, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim3.png")
         savefig(pl4, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim1.png")
         savefig(pl5, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim2.png")
-        savefig(pl6, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim3.png")
-        # savefig(pl1, "test-assets/Hammel-2001/out_Loam_sim1_"*git_status_string*".png")
-        # savefig(pl2, "test-assets/Hammel-2001/out_Loam_sim2_"*git_status_string*".png")
-        # savefig(pl3, "test-assets/Hammel-2001/out_Loam_sim3_"*git_status_string*".png")
-        # savefig(pl4, "test-assets/Hammel-2001/out_Sand_sim1_"*git_status_string*".png")
-        # savefig(pl5, "test-assets/Hammel-2001/out_Sand_sim2_"*git_status_string*".png")
-        # savefig(pl6, "test-assets/Hammel-2001/out_Sand_sim3_"*git_status_string*".png")
+        # savefig(pl6, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim3.png")
     end
 
     # Use sensible accuracy values to compare the two solutions (e.g. θ of 0.02, and ψ of 1 kPa)
@@ -402,7 +396,7 @@ end
 
     # 2) Plot (optional, not done when testing in CI)
     # Illustrate with a plot what will be compared in the tests below
-    if !is_a_CI_system
+    if !is_a_CI_system && plot_flag
         # if (true) # Do these manually outside of automatic testing in order not to require Plots pkg
         using Plots, Measures
         depth_to_read_out_mm = [100 500 1000 1500 1900]

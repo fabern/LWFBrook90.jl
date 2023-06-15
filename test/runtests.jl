@@ -9,7 +9,7 @@ using Logging
 using Dates: today
 
 # Note the git hash-string and repository status (can be optionally used in filenames for plots etc.)
-git_status_string = "__$(today())git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
+git_status_string = "__$(today())-git+"*chomp(Base.read(`git rev-parse --short HEAD`, String))*
             ifelse(length(Base.read(`git status --porcelain`, String))==0, "+gitclean","+gitdirty")*
             "__"
 
@@ -38,7 +38,10 @@ Random.seed!(1234)
 
 # if !is_a_CI_system; include("00-plot-if-not-CI-system.jl"); end
 
-# include("01-unit-tests.jl")
+include("01-unit-tests.jl")
+
+plot_flag = false
+# plot_flag = true; using Plots, Measures # run this line for plotting outside of default testing
 
 include("02-integration-tests.jl")
 
