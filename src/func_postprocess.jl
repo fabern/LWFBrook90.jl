@@ -913,6 +913,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
     dpi --> 300
     # xlim --> xlimits
     leftmargin --> 15mm
+    legend --> :topleft
 
     # # 3) generate plots
     # # NOTE: --> sets attributes only when they don't already exist

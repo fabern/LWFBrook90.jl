@@ -120,7 +120,7 @@ if basename(pwd()) != "test"; cd("test"); end
         pl2 = plotisotopes(example_result, :d18O, :showRWUcentroid)
         pl3 = plotforcingandstates(example_result)
         savefig(plot(pl1, size=(1000,1400), dpi=300),  fname_illustrations*"_amts.png")
-        savefig(plot(pl2, size=(1000,1400), dpi=300), fname_illustrations*"_d18O-d2H.png")
+        savefig(plot(pl2, size=(1000,700), dpi=300), fname_illustrations*"_d18O-d2H.png")
         savefig(plot(pl3, size=(1000,1400), dpi=300), fname_illustrations*"_forcing.png")
     end
 
