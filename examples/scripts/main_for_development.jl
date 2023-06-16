@@ -900,8 +900,9 @@ end
 input_prefix = "isoBEAdense2010-18-reset-FALSE";
 input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
 run_main_with_isotopes(;input_prefix = input_prefix, input_path = input_path)
-# input_prefix = "BEA2010-2021";
-# input_path = "../../../LWF-Brook90.jl-calibration/Input-Meteo-Data/BEA2010-2021/";
+input_prefix = "BEA2010-2021";
+input_path = "../../../LWF-Brook90.jl-calibration/Input-Meteo-Data/BEA2010-2021/";
+run_main_with_isotopes(;input_prefix = input_prefix, input_path = input_path)
 # input_prefix = "LAU2010-2021";
 # input_path = "../../../LWF-Brook90.jl-calibration/Input-Meteo-Data/LAU2010-2021/";
 # input_prefix = "LAE2010-2021";
