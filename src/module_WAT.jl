@@ -392,7 +392,7 @@ function INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
     #    and cannot saturet any other soil layer. It is therefore accepted as-is:
     VRFLI_posterior[NLAYER] = VRFLI_prior[NLAYER]
 
-    # Now going through all layers bottom up and prevent oversaturation.
+    # Now going through all layers bottom up and prevent oversaturation due to INFLI.
     # (To obey causailty we need to assume flow goes from top to bottom):
     for i = NLAYER:-1:1
         # Compute maximum possible inflow during time interval DTI:
@@ -450,9 +450,9 @@ function INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
                     # negative) so that inflow just achieves complete saturation
                     VRFLI_posterior[i-1] = MAXIN - INFLI[i]
                     # With that VRFLI + INFLI == MAXIN
-                    # By modifying VRFLI_posterior[i-1], this will also have an
-                    # effect on the next loop iteration. Increasing MAXIN for
-                    # the layer above.
+                    # By decreasing VRFLI_posterior[i-1], this will also have an
+                    # effect on the next loop iteration (i.e. the layer above). It will 
+                    # indeed decrease MAXIN for the layer above.
                 end
             else
                 # If inflow is below MAXIN, accept prior estimate of incoming VRFLI for that layer:
@@ -574,6 +574,7 @@ function ITER(NLAYER, FLAG_MualVanGen, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSIT
         # DTINEW = min(DTINEW, 0.01 * p_DSWMAX * p_SWATMAX[i] / max(0.000001, abs(du_NTFLI[i])))
         DTINEW = min(DTINEW,
                      0.01 * p_DSWMAX * p_soil.p_THICK[i] * p_soil.p_THSAT[i] * (1 - p_soil.p_STONEF[i]) / max(0.000001, abs(du_NTFLI[i])))
+        # TODO(bernhard): shouldn't here also be checked that DTINEW=max(DTIMIN, DTINEW) ?
 
         # prevent a change in water content larger than total available water
         if (FLAG_MualVanGen == 0)
@@ -596,6 +597,8 @@ function ITER(NLAYER, FLAG_MualVanGen, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSIT
                 # if (i == 1)
                 #     SLVP=0   # TODO(Benrhard): should this change leak out into main program? (side effect)
                 # end
+                # NOTE: This original TRANI and SLVP correction violates the mass balance.
+                # @warn "Reduced DTI was lower than DTIMIN. DTI was increased to DTIMIN. Warning: original Brook set TRANI and SLVP to zero in these cases. This is not done anymore."
             end
         end
         # 3) prevent oscillation of gradient in soil water potential
@@ -613,7 +616,7 @@ function ITER(NLAYER, FLAG_MualVanGen, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSIT
         end
     end
 
-    return DTINEW # second estimate of DTI
+    return DTINEW # return second estimate of DTI
 end
 
 """

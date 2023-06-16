@@ -39,7 +39,9 @@ function MSBSETVARS(# arguments
     # TODO(bernhard): a) Do this outside of integration loop in define_LWFB90_p() p_fT_DAYLEN
     p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY = LWFBrook90.SUN.SUNDS(p_LAT, p_ESLOPE, DOY, p_L1, p_L2, LWFBrook90.CONSTANTS.p_SC, LWFBrook90.CONSTANTS.p_PI, LWFBrook90.CONSTANTS.p_WTOMJ)
 
-    # canopy parameters depending on DOY as well as different state parameters of snow depth
+    # start A: get_windspeed_from_canopy_and_snowpack
+    # Compute influence of snow on canopy height and roughness and how this influences wind speed
+    # Modify canopy parameters (depending on DOY -> fT) due to dependency on snow depth (state parameter -> fu)
     p_fu_HEIGHTeff, p_fu_LAIeff, p_fT_SAIeff, p_fT_RTLENeff, p_fT_RPLANT =
         LWFBrook90.PET.LWFBrook90_CANOPY(p_fT_HEIGHT,
                           p_fT_LAI,  # leaf area index, m2/m2, minimum of 0.00001
@@ -49,21 +51,22 @@ function MSBSETVARS(# arguments
                           p_MXRTLN,  # maximum root length per unit land area, m/m2
                           p_MXKPL,   # maximum plant conductivity, (mm/d)/MPa
                           p_fT_DENSEF)
-
     # roughness parameters depending on u_SNOW
     p_fu_Z0GS, p_fu_Z0C, p_fu_DISPC, p_fu_Z0, p_fu_DISP, p_fu_ZA =
             LWFBrook90.PET.ROUGH(p_fu_HEIGHTeff, p_ZMINH, p_fu_LAIeff, p_fT_SAIeff,
                                  p_CZS, p_CZR, p_HS, p_HR, p_LPC, ifelse(u_SNOW > 0, p_Z0S, p_Z0G))
-
-    # plant resistance components
-    p_fT_RXYLEM, p_fT_RROOTI, p_fT_ALPHA = LWFBrook90.EVP.PLNTRES(NLAYER, p_soil, p_fT_RTLENeff, p_fT_RELDEN, p_RTRAD, p_fT_RPLANT, p_FXYLEM, LWFBrook90.CONSTANTS.p_PI, LWFBrook90.CONSTANTS.p_RHOWG)
-
     # calculated weather data
     p_fu_SHEAT = 0.
     (p_fT_SOLRADC, p_fT_TA, p_fT_TADTM, p_fT_TANTM, UA, p_fu_UADTM, p_fu_UANTM) =
         LWFBrook90.PET.WEATHER(p_fT_TMAX, p_fT_TMIN, p_fT_DAYLEN, p_fT_I0HDAY, p_fT_VAPPRES, p_fT_UW, p_fu_ZA, p_fu_DISP, p_fu_Z0, p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_fT_SOLRAD)
+    # end A: get_windspeed_from_canopy_and_snowpack
+
     # fraction of precipitation as p_fT_SFAL
     p_fT_SNOFRC= LWFBrook90.SNO.SNOFRAC(p_fT_TMAX, p_fT_TMIN, p_RSTEMP)
+
+    # plant resistance components
+    p_fT_RXYLEM, p_fT_RROOTI, p_fT_ALPHA = LWFBrook90.EVP.PLNTRES(NLAYER, p_soil, p_fT_RTLENeff, p_fT_RELDEN, p_RTRAD, p_fT_RPLANT, p_FXYLEM, LWFBrook90.CONSTANTS.p_PI, LWFBrook90.CONSTANTS.p_RHOWG)
+
 
     if (u_SNOW > 0)
         # snowpack temperature at beginning of day
@@ -489,19 +492,24 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
     #                       see: https://diffeq.sciml.ai/stable/basics/integrator/#SciMLBase.set_proposed_dt!
     #   ITER computes DTI so that the potential difference (due to aux_du_VRFLI)
     #   between adjacent layers does not change sign during the iteration time step
-    DTINEW=LWFBrook90.WAT.ITER(NLAYER, FLAG_MualVanGen, DTI, LWFBrook90.CONSTANTS.p_DTIMIN, DPSIDW,
-                                    du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMAX,
-                    p_soil) # 0.000002 seconds (2 allocations: 288 bytes)
-    # recompute step
-    if (DTINEW < DTI)
-        # recalculate flow rates with new DTI
-        DTI = DTINEW
-        aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
-            LWFBrook90.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
-                                        aux_du_SLVP, p_soil.p_SWATMAX, u_SWATI,
-                                        aux_du_VRFLI_1st_approx)
+    if (true) # NOTE: when using DiffEq.jl the integrator time step is determined by solve().
+        # One might think, that therefore the adaptive time step control of LWFBrook can be deactivated.
+        # However, this is not the case. DTI is used in INFLOW() to compute the fluxes aux_du_VRFLI, ... etc.
+
+        DTINEW=LWFBrook90.WAT.ITER(NLAYER, FLAG_MualVanGen, DTI, LWFBrook90.CONSTANTS.p_DTIMIN, DPSIDW,
+                                        du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMAX,
+                        p_soil) # 0.000002 seconds (2 allocations: 288 bytes)
+        # recompute step
+        if (DTINEW < DTI)
+            # recalculate flow rates with new DTI
+            DTI = DTINEW
+            aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
+                LWFBrook90.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
+                                            aux_du_SLVP, p_soil.p_SWATMAX, u_SWATI,
+                                            aux_du_VRFLI_1st_approx)
+        end
+        #@debug "c) aux_du_VRFLI[1]: $(aux_du_VRFLI[1]), sum(aux_du_VRFLI): $(sum(aux_du_VRFLI))"
     end
-    #@debug "c) aux_du_VRFLI[1]: $(aux_du_VRFLI[1]), sum(aux_du_VRFLI): $(sum(aux_du_VRFLI))"
 
     # groundwater flow and seepage loss
     du_GWFL, du_SEEP = LWFBrook90.WAT.GWATER(u_GWAT, p_GSC, p_GSP, aux_du_VRFLI[NLAYER])
