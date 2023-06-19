@@ -124,36 +124,39 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
         LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil)
 
+    # MSBSETVARS: A) get: 1) sunshine durations, 2) SFAL, 3) plant resistance (TODO: could be done before simulation)
+    # MSBSETVARS: B) get_windspeed_from_canopy_and_snowpack: (p_fu_UADTM, p_fu_UANTM) = f(...)
+    # MSBSETVARS: C) get_snowpack_evaporation_from_canopy,snowpack,atmosphere,: (p_fu_UADTM, p_fu_UANTM) = f(...)
     p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY, p_fu_HEIGHT, p_fu_LAI, p_fu_SAI,
         p_fu_Z0GS, p_fu_Z0C, p_fu_DISPC, p_fu_Z0, p_fu_DISP, p_fu_ZA,
-      p_fT_RXYLEM, p_fT_RROOTI, p_fT_ALPHA,
-      p_fu_SHEAT, p_fT_SOLRADC, p_fT_TA, p_fT_TADTM[1], p_fT_TANTM, p_fu_UADTM, p_fu_UANTM,
-      p_fT_SNOFRC, p_fu_TSNOW, p_fu_PSNVP, p_fu_ALBEDO,p_fu_RSS, p_fu_SNOEN =
-      MSBSETVARS(FLAG_MualVanGen, NLAYER, p_soil,
-                 # for SUNDS:
-                 p_LAT, p_ESLOPE, p_DOY(integrator.t), p_L1, p_L2,
+        p_fT_RXYLEM, p_fT_RROOTI, p_fT_ALPHA,
+        p_fu_SHEAT, p_fT_SOLRADC, p_fT_TA, p_fT_TADTM[1], p_fT_TANTM, p_fu_UADTM, p_fu_UANTM,
+        p_fT_SNOFRC, p_fu_TSNOW, p_fu_PSNVP, p_fu_ALBEDO,p_fu_RSS, p_fu_SNOEN =
+            MSBSETVARS(FLAG_MualVanGen, NLAYER, p_soil,
+                       # for SUNDS:
+                       p_LAT, p_ESLOPE, p_DOY(integrator.t), p_L1, p_L2,
                  # for LWFBrook90_CANOPY:
-                 p_HEIGHT(integrator.t), p_LAI(integrator.t), p_SAI(integrator.t), u_SNOW, p_SNODEN, p_MXRTLN, p_MXKPL, p_DENSEF(integrator.t),
-                 #
-                 p_Z0S, p_Z0G,
-                 # for ROUGH:
-                 p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC,
-                 # for PLNTRES:
-                 p_fT_RELDEN.(integrator.t, 1:NLAYER), p_RTRAD, p_FXYLEM,
-                 # for WEATHER:
-                 p_TMAX(integrator.t), p_TMIN(integrator.t), p_VAPPRES(integrator.t), p_WIND(integrator.t), p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_GLOBRAD(integrator.t),
-                 # for SNOFRAC:
-                 p_RSTEMP,
-                 #
-                 u_CC, p_CVICE,
-                 # for SNOVAP:
-                 p_LWIDTH, p_RHOTP, p_NN, p_KSNVP,
-                 #
-                 p_ALBSN, p_ALB,
-                 # for FRSS:
-                 p_RSSA, p_RSSB, u_aux_PSIM, #u_aux_PSIM[1]
-                 # for SNOENRGY:
-                 p_CCFAC, p_MELFAC, p_LAIMLT, p_SAIMLT)
+                       p_HEIGHT(integrator.t), p_LAI(integrator.t), p_SAI(integrator.t), u_SNOW, p_SNODEN, p_MXRTLN, p_MXKPL, p_DENSEF(integrator.t),
+                       #
+                       p_Z0S, p_Z0G,
+                       # for ROUGH:
+                       p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC,
+                       # for PLNTRES:
+                       p_fT_RELDEN.(integrator.t, 1:NLAYER), p_RTRAD, p_FXYLEM,
+                       # for WEATHER:
+                       p_TMAX(integrator.t), p_TMIN(integrator.t), p_VAPPRES(integrator.t), p_WIND(integrator.t), p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_GLOBRAD(integrator.t),
+                       # for SNOFRAC:
+                       p_RSTEMP,
+                       #
+                       u_CC, p_CVICE,
+                       # for SNOVAP:
+                       p_LWIDTH, p_RHOTP, p_NN, p_KSNVP,
+                       #
+                       p_ALBSN, p_ALB,
+                       # for FRSS:
+                       p_RSSA, p_RSSB, u_aux_PSIM, #u_aux_PSIM[1]
+                       # for SNOENRGY:
+                       p_CCFAC, p_MELFAC, p_LAIMLT, p_SAIMLT)
 
 
     # Calculate average daily rate of potential and actual interception,

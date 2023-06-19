@@ -5,8 +5,28 @@
 Compute state dependent parameters for updating states INTS, INTR, SNOW, CC, SNOWLQ in
 callback function.
 
+A) get: 1) sunshine durations, 2) SFAL, 3) plant resistance (TODO: could be done before simulation) 
+B) get_windspeed_from_canopy_and_snowpack: (p_fu_UADTM, p_fu_UANTM) = f(...) 
+C) get_potential_snowpack_and_soil_evaporation_from_canopy,snowpack,atmosphere,: (p_fu_UADTM, p_fu_UANTM) = f(...)
+
 # Arguments
 - many
+
+" From ecoshift: 
+Subroutine MSUBSETVARS contains subroutines that calulate derived variables for the day.
+SUNDS, CANOPY, ROUGH, and PLNTRES are called to get solar, canopy structure, roughness, and
+plant resistance variables that depend on day of the year. Subsurface heat flux (SHEAT) is
+always set to zero. Subroutine WEATHER estimates missing values, modifies input data as
+necessary, corrects weather station wind speed to wind speed above the canopy, and
+determines daytime and nighttime temperatures and wind speeds. Subroutine SNOFRAC determines
+the fraction of daily precipitation that is snow (SNOFRC). If there is no snow on the
+ground, the soil evaporation resistance (RSS) is obtained as function FRSS. When there is
+snow on the ground, the snowpack temperature (TSNOW) is calculated from cold content (CC).
+Subroutine SNOVAP then estimates the snow evaporation rate. Subroutine SNOENRGY obtains the
+energy available for snowmelt (SNOEN) from mean daily temperature. The factor is modified
+for canopy cover as determined by LAI and SAI. Snow evaporation or condensation depends on
+the aerodynamic resistances and the vapor gradient; however, an arbitrary reduction factor
+is required. "
 """
 function MSBSETVARS(# arguments
                     FLAG_MualVanGen, NLAYER, p_soil,
@@ -115,8 +135,58 @@ Subroutine MSBDAYNIGHT - day-night loop: Compute day and night rates
 # Arguments
 - many
 
-http://www.ecoshift.net/brook/pet.html
+http://www.ecoshift.net/brook/b90.html:
+"
+Subroutine MSBDAYNIGHT contains routines that calculate the five components of evaporation
+(see Flow Chart):
 
+- evaporation of intercepted rain (IRVP) 
+- evaporation of intercepted snow (ISVP) 
+- evaporation from snow (SNVP) 
+- soil evaporation (SLVP) from the top soil layer 
+- transpiration (TRANI) from each soil layer that contains roots 
+
+These evaporation values are obtained separately for daytime and nightime, then combined 
+into a daily values.
+Note that evaporation of intercepted storage and snow evaporation (IRVP, ISVP, SNVP) are 
+reduced if their sources disappear. (This happens later in MSBPREINT.)
+
+Potential evaporation rates are obtained using the Shuttleworth and Wallace (1985)
+modification of the Penman-Monteith approach. Daily solar radiation is corrected for slope,
+is allocated to the daytime, and is converted to average daytime rate. Subroutine AVAILEN
+calculates available energy (net radiation minus SHEAT=0) at the top (AA) and at the bottom
+(ASUBS) of the canopy, using a Beers Law extinction coefficient. The three aerodynamic
+resistances (RAA, RAC, RAS) needed by the Shuttleworth-Wallace method are obtained in
+subroutine SWGRA, using algorithms of Shuttleworth and Gurney (1990). These resistances
+depend on leaf area index (LAI), which can vary seasonally, and on canopy height, which
+determines stem area index (SAI). The canopy surface resistance to transpiration (RSC) for
+the daytime is obtained in subroutine SRSC; it depends on maximum leaf conductance, reduced
+for humidity, temperature, and light penetration. At night RSC is the reciprocal of leaf
+area index (LAI) times minimum leaf conductance (GLMIN). Soil evaporation resistance (RSS)
+depends on soil water potential in the top soil layer. Subroutine SWPE uses AA, ASUBS, RSC,
+RSS, RAA, RAC, RAS and the vapor pressure deficit (VPD) to calculate potential transpiration
+(PTR) and the associated ground or soil evaporation (GER) as given by Shuttleworth and
+Wallace (1985). Subroutine SWPE is then called again with RSC = 0 to give the intercepted
+evaporation rate and its associated soil evaporation (PIR and GIR). Subroutine TBYLAYER
+obtains actual transpiration by layer (TRANI). Actual transpiration is the lesser of
+potential transpiration and a soil water supply rate determined by the resistance to liquid
+water flow in the plants and on root distribution and soil water potential in the soil
+layers. If the actual transpiration is less than the potential, a new, higher GER is
+calculated by subroutine SWGE. After the MSBDAYNIGHT day-night loop, these evaporation rates
+are weighted for daytime and nighttime according to daylength (DAYLEN), and the daily
+average rates are then used in later calculations.
+
+The "precipitation interval" is equal to one day when daily precipitation is provided along
+with other daily weather data in the Data File; parameter NPINT is then set to 1 and the
+precipitation loop is passed through once a day. Alternatively, precipitation data at fixed
+intervals of less than a day can be read from a Precip Interval File. The Precip Interval
+File can have one line per day, allowing easy reruns with different daily precipitation.
+Then NPINT is set to the number of precipitation intervals per day; the precipitation loop
+is passed through NPINT times per day, and a line of the Precip Interval File is read each
+time. If available, measured flow for the interval can also be input.
+"
+http://www.ecoshift.net/brook/pet.html
+"
 BROOK90 obtains evaporation rates separately for daytime and nighttime within a day-night
 evaporation loop. All solar radiation (SOLRAD) is assigned to the daytime. The atmospheric
 humidity (EA) is assumed constant through the day ("day" refers to 24 hours). The daytime
@@ -135,6 +205,7 @@ transpiration by layer (ATRANI). If the actual transpiration is less than the po
 new, higher GER is calculated by subroutine SWGE. BROOK90 then weights the daytime and
 nighttime rates by the solar daylength (DAYLEN) to obtain average rates for the day, PTRAN,
 GEVP, PINT, GIVP, and TRANI, which are used in later calculations.
+"
 """
 function MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM, p_fu_UADTM, p_fT_TANTM, p_fu_UANTM,
                      p_fT_I0HDAY,
@@ -289,7 +360,22 @@ function MSBDAYNIGHT_postprocess(NLAYER,
             aux_du_TRANI) # average transpiration rate for day from layer (mm/d)
 end
 
+"""
+    MSBPREINT()
 
+http://www.ecoshift.net/brook/b90.html
+In subroutine MSBPREINT, precipitation is separated into rain and snow using SNOFRC. If
+NPINT = 1, subroutine INTER24 is called twice, once for snow interception and once for rain
+interception; this routine uses the monthly parameter DURATN, which is the average storm
+duration in hours. If NPINT > 1, subroutine INTER is used instead, and the precipitation is
+assumed to occur over the whole precipitation interval. Transpiration (TRAN) for the
+interval is summed over layers and reduced by the fraction of time the canopy is wet; soil
+evaporation (SLVP) is GIR when the canopy is wet and GER when it is dry. If a snowpack
+exists, subroutine SNOWPACK is called to use SNOEN and the rain and snow throughfall to
+calculate snowmelt (SMLT), cold content (CC), and liquid water content of the snow. Net rain
+to the soil surface (RNET) is rain throughfall (RTHR) minus rain absorbed by the snowpack
+(RSNO). Water reaching the ground surface is RNET + SMLT.
+"""
 function MSBPREINT(#arguments:
                    p_fT_PREC, p_DTP, p_fT_SNOFRC, p_NPINT, p_fu_PINT, p_fT_TA,
                    # for INTER (snow)
@@ -307,6 +393,7 @@ function MSBPREINT(#arguments:
     p_fT_SFAL = p_fT_SNOFRC * p_fT_PREC # rate in mm/day
     p_fT_RFAL = p_fT_PREC - p_fT_SFAL   # rate in mm/day
 
+    # A) Interception by canopy ################
     if (p_NPINT > 1.0)
         # more than one precip interval in day
         error("Case with multiple precipitation intervals (using PRECDAT and precip_interval != 1) is not implemented.")
@@ -335,6 +422,7 @@ function MSBPREINT(#arguments:
             aux_du_SINT, aux_du_ISVP = LWFBrook90.EVP.INTER24(p_fT_SFAL, p_fu_PINT, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DURATN, u_INTS, MONTHN)
         end
         # b) rain interception,  note potential interception rate is p_fu_PINT-aux_du_ISVP (mm/day)
+        # interception catch rate, interception evaporation rate (both in mm/day):
         aux_du_RINT, aux_du_IRVP = LWFBrook90.EVP.INTER24(p_fT_RFAL, p_fu_PINT - aux_du_ISVP, p_fu_LAI, p_fu_SAI, p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS, p_DURATN, u_INTR, MONTHN)
     end
 
@@ -387,7 +475,62 @@ function MSBPREINT(#arguments:
             u_SNOW, u_CC, u_SNOWLQ)
 end
 
+"""
+    MSBITERATE()
 
+http://www.ecoshift.net/brook/b90.html 
+
+Subsurface water movement is determined in several to many iterations per precipitation
+time-step. Remaining model calculations are done within subroutine MSBITERATE for each
+iteration loop.
+
+Net throughfall (RNET) plus snowmelt (SMLT) may:
+
+1. infiltrate into the soil matrix of the surface horizon (INFLI(1)), 
+2. infiltrate directly to deeper horizons via vertical macropore flow (INFLI), 
+3. go immediately to streamflow via vertical macropore flow followed by downslope pipe flow (BYFLI), 
+4. or go immediately to streamflow via impaction on a variable saturated source area (SRFL). 
+
+The fraction of area acting as a saturated source area (SAFRAC) is obtained in subroutine
+SRFLFR. Source area flow (SRFL) is obtained as SAFRAC plus impervious area (IMPERV) times
+RNET + SMLT. Infiltration rate (SLFL) is RNET + SMLT - SRFL. The fraction of infiltration to
+each layer that bypasses the layer and becomes an output via bypass flow (BYFLI) is
+calculated in subroutine BYFLFR. For each layer, the downslope flow rate by matrix flow
+(DSFLI) is obtained from subroutine DSLOP. In general, one or more of SRFL, BYFL, and DSFL
+will be set to zero by the user.
+
+If the water potential difference between layers is less than the parameter DPSIMX, vertical
+flow (VRFLI) is zero; otherwise subroutine VERT obtains VRFLI between layers from a weighted
+hydraulic conductivity and the water potential difference between the layers. For the bottom
+layer, outflow to groundwater is the hydraulic conductivity of the layer times a parameter
+(DRAIN), which can vary from 0 to 1. This assumes a gravity potential gradient.
+
+Subroutine INFLOW is called to get net inflow into each layer (NTFLI) using parameter DTIMAX
+as a first approximation for iteration time step. The rate of change of matric potential
+with water content (DPSIDW) from function FDPSIDW is used with NTFLI in subroutine ITER to
+obtain the maximum iteration time step (DTI) allowed by two parameters. The parameters are
+DPSIMX and the maximum allowed change in soil water content (DSWMAX). INFLOW is called again
+with the new DTI to get the final NTFLI, VRFLI, BYFLI, and matric uptake (INFLI).
+
+Groundwater discharge to streamflow (GWFL) and deep seepage (SEEP) are obtained from
+subroutine GWATER. GWFL is simulated as a fixed fraction of groundwater each day and SEEP is
+a fixed fraction of GWFL.
+
+Simulated streamflow is the sum of SRFL, BYFL, DSFL, and GWFL. This can be compared with
+measured streamflow if that is available.
+
+At the end of each iteration time-step, soil water content of each layer (SWATI) is updated
+by adding NTFLI * DTI. Groundwater storage is also updated. Then new soil water variables
+are calculated using function FPSIM and subroutine SOILVAR. Available water (AWAT) is
+calculated for output as water held in the root zone between field capacity and PSICR.
+
+SWCHEK tests that the SWATI remain between zero and saturation; if not, the program stops.
+At the end of each day the water balance is checked and the program stops if there is an
+error greater than 0.003 mm. These crashes should only occur if there are parameter or
+programming errors.
+
+
+"""
 function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
                     # for SRFLFR:
                     u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC,
