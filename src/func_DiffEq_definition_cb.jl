@@ -281,8 +281,8 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         integrator.u.accum.dsfl             = 0 # dsfl,  is computed in ODE
         integrator.u.accum.gwfl             = 0 # gwfl,  is computed in ODE
         integrator.u.accum.vrfln            = 0 # vrfln, is computed in ODE
-        # integrator.u.accum.cum_d_rthr     = p_DTP*(p_fT_RFAL - aux_du_RINT) # cum_d_rthr
-        # integrator.u.accum.cum_d_sthr     = p_DTP*(p_fT_SFAL - aux_du_SINT) # cum_d_sthr
+        integrator.u.accum.cum_d_rthr     = p_DTP*(p_fT_RFAL - aux_du_RINT[1]) # cum_d_rthr
+        integrator.u.accum.cum_d_sthr     = p_DTP*(p_fT_SFAL - aux_du_SINT[1]) # cum_d_sthr
         # integrator.u.accum.totalSWAT      = new_SWAT
         # integrator.u.accum.new_totalWATER = new_totalWATER
         # integrator.u.accum.BALERD_SWAT    = BALERD_SWAT

@@ -461,9 +461,6 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
                 aux_du_VRFLI[NLAYER] = 0
             end
         end
-        # if (IDAY >= 6 && i==NLAYER) # TODO(bernhard): this seemed like a no effect snippet
-        #     p_DRAIN=p_DRAIN         # TODO(bernhard): this seemed like a no effect snippet
-        # end                         # TODO(bernhard): this seemed like a no effect snippet
     end
 
     # first approximation on aux_du_VRFLI

@@ -5,6 +5,8 @@ Run example simulation located in "/examples/BEA2016-reset-FALSE-input" for 100 
 and return a Dict containing the solution (solution
 object of DifferentialEquations.jl) and other variables useful for plotting.
 
+Kwargs can be provided and are passed through to loadSPAC().
+
 ## Example:
     using LWFBrook90
     example = LWFBrook90.run_example()
@@ -38,7 +40,7 @@ object of DifferentialEquations.jl) and other variables useful for plotting.
         c = cgrad(:blues,  rev = false),
         colorbar_title = "θ [m3/m3]\n(of fine soil volume)")#, rightmargin = 10mm)
 """
-function run_example()
+function run_example(;kwargs...)
 
     @info """
     LWFBrook90 example is being run. Once it has finished, plotting can be done in the
@@ -85,7 +87,7 @@ function run_example()
 
     ####################
     # Define simulation model by reading in system definition and input data
-    model = loadSPAC(input_path, input_prefix; simulate_isotopes = true);
+    model = loadSPAC(input_path, input_prefix; simulate_isotopes = true, kwargs...);
     ####################
 
     ####################
