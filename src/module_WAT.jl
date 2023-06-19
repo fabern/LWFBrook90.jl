@@ -79,7 +79,7 @@ function INFPAR(p_INFEXP, p_ILAYER, p_soil)
 end
 
 """
-    BYFLFR(NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_WETF)
+    BYFLFR!(p_fu_BYFRAC, p_QFPAR, p_QFFC, u_aux_WETNES, p_soil)
 
 Compute fraction of bypass flow.
 
@@ -130,52 +130,24 @@ Note that BYFRAC is calculated from soil water prior to the input of water for t
 step.
 "
 """
-function BYFLFR(NLAYER, p_BYPAR, p_QFPAR, p_QFFC, u_aux_WETNES, p_soil)
-    # TODO(bernhard): could be optimized by not allocating each time new memory (versus in-place)
-    p_fu_BYFRAC = fill(NaN, NLAYER)
-    # TODO(bernhard): put check outside of for loop
-    for i = 1:NLAYER
-        if (isone(p_BYPAR))
-            ####
-            # variant Brook90: if (p_QFPAR > 0.01)
-            # variant Brook90:     p_fu_BYFRAC[i] = p_QFFC ^ (1 - (1 / p_QFPAR) * (u_aux_WETNES[i] - p_soil.p_WETF[i]) / (1 - p_soil.p_WETF[i]))
-            # variant Brook90:     if (p_fu_BYFRAC[i] > 1)
-            # variant Brook90:         p_fu_BYFRAC[i] = 1
-            # variant Brook90:     end
-            # variant Brook90: else
-            # variant Brook90:     # bucket for the layer
-            # variant Brook90:     if (u_aux_WETNES[i] >= p_soil.p_WETF[i])
-            # variant Brook90:         p_fu_BYFRAC[i] = 1
-            # variant Brook90:     else
-            # variant Brook90:         p_fu_BYFRAC[i] = 0
-            # variant Brook90:     end
-            # variant Brook90: end
-            ####
-
-            ####
-            # variant LWFBrook90R:
-            p_fu_BYFRAC[i] = p_QFFC ^ (1 - (1 / p_QFPAR) * (u_aux_WETNES[i] - p_soil.p_WETF[i]) / (1 - p_soil.p_WETF[i]))
-            # should be equvalent with
-            # BYFRAC = QFFC ^ (1 - (1 / QFPAR) * (θ - θfc) / (θs - θfc))
+function BYFLFR!(p_fu_BYFRAC, p_QFPAR, p_QFFC, u_aux_WETNES, p_soil)
+    for i = 1:p_soil.NLAYER
+        p_fu_BYFRAC[i] = min(
+            1,
+            p_QFFC ^ (1 - (1 / p_QFPAR) * (u_aux_WETNES[i] - p_soil.p_WETF[i]) / (1 - p_soil.p_WETF[i])))
+            # is equivalent with
+            # BYFRAC         = QFFC ^ (1 - (1 / QFPAR) * (θ - θfc) / (θs - θfc))
             # p_fu_BYFRAC[i] = p_QFFC ^ (1 - (1 / p_QFPAR) * (u_aux_θ[i] - p_soil.p_THETAF[i]) / (p_soil.p_THSAT[i] - p_soil.p_THETAF[i]))
-
-            if (p_fu_BYFRAC[i] > 1)
-                p_fu_BYFRAC[i] = 1
-            end
-
-            # generate bypass flow to avoid saturation
-            if (u_aux_WETNES[i] > 0.99)
-                p_fu_BYFRAC[i] = 1
-            end
-            ####
-
-        else
-            p_fu_BYFRAC[i] = 0
-        end
     end
-    return p_fu_BYFRAC
 end
 
+function SRFLFR(p_QLAYER, u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC)
+    SAFRAC = min(
+        1,
+        p_QFFC ^ (1 - (1 / p_QFPAR) * (sum(u_SWATI[1:p_QLAYER]) - p_SWATQF) / (p_SWATQX - p_SWATQF)))
+
+    return SAFRAC
+end
 
 """
     DSLOP()
@@ -471,34 +443,6 @@ function INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
     # NTFLI(*)  - net flow rate into layer, mm/d
 
     return (VRFLI_posterior, INFLI, BYFLI, NTFLI)
-end
-
-
-
-function SRFLFR(p_QLAYER, u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC)
-    @assert p_QLAYER >= 1 "QLAYER is smaller than 1. Funcion SRFLFR should never have been called."
-
-    SUM = sum(u_SWATI[1:p_QLAYER])
-
-    # Brook90 Variant: if p_QFPAR > 0.01
-    # Brook90 Variant:     SAFRAC = min(
-    # Brook90 Variant:         1.0,
-    # Brook90 Variant:         p_QFFC ^ (1.0 - (1.0 / p_QFPAR) * (SUM - p_SWATQF) / (p_SWATQX - p_SWATQF)))
-    # Brook90 Variant: else
-    # Brook90 Variant:     # bucket over QLAYERs
-    # Brook90 Variant:     if SUM >= p_SWATQF
-    # Brook90 Variant:             SAFRAC = 1.0
-    # Brook90 Variant:     else
-    # Brook90 Variant:             SAFRAC = 0.0
-    # Brook90 Variant:     end
-    # Brook90 Variant: end
-
-    # LWFBrook90 variant:
-    SAFRAC = min(
-            1.0,
-            p_QFFC ^ (1.0 - (1.0 / p_QFPAR) * (SUM - p_SWATQF) / (p_SWATQX - p_SWATQF)))
-
-    return SAFRAC
 end
 
 function ITER(NLAYER, FLAG_MualVanGen, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMAX, p_soil)

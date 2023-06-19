@@ -445,6 +445,7 @@ function MSBPREINT(#arguments:
     p_fu_PTRAN = (1.0 - p_fu_WETFR) * p_fu_PTRAN         # only used for cum_d_ptran
     for i = 1:NLAYER
         aux_du_TRANI[i] = (1.0 - p_fu_WETFR) * aux_du_TRANI[i]
+        # LWFBrook90 additionally: if(u_aux_PSIM[i] < PsiCrit[i]) FRSS=1.e+20 end # where PsiCrit (! not PSICR) is a cutoff pressure for evaporation but also transpiration
     end
     # end B) Effect of wet/snow-covered canopy on fluxes ################
     
