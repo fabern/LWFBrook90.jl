@@ -352,6 +352,7 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
                 end
         end
 
+        # 1) compute available SUPPLY
         # soil water supply rate, assumed constant over day
         SUPPLY = (PSIT / 1000 - p_PSICR - p_RHOWG * p_fu_DISPC) / (RT + p_fT_RXYLEM)
                 # PSIT                  in kPa
@@ -360,8 +361,9 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
                 # DISPC                 in m
                 # RT and RXYLEM must be in [MPa d/mm]  to get:
                 # SUPPLY                in mm/day
-        # transpiration rate limited by either PTR or SUPPLY
 
+        # 2) reduce actual transpiration rate ATR
+        # transpiration rate limited by either PTR or SUPPLY
         if J == 1
             # daytime, PTR is average of a half sine over daytime
             R = (2 / p_PI) * (SUPPLY / p_fu_PTR)

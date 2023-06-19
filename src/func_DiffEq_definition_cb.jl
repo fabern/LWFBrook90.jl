@@ -135,7 +135,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
             MSBSETVARS(FLAG_MualVanGen, NLAYER, p_soil,
                        # for SUNDS:
                        p_LAT, p_ESLOPE, p_DOY(integrator.t), p_L1, p_L2,
-                 # for LWFBrook90_CANOPY:
+                       # for CANOPY:
                        p_HEIGHT(integrator.t), p_LAI(integrator.t), p_SAI(integrator.t), u_SNOW, p_SNODEN, p_MXRTLN, p_MXKPL, p_DENSEF(integrator.t),
                        #
                        p_Z0S, p_Z0G,

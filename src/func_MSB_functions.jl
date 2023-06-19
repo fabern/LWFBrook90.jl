@@ -54,23 +54,33 @@ function MSBSETVARS(# arguments
                     p_RSSA, p_RSSB, u_aux_PSIM, #u_aux_PSIM[1]
                     # for SNOENRGY
                     p_CCFAC, p_MELFAC, p_LAIMLT, p_SAIMLT)
-    #
-    # solar parameters depending on only on DOY
-    # TODO(bernhard): a) Do this outside of integration loop in define_LWFB90_p() p_fT_DAYLEN
-    p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY = LWFBrook90.SUN.SUNDS(p_LAT, p_ESLOPE, DOY, p_L1, p_L2, LWFBrook90.CONSTANTS.p_SC, LWFBrook90.CONSTANTS.p_PI, LWFBrook90.CONSTANTS.p_WTOMJ)
 
-    # start A: get_windspeed_from_canopy_and_snowpack
-    # Compute influence of snow on canopy height and roughness and how this influences wind speed
+    # start A: get: 1) sunshine durations, 2) SFAL, 3) plant resistance
+    # TODO(bernhard): a) Do this outside of integration loop in define_LWFB90_p() p_fT_DAYLEN
+    # solar parameters depending on only on DOY
+    p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY = LWFBrook90.SUN.SUNDS(p_LAT, p_ESLOPE, DOY, p_L1, p_L2, LWFBrook90.CONSTANTS.p_SC, LWFBrook90.CONSTANTS.p_PI, LWFBrook90.CONSTANTS.p_WTOMJ)
+    # canopy evolution depending only on DOY
+    p_fT_LAIeff, p_fT_SAIeff, p_fT_RTLENeff, p_fT_RPLANT = LWFBrook90.PET.CANOPY_timeEvolution(
+        p_fT_LAI, # leaf area index, m2/m2, minimum of 0.00001
+        p_fT_SAI,  # stem area index, m2/m2
+        p_MXRTLN,  # maximum root length per unit land area, m/m2
+        p_MXKPL,   # maximum plant conductivity, (mm/d)/MPa
+        #p_CS,     # ratio of projected SAI to canopy height, m-1, not needed in this version
+        p_fT_DENSEF)  # density factor
+    # fraction of precipitation as p_fT_SFAL
+    p_fT_SNOFRC= LWFBrook90.SNO.SNOFRAC(p_fT_TMAX, p_fT_TMIN, p_RSTEMP)
+    # plant resistance components
+    p_fT_RXYLEM, p_fT_RROOTI, p_fT_ALPHA = LWFBrook90.EVP.PLNTRES(NLAYER, p_soil, p_fT_RTLENeff, p_fT_RELDEN, p_RTRAD, p_fT_RPLANT, p_FXYLEM, LWFBrook90.CONSTANTS.p_PI, LWFBrook90.CONSTANTS.p_RHOWG)
+    # end A: get: 1) sunshine durations, 2) SFAL, 3) plant resistance
+
+    # start B: get_windspeed_from_canopy_and_snowpack: (p_fu_UADTM, p_fu_UANTM) = f(...)
+    # Compute influence of snow on canopy height, LAI, and roughness and how this influences wind speed
     # Modify canopy parameters (depending on DOY -> fT) due to dependency on snow depth (state parameter -> fu)
-    p_fu_HEIGHTeff, p_fu_LAIeff, p_fT_SAIeff, p_fT_RTLENeff, p_fT_RPLANT =
-        LWFBrook90.PET.LWFBrook90_CANOPY(p_fT_HEIGHT,
-                          p_fT_LAI,  # leaf area index, m2/m2, minimum of 0.00001
-                          p_fT_SAI,  # stem area index, m2/m2
-                          u_SNOW,    # water equivalent of snow on the ground, mm SWE
-                          p_SNODEN,  # snow density, mm SWE/mm depth
-                          p_MXRTLN,  # maximum root length per unit land area, m/m2
-                          p_MXKPL,   # maximum plant conductivity, (mm/d)/MPa
-                          p_fT_DENSEF)
+    p_fu_HEIGHTeff, p_fu_LAIeff = LWFBrook90.PET.CANOPY_snowCover( # height and LAI reduced by snowcover
+        p_fT_HEIGHT,
+        p_fT_LAIeff,  # leaf area index, m2/m2, not yet reduced by snowcover
+        u_SNOW,       # water equivalent of snow on the ground, mm SWE
+        p_SNODEN)     # snow density, mm SWE/mm depth
     # roughness parameters depending on u_SNOW
     p_fu_Z0GS, p_fu_Z0C, p_fu_DISPC, p_fu_Z0, p_fu_DISP, p_fu_ZA =
             LWFBrook90.PET.ROUGH(p_fu_HEIGHTeff, p_ZMINH, p_fu_LAIeff, p_fT_SAIeff,
@@ -79,29 +89,27 @@ function MSBSETVARS(# arguments
     p_fu_SHEAT = 0.
     (p_fT_SOLRADC, p_fT_TA, p_fT_TADTM, p_fT_TANTM, UA, p_fu_UADTM, p_fu_UANTM) =
         LWFBrook90.PET.WEATHER(p_fT_TMAX, p_fT_TMIN, p_fT_DAYLEN, p_fT_I0HDAY, p_fT_VAPPRES, p_fT_UW, p_fu_ZA, p_fu_DISP, p_fu_Z0, p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_fT_SOLRAD)
-    # end A: get_windspeed_from_canopy_and_snowpack
+    # end B: get_windspeed_from_canopy_and_snowpack: (p_fu_UADTM, p_fu_UANTM) = f(...)
 
-    # fraction of precipitation as p_fT_SFAL
-    p_fT_SNOFRC= LWFBrook90.SNO.SNOFRAC(p_fT_TMAX, p_fT_TMIN, p_RSTEMP)
-
-    # plant resistance components
-    p_fT_RXYLEM, p_fT_RROOTI, p_fT_ALPHA = LWFBrook90.EVP.PLNTRES(NLAYER, p_soil, p_fT_RTLENeff, p_fT_RELDEN, p_RTRAD, p_fT_RPLANT, p_FXYLEM, LWFBrook90.CONSTANTS.p_PI, LWFBrook90.CONSTANTS.p_RHOWG)
-
-
+    # start C: get_potential_snowpack_and_soil_evaporation_from_canopy,snowpack,atmosphere,: (p_fu_UADTM, p_fu_UANTM) = f(...)
     if (u_SNOW > 0)
         # snowpack temperature at beginning of day
         p_fu_TSNOW = -u_CC / (p_CVICE * u_SNOW)
         # potential snow evaporation PSNVP
         p_fu_PSNVP=LWFBrook90.SNO.SNOVAP(p_fu_TSNOW, p_fT_TA, p_fT_VAPPRES, UA, p_fu_ZA, p_fu_HEIGHTeff, p_fu_Z0, p_fu_DISP, p_fu_Z0C, p_fu_DISPC, p_fu_Z0GS, p_LWIDTH, p_RHOTP, p_NN, p_fu_LAIeff, p_fT_SAIeff, p_KSNVP)
         p_fu_ALBEDO = p_ALBSN
-        p_fu_RSS = 0.
     else
         p_fu_TSNOW = 0.
         p_fu_PSNVP = 0.
         p_fu_ALBEDO = p_ALB
-        # soil evaporation resistance
-        p_fu_RSS = LWFBrook90.PET.FRSS(p_RSSA, p_RSSB, u_aux_PSIM[1], p_soil)
-
+    end
+    # snow surface energy balance (is performed even when SNOW=0 in case snow is added during day)
+    p_fu_SNOEN = LWFBrook90.SNO.SNOENRGY(p_fu_TSNOW, p_fT_TA, p_fT_DAYLEN, p_CCFAC, p_MELFAC, p_fT_SLFDAY, p_fu_LAIeff, p_fT_SAIeff, p_LAIMLT, p_SAIMLT)
+    # soil evaporation resistance
+    if (u_SNOW > 0)
+        p_fu_RSS = 0.
+    else
+        p_fu_RSS = LWFBrook90.PET.FRSS(p_RSSA, p_RSSB, u_aux_PSIM[1], p_soil) # TODO: with smaller discretizations, maybe use more than one layer? (e.g. damping depth see p.115/119 or Table9.2 in Campbell-1998- Env.Biophys.)
         # check for zero or negative p_fu_RSS (TODO: not done in LWFBrook90)
         if (p_fu_RSS < 0.000001)
            error("""
@@ -110,9 +118,7 @@ function MSBSETVARS(# arguments
             Check p_RSSA ($p_RSSA) and p_RSSB ($p_RSSB) values.""")
         end
     end
-
-    # snow surface energy balance (is performed even when SNOW=0 in case snow is added during day)
-    p_fu_SNOEN = LWFBrook90.SNO.SNOENRGY(p_fu_TSNOW, p_fT_TA, p_fT_DAYLEN, p_CCFAC, p_MELFAC, p_fT_SLFDAY, p_fu_LAIeff, p_fT_SAIeff, p_LAIMLT, p_SAIMLT)
+    # end C: get_potential_snowpack_and_soil_evaporation_from_canopy,snowpack,atmosphere,: (p_fu_UADTM, p_fu_UANTM) = f(...)
 
     return (p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY,
             p_fu_HEIGHTeff, p_fu_LAIeff, p_fT_SAIeff,
@@ -426,42 +432,69 @@ function MSBPREINT(#arguments:
         aux_du_RINT, aux_du_IRVP = LWFBrook90.EVP.INTER24(p_fT_RFAL, p_fu_PINT - aux_du_ISVP, p_fu_LAI, p_fu_SAI, p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS, p_DURATN, u_INTR, MONTHN)
     end
 
-    # throughfall
-    p_fu_RTHR = p_fT_RFAL - aux_du_RINT
-    p_fu_STHR = p_fT_SFAL - aux_du_SINT
-
-    # reduce transpiration for fraction of precip interval that canopy is wet
+    # fraction of time (precip interval) that canopy is wet
     p_fu_WETFR = min(1.0, (aux_du_IRVP + aux_du_ISVP) / p_fu_PINT)
-    p_fu_PTRAN = (1.0 - p_fu_WETFR) * p_fu_PTRAN
+    # end A) Interception by canopy ################
+
+    # throughfall arriving onto snowpack (or soil layer)
+    p_fu_RTHR = p_fT_RFAL - aux_du_RINT # rates in mm/h
+    p_fu_STHR = p_fT_SFAL - aux_du_SINT # rates in mm/h
+
+    # B) Effect of wet/snow-covered canopy on fluxes ################
+    # reduce potential and actual transpiration for fraction of precip interval that canopy is wet
+    p_fu_PTRAN = (1.0 - p_fu_WETFR) * p_fu_PTRAN         # only used for cum_d_ptran
     for i = 1:NLAYER
         aux_du_TRANI[i] = (1.0 - p_fu_WETFR) * aux_du_TRANI[i]
     end
+    # end B) Effect of wet/snow-covered canopy on fluxes ################
+    
+    # C) Effect of snowpack on fluxes ################
+    # compute soil evaporation as average of wet and non-wet canopy computations
     if (u_SNOW <= 0 && p_fu_STHR <= 0)
         # no previous snow, no added snow: soil evaporation weighted for p_fu_WETFR
         aux_du_SLVP = p_fu_WETFR * p_fu_GIVP + (1.0 - p_fu_WETFR) * p_fu_GEVP
-        p_fu_RNET = p_fu_RTHR
+    else
+        # either previous snow, or added snow, or both => prevents soil evaporation
+        aux_du_SLVP = 0.0
+    end
+    # end C) Effect of snowpack on fluxes ################
+
+    # D) Interception by snowpack (RSNO), snowmelt (SMLT) and snow evaporation (SNVP) ################
+    # Compute evolution of snowpack (evaporation, acumulation, etc...)
+    if (u_SNOW <= 0 && p_fu_STHR <= 0)
+        # no previous snow, no added snow
         aux_du_RSNO = 0.0
         aux_du_SNVP = 0.0
         aux_du_SMLT = 0.0
-
         # u_CC, u_SNOW, u_SNOWLQ remain unchanged
-    else
-        if (u_SNOW <= 0 && p_fu_STHR > 0)
-            # no previous snow, some added snow: initialize zero CC and SNOWLQ
-            u_CC     = 0.0
-            u_SNOWLQ = 0.0
-        end
+    elseif (u_SNOW <= 0 && p_fu_STHR > 0)
+        # no previous snow, some added snow: initialize zero CC and SNOWLQ
+        u_CC     = 0.0
+        u_SNOWLQ = 0.0
         # snow accumulation and melt
-        u_SNOW, u_CC, u_SNOWLQ, aux_du_RSNO, aux_du_SNVP, aux_du_SMLT =
-          LWFBrook90.SNO.SNOWPACK(p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN,
-                   # States that are overwritten:
-                   u_CC, u_SNOW, u_SNOWLQ,
-                   p_DTP, p_fT_TA, p_MAXLQF, p_GRDMLT,
-                   p_CVICE, p_LF, p_CVLQ)
-
-        p_fu_RNET = p_fu_RTHR - aux_du_RSNO
-        aux_du_SLVP = 0.0
+        (u_SNOW, u_CC, u_SNOWLQ, aux_du_RSNO, aux_du_SNVP, aux_du_SMLT) =
+                LWFBrook90.SNO.SNOWPACK(
+                    p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN,
+                    # States that are overwritten:
+                    u_CC, u_SNOW, u_SNOWLQ,
+                    p_DTP, p_fT_TA, p_MAXLQF, p_GRDMLT,
+                    p_CVICE, p_LF, p_CVLQ)
+    else
+        # previous snow with/without added snow: evolve snowpack (accumulation & melt)
+        # snow accumulation and melt
+        (u_SNOW, u_CC, u_SNOWLQ, aux_du_RSNO, aux_du_SNVP, aux_du_SMLT) =
+                LWFBrook90.SNO.SNOWPACK(
+                    p_fu_RTHR, p_fu_STHR, p_fu_PSNVP, p_fu_SNOEN,
+                    # States that are overwritten:
+                    u_CC, u_SNOW, u_SNOWLQ,
+                    p_DTP, p_fT_TA, p_MAXLQF, p_GRDMLT,
+                    p_CVICE, p_LF, p_CVLQ)
     end
+    # end D) Interception by snowpack (RSNO), snowmelt (SMLT) and snow evaporation (SNVP) ################
+
+    # Compute net rain arriving at soil surface (together with snow melt SMLT)
+    p_fu_RNET = p_fu_RTHR - aux_du_RSNO 
+    # aux_du_SMLT: snowmelt arriving at soil surface (together with snow melt RNET)
 
     return (# compute some fluxes as intermediate results:
             p_fT_SFAL, p_fT_RFAL, p_fu_RNET, p_fu_PTRAN,

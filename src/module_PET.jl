@@ -136,32 +136,19 @@ change ISVP and SNVP. An estimate of PEs can then be obtained as: PEs = PTRAN + 
 """
 module PET
 
-export LWFBrook90_CANOPY, ROUGH, WEATHER, SWPE, SWGE, SWGRA, SRSC, ESAT
+export ROUGH, WEATHER, SWPE, SWGE, SWGRA, SRSC, ESAT
 
 using ..CONSTANTS # https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
 
 """
-    LWFBrook90_CANOPY()
+    CANOPY_timeEvolution()
 
 Compute evolution of plant parameters over the season.
 
 # Ecoshift
 "
-Subroutine CANOPY calculates plant "parameters" that can vary with day of the year
+Subroutine CANOPY_timeEvolution calculates plant "parameters" that can vary with day of the year
 ( DOY).
-
-The height of the canopy above any snowpack, h (HEIGHT), is
-
-HEIGHT = RELHIT * MAXHT - p_fu_SNODEP
-
-where MAXHT is the maximum height for the year, which is an input parameter, and RELHIT is
-the relative height for the day of the year (doy), as obtained with function INTERP from the
-RELHT parameter array. HEIGHT is not allowed to be less than 0.01 m, which gives an
-appropriate roughness parameter for "smooth" surfaces. The snowpack depth (p_fu_SNODEP, m) is the
-snow water content (SNOW, mm) divided by 1000 times snow density (SNODEN), which is assumed
-constant. Although snow density can actually vary from 0.05 to 0.5, the constant value is
-good enough to account for burying of the canopy in BROOK90. The RATIO of uncovered HEIGHT
-to total height (RELHT * MAXHT) is also calculated.
 
 Actual projected leaf area index, Lp (LAI), is
 
@@ -203,11 +190,9 @@ should NOT be set to 0 to simulate a clearcut as HEIGHT is unchanged and the aer
 resistances will be wrong. Probably DENSEF should not be less than 0.05.
 "
 """
-function LWFBrook90_CANOPY(p_fT_HEIGHT,
-                           p_fT_LAI,  # leaf area index, m2/m2, minimum of 0.00001
+function CANOPY_timeEvolution(
+                           p_fT_LAI, # leaf area index, m2/m2, minimum of 0.00001
                            p_fT_SAI,  # stem area index, m2/m2
-                           u_SNOW,    # water equivalent of snow on the ground, mm SWE
-                           p_SNODEN,  # snow density, mm SWE/mm depth
                            p_MXRTLN,  # maximum root length per unit land area, m/m2
                            p_MXKPL,   # maximum plant conductivity, (mm/d)/MPa
                            #p_CS,     # ratio of projected SAI to canopy height, m-1, not needed in this version
@@ -220,7 +205,33 @@ function LWFBrook90_CANOPY(p_fT_HEIGHT,
     KPL      = max(p_fT_DENSEF*p_MXKPL, 1E-8) # plant conductivity, mm d-1 MPa-1
     p_fT_RPLANT = 1 / KPL                     # plant resistivity to water flow, MPa d/mm
 
+    p_fT_LAIeff = p_fT_DENSEF*p_fT_LAI
 
+    return (p_fT_LAIeff, p_fT_SAIeff, p_fT_RTLENeff, p_fT_RPLANT)
+end
+
+"""
+"
+CANOPY_snowCover computes plant "parameters" that can change due to the evolution of a snowpack:
+The height of the canopy above any snowpack, h (HEIGHT), is
+
+HEIGHT = RELHIT * MAXHT - p_fu_SNODEP
+
+where MAXHT is the maximum height for the year, which is an input parameter, and RELHIT is
+the relative height for the day of the year (doy), as obtained with function INTERP from the
+RELHT parameter array. HEIGHT is not allowed to be less than 0.01 m, which gives an
+appropriate roughness parameter for "smooth" surfaces. The snowpack depth (p_fu_SNODEP, m) is the
+snow water content (SNOW, mm) divided by 1000 times snow density (SNODEN), which is assumed
+constant. Although snow density can actually vary from 0.05 to 0.5, the constant value is
+good enough to account for burying of the canopy in BROOK90. The RATIO of uncovered HEIGHT
+to total height (RELHT * MAXHT) is also calculated.
+"
+"""
+function CANOPY_snowCover(p_fT_HEIGHT,
+                           p_fT_LAIeff,  # leaf area index, m2/m2, minimum of 0.00001
+                           u_SNOW,       # water equivalent of snow on the ground, mm SWE
+                           p_SNODEN)     # snow density, mm SWE/mm depth
+                           #p_CS,        # ratio of projected SAI to canopy height, m-1, not needed in this version
     # Parameters dependent on snow depth:
 
     #     TREE
@@ -241,11 +252,9 @@ function LWFBrook90_CANOPY(p_fT_HEIGHT,
 
     p_fu_HEIGHTeff = max(p_fu_HSNO, 0.01)            # effective canopy height, i.e. above any snow, m, minimum of 0.01 m
 
-    p_fu_LAIeff = max(p_fu_RATIO*p_fT_DENSEF*p_fT_LAI, # effective leaf area index, m2/m2, minimum of 0.00001
-                      0.00001)
+    p_fu_LAIeff = max(p_fu_RATIO*p_fT_LAIeff, 0.00001) # effective leaf area index reduced by snow, m2/m2, minimum of 0.00001
 
-    return (p_fu_HEIGHTeff, p_fu_LAIeff,
-            p_fT_SAIeff, p_fT_RTLENeff, p_fT_RPLANT)
+    return (p_fu_HEIGHTeff, p_fu_LAIeff)
 end
 
 """
@@ -664,7 +673,7 @@ then
 (15) Lv ρw Es = Lv ρw E - Lv ρw Ec
 "
 """
-function SWGE(AA, ASUBS, VPD, RAA, RAS, p_fu_RSS, DELTA, ARATE)
+function SWGE(AA, ASUBS, VPD, RAA, RAS, p_fu_RSS, DELTA, ARATE) # RAC, RSC not needed because we have known transpiration rate
     # AA      - net radiation at canopy top minus ground flux, W/m2
     # ASUBS   - net radiation minus ground flux at ground, W/m2
     # VPD     - vapor pressure deficit, kPa

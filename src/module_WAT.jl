@@ -195,6 +195,7 @@ function DSLOP(p_DSLOPE, p_LENGTH_SLOPE, p_RHOWG, p_soil, u_aux_PSIM, p_fu_KK)
     aux_du_DSFLI = p_fu_KK .* ARATIO .* GRAD ./ p_RHOWG
 
     # no water uptake into dry soil because no free water at outflow face
+    # prevent water uptake through DSFLI. Treat this only as sink, never as a source for the soil.
     for i = 1:length(aux_du_DSFLI)
         if (aux_du_DSFLI[i] < 0)
             aux_du_DSFLI[i] = 0
@@ -372,10 +373,9 @@ function INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
     # SWATI(*)  - water volume in layer, mm
     # VRFLI(*)  - vertical drainage rate from layer, mm/d
 
-    VRFLI_posterior=fill(NaN, NLAYER) #TODO(bernhard): assess whether in-place INFLOW!() is faster
-    INFLI=fill(NaN, NLAYER) #TODO(bernhard): assess whether in-place INFLOW!() is faster
-    BYFLI=fill(NaN, NLAYER) #TODO(bernhard): assess whether in-place INFLOW!() is faster
-    NTFLI=fill(NaN, NLAYER) #TODO(bernhard): assess whether in-place INFLOW!() is faster
+    VRFLI_posterior=fill(NaN, NLAYER)
+    INFLI=fill(NaN, NLAYER)
+    BYFLI=fill(NaN, NLAYER)
 
     # A) Compute prior estimates for BYFLI and INFLI
     for i = NLAYER:-1:1
@@ -389,7 +389,7 @@ function INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
     #    prior estimates accordingly.
     #    For layer i, relevant incoming fluxes are: VRFLi[i-1], BYFLI[i], and INFLI[i]
     #    Therefore VRFLI exiting last layer (VRFLi[NLAYER]) is only outgoing flux
-    #    and cannot saturet any other soil layer. It is therefore accepted as-is:
+    #    and cannot saturate any other soil layer. It is therefore accepted as-is:
     VRFLI_posterior[NLAYER] = VRFLI_prior[NLAYER]
 
     # Now going through all layers bottom up and prevent oversaturation due to INFLI.
@@ -398,8 +398,9 @@ function INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
         # Compute maximum possible inflow during time interval DTI:
         # maximum allowed rate of input of water to layer, mm/d:
         MAXIN = (p_SWATMAX[i] - u_SWATI[i]) / DTI + VRFLI_posterior[i] + aux_du_DSFLI[i] + aux_du_TRANI[i]
-        # inflow is constitued by INFLI(i), VRFLI(i-1) for any layer i
-        # inflow is constitued by INFLI(1)             for the first layer 1
+
+        # inflow is composed of INFLI[1]             for the first layer 1
+        # inflow is composed of INFLI[i], VRFLI[i-1] for any layer i
         if (i == 1)
             # In first layer there is additionally soil evaporation SLVP as an
             # outflow. A fact which increases the maximum possible inflow.
@@ -407,52 +408,42 @@ function INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
             # If inflow is too large
             if (INFLI[1] > MAXIN)
                 # Decrease INFLI, and increase BYFLI:
-                # variant 1:
                 tooMuchInflow = INFLI[1] - MAXIN
                 INFLI[1] = INFLI[1] - tooMuchInflow
                 BYFLI[1] = BYFLI[1] + tooMuchInflow
-                # variant 2:
-                #BYFLI[1] = BYFLI[1] + INFLI[1] - MAXIN
-                #INFLI[1] = MAXIN
             else
                 # Prior estimates of INFLI and BYFLI are accepted for that layer.
                 # There is no incoming VRFLI to accept for first layer.
             end
-        else
-            # i = 2:NLAYER
-            if (VRFLI_prior[i - 1] + INFLI[i] > MAXIN)
-                # If inflow (VRFLI[i-1] + INFLI[i]) is too large:
-                # oversaturation occurs
+        else # i = 2:NLAYER
+            if (VRFLI_prior[i-1] + INFLI[i] > MAXIN)
+                # If inflow (VRFLI[i-1] + INFLI[i]) is too large: oversaturation occurs
                 # Therefore modify estimation of inflowing VRFLI
                 if (p_fu_BYFRAC[i] > 0)
-                    # If byflow can occur:
-                    if (VRFLI_prior[i - 1] < MAXIN)
-                        # If VRFLI on its own is small enough:
+                # If byflow can occur:
+                    if (VRFLI_prior[i-1] < MAXIN)
+                    # If VRFLI on its own is small enough:
                         # a) keep VRFLI as-is,
                         VRFLI_posterior[i-1] = VRFLI_prior[i-1]
                         # b) and balance between BYFLI and INFLI (like in case i=1)
-                        # variant 1:
-                        tooMuchInflow = INFLI[i] + VRFLI_prior[i - 1] - MAXIN
+                        tooMuchInflow = INFLI[i] + VRFLI_prior[i-1] - MAXIN
                         INFLI[i] = INFLI[i] - tooMuchInflow
                         BYFLI[i] = BYFLI[i] + tooMuchInflow
-                        # variant 2:
-                        #BYFLI[i] = BYFLI[i] + INFLI[i] - (MAXIN - VRFLI_prior[i - 1])
-                        #INFLI[i] = MAXIN - VRFLI_prior[i - 1]
                     else
-                        # If VRFLI on its own is still too large:
+                    # If VRFLI on its own is still too large:
                         # a) reduce VRFLi to max value and b) reroute all of INFLI to BYFLI
                         VRFLI_posterior[i-1] = MAXIN
                         BYFLI[i] = BYFLI[i] + INFLI[i]
                         INFLI[i] = 0
                     end
                 else
-                    # If no byflow can occur, decrease VRFLI (even making it
-                    # negative) so that inflow just achieves complete saturation
+                # If no byflow can occur, decrease VRFLI (even making it
+                #   negative) so that inflow just achieves complete saturation
                     VRFLI_posterior[i-1] = MAXIN - INFLI[i]
                     # With that VRFLI + INFLI == MAXIN
                     # By decreasing VRFLI_posterior[i-1], this will also have an
-                    # effect on the next loop iteration (i.e. the layer above). It will 
-                    # indeed decrease MAXIN for the layer above.
+                    #    effect on the layer above (i.e. in the next loop iteration). It will 
+                    #    indeed decrease MAXIN for the layer above.
                 end
             else
                 # If inflow is below MAXIN, accept prior estimate of incoming VRFLI for that layer:
@@ -460,15 +451,18 @@ function INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
                 # as well as accept prior estimates of INFLI and BYFLI for that layer.
             end
         end
+    end
 
+    # Compute net flows NTFLI based on corrected flows
+    NTFLI=fill(NaN, NLAYER)
+    for i = NLAYER:-1:1
         if (i == 1)
-            NTFLI[i] = INFLI[i] - VRFLI_posterior[i] - aux_du_DSFLI[i] - aux_du_TRANI[i] - aux_du_SLVP
+            NTFLI[i] =                        INFLI[i] - VRFLI_posterior[i] - aux_du_DSFLI[i] - aux_du_TRANI[i] - aux_du_SLVP
         elseif (i > 1)
             NTFLI[i] = VRFLI_posterior[i-1] + INFLI[i] - VRFLI_posterior[i] - aux_du_DSFLI[i] - aux_du_TRANI[i]
         else
             error("Unexpected value of i.")
         end
-
     end
 
     # VV(*)     - modified VRFLI, mm/d
