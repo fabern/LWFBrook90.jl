@@ -640,7 +640,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
             u_δ18O_GWAT, u_δ2H_GWAT, u_δ18O_SWATI, u_δ2H_SWATI =
                 compute_isotope_u_GWAT_SWATI(integrator,
                     # for GWAT:
-                    u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT, du_GWFL, du_SEEP,
+                    u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT, du_GWFL[1], du_SEEP[1],
                     # for SWATI:
                     du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI,  # (non-fractionating)
                     aux_du_SLVP[1], p_fT_TADTM[1], p_VAPPRES(integrator.t), p_δ2H_PREC(integrator.t), p_δ18O_PREC(integrator.t), u_aux_WETNES, # (fractionating)

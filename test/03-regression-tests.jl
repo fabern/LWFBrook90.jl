@@ -126,6 +126,195 @@ if basename(pwd()) != "test"; cd("test"); end
 
 end
 
+function get_daily_soilFluxes(simulation)
+    t_out = range(extrema(simulation.ODESolution.t)..., step = 1)
+    t_ref = simulation.ODESolution.prob.p.REFERENCE_DATE
+    d_out = RelativeDaysFloat2DateTime.(t_out, t_ref);
+
+    # extract specifically flows: INFL-BYFL-SRFL-DSFLI-VRFLN
+    # keys(simulation.ODESolution(1).accum)
+    simulated_fluxes = (
+        cum_d_prec      = [simulation.ODESolution(t_days).accum.cum_d_prec      for t_days = t_out],
+        cum_d_rfal      = [simulation.ODESolution(t_days).accum.cum_d_rfal      for t_days = t_out],
+        cum_d_sfal      = [simulation.ODESolution(t_days).accum.cum_d_sfal      for t_days = t_out],
+        cum_d_rint      = [simulation.ODESolution(t_days).accum.cum_d_rint      for t_days = t_out],
+        cum_d_sint      = [simulation.ODESolution(t_days).accum.cum_d_sint      for t_days = t_out],
+        cum_d_rthr      = [simulation.ODESolution(t_days).accum.cum_d_rthr      for t_days = t_out],
+        cum_d_sthr      = [simulation.ODESolution(t_days).accum.cum_d_sthr      for t_days = t_out],
+        cum_d_rsno      = [simulation.ODESolution(t_days).accum.cum_d_rsno      for t_days = t_out],
+        cum_d_rnet      = [simulation.ODESolution(t_days).accum.cum_d_rnet      for t_days = t_out],
+        cum_d_smlt      = [simulation.ODESolution(t_days).accum.cum_d_smlt      for t_days = t_out],
+        cum_d_evap      = [simulation.ODESolution(t_days).accum.cum_d_evap      for t_days = t_out],
+        cum_d_tran      = [simulation.ODESolution(t_days).accum.cum_d_tran      for t_days = t_out],
+        cum_d_irvp      = [simulation.ODESolution(t_days).accum.cum_d_irvp      for t_days = t_out],
+        cum_d_isvp      = [simulation.ODESolution(t_days).accum.cum_d_isvp      for t_days = t_out],
+        cum_d_slvp      = [simulation.ODESolution(t_days).accum.cum_d_slvp      for t_days = t_out],
+        cum_d_snvp      = [simulation.ODESolution(t_days).accum.cum_d_snvp      for t_days = t_out],
+        cum_d_pint      = [simulation.ODESolution(t_days).accum.cum_d_pint      for t_days = t_out],
+        cum_d_ptran     = [simulation.ODESolution(t_days).accum.cum_d_ptran     for t_days = t_out],
+        # cum_d_pslvp     = [simulation.ODESolution(t_days).accum.cum_d_pslvp     for t_days = t_out],
+        flow            = [simulation.ODESolution(t_days).accum.flow            for t_days = t_out],
+        seep            = [simulation.ODESolution(t_days).accum.seep            for t_days = t_out],
+        srfl            = [simulation.ODESolution(t_days).accum.srfl            for t_days = t_out],
+        slfl            = [simulation.ODESolution(t_days).accum.slfl            for t_days = t_out],
+        byfl            = [simulation.ODESolution(t_days).accum.byfl            for t_days = t_out],
+        dsfl            = [simulation.ODESolution(t_days).accum.dsfl            for t_days = t_out],
+        gwfl            = [simulation.ODESolution(t_days).accum.gwfl            for t_days = t_out],
+        vrfln           = [simulation.ODESolution(t_days).accum.vrfln           for t_days = t_out],
+        totalSWAT       = [simulation.ODESolution(t_days).accum.totalSWAT       for t_days = t_out],
+        new_totalWATER  = [simulation.ODESolution(t_days).accum.new_totalWATER  for t_days = t_out],
+        BALERD_SWAT     = [simulation.ODESolution(t_days).accum.BALERD_SWAT     for t_days = t_out],
+        BALERD_total    = [simulation.ODESolution(t_days).accum.BALERD_total    for t_days = t_out],
+        )
+    return d_out, simulated_fluxes
+end
+function plot_simulated_fluxes_vs_reference(simulated_fluxes, reference, d_out; labels = ["current code" "reference simulation"], kwargs...)
+    plot(
+        plot(d_out, [simulated_fluxes.cum_d_prec      reference["cum_d_prec"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_prec", kwargs...),
+        plot(d_out, [simulated_fluxes.cum_d_rfal      reference["cum_d_rfal"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_rfal", kwargs...),
+        plot(d_out, [simulated_fluxes.cum_d_sfal      reference["cum_d_sfal"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_sfal", kwargs...),
+        plot(d_out, [simulated_fluxes.cum_d_rint      reference["cum_d_rint"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_rint", kwargs...),
+        plot(d_out, [simulated_fluxes.cum_d_sint      reference["cum_d_sint"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_sint", kwargs...),
+        plot(d_out, [simulated_fluxes.cum_d_rthr      reference["cum_d_rthr"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_rthr", kwargs...),
+        plot(d_out, [simulated_fluxes.cum_d_sthr      reference["cum_d_sthr"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_sthr", kwargs...),
+        plot(d_out, [simulated_fluxes.cum_d_rsno      reference["cum_d_rsno"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_rsno", kwargs...),
+        plot(d_out, [simulated_fluxes.cum_d_rnet      reference["cum_d_rnet"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_rnet", kwargs...),
+        plot(d_out, [simulated_fluxes.cum_d_smlt      reference["cum_d_smlt"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_smlt", kwargs...),
+        plot(d_out, [simulated_fluxes.cum_d_evap      reference["cum_d_evap"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_evap", kwargs...),
+        plot(d_out, [simulated_fluxes.cum_d_tran      reference["cum_d_tran"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_tran", kwargs...),
+        plot(d_out, [simulated_fluxes.cum_d_irvp      reference["cum_d_irvp"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_irvp", kwargs...),
+        plot(d_out, [simulated_fluxes.cum_d_isvp      reference["cum_d_isvp"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_isvp", kwargs...),
+        plot(d_out, [simulated_fluxes.cum_d_slvp      reference["cum_d_slvp"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_slvp", kwargs...),
+        plot(d_out, [simulated_fluxes.cum_d_snvp      reference["cum_d_snvp"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_snvp", kwargs...),
+        plot(d_out, [simulated_fluxes.cum_d_pint      reference["cum_d_pint"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_pint", kwargs...),
+        plot(d_out, [simulated_fluxes.cum_d_ptran     reference["cum_d_ptran"]],    linestyle = [:solid :dot], label = labels, title = "accum.cum_d_ptran", kwargs...),
+        # plot(d_out, [simulated_fluxes.cum_d_pslvp     reference["cum_d_pslvp"]],    linestyle = [:solid :dot], label = labels, title = "accum.cum_d_pslvp", kwargs...), # PSLVP was removed from output,
+        plot(d_out, [simulated_fluxes.flow            reference["flow"]],           linestyle = [:solid :dot], label = labels, title = "accum.flow", kwargs...),
+        plot(d_out, [simulated_fluxes.seep            reference["seep"]],           linestyle = [:solid :dot], label = labels, title = "accum.seep", kwargs...),
+        plot(d_out, [simulated_fluxes.srfl            reference["srfl"]],           linestyle = [:solid :dot], label = labels, title = "accum.srfl", kwargs...),
+        plot(d_out, [simulated_fluxes.slfl            reference["slfl"]],           linestyle = [:solid :dot], label = labels, title = "accum.slfl", kwargs...),
+        plot(d_out, [simulated_fluxes.byfl            reference["byfl"]],           linestyle = [:solid :dot], label = labels, title = "accum.byfl", kwargs...),
+        plot(d_out, [simulated_fluxes.dsfl            reference["dsfl"]],           linestyle = [:solid :dot], label = labels, title = "accum.dsfl", kwargs...),
+        plot(d_out, [simulated_fluxes.gwfl            reference["gwfl"]],           linestyle = [:solid :dot], label = labels, title = "accum.gwfl", kwargs...),
+        plot(d_out, [simulated_fluxes.vrfln           reference["vrfln"]],          linestyle = [:solid :dot], label = labels, title = "accum.vrfln", kwargs...),
+        plot(d_out, [simulated_fluxes.totalSWAT       reference["totalSWAT"]],      linestyle = [:solid :dot], label = labels, title = "accum.totalSWAT", kwargs...),
+        plot(d_out, [simulated_fluxes.new_totalWATER  reference["new_totalWATER"]], linestyle = [:solid :dot], label = labels, title = "accum.new_totalWATER", kwargs...),
+        plot(d_out, [simulated_fluxes.BALERD_SWAT     reference["BALERD_SWAT"]],    linestyle = [:solid :dot], label = labels, title = "accum.BALERD_SWAT", kwargs...),
+        plot(d_out, [simulated_fluxes.BALERD_total    reference["BALERD_total"]],   linestyle = [:solid :dot], label = labels, title = "accum.BALERD_total", kwargs...)
+    )
+end
+function test_fluxes_comparison(simulated_fluxes, reference)
+        @test isapprox(reference["cum_d_prec"], simulated_fluxes.cum_d_prec,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_rfal"], simulated_fluxes.cum_d_rfal,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_sfal"], simulated_fluxes.cum_d_sfal,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_rint"], simulated_fluxes.cum_d_rint,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_sint"], simulated_fluxes.cum_d_sint,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_rthr"], simulated_fluxes.cum_d_rthr,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_sthr"], simulated_fluxes.cum_d_sthr,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_rsno"], simulated_fluxes.cum_d_rsno,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_rnet"], simulated_fluxes.cum_d_rnet,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_smlt"], simulated_fluxes.cum_d_smlt,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_evap"], simulated_fluxes.cum_d_evap,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_tran"], simulated_fluxes.cum_d_tran,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_irvp"], simulated_fluxes.cum_d_irvp,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_isvp"], simulated_fluxes.cum_d_isvp,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_slvp"], simulated_fluxes.cum_d_slvp,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_snvp"], simulated_fluxes.cum_d_snvp,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_pint"], simulated_fluxes.cum_d_pint,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_ptran"], simulated_fluxes.cum_d_ptran,        atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        # @test isapprox(reference["cum_d_pslvp"], simulated_fluxes.cum_d_pslvp,      atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["flow"], simulated_fluxes.flow,                      atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["seep"], simulated_fluxes.seep,                      atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["srfl"], simulated_fluxes.srfl,                      atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["slfl"], simulated_fluxes.slfl,                      atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["byfl"], simulated_fluxes.byfl,                      atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["dsfl"], simulated_fluxes.dsfl,                      atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["gwfl"], simulated_fluxes.gwfl,                      atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["vrfln"], simulated_fluxes.vrfln,                    atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["totalSWAT"], simulated_fluxes.totalSWAT,            atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["new_totalWATER"], simulated_fluxes.new_totalWATER,  atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["BALERD_SWAT"], simulated_fluxes.BALERD_SWAT,        atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["BALERD_total"], simulated_fluxes.BALERD_total,      atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+end
+
+@testset "Oversaturation-infiltration-FLUXES" begin
+    # model1 = loadSPAC("../examples/infiltrationSaturationINFEXP0/", "infiltrationSaturationINFEXP0"; 
+    #     simulate_isotopes = false,
+    #     Δz_thickness_m = [fill(0.05, 42);],
+    #     IC_soil = (PSIM_init_kPa = -6.3, delta18O_init_permil = -13.0, delta2H_init_permil = -95.0),
+    #     root_distribution = (beta = 0.90, z_rootMax_m = nothing));
+    # simulation1  = setup(model1; requested_tspan = (0,300));
+    # simulation1 = remakeSPAC(simulation1, params = (
+    #     # activate all flow processes INFL, BYFL, SRFL DSFLI, SEEP/GWFL
+    #     BYPAR=1, QDEPTH_m = 0.70, QFFC = 0.2, QFPAR = 0.3,
+    #     IMPERV = 0.01,
+    #     DSLOPE = 10,
+    #     DRAIN=.33, 
+    #     GSC = 0.05, GSP = 0.2))
+    # simulate!(simulation1);
+    
+    model2 = loadSPAC("../examples/infiltrationSaturationINFEXP1/", "infiltrationSaturationINFEXP1"; 
+        simulate_isotopes = false,
+        Δz_thickness_m = [fill(0.05, 42);],
+        IC_soil = (PSIM_init_kPa = -6.3, delta18O_init_permil = -13.0, delta2H_init_permil = -95.0),
+        root_distribution = (beta = 0.90, z_rootMax_m = nothing));
+    simulation2  = setup(model2; requested_tspan = (0,300));
+    simulate!(simulation2);
+    simulation2_withVariousFlows = remakeSPAC(simulation2, params = (
+        # activate all flow processes INFL, BYFL, SRFL DSFLI, SEEP/GWFL
+        BYPAR=1, QDEPTH_m = 0.40, QFFC = 0.2, QFPAR = 0.3,
+        # IMPERV = 0.01,
+        # DSLOPE = 10,
+        # DRAIN=.33, 
+        GSC = 0.05, GSP = 0.2))
+    simulate!(simulation2_withVariousFlows);
+
+    # d_out1, simulated_fluxes1 = get_daily_soilFluxes(simulation1);
+    d_out2,  simulated_fluxes2  = get_daily_soilFluxes(simulation2);
+    d_out2b, simulated_fluxes2b = get_daily_soilFluxes(simulation2_withVariousFlows);
+    
+    fname2  = "../examples/INFEXP1_fluxes_reference.jld2"
+    fname2b = "../examples/INFEXP1-modified_fluxes_reference.jld2"
+    if task == "test"
+        loaded2 = load(fname2)
+        loaded2b = load(fname2b)
+
+        test_fluxes_comparison(simulated_fluxes2, loaded2)
+        test_fluxes_comparison(simulated_fluxes2b, loaded2b)
+    elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
+        # overwrite output
+        jldsave(fname2, compress=false; (simulated_fluxes2   = simulated_fluxes2)..., d_out2 = d_out2)
+        jldsave(fname2b, compress=false; (simulated_fluxes2b   = simulated_fluxes2b)..., d_out2b = d_out2b)
+        error("Test overwrites reference solution instead of checking against it.")
+    else
+        # do nothing
+    end
+
+    if !is_a_CI_system && plot_flag
+        fname_illustrations = "out/$git_status_string/TESTSET_Oversaturation-infiltration-FLUXES"
+        mkpath(dirname(fname_illustrations))
+        
+        pl_fluxes2 = plot_simulated_fluxes_vs_reference(simulated_fluxes2, loaded2, loaded2["d_out2"]);
+        plot!(legend = :topleft, size=(2000,1000), layout = (7,5))
+        savefig(plot(pl_fluxes2, size=(2000,1000), dpi=300),  fname_illustrations*"_fluxes_noBYFL_regressionTest.png")
+
+        pl_fluxes2b = plot_simulated_fluxes_vs_reference(simulated_fluxes2b, loaded2b, loaded2b["d_out2b"]);
+        plot!(legend = :topleft, size=(2000,1000), layout = (7,5))
+        savefig(plot(pl_fluxes2b, size=(2000,1000), dpi=300),  fname_illustrations*"_fluxes_withBYFL_regressionTest.png")
+        
+        pl_fluxes2vs2b = plot_simulated_fluxes_vs_reference(
+            simulated_fluxes2, 
+            Dict(String(k) => v for (k,v) in pairs(simulated_fluxes2b)), 
+            d_out2b, 
+            labels = ["Without BYFL" "With BYFL"]);
+        plot!(legend = :topleft, size=(2000,1000), layout = (7,5))
+        savefig(plot(pl_fluxes2vs2b, size=(2000,1000), dpi=300),  fname_illustrations*"_fluxes_BYFL_comparison.png")
+        pl_comparison = plot(plotamounts(simulation2, title = "Without BYFL"),
+            plotamounts(simulation2_withVariousFlows, title = "With BYFL"),
+            layout = (1,2), size=(1460,1400))
+        savefig(plot(pl_comparison, size=(2000,1000), dpi=300),  fname_illustrations*"_fluxes_BYFL_comparison2.png")
+    end
+end
 
 @testset "DAV2020modified-FLUXES" begin
     
@@ -178,84 +367,14 @@ end
     simulate!(example_result3)
 
     # extract required data from solution object
-    # extract specificayll flows: INFL-BYFL-SRFL-DSFLI-VRFLN
-    ## helper quantities
-    # t_out = range(extrema(example_result3.ODESolution.t)..., step = 30)
-    t_out = range(extrema(example_result3.ODESolution.t)..., step = 1)
-    t_ref = example_result3.ODESolution.prob.p.REFERENCE_DATE
-    d_out = RelativeDaysFloat2DateTime.(t_out, t_ref);
-    ## scalar quantities
-    # keys(example_result3.ODESolution(1).accum)
-    simulated_fluxes = (
-        cum_d_prec      = [example_result3.ODESolution(t_days).accum.cum_d_prec      for t_days = t_out],
-        cum_d_rfal      = [example_result3.ODESolution(t_days).accum.cum_d_rfal      for t_days = t_out],
-        cum_d_sfal      = [example_result3.ODESolution(t_days).accum.cum_d_sfal      for t_days = t_out],
-        cum_d_rint      = [example_result3.ODESolution(t_days).accum.cum_d_rint      for t_days = t_out],
-        cum_d_sint      = [example_result3.ODESolution(t_days).accum.cum_d_sint      for t_days = t_out],
-        cum_d_rthr      = [example_result3.ODESolution(t_days).accum.cum_d_rthr      for t_days = t_out],
-        cum_d_sthr      = [example_result3.ODESolution(t_days).accum.cum_d_sthr      for t_days = t_out],
-        cum_d_rsno      = [example_result3.ODESolution(t_days).accum.cum_d_rsno      for t_days = t_out],
-        cum_d_rnet      = [example_result3.ODESolution(t_days).accum.cum_d_rnet      for t_days = t_out],
-        cum_d_smlt      = [example_result3.ODESolution(t_days).accum.cum_d_smlt      for t_days = t_out],
-        cum_d_evap      = [example_result3.ODESolution(t_days).accum.cum_d_evap      for t_days = t_out],
-        cum_d_tran      = [example_result3.ODESolution(t_days).accum.cum_d_tran      for t_days = t_out],
-        cum_d_irvp      = [example_result3.ODESolution(t_days).accum.cum_d_irvp      for t_days = t_out],
-        cum_d_isvp      = [example_result3.ODESolution(t_days).accum.cum_d_isvp      for t_days = t_out],
-        cum_d_slvp      = [example_result3.ODESolution(t_days).accum.cum_d_slvp      for t_days = t_out],
-        cum_d_snvp      = [example_result3.ODESolution(t_days).accum.cum_d_snvp      for t_days = t_out],
-        cum_d_pint      = [example_result3.ODESolution(t_days).accum.cum_d_pint      for t_days = t_out],
-        cum_d_ptran     = [example_result3.ODESolution(t_days).accum.cum_d_ptran     for t_days = t_out],
-        # cum_d_pslvp     = [example_result3.ODESolution(t_days).accum.cum_d_pslvp     for t_days = t_out],
-        flow            = [example_result3.ODESolution(t_days).accum.flow            for t_days = t_out],
-        seep            = [example_result3.ODESolution(t_days).accum.seep            for t_days = t_out],
-        srfl            = [example_result3.ODESolution(t_days).accum.srfl            for t_days = t_out],
-        slfl            = [example_result3.ODESolution(t_days).accum.slfl            for t_days = t_out],
-        byfl            = [example_result3.ODESolution(t_days).accum.byfl            for t_days = t_out],
-        dsfl            = [example_result3.ODESolution(t_days).accum.dsfl            for t_days = t_out],
-        gwfl            = [example_result3.ODESolution(t_days).accum.gwfl            for t_days = t_out],
-        vrfln           = [example_result3.ODESolution(t_days).accum.vrfln           for t_days = t_out],
-        totalSWAT       = [example_result3.ODESolution(t_days).accum.totalSWAT       for t_days = t_out],
-        new_totalWATER  = [example_result3.ODESolution(t_days).accum.new_totalWATER  for t_days = t_out],
-        BALERD_SWAT     = [example_result3.ODESolution(t_days).accum.BALERD_SWAT     for t_days = t_out],
-        BALERD_total    = [example_result3.ODESolution(t_days).accum.BALERD_total    for t_days = t_out],
-        )
-    
+    d_out, simulated_fluxes = get_daily_soilFluxes(example_result3);
+
     # test or overwrite
     # fname = input_path*input_prefix
     fname = "../examples/DAV2020-full-modified_fluxes_reference.jld2"
     if task == "test"
         loaded = load(fname)
-        @test isapprox(loaded["cum_d_prec"], simulated_fluxes.cum_d_prec, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["cum_d_rfal"], simulated_fluxes.cum_d_rfal, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["cum_d_sfal"], simulated_fluxes.cum_d_sfal, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["cum_d_rint"], simulated_fluxes.cum_d_rint, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["cum_d_sint"], simulated_fluxes.cum_d_sint, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["cum_d_rthr"], simulated_fluxes.cum_d_rthr, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["cum_d_sthr"], simulated_fluxes.cum_d_sthr, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["cum_d_rsno"], simulated_fluxes.cum_d_rsno, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["cum_d_rnet"], simulated_fluxes.cum_d_rnet, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["cum_d_smlt"], simulated_fluxes.cum_d_smlt, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["cum_d_evap"], simulated_fluxes.cum_d_evap, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["cum_d_tran"], simulated_fluxes.cum_d_tran, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["cum_d_irvp"], simulated_fluxes.cum_d_irvp, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["cum_d_isvp"], simulated_fluxes.cum_d_isvp, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["cum_d_slvp"], simulated_fluxes.cum_d_slvp, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["cum_d_snvp"], simulated_fluxes.cum_d_snvp, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["cum_d_pint"], simulated_fluxes.cum_d_pint, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["cum_d_ptran"], simulated_fluxes.cum_d_ptran, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        # @test isapprox(loaded["cum_d_pslvp"], simulated_fluxes.cum_d_pslvp, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["flow"], simulated_fluxes.flow, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["seep"], simulated_fluxes.seep, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["srfl"], simulated_fluxes.srfl, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["slfl"], simulated_fluxes.slfl, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["byfl"], simulated_fluxes.byfl, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["dsfl"], simulated_fluxes.dsfl, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["gwfl"], simulated_fluxes.gwfl, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["vrfln"], simulated_fluxes.vrfln, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["totalSWAT"], simulated_fluxes.totalSWAT, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["new_totalWATER"], simulated_fluxes.new_totalWATER, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["BALERD_SWAT"], simulated_fluxes.BALERD_SWAT, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(loaded["BALERD_total"], simulated_fluxes.BALERD_total, atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        test_fluxes_comparison(simulated_fluxes, loaded)
     elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
         # overwrite output
         jldsave(fname, compress=false; (simulated_fluxes   = simulated_fluxes)...)
@@ -270,41 +389,9 @@ end
         fname_illustrations = "out/$git_status_string/TESTSET_DAV2020modified-regressionTest-FLUXES"
         mkpath(dirname(fname_illustrations))
 
-        pl_fluxes = plot(
-            plot(d_out, [simulated_fluxes.cum_d_prec      loaded["cum_d_prec"]],     legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.cum_d_prec", ),
-            plot(d_out, [simulated_fluxes.cum_d_rfal      loaded["cum_d_rfal"]],     legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.cum_d_rfal", ),
-            plot(d_out, [simulated_fluxes.cum_d_sfal      loaded["cum_d_sfal"]],     legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.cum_d_sfal", ),
-            plot(d_out, [simulated_fluxes.cum_d_rint      loaded["cum_d_rint"]],     legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.cum_d_rint", ),
-            plot(d_out, [simulated_fluxes.cum_d_sint      loaded["cum_d_sint"]],     legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.cum_d_sint", ),
-            plot(d_out, [simulated_fluxes.cum_d_rthr      loaded["cum_d_rthr"]],     legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.cum_d_rthr", ),
-            plot(d_out, [simulated_fluxes.cum_d_sthr      loaded["cum_d_sthr"]],     legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.cum_d_sthr", ),
-            plot(d_out, [simulated_fluxes.cum_d_rsno      loaded["cum_d_rsno"]],     legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.cum_d_rsno", ),
-            plot(d_out, [simulated_fluxes.cum_d_rnet      loaded["cum_d_rnet"]],     legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.cum_d_rnet", ),
-            plot(d_out, [simulated_fluxes.cum_d_smlt      loaded["cum_d_smlt"]],     legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.cum_d_smlt", ),
-            plot(d_out, [simulated_fluxes.cum_d_evap      loaded["cum_d_evap"]],     legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.cum_d_evap", ),
-            plot(d_out, [simulated_fluxes.cum_d_tran      loaded["cum_d_tran"]],     legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.cum_d_tran", ),
-            plot(d_out, [simulated_fluxes.cum_d_irvp      loaded["cum_d_irvp"]],     legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.cum_d_irvp", ),
-            plot(d_out, [simulated_fluxes.cum_d_isvp      loaded["cum_d_isvp"]],     legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.cum_d_isvp", ),
-            plot(d_out, [simulated_fluxes.cum_d_slvp      loaded["cum_d_slvp"]],     legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.cum_d_slvp", ),
-            plot(d_out, [simulated_fluxes.cum_d_snvp      loaded["cum_d_snvp"]],     legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.cum_d_snvp", ),
-            plot(d_out, [simulated_fluxes.cum_d_pint      loaded["cum_d_pint"]],     legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.cum_d_pint", ),
-            plot(d_out, [simulated_fluxes.cum_d_ptran     loaded["cum_d_ptran"]],    legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.cum_d_ptran", ),
-            # plot(d_out, [simulated_fluxes.cum_d_pslvp     loaded["cum_d_pslvp"]],    legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.cum_d_pslvp", ), # PSLVP was removed from output,
-            plot(d_out, [simulated_fluxes.flow            loaded["flow"]],           legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.flow", ),
-            plot(d_out, [simulated_fluxes.seep            loaded["seep"]],           legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.seep", ),
-            plot(d_out, [simulated_fluxes.srfl            loaded["srfl"]],           legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.srfl", ),
-            plot(d_out, [simulated_fluxes.slfl            loaded["slfl"]],           legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.slfl", ),
-            plot(d_out, [simulated_fluxes.byfl            loaded["byfl"]],           legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.byfl", ),
-            plot(d_out, [simulated_fluxes.dsfl            loaded["dsfl"]],           legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.dsfl", ),
-            plot(d_out, [simulated_fluxes.gwfl            loaded["gwfl"]],           legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.gwfl", ),
-            plot(d_out, [simulated_fluxes.vrfln           loaded["vrfln"]],          legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.vrfln", ),
-            plot(d_out, [simulated_fluxes.totalSWAT       loaded["totalSWAT"]],      legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.totalSWAT", ),
-            plot(d_out, [simulated_fluxes.new_totalWATER  loaded["new_totalWATER"]], legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.new_totalWATER", ),
-            plot(d_out, [simulated_fluxes.BALERD_SWAT     loaded["BALERD_SWAT"]],    legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.BALERD_SWAT", ),
-            plot(d_out, [simulated_fluxes.BALERD_total    loaded["BALERD_total"]],   legend = :topright, linestyle = [:solid :dot], label = ["current code" "reference simulation"], title = "accum.BALERD_total", ),
-            size=(2000,1000), layout = (7,5)
-            )
-        savefig(plot(pl_fluxes, size=(2000,1400), dpi=300),  fname_illustrations*"_fluxes.png")
+        pl_fluxes = plot_simulated_fluxes_vs_reference(simulated_fluxes, loaded, d_out);
+        plot!(legend = :topright, size=(2000,1000), layout = (7,5))
+        savefig(plot(pl_fluxes, size=(2000,1400), layout = (7,5), dpi=300),  fname_illustrations*"_fluxes.png")
     end
 
 end

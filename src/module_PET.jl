@@ -882,6 +882,8 @@ function FRSS(p_RSSA, p_RSSB, u_aux_PSIM, p_soil)
         #     FRSS = p_RSSA
         # end
     end
+
+    # LWFBrook90 additionally: if(u_aux_PSIM < PsiCrit[1]) FRSS=1.e+20 end # where PsiCrit (! not PSICR) is a cutoff pressure for evaporation but also transpiration
     return FRSS
 end
 

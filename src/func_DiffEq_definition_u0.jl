@@ -4,20 +4,20 @@
 Generate vector u0 needed for ODE() problem in DiffEq.jl package.
 """
 function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, NLAYER)
-    # u0_treespecies_names = (default = 1) # e.g. (beech = 1, oak = 2, spruce = 3)
-    names_accum = compute_intermediate_quantities ? reshape([
-                "cum_d_prec";"cum_d_rfal";"cum_d_sfal";"cum_d_rint"; "cum_d_sint";"cum_d_rsno";
-                "cum_d_rnet";"cum_d_smlt";"cum_d_evap";"cum_d_tran";"cum_d_irvp";"cum_d_isvp";
-                "cum_d_slvp";"cum_d_snvp";"cum_d_pint";"cum_d_ptran";"cum_d_pslvp";
-                "flow";"seep";"srfl";"slfl";"byfl";"dsfl";"gwfl";"vrfln";
-                "cum_d_rthr";"cum_d_sthr";
-                "totalSWAT"; "new_totalWATER"; "BALERD_SWAT"; "BALERD_total";
-            ],1,:) : []
+    name_states = ifelse(simulate_isotopes, (:mm,    :d18O, :d2H), (:mm,))
+    name_fluxes = ifelse(simulate_isotopes, (:mmday, :d18O, :d2H), (:mmday,))
+    name_aux       = (:θ,:ψ,:K)
+    name_accum     = (:cum_d_prec, :cum_d_rfal, :cum_d_sfal, :cum_d_rint,  :cum_d_sint, :cum_d_rsno,
+                    :cum_d_rnet, :cum_d_smlt, :cum_d_evap, :cum_d_tran, :cum_d_irvp, :cum_d_isvp,
+                    :cum_d_slvp, :cum_d_snvp, :cum_d_pint, :cum_d_ptran, :cum_d_pslvp,
+                    :flow, :seep, :srfl, :slfl, :byfl, :dsfl, :gwfl, :vrfln,
+                    :cum_d_rthr, :cum_d_sthr,
+                    :totalSWAT,  :new_totalWATER,  :BALERD_SWAT,  :BALERD_total)
 
     variable_names = simulate_isotopes ? (d18O = 2, d2H = 3) : ()
     N_isotopes             = length(variable_names)
     N_separate_treespecies = 1 # TODO(bernhard) currently only one species is implemented
-    N_accum_var            = length(names_accum)
+    N_accum_var            = length(name_accum)
 
     u_totalRWUinit_mmday = zeros(1,  1+N_isotopes, N_separate_treespecies)
     u_Xyleminit_mm       = zeros(1,  1+N_isotopes, N_separate_treespecies)  #[5.0 -12 -95] .* ones(1, 1+N_isotopes, N_separate_treespecies) # # start out with same concentration as in first soil layer
@@ -36,16 +36,8 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             # Further structures for auxiliary soil variables (θ,ψ,K) and accumulation variables
             aux    = zeros(NLAYER, 3), # TODO: where to store θ, ψ and K(θ) ?
             accum  = zeros(N_accum_var,1))
+
     # Give ComponentArray as u0 to DiffEq.jl
-    name_states = ifelse(simulate_isotopes, (:mm,    :d18O, :d2H), (:mm,))
-    name_fluxes = ifelse(simulate_isotopes, (:mmday, :d18O, :d2H), (:mmday,))
-    name_aux       = (:θ,:ψ,:K)
-    name_accum     = (:cum_d_prec, :cum_d_rfal, :cum_d_sfal, :cum_d_rint,  :cum_d_sint, :cum_d_rsno,
-                    :cum_d_rnet, :cum_d_smlt, :cum_d_evap, :cum_d_tran, :cum_d_irvp, :cum_d_isvp,
-                    :cum_d_slvp, :cum_d_snvp, :cum_d_pint, :cum_d_ptran, :cum_d_pslvp,
-                    :flow, :seep, :srfl, :slfl, :byfl, :dsfl, :gwfl, :vrfln,
-                    :cum_d_rthr, :cum_d_sthr,
-                    :totalSWAT,  :new_totalWATER,  :BALERD_SWAT,  :BALERD_total)
     if simulate_isotopes
         u0 = ComponentArray(
             SWATI  = NamedTuple{name_states, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:SWATI][:,:,1])...)),
