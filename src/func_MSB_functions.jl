@@ -565,7 +565,11 @@ programming errors.
 
 
 """
-function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
+function MSBITERATE!(
+        # modified in_place:
+        p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI, DPSIDW, 
+        # unmodified arguments
+                    FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
                     # for SRFLFR:
                     u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC,
                     #
@@ -594,15 +598,14 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
     else
         SAFRAC = 0.
     end
-    p_fu_SRFL = min(1., (p_IMPERV + SAFRAC)) * (p_fu_RNET + aux_du_SMLT)
+    p_fu_SRFL .= min(1., (p_IMPERV + SAFRAC)) * (p_fu_RNET .+ aux_du_SMLT)
 
     # Derive water supply rate to soil surface:
-    p_fu_SLFL = p_fu_RNET + aux_du_SMLT - p_fu_SRFL
+    p_fu_SLFL .= p_fu_RNET .+ aux_du_SMLT .- p_fu_SRFL
 
     ##########################
     ## Within soil compute flows from layers:
     #  a) downslope, lateral flow from the layers: DSFLI
-    aux_du_DSFLI = fill(NaN, NLAYER) # 0.000001 seconds (1 allocation: 144 bytes)
     if (p_LENGTH_SLOPE == 0 || p_DSLOPE == 0)
         # added in Version 4
         aux_du_DSFLI .= 0
@@ -611,7 +614,6 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
     end
 
     #  b) vertical flux between layers: VRFLI (Richards equation)
-    aux_du_VRFLI = fill(NaN, NLAYER) # 0.000001 seconds (1 allocation: 144 bytes)
     for i = NLAYER:-1:1
         # vertical flow rates
         if (i < NLAYER)
@@ -639,7 +641,7 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
     end
 
     # first approximation on aux_du_VRFLI
-    aux_du_VRFLI_1st_approx = aux_du_VRFLI
+    aux_du_VRFLI_1st_approx = deepcopy(aux_du_VRFLI)
     #@debug "u_aux_PSITI[1]: $(u_aux_PSITI[1]), sum(u_aux_PSITI): $(sum(u_aux_PSITI))"
     #@debug "a) aux_du_VRFLI_1st_approx[1]: $(aux_du_VRFLI_1st_approx[1]), sum(aux_du_VRFLI_1st_approx): $(sum(aux_du_VRFLI_1st_approx))"
 
@@ -649,8 +651,8 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
     DTI = min(DTRI, p_DTIMAX)
 
     # net inflow to each layer including E and T withdrawal adjusted for interception
-    aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
-        LWFBrook90.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
+    aux_du_VRFLI[:], aux_du_INFLI[:], aux_du_BYFLI[:], du_NTFLI[:] =
+        LWFBrook90.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL[1], aux_du_DSFLI, aux_du_TRANI,
                                     aux_du_SLVP, p_soil.p_SWATMAX, u_SWATI,
                                     aux_du_VRFLI_1st_approx) # 0.000003 seconds (4 allocations: 576 bytes)
 
@@ -665,7 +667,7 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
         # One might think, that therefore the adaptive time step control of LWFBrook can be deactivated.
         # However, this is not the case. DTI is used in INFLOW() to compute the fluxes aux_du_VRFLI, ... etc.
 
-        DPSIDW = LWFBrook90.KPT.FDPSIDWF(u_aux_WETNES, p_soil) # 0.000004 seconds (3 allocations: 432 bytes)
+        DPSIDW .= LWFBrook90.KPT.FDPSIDWF(u_aux_WETNES, p_soil) # 0.000004 seconds (3 allocations: 432 bytes)
 
         DTINEW=LWFBrook90.WAT.ITER(NLAYER, FLAG_MualVanGen, DTI, LWFBrook90.CONSTANTS.p_DTIMIN, DPSIDW,
                                         du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMAX,
@@ -675,14 +677,14 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
         if (DTINEW < DTI)
             # recalculate flow rates with new DTI
             DTI = DTINEW
-            aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
-                LWFBrook90.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
+            aux_du_VRFLI[:], aux_du_INFLI[:], aux_du_BYFLI[:], du_NTFLI[:] =
+                LWFBrook90.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL[1], aux_du_DSFLI, aux_du_TRANI,
                                             aux_du_SLVP, p_soil.p_SWATMAX, u_SWATI,
                                             aux_du_VRFLI_1st_approx)
         end
     end
 
-    return (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI, DTI)
+    return nothing
 end
 
 

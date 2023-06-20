@@ -551,14 +551,18 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
         #         # 4 vectors: diff¹⁸O_interfaces, diff²H_interfaces, qCᵢ¹⁸O_interfaces, qCᵢ²H_interfaces,
         #     # Tuple(zeros(NLAYER+1) for i=1:4)
         #     ),
-        u_aux_PSIM              = fill(NaN, NLAYER), # TODO: test if also works when initialized as NaN
-        u_aux_PSITI             = fill(NaN, NLAYER), # TODO: test if also works when initialized as NaN
-        u_aux_θ                 = fill(NaN, NLAYER), # TODO: test if also works when initialized as NaN
-        u_aux_θ_tminus1         = fill(NaN, NLAYER), # TODO: test if also works when initialized as NaN
-        p_fu_KK                 = fill(NaN, NLAYER), # TODO: test if also works when initialized as NaN
-        aux_du_VRFLI_1st_approx = fill(NaN, NLAYER), # TODO: test if also works when initialized as NaN
-        aux_du_BYFLI            = fill(NaN, NLAYER), # TODO: test if also works when initialized as NaN
-        p_fu_BYFRAC             = fill(NaN, NLAYER), # TODO: test if also works when initialized as NaN
+        u_aux_PSIM              = fill(NaN, NLAYER),
+        u_aux_PSITI             = fill(NaN, NLAYER),
+        u_aux_θ                 = fill(NaN, NLAYER),
+        u_aux_θ_tminus1         = fill(NaN, NLAYER),
+        p_fu_KK                 = fill(NaN, NLAYER),
+        aux_du_VRFLI_1st_approx = fill(NaN, NLAYER),
+        aux_du_BYFLI            = fill(NaN, NLAYER),
+        p_fu_BYFRAC             = fill(NaN, NLAYER),
+        p_fu_SRFL = fill(NaN, 1),
+        p_fu_SLFL = fill(NaN, 1),
+        DPSIDW    = fill(NaN, NLAYER),
+
         #     # chaches for advection dispersion equation
         #         # for quantities (all NLAYER long):
         #         # 7 vectors: θᵏ⁺¹, θᵏ, C_¹⁸Oᵏ⁺¹, C_¹⁸Oᵏ, C_²Hᵏ⁺¹, C_²Hᵏ, q,

@@ -49,7 +49,8 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # Pre-allocated caches to save memory allocations
         @unpack du_GWFL, du_SEEP, du_NTFLI, aux_du_VRFLI, aux_du_DSFLI, aux_du_INFLI, u_aux_WETNES = p;
         @unpack u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
-            aux_du_VRFLI_1st_approx, aux_du_BYFLI, p_fu_BYFRAC = p;
+            aux_du_VRFLI_1st_approx, aux_du_BYFLI, p_fu_BYFRAC,
+            p_fu_SRFL, p_fu_SLFL, DPSIDW = p;
 
         ##################
         # Parse states
@@ -78,7 +79,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # Compute fluxes
 
         # Bypass fraction of infiltration to each layer
-        p_fu_BYFRAC = fill(NaN, p_soil.NLAYER)
+        p_fu_BYFRAC .= NaN64
         if (isone(p_BYPAR))
             LWFBrook90.WAT.BYFLFR!(p_fu_BYFRAC, p_QFPAR, p_QFFC, u_aux_WETNES, p_soil) # 0.000002 seconds (1 allocation: 144 bytes)
             # generate bypass flow to avoid saturation
@@ -91,10 +92,12 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
             p_fu_BYFRAC .= 0 # alternatively
         end
 
-
         # Water movement through soil (modify DTI time step if needed)
-        p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI[:], aux_du_VRFLI[:], aux_du_INFLI[:], aux_du_BYFLI[:], du_NTFLI[:], DTI =
-            MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
+        MSBITERATE!(# modified arguments (or caches) #######
+                    p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI, DPSIDW,
+                    
+                    # input arguments #######
+                    FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
                     # for SRFLFR:
                     u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC,
                     #
@@ -204,13 +207,13 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
             du.accum.cum_d_ptran    = 0 # was computed in callback
             du.accum.cum_d_pslvp    = 0 # was computed in callback
 
-            du.accum.flow           = p_fu_SRFL +
+            du.accum.flow           = p_fu_SRFL[1] +
                                         sum(aux_du_BYFLI) +
                                         sum(aux_du_DSFLI) +
                                         du_GWFL[1]
             du.accum.seep           = du_SEEP[1]
-            du.accum.srfl           = p_fu_SRFL
-            du.accum.slfl           = p_fu_SLFL
+            du.accum.srfl           = p_fu_SRFL[1]
+            du.accum.slfl           = p_fu_SLFL[1]
             du.accum.byfl           = sum(aux_du_BYFLI)
             du.accum.dsfl           = sum(aux_du_DSFLI)
             du.accum.gwfl           = du_GWFL[1]
