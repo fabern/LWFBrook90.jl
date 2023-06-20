@@ -22,23 +22,8 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
             p_QLAYER, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC, p_IMPERV,
             p_LENGTH_SLOPE, p_DSLOPE, p_RHOWG, p_DPSIMAX, #TODO(bernhard) p_RHOWG is a global constant
             p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX, p_GSC, p_GSP, p_BYPAR = p;
-        # p_soil = .p_soil
-        # (NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, Reset,
-        # p_DTP, p_NPINT,
-
-        # # FOR MSBITERATE:
-        # p_QLAYER, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC, p_IMPERV,
-        # p_LENGTH_SLOPE, p_DSLOPE, p_RHOWG, p_DPSIMAX, #TODO(bernhard) p_RHOWG is a global constant
-        # p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX,
-        # p_GSC, p_GSP,
-
-        # p_BYPAR) = p[1][2]
-        # # unused are the constant parameters saved in: = p[1][3]
 
         ## B) time dependent parameters
-        # p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
-        #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_fT_RELDEN,
-        #     p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = p[2]
         @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND,  p_PREC,
             p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_fT_RELDEN,
             p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = p;
@@ -60,17 +45,9 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
             p_fT_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP, p_fu_STHR,
             aux_du_RSNO, aux_du_SNVP, aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP,
             u_SNOW_old, aux_du_TRANI = p
-        # (p_fu_δ18O_SLFL, p_fu_δ2H_SLFL,
-        #     p_fT_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
-        #     p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
-        #     aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old) = p[3][1]
-        # aux_du_TRANI = p[3][2]
 
         # Pre-allocated caches to save memory allocations
         @unpack du_GWFL, du_SEEP, du_NTFLI, aux_du_VRFLI, aux_du_DSFLI, aux_du_INFLI, u_aux_WETNES = p;
-        # (u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
-        #     aux_du_DSFLI,aux_du_VRFLI,aux_du_VRFLI_1st_approx,aux_du_INFLI,aux_du_BYFLI, du_NTFLI,
-        #     p_fu_BYFRAC) = p[4][1]
         @unpack u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
             aux_du_VRFLI_1st_approx, aux_du_BYFLI, p_fu_BYFRAC = p;
 
@@ -115,9 +92,8 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         end
 
 
-        # Water movement through soil
-        p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI[:], aux_du_VRFLI[:], DTI, aux_du_INFLI[:], aux_du_BYFLI[:],
-        du_NTFLI[:], du_GWFL, du_SEEP =
+        # Water movement through soil (modify DTI time step if needed)
+        p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI[:], aux_du_VRFLI[:], aux_du_INFLI[:], aux_du_BYFLI[:], du_NTFLI[:], DTI =
             MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
                     # for SRFLFR:
                     u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC,
@@ -135,9 +111,10 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
                     # for FDPSIDW:
                     u_aux_WETNES,
                     # for ITER:
-                    p_DSWMAX, u_aux_θ,
-                    # for GWATER:
-                    u_GWAT, p_GSC, p_GSP) # 0.000011 seconds (15 allocations: 2.109 KiB)
+                    p_DSWMAX, u_aux_θ) # 0.000011 seconds (15 allocations: 2.109 KiB)
+
+        # groundwater flow and seepage loss
+        du_GWFL[1], du_SEEP[1] = LWFBrook90.WAT.GWATER(u_GWAT, p_GSC, p_GSP, aux_du_VRFLI[p_soil.NLAYER]) # [1] as they are vectors and this doesn't allocate
 
         # Transport flow (heat, solutes, isotopes, ...)
         # If we compute scalar transport as ODEs, the du's need to be computed here in the f-function
@@ -163,7 +140,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # Update solution:
         # u is a state vector with u[1] = S relative saturation (-)
         # Update GWAT:
-        du.GWAT.mm   = aux_du_VRFLI[NLAYER] - du_GWFL - du_SEEP
+        du.GWAT.mm   = aux_du_VRFLI[NLAYER] - du_GWFL[1] - du_SEEP[1]
 
         # Do not modify INTS, INTR, SNOW, CC, SNOWLQ
         # as they are separately modified by the callback.
@@ -190,7 +167,6 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # p[3][4][1:2] .=  [du_GWFL, du_SEEP]
         # with the method @unpack this is automatically overwritten
         # TODO(bernhard): it seems it is not automatically overwritten. As workaround check:
-        # p.aux_du_VRFLI === aux_du_VRFLI
         # p.du_NTFLI     === du_NTFLI
         # p.aux_du_VRFLI === aux_du_VRFLI
         # p.aux_du_DSFLI === aux_du_DSFLI
@@ -231,13 +207,13 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
             du.accum.flow           = p_fu_SRFL +
                                         sum(aux_du_BYFLI) +
                                         sum(aux_du_DSFLI) +
-                                        du_GWFL
-            du.accum.seep           = du_SEEP
+                                        du_GWFL[1]
+            du.accum.seep           = du_SEEP[1]
             du.accum.srfl           = p_fu_SRFL
             du.accum.slfl           = p_fu_SLFL
             du.accum.byfl           = sum(aux_du_BYFLI)
             du.accum.dsfl           = sum(aux_du_DSFLI)
-            du.accum.gwfl           = du_GWFL
+            du.accum.gwfl           = du_GWFL[1]
             du.accum.vrfln          = aux_du_VRFLI[NLAYER]
             # du.accum.cum_d_rthr   = 0 # was computed in callback
             # du.accum.cum_d_sthr   = 0 # was computed in callback

@@ -405,7 +405,7 @@ function MSBPREINT(#arguments:
         error("Case with multiple precipitation intervals (using PRECDAT and precip_interval != 1) is not implemented.")
         # # snow interception
         # if (p_fu_PINT < 0 && p_fT_TA > 0)
-        #     # prevent frost when too warm, carry negative p_fu_PINT to rain
+        #     # prevent frost when too warm, carry negative p_fu_PINT to rain  # NOTE: this case is not done in LWFBRook90R
         #     aux_du_SINT, aux_du_ISVP = LWFBrook90.EVP.INTER(p_fT_SFAL, 0, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DTP, u_INTS)
         # else
         #     aux_du_SINT, aux_du_ISVP = LWFBrook90.EVP.INTER(p_fT_SFAL, p_fu_PINT, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DTP, u_INTS)
@@ -420,7 +420,7 @@ function MSBPREINT(#arguments:
             # atmospheric humidity will be deposited in the interception storage. However, when too warm TA > 0, deposit
             # a negative p_fu_PINT into the rain interception storage.
 
-            # prevent frost when too warm, carry negative p_fu_PINT to rain interception storage
+            # prevent frost when too warm, carry negative p_fu_PINT to rain interception storage # NOTE: this case is not done in LWFBRook90R
             aux_du_SINT, aux_du_ISVP = LWFBrook90.EVP.INTER24(p_fT_SFAL, 0, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS, p_DURATN, u_INTS, MONTHN)
         else
             # else if PINT>0 (potential evaporation of snow intercep. storage)
@@ -582,10 +582,9 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
                     # for FDPSIDW:
                     u_aux_WETNES,
                     # for ITER:
-                    p_DSWMAX, u_aux_θ,
-                    # for GWATER:
-                    u_GWAT, p_GSC, p_GSP)
+                    p_DSWMAX, u_aux_θ)
 
+    ##########################
     ## On soil surface, partition incoming rain (RNET) and melt water (SMLT)
     # into either above ground source area flow (streamflow, SRFL) or
     # below ground ("infiltrated") input to soil (SLFL)
@@ -597,16 +596,13 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
     end
     p_fu_SRFL = min(1., (p_IMPERV + SAFRAC)) * (p_fu_RNET + aux_du_SMLT)
 
-    # water supply rate to soil surface:
+    # Derive water supply rate to soil surface:
     p_fu_SLFL = p_fu_RNET + aux_du_SMLT - p_fu_SRFL
 
+    ##########################
     ## Within soil compute flows from layers:
-    #  a) vertical flux between layers VRFLI,
-    #  b) downslope flow from the layers DSFLI
-    aux_du_VRFLI = fill(NaN, NLAYER) # 0.000001 seconds (1 allocation: 144 bytes)
+    #  a) downslope, lateral flow from the layers: DSFLI
     aux_du_DSFLI = fill(NaN, NLAYER) # 0.000001 seconds (1 allocation: 144 bytes)
-
-    # downslope flow rates
     if (p_LENGTH_SLOPE == 0 || p_DSLOPE == 0)
         # added in Version 4
         aux_du_DSFLI .= 0
@@ -614,6 +610,8 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
         aux_du_DSFLI .= LWFBrook90.WAT.DSLOP(p_DSLOPE, p_LENGTH_SLOPE, p_RHOWG, p_soil, u_aux_PSIM, p_fu_KK)
     end
 
+    #  b) vertical flux between layers: VRFLI (Richards equation)
+    aux_du_VRFLI = fill(NaN, NLAYER) # 0.000001 seconds (1 allocation: 144 bytes)
     for i = NLAYER:-1:1
         # vertical flow rates
         if (i < NLAYER)
@@ -655,9 +653,6 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
         LWFBrook90.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
                                     aux_du_SLVP, p_soil.p_SWATMAX, u_SWATI,
                                     aux_du_VRFLI_1st_approx) # 0.000003 seconds (4 allocations: 576 bytes)
-    #@debug "b) aux_du_VRFLI[1]: $(aux_du_VRFLI[1]), sum(aux_du_VRFLI): $(sum(aux_du_VRFLI))"
-
-    DPSIDW = LWFBrook90.KPT.FDPSIDWF(u_aux_WETNES, p_soil) # 0.000004 seconds (3 allocations: 432 bytes)
 
     # limit step size
     #       TODO(bernhard): This could alternatively be achieved with a stepsize limiter callback
@@ -670,10 +665,13 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
         # One might think, that therefore the adaptive time step control of LWFBrook can be deactivated.
         # However, this is not the case. DTI is used in INFLOW() to compute the fluxes aux_du_VRFLI, ... etc.
 
+        DPSIDW = LWFBrook90.KPT.FDPSIDWF(u_aux_WETNES, p_soil) # 0.000004 seconds (3 allocations: 432 bytes)
+
         DTINEW=LWFBrook90.WAT.ITER(NLAYER, FLAG_MualVanGen, DTI, LWFBrook90.CONSTANTS.p_DTIMIN, DPSIDW,
                                         du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMAX,
-                        p_soil) # 0.000002 seconds (2 allocations: 288 bytes)
-        # recompute step
+                        p_soil)
+
+        # recompute step with updated DTI if needed
         if (DTINEW < DTI)
             # recalculate flow rates with new DTI
             DTI = DTINEW
@@ -682,14 +680,9 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
                                             aux_du_SLVP, p_soil.p_SWATMAX, u_SWATI,
                                             aux_du_VRFLI_1st_approx)
         end
-        #@debug "c) aux_du_VRFLI[1]: $(aux_du_VRFLI[1]), sum(aux_du_VRFLI): $(sum(aux_du_VRFLI))"
     end
 
-    # groundwater flow and seepage loss
-    du_GWFL, du_SEEP = LWFBrook90.WAT.GWATER(u_GWAT, p_GSC, p_GSP, aux_du_VRFLI[NLAYER])
-
-
-    return (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, DTI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI, du_GWFL, du_SEEP)
+    return (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI, DTI)
 end
 
 

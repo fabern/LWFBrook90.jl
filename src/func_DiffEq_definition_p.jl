@@ -498,11 +498,6 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
 
         # formerly p_fu:
         # Initialize placeholder for parameters that depend on solution and are computed
-        # p_fu = ([NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN],
-        #         fill(NaN, NLAYER),     # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto
-        #         fill(NaN, (NLAYER,5)), # for du_NTFLI, aux_du_VRFLI, aux_du_DSFLI, aux_du_INFLI, u_aux_WETNES)
-        #         # TODO(bernhard): should we combine these caches to a matrix of (NLAYER,6)?
-        #         fill(NaN, 2)),         # for du_GWFL du_SEEP
         # make them vectors to have them mutable:
         p_fu_δ18O_SLFL = [NaN],
         p_fu_δ2H_SLFL  = [NaN],
@@ -555,14 +550,14 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
         #         # 4 vectors: diff¹⁸O_interfaces, diff²H_interfaces, qCᵢ¹⁸O_interfaces, qCᵢ²H_interfaces,
         #     # Tuple(zeros(NLAYER+1) for i=1:4)
         #     ),
-        u_aux_PSIM              = fill(0., NLAYER), # TODO: test if also works when initialized as NaN
-        u_aux_PSITI             = fill(0., NLAYER), # TODO: test if also works when initialized as NaN
-        u_aux_θ                 = fill(0., NLAYER), # TODO: test if also works when initialized as NaN
-        u_aux_θ_tminus1         = fill(0., NLAYER), # TODO: test if also works when initialized as NaN
-        p_fu_KK                 = fill(0., NLAYER), # TODO: test if also works when initialized as NaN
-        aux_du_VRFLI_1st_approx = fill(0., NLAYER), # TODO: test if also works when initialized as NaN
-        aux_du_BYFLI            = fill(0., NLAYER), # TODO: test if also works when initialized as NaN
-        p_fu_BYFRAC             = fill(0., NLAYER), # TODO: test if also works when initialized as NaN
+        u_aux_PSIM              = fill(NaN, NLAYER), # TODO: test if also works when initialized as NaN
+        u_aux_PSITI             = fill(NaN, NLAYER), # TODO: test if also works when initialized as NaN
+        u_aux_θ                 = fill(NaN, NLAYER), # TODO: test if also works when initialized as NaN
+        u_aux_θ_tminus1         = fill(NaN, NLAYER), # TODO: test if also works when initialized as NaN
+        p_fu_KK                 = fill(NaN, NLAYER), # TODO: test if also works when initialized as NaN
+        aux_du_VRFLI_1st_approx = fill(NaN, NLAYER), # TODO: test if also works when initialized as NaN
+        aux_du_BYFLI            = fill(NaN, NLAYER), # TODO: test if also works when initialized as NaN
+        p_fu_BYFRAC             = fill(NaN, NLAYER), # TODO: test if also works when initialized as NaN
         #     # chaches for advection dispersion equation
         #         # for quantities (all NLAYER long):
         #         # 7 vectors: θᵏ⁺¹, θᵏ, C_¹⁸Oᵏ⁺¹, C_¹⁸Oᵏ, C_²Hᵏ⁺¹, C_²Hᵏ, q,
@@ -570,7 +565,7 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
         #         # 8 vectors: diff¹⁸O_upp, diff²H_upp, qCᵢ¹⁸O_upp, qCᵢ²H_upp,
         #         #            diff¹⁸O_low, diff²H_low, qCᵢ¹⁸O_low, qCᵢ²H_low,
         #         # 4 vectors: du_Cᵢ¹⁸_SWATI, du_Cᵢ²H_SWATI, du_δ18O_SWATI, du_δ2H_SWATI
-        cache_for_ADE_28        = Tuple(zeros(NLAYER) for i=1:28),
+        cache_for_ADE_28        = Tuple(fill(NaN, NLAYER) for i=1:28),
     )
 
     return parameter_single_tuple
