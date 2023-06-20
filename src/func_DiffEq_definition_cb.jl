@@ -186,7 +186,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     # 1) Update snow accumulation/melt: u_SNOW, u_CC, u_SNOWLQ
     #    and compute fluxes to/from interception storage
     u_SNOW_old[1] = u_SNOW
-    (# compute some fluxes as intermediate results:
+    (# compute some fluxes as intermediate results to be used in RHS function f:
     p_fT_SFAL, p_fT_RFAL, p_fu_RNET[1], p_fu_PTRAN,
     # compute changes in soil water storage:
     aux_du_TRANI[:], aux_du_SLVP[1],

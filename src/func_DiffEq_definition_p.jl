@@ -213,6 +213,7 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
             p_KSAT   = [shp.p_KSAT   for shp in parametrizedSPAC.soil_discretization.df.shp],
             p_MvGα   = [shp.p_MvGα   for shp in parametrizedSPAC.soil_discretization.df.shp],
             p_MvGn   = [shp.p_MvGn   for shp in parametrizedSPAC.soil_discretization.df.shp],
+            p_MvGm   = [shp.p_MvGm   for shp in parametrizedSPAC.soil_discretization.df.shp],
             p_MvGl   = [shp.p_MvGl   for shp in parametrizedSPAC.soil_discretization.df.shp],
             p_θr     = [shp.p_θr     for shp in parametrizedSPAC.soil_discretization.df.shp])
     else

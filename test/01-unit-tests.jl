@@ -18,6 +18,7 @@ if basename(pwd()) != "test"; cd("test"); end
     @test shp.p_θr ≈ 1.0
     @test shp.p_MvGα ≈ 1.0
     @test shp.p_MvGn ≈ 1.0
+    @test shp.p_MvGm ≈ 1.0 - 1.0 / 1.0
     @test shp.p_KSAT ≈ 1.0
     @test shp.p_MvGl ≈ 1.0
     @test shp.p_STONEF ≈ 1.0
@@ -30,6 +31,7 @@ if basename(pwd()) != "test"; cd("test"); end
     @test [shp.p_θr     for shp in soil_horizons.shp] ≈ [0.0, 0.0, 0.0]
     @test [shp.p_MvGα   for shp in soil_horizons.shp] ≈ [20.387, 20.387, 20.387]
     @test [shp.p_MvGn   for shp in soil_horizons.shp] ≈ [1.2347, 1.2347, 1.2347]
+    @test [shp.p_MvGm   for shp in soil_horizons.shp] ≈ [0.19008666072730207, 0.19008666072730207, 0.19008666072730207]
     @test [shp.p_KSAT   for shp in soil_horizons.shp] ≈ [2854.91, 2854.91, 2854.91]
     @test [shp.p_MvGl   for shp in soil_horizons.shp] ≈ [-3.339, -3.339, -3.339]
     @test [shp.p_STONEF for shp in soil_horizons.shp] ≈ [0.175, 0.375, 0.75]
@@ -72,6 +74,7 @@ end
         p_KSAT   = [24864., 12881., 10516.],
         p_MvGα   = [1147.,  1274.,  1215.],
         p_MvGn   = [1.051225, 1.051052, 1.051055],
+        p_MvGm   = [0.048728863944445866, 0.04857228757473475, 0.04857500321105945],
         p_MvGl   = [4.6703, 4.4782, 4.5016],
         p_θr     = [0.069, 0.069, 0.069])
 
@@ -83,6 +86,7 @@ end
         p_KSAT   = [24864., 12881., 10516.],
         p_MvGα   = [1147.,  1274.,  1215.],
         p_MvGn   = [1.051225, 1.051052, 1.051055],
+        p_MvGm   = [0.048728863944445866, 0.04857228757473475, 0.04857500321105945],
         p_MvGl   = [4.6703, 4.4782, 4.5016],
         p_θr     = [0.069, 0.069, 0.069])
 
@@ -93,6 +97,7 @@ end
     @test p_soil1.p_KSAT    ≈ [24864, 12881, 10516]
     @test p_soil1.p_MvGα    ≈ [1147, 1274, 1215]
     @test p_soil1.p_MvGn    ≈ [1.051225, 1.051052, 1.051055]
+    @test p_soil1.p_MvGm    ≈ [0.048728863944445866, 0.04857228757473475, 0.04857500321105945]
     @test p_soil1.p_MvGl    ≈ [4.6703, 4.4782, 4.5016]
     @test p_soil1.p_θr      ≈ [0.069, 0.069, 0.069]
     @test p_soil1.p_PSIF    ≈ [-0.03210102700011719, -0.02096528992202748, -0.019805546964157438]
@@ -114,6 +119,7 @@ end
         p_KSAT   = [1,1],
         p_MvGα   = [1,1],
         p_MvGn   = [1,1],
+        p_MvGm   = [0,0],
         p_MvGl   = [1,1],
         p_θr     = [1])
 
@@ -126,6 +132,7 @@ end
         p_KSAT   = [24864., 12881., 10516.],
         p_MvGα   = [1147.,  1274.,  1215.],
         p_MvGn   = [1.051225, 1.051052, 1.051055],
+        p_MvGm   = [0.048728863944445866, 0.04857228757473475, 0.04857500321105945],
         p_MvGl   = [4.6703, 4.4782, 4.5016],
         p_θr     = [0.069, 0.069, 0.069])
 end

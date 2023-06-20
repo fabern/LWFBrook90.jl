@@ -130,7 +130,7 @@ K(\psi)   = K_s\frac{\left[ 1- (-\alpha\psi)^{n-1} (1 + (-\alpha \psi)^n)^{-m} \
 ```
 source: Shao, Y. and Irannejad, P.: On the Choice of Soil Hydraulic Models in Land-Surface Schemes, Boundary Layer Meterol., 90, 83–115, https://doi.org/10.1023/A:1001786023282, 1999.
 """
-Base.@kwdef mutable struct MualemVanGenuchtenSHP <: AbstractSoilHydraulicParams
+mutable struct MualemVanGenuchtenSHP <: AbstractSoilHydraulicParams
     # Soil hydraulic parameters: Mualem-van Genuchten
     # Input fields
     "Saturation volumetric soil water content [m³ m⁻³]"
@@ -141,6 +141,8 @@ Base.@kwdef mutable struct MualemVanGenuchtenSHP <: AbstractSoilHydraulicParams
     p_MvGα::Real
     "Mualem-van Genuchten n [-]"
     p_MvGn::Real
+    "Mualem-van Genuchten n [-]"
+    p_MvGm::Real
     "Saturated hydraulic conductivity [mm day⁻¹]"
     p_KSAT::Real
     "Tortuosity [-]"
@@ -148,7 +150,17 @@ Base.@kwdef mutable struct MualemVanGenuchtenSHP <: AbstractSoilHydraulicParams
     "Gravel/stone fraction [m³ m⁻³]"
     p_STONEF::Real
 end
-
+function MualemVanGenuchtenSHP(;p_THSAT,p_θr,p_MvGα,p_MvGn,p_KSAT,p_MvGl,p_STONEF)
+    MualemVanGenuchtenSHP(
+        p_THSAT,
+        p_θr,
+        p_MvGα,
+        p_MvGn,
+        1 .- 1 ./ p_MvGn, # = p_MvGm
+        p_KSAT,
+        p_MvGl,
+        p_STONEF)
+end
 function MualemVanGenuchtenSHP(df::DataFrame)
     [MualemVanGenuchtenSHP(
         p_THSAT  = dfrow.ths_volFrac,     p_θr     = dfrow.thr_volFrac,
@@ -296,6 +308,7 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
     p_KSAT::T
     p_MvGα::T
     p_MvGn::T
+    p_MvGm::T
     p_MvGl::T
     p_θr::T
     # Derived fields
@@ -308,10 +321,11 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
 
 
     # # Inner constructor:
-    function KPT_SOILPAR_Mvg1d{T}(;p_THICK, p_STONEF, p_THSAT, p_Kθfc, p_KSAT, p_MvGα, p_MvGn, p_MvGl, p_θr) where {T<:AbstractVector}
+    function KPT_SOILPAR_Mvg1d{T}(;p_THICK, p_STONEF, p_THSAT, p_Kθfc, p_KSAT, p_MvGα, p_MvGn, p_MvGm, p_MvGl, p_θr) where {T<:AbstractVector}
         NLAYER = length(p_THICK)
         @assert size(p_THICK) == size(p_STONEF) == size(p_THSAT) == size(p_Kθfc) ==
-                size(p_KSAT) == size(p_MvGα) == size(p_MvGn) == size(p_MvGl) == size(p_θr)
+                size(p_KSAT) == size(p_MvGα) == size(p_MvGn) == size(p_MvGm) == 
+                size(p_MvGl) == size(p_θr)
         @assert !any(isnan.(p_Kθfc))
 
         # # Variant A: used to be SOILPAR()
@@ -360,7 +374,7 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
             end
         end
 
-        p_PSIF   = FPSIM_MvG(p_WETF, p_MvGα, p_MvGn)  # matric potential at field capacity, kPa
+        p_PSIF   = FPSIM_MvG(p_WETF, p_MvGα, p_MvGn, p_MvGm)  # matric potential at field capacity, kPa
         p_THETAF = FTheta_MvG(p_WETF, p_THSAT, p_θr)  # soil moisture θ at field capacity, m3/m3
         p_Kθfc .= NaN                                 # p_Kθfc is only used as input parameter for setup, not for calculation
 
@@ -373,12 +387,12 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
         #                  - computation of p_PsiCrit = FPSIM_CH(p_ThCrit./p_THSAT, p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN)
 
         # Instantiate
-        new(p_THICK,p_STONEF,p_THSAT,p_Kθfc,p_KSAT,p_MvGα,p_MvGn,p_MvGl,p_θr,
+        new(p_THICK,p_STONEF,p_THSAT,p_Kθfc,p_KSAT,p_MvGα,p_MvGn,p_MvGm,p_MvGl,p_θr,
             NLAYER, p_PSIF, p_THETAF,p_PSIG,p_SWATMAX,p_WETF)
     end
 end
-KPT_SOILPAR_Mvg1d(;p_THICK::T, p_STONEF::T, p_THSAT::T, p_Kθfc::T, p_KSAT::T, p_MvGα::T, p_MvGn::T, p_MvGl::T, p_θr::T) where {T<:AbstractVector} =
-KPT_SOILPAR_Mvg1d{T}(;p_THICK, p_STONEF, p_THSAT, p_Kθfc, p_KSAT, p_MvGα, p_MvGn, p_MvGl, p_θr)
+KPT_SOILPAR_Mvg1d(;p_THICK::T, p_STONEF::T, p_THSAT::T, p_Kθfc::T, p_KSAT::T, p_MvGα::T, p_MvGn::T, p_MvGm::T, p_MvGl::T, p_θr::T) where {T<:AbstractVector} =
+    KPT_SOILPAR_Mvg1d{T}(;p_THICK, p_STONEF, p_THSAT, p_Kθfc, p_KSAT, p_MvGα, p_MvGn, p_MvGm, p_MvGl, p_θr)
     # for explanation see https://docs.julialang.org/en/v1/manual/constructors/#Parametric-Constructors
 
 # TODO: at some point in time define iterators or getindex for my type
@@ -516,14 +530,16 @@ function FPSIM_CH(u_aux_WETNES,p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN)
     return ψM
 end
 function FPSIM(u_aux_WETNES, p::KPT_SOILPAR_Mvg1d)
-    FPSIM_MvG(u_aux_WETNES, p.p_MvGα, p.p_MvGn)
+    FPSIM_MvG(u_aux_WETNES, p.p_MvGα, p.p_MvGn, p.p_MvGm)
 end
-function FPSIM_MvG(u_aux_WETNES, p_MvGα, p_MvGn)
+function FPSIM_MvG(u_aux_WETNES, p_MvGα, p_MvGn, p_MvGm)
     eps = 1.e-6
     # MvGm = 1-1/MvGn
     # AWET = max.(u_aux_WETNES, eps)
     # ψM = 9.81 .* (-1 ./ p_MvGα) .* (AWET .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
-    ψM = 9.81 .* (-1 ./ p_MvGα) .* (max.(u_aux_WETNES, eps) .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
+    # ψM = 9.81 .* (-1 ./ p_MvGα) .* (max.(u_aux_WETNES, eps) .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
+    ψM = 9.81 .* (-1 ./ p_MvGα) .* (max.(u_aux_WETNES, eps) .^ (-1 ./ (p_MvGm)) .-1) .^ (1 ./ p_MvGn)
+    
     # 9.81 conversion from m to kPa #TODO define and use const
 end
 
@@ -579,7 +595,7 @@ function FDPSIDWF(u_aux_WETNES, p::KPT_SOILPAR_Mvg1d)
     n = p.p_MvGn
 
     eps = 1.e-6
-    m = 1 .- 1 ./ n
+    m = p.p_MvGm
     dψδW = zeros(size(u_aux_WETNES))
     @inbounds for i = 1:length(u_aux_WETNES)
         if (u_aux_WETNES[i] <= eps)
@@ -632,8 +648,9 @@ function FWETNES(u_aux_PSIM, p::KPT_SOILPAR_Mvg1d)
             # 1) W = (1 + (αh)^n )^(-m)
             α = p.p_MvGα[i]
             n = p.p_MvGn[i]
+            m = p.p_MvGm[i]
             # MvGm = 1-1/MvGn
-            WETNES[i] = (1+(-α*u_aux_PSIM[i]/9.81)^n)^(-(1-1/n)) # 9.81 conversion from kPa to m #TODO define and use const
+            WETNES[i] = (1+(-α*u_aux_PSIM[i]/9.81)^n)^(-(m)) # 9.81 conversion from kPa to m #TODO define and use const
         else
             WETNES[i] = 1.0
         end
