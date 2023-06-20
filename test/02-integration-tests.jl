@@ -255,11 +255,10 @@ end
         path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_sand-NLayer-103-RESET=FALSE",
         path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-103-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
         path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand");
-    # (sim6, ref6, hyd6), time6, bytes6, gctime6, gcstats6 = @timed prepare_θψδ_from_sim_and_reference(;
-    #     path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_sand-NLayer-400-RESET=FALSE",
-    #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
-    #     path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand");
-    #     # not run
+    high_resolution_flag && begin (sim6, ref6, hyd6), time6, bytes6, gctime6, gcstats6 = @timed prepare_θψδ_from_sim_and_reference(;
+        path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_sand-NLayer-400-RESET=FALSE",
+        path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
+        path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand") end;
     (sim1, ref1, hyd1), time1, bytes1, gctime1, gcstats1 = @timed prepare_θψδ_from_sim_and_reference(;
         path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_loam-NLayer-27-RESET=FALSE",
         path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_loam-NLayer-27-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
@@ -268,11 +267,10 @@ end
         path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_loam-NLayer-103-RESET=FALSE",
         path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_loam-NLayer-103-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
         path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Loam");
-    # (sim3, ref3, hyd3), time3, bytes3, gctime3, gcstats3 = @timed prepare_θψδ_from_sim_and_reference(;
-    #     path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_loam-NLayer-400-RESET=FALSE",
-    #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_loam-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
-    #     path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Loam");
-    #     # not run
+    high_resolution_flag && begin (sim3, ref3, hyd3), time3, bytes3, gctime3, gcstats3 = @timed prepare_θψδ_from_sim_and_reference(;
+        path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_loam-NLayer-400-RESET=FALSE",
+        path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_loam-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
+        path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Loam") end;
 
     # 2) Plot (optional, not done when testing in CI)
     # Illustrate with a plot what will be compared in the tests below
@@ -287,7 +285,7 @@ end
 
         # Plot Loam simulations
         pl1 = plot_Hammel_Dense(sim1, ref1, hyd1, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(700,900), dpi=300,
-            subtitle = print_timed_statistics(time4, gctime4, gcstats4)*"\n"*git_status_string, topmargin = 15mm)
+            subtitle = print_timed_statistics(time1, gctime1, gcstats1)*"\n"*git_status_string, topmargin = 15mm)
         pl2 = plot_Hammel_Dense(sim2, ref2, hyd2, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(700,900), dpi=300,
             subtitle = print_timed_statistics(time2, gctime2, gcstats2)*"\n"*git_status_string, topmargin = 15mm)
         
@@ -297,17 +295,17 @@ end
         pl5 = plot_Hammel_Dense(sim5, ref5, hyd5, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(700,900), dpi=300,
             subtitle = print_timed_statistics(time5, gctime5, gcstats5)*"\n"*git_status_string, topmargin = 15mm)
 
-        # pl3 = plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(700,900), dpi=300,
-        #     subtitle = print_timed_statistics(time3, gctime3, gcstats3)*"\n"*git_status_string, topmargin = 15mm)
-        # pl6 = plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(700,900), dpi=300,
-        #     subtitle = print_timed_statistics(time6, gctime6, gcstats6)*"\n"*git_status_string, topmargin = 15mm)
+        high_resolution_flag && (pl3 = plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(700,900), dpi=300,
+            subtitle = print_timed_statistics(time3, gctime3, gcstats3)*"\n"*git_status_string, topmargin = 15mm))
+        high_resolution_flag && (pl6 = plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(700,900), dpi=300,
+            subtitle = print_timed_statistics(time6, gctime6, gcstats6)*"\n"*git_status_string, topmargin = 15mm))
         
         savefig(pl1, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim1.png")
         savefig(pl2, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim2.png")
-        # savefig(pl3, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim3.png")
+        high_resolution_flag && (savefig(pl3, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim3.png"))
         savefig(pl4, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim1.png")
         savefig(pl5, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim2.png")
-        # savefig(pl6, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim3.png")
+        high_resolution_flag && (savefig(pl6, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim3.png"))
     end
 
     # Use sensible accuracy values to compare the two solutions (e.g. θ of 0.02, and ψ of 1 kPa)
@@ -321,35 +319,35 @@ end
     # Compare with LWFBrook90R as reference solution
     @test RMS_differences(sim1.θ, ref1.θ) < 0.0020
     @test RMS_differences(sim2.θ, ref2.θ) < 0.00070
-    # @test RMS_differences(sim3.θ, ref3.θ) < 0.00047
+    high_resolution_flag && (@test RMS_differences(sim3.θ, ref3.θ) < 0.00053)
     @test RMS_differences(sim4.θ, ref4.θ) < 0.00035
     @test RMS_differences(sim5.θ, ref5.θ) < 0.00035
-    # # @test RMS_differences(sim6.θ, ref6.θ) < 0.00035
+    high_resolution_flag && (@test RMS_differences(sim6.θ, ref6.θ) < 0.00035)
 
     # Compare with Hydrus1D
     @test RMS_differences(sim1.θ[Not(end),:], hyd1.θ[Not(1),:]) < 0.005
     @test RMS_differences(sim2.θ[Not(end),:], hyd2.θ[Not(1),:]) < 0.002
-    # @test RMS_differences(sim3.θ[Not(end),:], hyd3.θ[Not(1),:]) < 0.0015
+    high_resolution_flag && (@test RMS_differences(sim3.θ[Not(end),:], hyd3.θ[Not(1),:]) < 0.0015)
     @test RMS_differences(sim4.θ[Not(end),:], hyd4.θ[Not(1),:]) < 0.008
     @test RMS_differences(sim5.θ[Not(end),:], hyd5.θ[Not(1),:]) < 0.009
-    # # @test RMS_differences(sim6.θ[Not(end),:], hyd6.θ[Not(1),:]) < 0.007
+    high_resolution_flag && (@test RMS_differences(sim6.θ[Not(end),:], hyd6.θ[Not(1),:]) < 0.007)
 
     # Compare ψ
     # Compare with LWFBrook90R as reference solution
     @test RMS_differences(sim1.ψ, ref1.ψ) < 2.0 # kPa
     @test RMS_differences(sim2.ψ, ref2.ψ) < 0.60 # kPa
-    # @test RMS_differences(sim3.ψ, ref3.ψ) < 0.2 # kPa
+    high_resolution_flag && (@test RMS_differences(sim3.ψ, ref3.ψ) < 0.42) # kPa
     @test RMS_differences(sim4.ψ, ref4.ψ) < 0.004 # kPa
     @test RMS_differences(sim5.ψ, ref5.ψ) < 0.0080 # kPa
-    # # @test RMS_differences(sim6.ψ, ref6.ψ) < 0.0025 # kPa
+    high_resolution_flag && (@test RMS_differences(sim6.ψ, ref6.ψ) < 0.0025) # kPa
 
     # Compare with Hydrus1D
     @test RMS_differences(sim1.ψ[Not(end),:], hyd1.ψ[Not(1),:]) < 6.1 # kPa
     @test RMS_differences(sim2.ψ[Not(end),:], hyd2.ψ[Not(1),:]) < 2.8 # kPa
-    # @test RMS_differences(sim3.ψ[Not(end),:], hyd3.ψ[Not(1),:]) < 1.2 # kPa
+    high_resolution_flag && (@test RMS_differences(sim3.ψ[Not(end),:], hyd3.ψ[Not(1),:]) < 2.1) # kPa
     @test RMS_differences(sim4.ψ[Not(end),:], hyd4.ψ[Not(1),:]) < 1.0 # kPa
     @test RMS_differences(sim5.ψ[Not(end),:], hyd5.ψ[Not(1),:]) < 1.5 # kPa
-    # # @test RMS_differences(sim6.ψ[Not(end),:], hyd6.ψ[Not(1),:]) < 1.0 # kPa
+    high_resolution_flag && (@test RMS_differences(sim6.ψ[Not(end),:], hyd6.ψ[Not(1),:]) < 1.0) # kPa
 end
 
 # # NOTE: locally, i.e. not on CI system, one might need to do manually cd("test")
@@ -370,12 +368,11 @@ end
         path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-103-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
         path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand_ISO2",
         simulate_isotopes   = true);
-    # (sim6, ref6, hyd6), time6, bytes6, gctime6, gcstats6 = @timed prepare_θψδ_from_sim_and_reference(;
-    #     path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_sand-NLayer-400-RESET=FALSE",
-    #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
-    #     path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand_ISO2",
-    #     simulate_isotopes   = true);
-    #     # not run
+    high_resolution_flag && begin (sim6, ref6, hyd6), time6, bytes6, gctime6, gcstats6 = @timed prepare_θψδ_from_sim_and_reference(;
+        path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_sand-NLayer-400-RESET=FALSE",
+        path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
+        path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand_ISO2",
+        simulate_isotopes   = true) end;
 
     (sim1, ref1, hyd1), time1, bytes1, gctime1, gcstats1 = @timed prepare_θψδ_from_sim_and_reference(;
         path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_loam-NLayer-27-RESET=FALSE",
@@ -387,12 +384,11 @@ end
         path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_loam-NLayer-103-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
         path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Loam_ISO2",
         simulate_isotopes   = true);
-    # (sim3, ref3, hyd3), time3, bytes3, gctime3, gcstats3 = @timed prepare_θψδ_from_sim_and_reference(;
-    #     path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_loam-NLayer-400-RESET=FALSE",
-    #     path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_loam-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
-    #     path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Loam_ISO2",
-    #     simulate_isotopes   = true);
-    #     # not run
+    high_resolution_flag && begin (sim3, ref3, hyd3), time3, bytes3, gctime3, gcstats3 = @timed prepare_θψδ_from_sim_and_reference(;
+        path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_loam-NLayer-400-RESET=FALSE",
+        path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_loam-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
+        path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Loam_ISO2",
+        simulate_isotopes   = true) end;
 
     # 2) Plot (optional, not done when testing in CI)
     # Illustrate with a plot what will be compared in the tests below
@@ -412,6 +408,9 @@ end
         pl2 = plot_Hammel_Dense(sim2, ref2, hyd2, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
             subtitle = print_timed_statistics(time2, gctime2, gcstats2)*"\n"*git_status_string, 
             topmargin = 17mm, layout = (2,2))
+        high_resolution_flag && (pl3 = plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
+            subtitle = print_timed_statistics(time3, gctime3, gcstats3)*"\n"*git_status_string, 
+            topmargin = 17mm, layout = (2,2)))
         # Plot Sand simulations
         pl4 = plot_Hammel_Dense(sim4, ref4, hyd4, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
             subtitle = print_timed_statistics(time4, gctime4, gcstats4)*"\n"*git_status_string, 
@@ -419,19 +418,16 @@ end
         pl5 = plot_Hammel_Dense(sim5, ref5, hyd5, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
             subtitle = print_timed_statistics(time5, gctime5, gcstats5)*"\n"*git_status_string, 
             topmargin = 17mm, layout = (2,2))
+        high_resolution_flag && (pl6 = plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
+            subtitle = print_timed_statistics(time6, gctime6, gcstats6)*"\n"*git_status_string, 
+            topmargin = 17mm, layout = (2,2)))
         
         savefig(pl1, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim1.png")
         savefig(pl2, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim2.png")
+        high_resolution_flag && (savefig(pl3, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim3.png"))
         savefig(pl4, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand_sim1.png")
         savefig(pl5, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand_sim2.png")
-        # pl3 = plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
-        #     subtitle = print_timed_statistics(time3, gctime3, gcstats3)*"\n"*git_status_string, 
-        #     topmargin = 17mm, layout = (2,2))
-        # pl6 = plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
-        #     subtitle = print_timed_statistics(time6, gctime6, gcstats6)*"\n"*git_status_string, 
-        #     topmargin = 17mm, layout = (2,2))
-        # savefig(pl3, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim3.png")
-        # savefig(pl6, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand_sim3.png")
+        high_resolution_flag && (savefig(pl6, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand_sim3.png"))
     end
 
 
@@ -446,49 +442,49 @@ end
     # θ: Compare with LWFBrook90R as reference solution
     @test RMS_differences(sim1.θ, ref1.θ) < 0.0018
     @test RMS_differences(sim2.θ, ref2.θ) < 0.00045
-    # @test RMS_differences(sim3.θ, ref3.θ) < 0.00040
+    high_resolution_flag && (@test RMS_differences(sim3.θ, ref3.θ) < 0.00048)
     @test RMS_differences(sim4.θ, ref4.θ) < 0.00040
     @test RMS_differences(sim5.θ, ref5.θ) < 0.00035
-    # @test RMS_differences(sim6.θ, ref6.θ) < 0.00035
+    high_resolution_flag && (@test RMS_differences(sim6.θ, ref6.θ) < 0.00035)
 
     # θ: Compare with Hydrus1D-Iso
     @test RMS_differences(sim1.θ[Not(end),:], hyd1.θ[Not(1),:]) < 0.005
     @test RMS_differences(sim2.θ[Not(end),:], hyd2.θ[Not(1),:]) < 0.002
-    # @test RMS_differences(sim3.θ[Not(end),:], hyd3.θ[Not(1),:]) < 0.001
+    high_resolution_flag && (@test RMS_differences(sim3.θ[Not(end),:], hyd3.θ[Not(1),:]) < 0.0013)
     @test RMS_differences(sim4.θ[Not(end),:], hyd4.θ[Not(1),:]) < 0.007
     @test RMS_differences(sim5.θ[Not(end),:], hyd5.θ[Not(1),:]) < 0.009
-    # @test RMS_differences(sim6.θ[Not(end),:], hyd6.θ[Not(1),:]) < 0.007
+    high_resolution_flag && (@test RMS_differences(sim6.θ[Not(end),:], hyd6.θ[Not(1),:]) < 0.007)
 
     # Compare ψ
     # ψ: Compare with LWFBrook90R as reference solution
     @test RMS_differences(sim1.ψ, ref1.ψ) < 1.6 # kPa
     @test RMS_differences(sim2.ψ, ref2.ψ) < 0.4 # kPa
-    # @test RMS_differences(sim3.ψ, ref3.ψ) < 0.2 # kPa
+    high_resolution_flag && (@test RMS_differences(sim3.ψ, ref3.ψ) < 0.36) # kPa
     @test RMS_differences(sim4.ψ, ref4.ψ) < 0.003 # kPa
     @test RMS_differences(sim5.ψ, ref5.ψ) < 0.004 # kPa
-    # @test RMS_differences(sim6.ψ, ref6.ψ) < 0.0035 # kPa
+    high_resolution_flag && (@test RMS_differences(sim6.ψ, ref6.ψ) < 0.0035) # kPa
 
     # ψ: Compare with Hydrus1D-Iso
     @test RMS_differences(sim1.ψ[Not(end),:], hyd1.ψ[Not(1),:]) < 6 # kPa
     @test RMS_differences(sim2.ψ[Not(end),:], hyd2.ψ[Not(1),:]) < 2.8 # kPa
-    # @test RMS_differences(sim3.ψ[Not(end),:], hyd3.ψ[Not(1),:]) < 1.6 # kPa
+    high_resolution_flag && (@test RMS_differences(sim3.ψ[Not(end),:], hyd3.ψ[Not(1),:]) < 2.1) # kPa
     @test RMS_differences(sim4.ψ[Not(end),:], hyd4.ψ[Not(1),:]) < 0.6 # kPa
     @test RMS_differences(sim5.ψ[Not(end),:], hyd5.ψ[Not(1),:]) < 1.1 # kPa
-    # @test RMS_differences(sim6.ψ[Not(end),:], hyd6.ψ[Not(1),:]) < 0.5 # kPa
+    high_resolution_flag && (@test RMS_differences(sim6.ψ[Not(end),:], hyd6.ψ[Not(1),:]) < 0.5) # kPa
 
     # Compare δ18O with Hydrus1D-Iso
-    # @test RMS_differences(sim1.δ18O[Not(end),:], hyd1.δ18O[Not(1),:]) < 0.5 # unit: ‰ # skipping as on Macbook it works in REPL, but bug in Pkg.test...
+    @test RMS_differences(sim1.δ18O[Not(end),:], hyd1.δ18O[Not(1),:]) < 0.5 # unit: ‰
     @test RMS_differences(sim2.δ18O[Not(end),:], hyd2.δ18O[Not(1),:]) < 0.3 # unit: ‰
-    # @test RMS_differences(sim3.δ18O[Not(end),:], hyd3.δ18O[Not(1),:]) < 0.5 # unit: ‰
+    high_resolution_flag && (@test RMS_differences(sim3.δ18O[Not(end),:], hyd3.δ18O[Not(1),:]) < 0.5) # unit: ‰
     @test RMS_differences(sim4.δ18O[Not(end),:], hyd4.δ18O[Not(1),:]) < 0.5 # unit: ‰
     @test RMS_differences(sim5.δ18O[Not(end),:], hyd5.δ18O[Not(1),:]) < 0.4 # unit: ‰
-    # @test RMS_differences(sim6.δ18O[Not(end),:], hyd6.δ18O[Not(1),:]) < 0.5 # unit: ‰
+    high_resolution_flag && (@test RMS_differences(sim6.δ18O[Not(end),:], hyd6.δ18O[Not(1),:]) < 0.5) # unit: ‰
     # Compare δ2H with Hydrus1D-Iso
-    @test_skip RMS_differences(sim1.δ2H[Not(end),:], hyd1.δ2H[Not(1),:]) < 3 # unit: ‰ # skipping as on Macbook it works in REPL, but bug in Pkg.test...
-    @test RMS_differences(sim2.δ2H[Not(end),:], hyd2.δ2H[Not(1),:]) < 2 # unit: ‰
-    # @test RMS_differences(sim3.δ2H[Not(end),:], hyd3.δ2H[Not(1),:]) < 2.9 # unit: ‰
-    @test RMS_differences(sim4.δ2H[Not(end),:], hyd4.δ2H[Not(1),:]) < 2.3 # unit: ‰
+    @test RMS_differences(sim1.δ2H[Not(end),:], hyd1.δ2H[Not(1),:]) < 3    # unit: ‰
+    @test RMS_differences(sim2.δ2H[Not(end),:], hyd2.δ2H[Not(1),:]) < 2    # unit: ‰
+    high_resolution_flag && (@test RMS_differences(sim3.δ2H[Not(end),:], hyd3.δ2H[Not(1),:]) < 2.9)  # unit: ‰
+    @test RMS_differences(sim4.δ2H[Not(end),:], hyd4.δ2H[Not(1),:]) < 2.3  # unit: ‰
     @test RMS_differences(sim5.δ2H[Not(end),:], hyd5.δ2H[Not(1),:]) < 1.65 # unit: ‰
-    # @test RMS_differences(sim6.δ2H[Not(end),:], hyd6.δ2H[Not(1),:]) < 3.7 # unit: ‰
+    high_resolution_flag && (@test RMS_differences(sim6.δ2H[Not(end),:], hyd6.δ2H[Not(1),:]) < 3.7)  # unit: ‰
 
 end
