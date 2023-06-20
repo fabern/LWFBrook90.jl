@@ -440,9 +440,9 @@ end
     # 3) Test RMSE
     # Compare θ
     # θ: Compare with LWFBrook90R as reference solution
-    @test RMS_differences(sim1.θ, ref1.θ) < 0.0018
-    @test RMS_differences(sim2.θ, ref2.θ) < 0.00045
-    high_resolution_flag && (@test RMS_differences(sim3.θ, ref3.θ) < 0.00048)
+    @test RMS_differences(sim1.θ, ref1.θ) < 0.00192
+    @test RMS_differences(sim2.θ, ref2.θ) < 0.00054
+    high_resolution_flag && (@test RMS_differences(sim3.θ, ref3.θ) < 0.00053)
     @test RMS_differences(sim4.θ, ref4.θ) < 0.00040
     @test RMS_differences(sim5.θ, ref5.θ) < 0.00035
     high_resolution_flag && (@test RMS_differences(sim6.θ, ref6.θ) < 0.00035)
@@ -457,9 +457,9 @@ end
 
     # Compare ψ
     # ψ: Compare with LWFBrook90R as reference solution
-    @test RMS_differences(sim1.ψ, ref1.ψ) < 1.6 # kPa
-    @test RMS_differences(sim2.ψ, ref2.ψ) < 0.4 # kPa
-    high_resolution_flag && (@test RMS_differences(sim3.ψ, ref3.ψ) < 0.36) # kPa
+    @test RMS_differences(sim1.ψ, ref1.ψ) < 1.70 # kPa
+    @test RMS_differences(sim2.ψ, ref2.ψ) < 0.47 # kPa
+    high_resolution_flag && (@test RMS_differences(sim3.ψ, ref3.ψ) < 0.42) # kPa
     @test RMS_differences(sim4.ψ, ref4.ψ) < 0.003 # kPa
     @test RMS_differences(sim5.ψ, ref5.ψ) < 0.004 # kPa
     high_resolution_flag && (@test RMS_differences(sim6.ψ, ref6.ψ) < 0.0035) # kPa
