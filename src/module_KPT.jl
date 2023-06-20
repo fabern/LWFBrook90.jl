@@ -58,6 +58,7 @@ using Roots: find_zero, Bisection # to find wetness for a given hydraulic conduc
 using ..CONSTANTS: p_RHOWG  # https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
 using DataFrames: DataFrame
 using Printf: @sprintf
+using UnPack: @unpack
 
 ### ### Parameters
 ### #   Clapp and Hornberger (FLAG_MualVanGen=0)
@@ -544,7 +545,7 @@ function FPSIM_MvG(u_aux_WETNES, p_MvGα, p_MvGn, p_MvGm)
 end
 
 """
-    FDPSIDWF_CH(u_aux_WETNES, p_soil)
+    FDPSIDWF!(dψδW, u_aux_WETNES, p_soil)
 
 Compute derivative dψi/dWi for each layer i.
 
@@ -564,16 +565,11 @@ when the soil is saturated (Wi = 1).
 For Mualem-van Genuchten:
 dψi / dWi = TODO.... write documentation here
 """
-function FDPSIDWF(u_aux_WETNES, p::KPT_SOILPAR_Ch1d)
+function FDPSIDWF!(dψδW, u_aux_WETNES, p::KPT_SOILPAR_Ch1d)
     # FDPSIDW returns dΨi/dWi for one layer, which is needed for the selection of iteration time-step.
-    p_WETINF = p.p_WETINF
-    p_BEXP   = p.p_BEXP
-    p_PSIF   = p.p_PSIF
-    p_WETF   = p.p_WETF
-    p_CHM    = p.p_CHM
-    p_CHN    = p.p_CHN
+    @unpack p_WETINF, p_BEXP, p_PSIF, p_WETF, p_CHM, p_CHN = p
 
-    dψδW  = zero(u_aux_WETNES)
+    # dψδW  = zero(u_aux_WETNES)
     for i = 1:length(u_aux_WETNES)
         if u_aux_WETNES[i] < p_WETINF[i]
             # in clearly unsaturated range (eq. 7)
@@ -590,27 +586,27 @@ function FDPSIDWF(u_aux_WETNES, p::KPT_SOILPAR_Ch1d)
     end
     return dψδW # d PSI/d WETNES, kPa
 end
-function FDPSIDWF(u_aux_WETNES, p::KPT_SOILPAR_Mvg1d)
+function FDPSIDWF!(dψδW, u_aux_WETNES, p::KPT_SOILPAR_Mvg1d)
     α = p.p_MvGα
     n = p.p_MvGn
 
     eps = 1.e-6
     m = p.p_MvGm
-    dψδW = zeros(size(u_aux_WETNES))
+    # dψδW = zeros(size(u_aux_WETNES))
     @inbounds for i = 1:length(u_aux_WETNES)
+        # 9.81 conversion from m to kPa #TODO define and use const
         if (u_aux_WETNES[i] <= eps)
-            dψδW[i] = (-1/α[i])*(1/n[i])*(            eps^(-1/(m[i]))-1)^(1/n[i]-1)*(-1/(m[i]))*            eps^(-1/(m[i])-1)
+            dψδW[i] = 9.81 * (-1/α[i])*(1/n[i])*(            eps^(-1/(m[i]))-1)^(1/n[i]-1)*(-1/(m[i]))*            eps^(-1/(m[i])-1)
         end
         if ((u_aux_WETNES[i] > eps) && (u_aux_WETNES[i] < 1.0))
-            dψδW[i] = (-1/α[i])*(1/n[i])*(u_aux_WETNES[i]^(-1/(m[i]))-1)^(1/n[i]-1)*(-1/(m[i]))*u_aux_WETNES[i]^(-1/(m[i])-1)
+            dψδW[i] = 9.81 * (-1/α[i])*(1/n[i])*(u_aux_WETNES[i]^(-1/(m[i]))-1)^(1/n[i]-1)*(-1/(m[i]))*u_aux_WETNES[i]^(-1/(m[i])-1)
         end
         if (u_aux_WETNES[i] > 1.0)
             dψδW[i] = 0.0
         end
     end
 
-    return dψδW .* 9.81 # # 9.81 conversion from m to kPa #TODO define and use const
-                              # d PSI/d WETNES, kPa
+    return dψδW # d PSI/d WETNES, kPa
 end
 
 """

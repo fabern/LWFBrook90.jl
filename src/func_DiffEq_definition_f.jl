@@ -38,19 +38,15 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         #  - fraction of precipitation as snowfall depending on DOY
         #  - snowpack temperature, potential snow evaporation and soil evaporation resistance depending on u_SNOW
 
-        # These were computed in the callback and are kept constant in between two
-        # callbacks.
-        # @unpack p_fu_RNET, aux_du_SMLT, aux_du_SLVP, aux_du_TRANI = p;
-        @unpack p_fu_δ18O_SLFL, p_fu_δ2H_SLFL,
-            p_fT_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP, p_fu_STHR,
-            aux_du_RSNO, aux_du_SNVP, aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP,
-            u_SNOW_old, aux_du_TRANI = p
+        # These were computed in the callback and are kept constant in between two callbacks.
+        @unpack p_fu_RNET, aux_du_SMLT, aux_du_SLVP, aux_du_TRANI = p
 
         # Pre-allocated caches to save memory allocations
         @unpack du_GWFL, du_SEEP, du_NTFLI, aux_du_VRFLI, aux_du_DSFLI, aux_du_INFLI, u_aux_WETNES = p;
         @unpack u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
             aux_du_VRFLI_1st_approx, aux_du_BYFLI, p_fu_BYFRAC,
             p_fu_SRFL, p_fu_SLFL, DPSIDW = p;
+        @unpack cache1, cache2 = p # cache vectors of length N
 
         ##################
         # Parse states
@@ -64,10 +60,10 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
         LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, t)
 
-        u_aux_θ_tminus1 .= u_aux_θ #TODO(bernhard): this does not seem to be correctly updated
-        (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-            LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil) # 0.000007 seconds (7 allocations: 1008 bytes)
-        # LWFBrook90.KPT.derive_auxiliary_SOILVAR!(u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK, u_SWATI,  p_soil)
+        u_aux_θ_tminus1[:] = u_aux_θ #TODO(bernhard): this does not seem to be correctly updated
+        # @time (u_aux_WETNES[:], u_aux_PSIM[:], u_aux_PSITI[:], u_aux_θ[:], p_fu_KK[:]) =
+        #     LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil) # 0.000007 seconds (7 allocations: 1008 bytes)
+        LWFBrook90.KPT.derive_auxiliary_SOILVAR!(u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK, u_SWATI,  p_soil) # 4 allocations 896 bytes
 
         ##################
         # Update soil limited boundary flows during iteration loop
@@ -81,7 +77,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # Bypass fraction of infiltration to each layer
         p_fu_BYFRAC .= NaN64
         if (isone(p_BYPAR))
-            LWFBrook90.WAT.BYFLFR!(p_fu_BYFRAC, p_QFPAR, p_QFFC, u_aux_WETNES, p_soil) # 0.000002 seconds (1 allocation: 144 bytes)
+            LWFBrook90.WAT.BYFLFR!(p_fu_BYFRAC, p_QFPAR, p_QFFC, u_aux_WETNES, p_soil)
             # generate bypass flow to avoid saturation
             for i = 1:p_soil.NLAYER
                 if (u_aux_WETNES[i] > 0.99)
@@ -94,14 +90,15 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
         # Water movement through soil (modify DTI time step if needed)
         MSBITERATE!(# modified arguments (or caches) #######
-                    p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI, DPSIDW,
+                    p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, aux_du_VRFLI_1st_approx,
+                    aux_du_INFLI, aux_du_BYFLI, du_NTFLI, DPSIDW, cache1, cache2,
                     
                     # input arguments #######
                     FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
                     # for SRFLFR:
                     u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC,
                     #
-                    p_IMPERV, p_fu_RNET[1], aux_du_SMLT[1],
+                    p_IMPERV, p_fu_RNET, aux_du_SMLT,
                     p_LENGTH_SLOPE, p_DSLOPE,
                     # for DSLOP:
                     p_RHOWG, u_aux_PSIM, p_fu_KK,
@@ -114,10 +111,10 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
                     # for FDPSIDW:
                     u_aux_WETNES,
                     # for ITER:
-                    p_DSWMAX, u_aux_θ) # 0.000011 seconds (15 allocations: 2.109 KiB)
+                    p_DSWMAX, u_aux_θ) # 0.000011 seconds (152 allocations: 448 bytes)
 
         # groundwater flow and seepage loss
-        du_GWFL[1], du_SEEP[1] = LWFBrook90.WAT.GWATER(u_GWAT, p_GSC, p_GSP, aux_du_VRFLI[p_soil.NLAYER]) # [1] as they are vectors and this doesn't allocate
+        du_GWFL[1], du_SEEP[1] = LWFBrook90.WAT.GWATER(u_GWAT, p_GSC, p_GSP, aux_du_VRFLI[p_soil.NLAYER]) # [1] so that this doesn't allocate
 
         # Transport flow (heat, solutes, isotopes, ...)
         # If we compute scalar transport as ODEs, the du's need to be computed here in the f-function

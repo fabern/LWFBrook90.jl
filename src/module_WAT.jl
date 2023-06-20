@@ -175,6 +175,28 @@ function DSLOP(p_DSLOPE, p_LENGTH_SLOPE, p_RHOWG, p_soil, u_aux_PSIM, p_fu_KK)
     end
     return aux_du_DSFLI
 end
+function DSLOP!(aux_du_DSFLI, GRAD, ARATIO,
+                p_DSLOPE, p_LENGTH_SLOPE, p_RHOWG, p_soil, u_aux_PSIM, p_fu_KK)
+
+    # p_THICK_i, p_STONEF_i, )
+    p_THICK = p_soil.p_THICK
+    p_STONEF = p_soil.p_STONEF
+
+    GRAD[:] =  cos(p_DSLOPE) * (u_aux_PSIM * 2 / (1000 * p_LENGTH_SLOPE)) .+ sin(p_DSLOPE) * p_RHOWG
+    ARATIO[:] = p_THICK .* (1 .- p_STONEF) * cos(p_DSLOPE) / (1000 * p_LENGTH_SLOPE)
+
+    aux_du_DSFLI[:] = p_fu_KK .* ARATIO .* GRAD ./ p_RHOWG
+
+    # no water uptake into dry soil because no free water at outflow face
+    # prevent water uptake through DSFLI. Treat this only as sink, never as a source for the soil.
+    for i = 1:length(aux_du_DSFLI)
+        if (aux_du_DSFLI[i] < 0)
+            aux_du_DSFLI[i] = 0
+        end
+    end
+    return nothing
+end
+
 
 """
     VERT()
@@ -288,7 +310,8 @@ The modified values of VRFLIi are output from the INFLOW routine as variable VV 
 original VRFLIi are needed again if the iteration time step (DTI) is reduced.
 "
 """
-function INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
+function INFLOW!(VRFLI_posterior, INFLI, BYFLI, # these are modified in-place
+                NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
                 aux_du_DSFLI, aux_du_TRANI, aux_du_SLVP, p_SWATMAX, u_SWATI, VRFLI_prior)
                 # This function a) computes all the fluxes involved in the
                 # balance of a single soil layer and b) corrects the fluxes of
@@ -345,9 +368,9 @@ function INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
     # SWATI(*)  - water volume in layer, mm
     # VRFLI(*)  - vertical drainage rate from layer, mm/d
 
-    VRFLI_posterior=fill(NaN, NLAYER)
-    INFLI=fill(NaN, NLAYER)
-    BYFLI=fill(NaN, NLAYER)
+    # VRFLI_posterior=fill(NaN, NLAYER)
+    # INFLI=fill(NaN, NLAYER)
+    # BYFLI=fill(NaN, NLAYER)
 
     # A) Compute prior estimates for BYFLI and INFLI
     for i = NLAYER:-1:1
@@ -376,7 +399,7 @@ function INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
         if (i == 1)
             # In first layer there is additionally soil evaporation SLVP as an
             # outflow. A fact which increases the maximum possible inflow.
-            MAXIN = MAXIN + aux_du_SLVP
+            MAXIN = MAXIN + aux_du_SLVP[1]
             # If inflow is too large
             if (INFLI[1] > MAXIN)
                 # Decrease INFLI, and increase BYFLI:
@@ -425,24 +448,12 @@ function INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
         end
     end
 
-    # Compute net flows NTFLI based on corrected flows
-    NTFLI=fill(NaN, NLAYER)
-    for i = NLAYER:-1:1
-        if (i == 1)
-            NTFLI[i] =                        INFLI[i] - VRFLI_posterior[i] - aux_du_DSFLI[i] - aux_du_TRANI[i] - aux_du_SLVP
-        elseif (i > 1)
-            NTFLI[i] = VRFLI_posterior[i-1] + INFLI[i] - VRFLI_posterior[i] - aux_du_DSFLI[i] - aux_du_TRANI[i]
-        else
-            error("Unexpected value of i.")
-        end
-    end
-
     # VV(*)     - modified VRFLI, mm/d
     # BYFLI(*)  - bypass flow rate from layer, mm/d
     # INFLI(*)  - infiltration rate into layer, mm/d
-    # NTFLI(*)  - net flow rate into layer, mm/d
 
-    return (VRFLI_posterior, INFLI, BYFLI, NTFLI)
+    # return (VRFLI_posterior, INFLI, BYFLI)
+    return nothing
 end
 
 function ITER(NLAYER, FLAG_MualVanGen, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMAX, p_soil)
