@@ -74,8 +74,23 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
             error("The case with updated flows (Reset==1) is not implemented here. A test is implemented in branch 005.")
         end
 
-        ##################
+        ######################################################################
         # Compute fluxes
+
+        ########################## On soil surface
+        ## On soil surface, partition incoming rain (RNET) and melt water (SMLT)
+        # into either above ground source area flow (streamflow, SRFL) or
+        # below ground ("infiltrated") input to soil (SLFL)
+        # source area flow rate
+        if (p_QLAYER > 0)
+            SAFRAC=LWFBrook90.WAT.SRFLFR(p_QLAYER, u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC)
+        else
+            SAFRAC = 0.
+        end
+        p_fu_SRFL = min(1., (p_IMPERV + SAFRAC)) * (p_fu_RNET + aux_du_SMLT)
+
+        # Derive water supply rate to soil surface:
+        p_fu_SLFL = p_fu_RNET + aux_du_SMLT - p_fu_SRFL
 
         # Bypass fraction of infiltration to each layer
         p_fu_BYFRAC = fill(NaN, p_soil.NLAYER)
@@ -91,27 +106,23 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
             p_fu_BYFRAC .= 0 # alternatively
         end
 
+        ########################## Within soil
+        ## Within soil compute flows from layers:
+        #  a) downslope, lateral flow from the layers: DSFLI
+        aux_du_DSFLI = fill(NaN, NLAYER) # 0.000001 seconds (1 allocation: 144 bytes)
+        if (p_LENGTH_SLOPE == 0 || p_DSLOPE == 0)
+            # added in Version 4
+            aux_du_DSFLI .= 0
+        else
+            aux_du_DSFLI .= LWFBrook90.WAT.DSLOP(p_DSLOPE, p_LENGTH_SLOPE, p_RHOWG, p_soil, u_aux_PSIM, p_fu_KK)
+        end
 
         # Water movement through soil (modify DTI time step if needed)
-        p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI[:], aux_du_VRFLI[:], aux_du_INFLI[:], aux_du_BYFLI[:], du_NTFLI[:], DTI =
-            MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
-                    # for SRFLFR:
-                    u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC,
-                    #
-                    p_IMPERV, p_fu_RNET[1], aux_du_SMLT[1],
-                    p_LENGTH_SLOPE, p_DSLOPE,
-                    # for DSLOP:
-                    p_RHOWG, u_aux_PSIM, p_fu_KK,
-                    #
-                    u_aux_PSITI, p_DPSIMAX,
-                    #
-                    p_DRAIN, p_DTP, t, p_DTIMAX,
+        aux_du_VRFLI[:], aux_du_INFLI[:], aux_du_BYFLI[:], du_NTFLI[:], DTI =
+            MSBITERATE(u_SWATI, u_aux_PSITI, p_fu_KK, p_fu_SLFL[1],
+                    p_soil, p_DPSIMAX, p_RHOWG, p_DTP, t, p_DTIMAX, p_DRAIN, p_INFRAC, 
                     # for INFLOW:
-                    p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP[1],
-                    # for FDPSIDW:
-                    u_aux_WETNES,
-                    # for ITER:
-                    p_DSWMAX, u_aux_θ) # 0.000011 seconds (15 allocations: 2.109 KiB)
+                    p_fu_BYFRAC, aux_du_DSFLI, aux_du_TRANI, aux_du_SLVP[1])
 
         # groundwater flow and seepage loss
         du_GWFL[1], du_SEEP[1] = LWFBrook90.WAT.GWATER(u_GWAT, p_GSC, p_GSP, aux_du_VRFLI[p_soil.NLAYER]) # [1] as they are vectors and this doesn't allocate
@@ -204,13 +215,13 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
             du.accum.cum_d_ptran    = 0 # was computed in callback
             du.accum.cum_d_pslvp    = 0 # was computed in callback
 
-            du.accum.flow           = p_fu_SRFL +
+            du.accum.flow           = p_fu_SRFL[1] +
                                         sum(aux_du_BYFLI) +
                                         sum(aux_du_DSFLI) +
                                         du_GWFL[1]
             du.accum.seep           = du_SEEP[1]
-            du.accum.srfl           = p_fu_SRFL
-            du.accum.slfl           = p_fu_SLFL
+            du.accum.srfl           = p_fu_SRFL[1]
+            du.accum.slfl           = p_fu_SLFL[1]
             du.accum.byfl           = sum(aux_du_BYFLI)
             du.accum.dsfl           = sum(aux_du_DSFLI)
             du.accum.gwfl           = du_GWFL[1]

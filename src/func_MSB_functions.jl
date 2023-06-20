@@ -565,50 +565,12 @@ programming errors.
 
 
 """
-function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
-                    # for SRFLFR:
-                    u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC,
-                    #
-                    p_IMPERV, p_fu_RNET, aux_du_SMLT,
-                    p_LENGTH_SLOPE, p_DSLOPE,
-                    # for DSLOP:
-                    p_RHOWG, u_aux_PSIM, p_fu_KK,
-                    #
-                    u_aux_PSITI, p_DPSIMAX,
-                    #
-                    p_DRAIN, p_DTP, t, p_DTIMAX,
+function MSBITERATE(u_SWATI, u_aux_PSITI, p_fu_KK, p_fu_SLFL, 
+                    p_soil, p_DPSIMAX, p_RHOWG, p_DTP, t, p_DTIMAX, p_DRAIN, p_INFRAC, 
                     # for INFLOW:
-                    p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP,
-                    # for FDPSIDW:
-                    u_aux_WETNES,
-                    # for ITER:
-                    p_DSWMAX, u_aux_θ)
+                    p_fu_BYFRAC, aux_du_DSFLI, aux_du_TRANI, aux_du_SLVP)
 
-    ##########################
-    ## On soil surface, partition incoming rain (RNET) and melt water (SMLT)
-    # into either above ground source area flow (streamflow, SRFL) or
-    # below ground ("infiltrated") input to soil (SLFL)
-    # source area flow rate
-    if (p_QLAYER > 0)
-        SAFRAC=LWFBrook90.WAT.SRFLFR(p_QLAYER, u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC)
-    else
-        SAFRAC = 0.
-    end
-    p_fu_SRFL = min(1., (p_IMPERV + SAFRAC)) * (p_fu_RNET + aux_du_SMLT)
-
-    # Derive water supply rate to soil surface:
-    p_fu_SLFL = p_fu_RNET + aux_du_SMLT - p_fu_SRFL
-
-    ##########################
-    ## Within soil compute flows from layers:
-    #  a) downslope, lateral flow from the layers: DSFLI
-    aux_du_DSFLI = fill(NaN, NLAYER) # 0.000001 seconds (1 allocation: 144 bytes)
-    if (p_LENGTH_SLOPE == 0 || p_DSLOPE == 0)
-        # added in Version 4
-        aux_du_DSFLI .= 0
-    else
-        aux_du_DSFLI .= LWFBrook90.WAT.DSLOP(p_DSLOPE, p_LENGTH_SLOPE, p_RHOWG, p_soil, u_aux_PSIM, p_fu_KK)
-    end
+    NLAYER = p_soil.NLAYER
 
     #  b) vertical flux between layers: VRFLI (Richards equation)
     aux_du_VRFLI = fill(NaN, NLAYER) # 0.000001 seconds (1 allocation: 144 bytes)
@@ -620,11 +582,11 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
             else
                 aux_du_VRFLI[i] =
                     LWFBrook90.WAT.VERT(p_fu_KK[i],     p_fu_KK[i+1],
-                                            p_soil.p_KSAT[i],      p_soil.p_KSAT[i+1],
-                                            p_soil.p_THICK[i],     p_soil.p_THICK[i+1],
-                                            u_aux_PSITI[i], u_aux_PSITI[i+1],
-                                            p_soil.p_STONEF[i],    p_soil.p_STONEF[i+1],
-                                            p_RHOWG)
+                                        p_soil.p_KSAT[i],      p_soil.p_KSAT[i+1],
+                                        p_soil.p_THICK[i],     p_soil.p_THICK[i+1],
+                                        u_aux_PSITI[i], u_aux_PSITI[i+1],
+                                        p_soil.p_STONEF[i],    p_soil.p_STONEF[i+1],
+                                        p_RHOWG)
             end
         else
         # bottom layer i == NLAYER
@@ -638,51 +600,26 @@ function MSBITERATE(FLAG_MualVanGen, NLAYER, p_QLAYER, p_soil,
         end
     end
 
-    # first approximation on aux_du_VRFLI
-    aux_du_VRFLI_1st_approx = aux_du_VRFLI
-    #@debug "u_aux_PSITI[1]: $(u_aux_PSITI[1]), sum(u_aux_PSITI): $(sum(u_aux_PSITI))"
-    #@debug "a) aux_du_VRFLI_1st_approx[1]: $(aux_du_VRFLI_1st_approx[1]), sum(aux_du_VRFLI_1st_approx): $(sum(aux_du_VRFLI_1st_approx))"
-
     # first approximation for iteration time step,time remaining or DTIMAX
-    DTRI = p_DTP - (t % p_DTP) # Time remaining
-    # DTRI = 1.0 - (t % 1.0)   # as p_DTP is 1.0 days in a default simulation
+    DTRI = p_DTP - (t % p_DTP) # Time remaining e.g. DTRI = 1.0 - (t % 1.0)   # as p_DTP is 1.0 days in a default simulation
     DTI = min(DTRI, p_DTIMAX)
 
-    # net inflow to each layer including E and T withdrawal adjusted for interception
-    aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
-        LWFBrook90.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
-                                    aux_du_SLVP, p_soil.p_SWATMAX, u_SWATI,
-                                    aux_du_VRFLI_1st_approx) # 0.000003 seconds (4 allocations: 576 bytes)
+    # correct INFLI, BYFLI, VRFLI to keep net inflow to each layer (already considering E and T withdrawal) below saturation
+    aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI =
+        LWFBrook90.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, 
+                              aux_du_DSFLI, aux_du_TRANI, aux_du_SLVP, p_soil.p_SWATMAX, u_SWATI, aux_du_VRFLI)
 
-    # limit step size
-    #       TODO(bernhard): This could alternatively be achieved with a stepsize limiter callback
-    #                       see: https://diffeq.sciml.ai/stable/features/callback_library/#Stepsize-Limiters
-    #       TODO(bernhard): Or it could alternatively be set manually using set_proposed_dt!
-    #                       see: https://diffeq.sciml.ai/stable/basics/integrator/#SciMLBase.set_proposed_dt!
-    #   ITER computes DTI so that the potential difference (due to aux_du_VRFLI)
-    #   between adjacent layers does not change sign during the iteration time step
-    if (true) # NOTE: when using DiffEq.jl the integrator time step is determined by solve().
-        # One might think, that therefore the adaptive time step control of LWFBrook can be deactivated.
-        # However, this is not the case. DTI is used in INFLOW() to compute the fluxes aux_du_VRFLI, ... etc.
-
-        DPSIDW = LWFBrook90.KPT.FDPSIDWF(u_aux_WETNES, p_soil) # 0.000004 seconds (3 allocations: 432 bytes)
-
-        DTINEW=LWFBrook90.WAT.ITER(NLAYER, FLAG_MualVanGen, DTI, LWFBrook90.CONSTANTS.p_DTIMIN, DPSIDW,
-                                        du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMAX,
-                        p_soil)
-
-        # recompute step with updated DTI if needed
-        if (DTINEW < DTI)
-            # recalculate flow rates with new DTI
-            DTI = DTINEW
-            aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI =
-                LWFBrook90.WAT.INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL, aux_du_DSFLI, aux_du_TRANI,
-                                            aux_du_SLVP, p_soil.p_SWATMAX, u_SWATI,
-                                            aux_du_VRFLI_1st_approx)
+    # Compute net flows NTFLI based on corrected flows
+    du_NTFLI=fill(NaN, NLAYER)
+    for i = NLAYER:-1:1
+        if (i == 1)
+            du_NTFLI[i] =                     aux_du_INFLI[i] - aux_du_VRFLI[i] - aux_du_DSFLI[i] - aux_du_TRANI[i] - aux_du_SLVP
+        elseif (i > 1)
+            du_NTFLI[i] = aux_du_VRFLI[i-1] + aux_du_INFLI[i] - aux_du_VRFLI[i] - aux_du_DSFLI[i] - aux_du_TRANI[i]
         end
     end
 
-    return (p_fu_SRFL, p_fu_SLFL, aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI, DTI)
+    return (aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, du_NTFLI, DTI)
 end
 
 

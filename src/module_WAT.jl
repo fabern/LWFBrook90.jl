@@ -425,137 +425,125 @@ function INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
         end
     end
 
-    # Compute net flows NTFLI based on corrected flows
-    NTFLI=fill(NaN, NLAYER)
-    for i = NLAYER:-1:1
-        if (i == 1)
-            NTFLI[i] =                        INFLI[i] - VRFLI_posterior[i] - aux_du_DSFLI[i] - aux_du_TRANI[i] - aux_du_SLVP
-        elseif (i > 1)
-            NTFLI[i] = VRFLI_posterior[i-1] + INFLI[i] - VRFLI_posterior[i] - aux_du_DSFLI[i] - aux_du_TRANI[i]
-        else
-            error("Unexpected value of i.")
-        end
-    end
-
     # VV(*)     - modified VRFLI, mm/d
     # BYFLI(*)  - bypass flow rate from layer, mm/d
     # INFLI(*)  - infiltration rate into layer, mm/d
     # NTFLI(*)  - net flow rate into layer, mm/d
 
-    return (VRFLI_posterior, INFLI, BYFLI, NTFLI)
+    return (VRFLI_posterior, INFLI, BYFLI)
 end
 
-function ITER(NLAYER, FLAG_MualVanGen, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMAX, p_soil)
-    # ITER() is a step size limiter
+# function ITER(NLAYER, FLAG_MualVanGen, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMAX, p_soil)
+#     # ITER() is a step size limiter
 
-    # DTI       ! time step for iteration interval, d
-    # DTIMIN    ! minimum time step for iteration interval, d
-    # DPSIDW(*) ! rate of change of total potential with water content, kPa/mm
-    # NTFLI(*)  ! net flow rate into layer, mm/d
-    # PSITI(*)  ! total potential, kPa
-    # u_aux_θ   ! volumetric soil water content, m3/m3
-    # p_DSWMAX  ! maximum change allowed in SWATI, percent of SWATMAX(i)
-    # p_DPSIMAX  ! maximum potential difference considered "equal", kPa
-    # p_THICK   ! soil layer thicknesses, mm
-    # p_THSAT   ! θ at saturation == matrix porosity (-)
-    # unused: p_SWATMAX   maximum water storage for layer, mm
+#     # DTI       ! time step for iteration interval, d
+#     # DTIMIN    ! minimum time step for iteration interval, d
+#     # DPSIDW(*) ! rate of change of total potential with water content, kPa/mm
+#     # NTFLI(*)  ! net flow rate into layer, mm/d
+#     # PSITI(*)  ! total potential, kPa
+#     # u_aux_θ   ! volumetric soil water content, m3/m3
+#     # p_DSWMAX  ! maximum change allowed in SWATI, percent of SWATMAX(i)
+#     # p_DPSIMAX  ! maximum potential difference considered "equal", kPa
+#     # p_THICK   ! soil layer thicknesses, mm
+#     # p_THSAT   ! θ at saturation == matrix porosity (-)
+#     # unused: p_SWATMAX   maximum water storage for layer, mm
 
-    #NLAYER = size(p_soil.p_SWATMAX, 1)
-    # if isa(p_soil, KPT_SOILPAR_Mvg1d)
-    #     FLAG_MualVanGen = 1
-    # else # elseis isa(p_soil, KPT_SOILPAR_Ch1d)
-    #     FLAG_MualVanGen = 0
-    # end
-    A = zeros(NLAYER)
-    temp = zeros(NLAYER)
-    # first approximation to new total potential
-    if (FLAG_MualVanGen == 0)
-        for i = 1:NLAYER
-            # A is dψ/dt
-            # du_NTFLI (mm/d)
-            # p_THICK (mm)
-            # DPSIDW (kPa/mm)
-            # p_THSAT (θ at saturation == matrix porosity (-))
-            # p_STONEF ()
-            # p_SWATMAX (mm) = p_THICK .* p_THSAT .* (1.0 .- p_STONEF)
+#     #NLAYER = size(p_soil.p_SWATMAX, 1)
+#     # if isa(p_soil, KPT_SOILPAR_Mvg1d)
+#     #     FLAG_MualVanGen = 1
+#     # else # elseis isa(p_soil, KPT_SOILPAR_Ch1d)
+#     #     FLAG_MualVanGen = 0
+#     # end
+#     A = zeros(NLAYER)
+#     temp = zeros(NLAYER)
+#     # first approximation to new total potential
+#     if (FLAG_MualVanGen == 0)
+#         for i = 1:NLAYER
+#             # A is dψ/dt
+#             # du_NTFLI (mm/d)
+#             # p_THICK (mm)
+#             # DPSIDW (kPa/mm)
+#             # p_THSAT (θ at saturation == matrix porosity (-))
+#             # p_STONEF ()
+#             # p_SWATMAX (mm) = p_THICK .* p_THSAT .* (1.0 .- p_STONEF)
 
-            # TODO: bernhard collect definitions of:
-            # WETNES = SWATI/SWATMAX
-            # θ  = f2(WETNES)
-            # ψM = f1(WETNES)
-            # ψT = ψM + ψG
+#             # TODO: bernhard collect definitions of:
+#             # WETNES = SWATI/SWATMAX
+#             # θ  = f2(WETNES)
+#             # ψM = f1(WETNES)
+#             # ψT = ψM + ψG
 
-            # A[i]    = du_NTFLI[i] * DPSIDW[i] / p_SWATMAX[i]
-            # NOTE(bernhard): using p_SWATMAX[i] = p_soil.p_THICK[i] * p_soil.p_THSAT[i] * (1 - p_soil.p_STONEF[i])
-            #                 above expression can be extended to:
-            A[i]    = du_NTFLI[i]/p_soil.p_THICK[i] * DPSIDW[i] / (p_soil.p_THSAT[i] -     0. )/ (1 - p_soil.p_STONEF[i])
-            temp[i] = u_aux_PSITI[i] + A[i] * DTI
-        end
-    else # elseif (FLAG_MualVanGen == 1)
-        for i = 1:NLAYER
-            # A[i]    = du_NTFLI[i]/p_soil.p_THICK[i] * DPSIDW[i] / (p_soil.p_THSAT[i] - p_soil.p_θr[i])
-            # # TODO(bernhard): is there no STONEF in FLAG_MualVanGen==1. Bug?
-            # #                 2021-03-24: yes, this seems like a bug. But it doesn't seem
-            # #                             to be used anywhere further down.
-            # temp[i] = u_aux_PSITI[i] + A[i] * DTI
+#             # A[i]    = du_NTFLI[i] * DPSIDW[i] / p_SWATMAX[i]
+#             # NOTE(bernhard): using p_SWATMAX[i] = p_soil.p_THICK[i] * p_soil.p_THSAT[i] * (1 - p_soil.p_STONEF[i])
+#             #                 above expression can be extended to:
+#             A[i]    = du_NTFLI[i]/p_soil.p_THICK[i] * DPSIDW[i] / (p_soil.p_THSAT[i] -     0. )/ (1 - p_soil.p_STONEF[i])
+#             temp[i] = u_aux_PSITI[i] + A[i] * DTI
+#         end
+#     else # elseif (FLAG_MualVanGen == 1)
+#         for i = 1:NLAYER
+#             # A[i]    = du_NTFLI[i]/p_soil.p_THICK[i] * DPSIDW[i] / (p_soil.p_THSAT[i] - p_soil.p_θr[i])
+#             # # TODO(bernhard): is there no STONEF in FLAG_MualVanGen==1. Bug?
+#             # #                 2021-03-24: yes, this seems like a bug. But it doesn't seem
+#             # #                             to be used anywhere further down.
+#             # temp[i] = u_aux_PSITI[i] + A[i] * DTI
 
-            # NOTE Bernhard: deactivated computation of A and temp as they are unused anyway
-            #                if FLAG_MualVanGen==1
-        end
-    end
+#             # NOTE Bernhard: deactivated computation of A and temp as they are unused anyway
+#             #                if FLAG_MualVanGen==1
+#         end
+#     end
 
-    # test to see if DTI should be reduced
-    DTINEW = DTI
+#     # test to see if DTI should be reduced
+#     DTINEW = DTI
 
-    for i = 1:NLAYER
-        # 1) prevent too large a change in water content, reduce DTI to keep change below p_DSWMAX
-        # DTINEW = min(DTINEW, 0.01 * p_DSWMAX * p_SWATMAX[i] / max(0.000001, abs(du_NTFLI[i])))
-        DTINEW = min(DTINEW,
-                     0.01 * p_DSWMAX * p_soil.p_THICK[i] * p_soil.p_THSAT[i] * (1 - p_soil.p_STONEF[i]) / max(0.000001, abs(du_NTFLI[i])))
-        # TODO(bernhard): shouldn't here also be checked that DTINEW=max(DTIMIN, DTINEW) ?
+#     for i = 1:NLAYER
+#         # 1) prevent too large a change in water content, reduce DTI to keep change below p_DSWMAX
+#         # DTINEW = min(DTINEW, 0.01 * p_DSWMAX * p_SWATMAX[i] / max(0.000001, abs(du_NTFLI[i])))
+#         DTINEW = min(DTINEW,
+#                      0.01 * p_DSWMAX * p_soil.p_THICK[i] * p_soil.p_THSAT[i] * (1 - p_soil.p_STONEF[i]) / max(0.000001, abs(du_NTFLI[i])))
+#         # TODO(bernhard): shouldn't here also be checked that DTINEW=max(DTIMIN, DTINEW) ?
 
-        # prevent a change in water content larger than total available water
-        if (FLAG_MualVanGen == 0)
-            available_water = (0.0     - u_aux_θ[i]) * p_soil.p_THICK[i] # TODO(bernhard): is ther no STONEF in FLAG_MualVanGen==0. Bug?
-        else # FLAG_MualVanGen == 1
-            available_water = (p_soil.p_θr[i] - u_aux_θ[i]) * p_soil.p_THICK[i] # TODO(bernhard): is ther no STONEF in FLAG_MualVanGen==1. Bug?
-        end
+#         # prevent a change in water content larger than total available water
+#         if (FLAG_MualVanGen == 0)
+#             available_water = (0.0     - u_aux_θ[i]) * p_soil.p_THICK[i] # TODO(bernhard): is ther no STONEF in FLAG_MualVanGen==0. Bug?
+#         else # FLAG_MualVanGen == 1
+#             available_water = (p_soil.p_θr[i] - u_aux_θ[i]) * p_soil.p_THICK[i] # TODO(bernhard): is ther no STONEF in FLAG_MualVanGen==1. Bug?
+#         end
 
-        # 2) If water is flowing out of cell (du_NTFLI < 0), prevent
-        #    a change in water content larger than total available water
-        if (du_NTFLI[i] < 0)
-            DTINEW = min(DTINEW, available_water/du_NTFLI[i]/1.30)
-            if (DTINEW < DTIMIN)
-                # Bernhard: if debug: LWFBrook90R printed here full state vector
-                DTINEW = DTIMIN
+#         # 2) If water is flowing out of cell (du_NTFLI < 0), prevent
+#         #    a change in water content larger than total available water
+#         if (du_NTFLI[i] < 0)
+#             DTINEW = min(DTINEW, available_water/du_NTFLI[i]/1.30)
+#             if (DTINEW < DTIMIN)
+#                 # Bernhard: if debug: LWFBrook90R printed here full state vector
+#                 DTINEW = DTIMIN
 
-                # NOTE(Bernhard): if step is smaller than DTMIN, reduce TRANI and SLVP, but keep at least DTMIN
-                # error("DTINEW is smaller than DTMIN. LWFBrook90R reduce in this case TRANI and SLVP. This is not implemented in LWFBrook90.jl.")
-                # TRANI[i] = 0 # TODO(Bernhard): shold this change leak out into main program? (side effect)
-                # if (i == 1)
-                #     SLVP=0   # TODO(Benrhard): should this change leak out into main program? (side effect)
-                # end
-                # NOTE: This original TRANI and SLVP correction violates the mass balance.
-                # @warn "Reduced DTI was lower than DTIMIN. DTI was increased to DTIMIN. Warning: original Brook set TRANI and SLVP to zero in these cases. This is not done anymore."
-            end
-        end
-        # 3) prevent oscillation of gradient in soil water potential
-        if (FLAG_MualVanGen == 0)
-            if (i < NLAYER)
-                # total potential difference at beginning of iteration
-                PP = u_aux_PSITI[i] - u_aux_PSITI[i + 1]
-                # first approx to total potential difference at end of iteration
-                TT = temp[i] - temp[i + 1]
-                if ((abs(TT) > p_DPSIMAX) && (abs(PP) > p_DPSIMAX) && (sign(TT) != sign(PP)))
-                    DTINEW = min(DTINEW, -PP / (A[i] - A[i + 1]))
-                    DTINEW = max(DTINEW, DTIMIN) # Only in LWFBrook90R
-                end
-            end
-        end
-    end
+#                 # NOTE(Bernhard): if step is smaller than DTMIN, reduce TRANI and SLVP, but keep at least DTMIN
+#                 # error("DTINEW is smaller than DTMIN. LWFBrook90R reduce in this case TRANI and SLVP. This is not implemented in LWFBrook90.jl.")
+#                 # TRANI[i] = 0 # TODO(Bernhard): shold this change leak out into main program? (side effect)
+#                 # if (i == 1)
+#                 #     SLVP=0   # TODO(Benrhard): should this change leak out into main program? (side effect)
+#                 # end
+#                 # NOTE: This original TRANI and SLVP correction violates the mass balance.
+#                 # @warn "Reduced DTI was lower than DTIMIN. DTI was increased to DTIMIN. Warning: original Brook set TRANI and SLVP to zero in these cases. This is not done anymore."
+#             end
+#         end
+#         # 3) prevent oscillation of gradient in soil water potential
+#         if (FLAG_MualVanGen == 0)
+#             if (i < NLAYER)
+#                 # total potential difference at beginning of iteration
+#                 PP = u_aux_PSITI[i] - u_aux_PSITI[i + 1]
+#                 # first approx to total potential difference at end of iteration
+#                 TT = temp[i] - temp[i + 1]
+#                 if ((abs(TT) > p_DPSIMAX) && (abs(PP) > p_DPSIMAX) && (sign(TT) != sign(PP)))
+#                     DTINEW = min(DTINEW, -PP / (A[i] - A[i + 1]))
+#                     DTINEW = max(DTINEW, DTIMIN) # Only in LWFBrook90R
+#                 end
+#             end
+#         end
+#     end
 
-    return DTINEW # return second estimate of DTI
-end
+#     return DTINEW # return second estimate of DTI
+# end
 
 """
     GWATER(u_GWAT, p_GSC, p_GSP, aux_du_VRFLIN)
