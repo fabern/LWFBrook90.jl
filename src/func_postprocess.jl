@@ -104,8 +104,8 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
         else
             @assert down <= mid - eps_ < mid <= up
             values = ([down, mid - eps_, mid, up] .- down) ./ (up - down) # scale to range 0-1
-            @show colors
-            @show values
+            # @show colors
+            # @show values
             cgrad(colors, values; kwargs...)
         end
     end
@@ -146,16 +146,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     col_XYL_amt  = [solu(t).XYLEM.mm  for t in days_to_read_out_d]
 
     # For water balance errors
-        # plot: INFL,                        TRAN/RWU,        SLVP,         DSFL, VRFL
-        # i.e.: (slfl-byfl)                  rows_RWU_mmDay,  cum_d_slvp    dsfl, vrfln
-        # from  u.accum.slfl - u.accum.byfl
-    col_BALERD_SWAT  = [solu(t).accum.BALERD_SWAT  for t in days_to_read_out_d]
-    col_BALERD_total = [solu(t).accum.BALERD_total for t in days_to_read_out_d]
-    col_INFL_mmDay = [solu(t).accum.slfl - solu(t).accum.byfl for t in days_to_read_out_d]
-    col_SLVP_mmDay = [solu(t).accum.cum_d_slvp                for t in days_to_read_out_d]
-    col_DSFL_mmDay = [solu(t).accum.dsfl                      for t in days_to_read_out_d]
-    col_VRFLN_mmDay= [solu(t).accum.vrfln                     for t in days_to_read_out_d]
-    # WB erro defined by Ireson et al. 2023
+    # WB error defined by Ireson et al. 2023
     function compute_WB_Ireson2023(solution)
         # Compute In/Out Fluxes and Storages
         days = unique(round.(solution.t)) # we have to read this out in a regular grid!
