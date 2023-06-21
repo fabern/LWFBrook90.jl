@@ -368,7 +368,7 @@ function setup(parametrizedSPAC::SPAC;
     if (!isnothing(requested_tspan) && !(requested_tspan[1] ≈ 0))
         @warn """
         Requested time span doesn't start at 0. This is supported and correctly takes into account atmospheric forcing.
-        Note, however, that initial conditions are applied to t=$(requested_tspan[1]), i.e. at $(parametrizedSPAC.reference_date + Dates.Day(requested_tspan[1])).
+        Note, however, that initial conditions are applied to t=$(requested_tspan[1]), i.e. at $(parametrizedSPAC.reference_date + Day(requested_tspan[1])).
         """
     end
     # This function prepares a discretizedSPAC, which is a container for a DifferentialEquations::ODEProblem.
