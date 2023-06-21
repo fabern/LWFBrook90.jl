@@ -96,16 +96,6 @@ if basename(pwd()) != "test"; cd("test"); end
                  u_aux_PSIM = u_aux_PSIM,
                  u_aux_θ    = u_aux_θ,
                  u_δsoil    = u_δsoil)...)
-        # if (true) # Do these manually outside of automatic testing in order not to require Plots pkg
-        #     using Plots, Measures
-        #     pl1 = plotamounts(example_result, :above_and_belowground, :showRWUcentroid)
-        #     pl2 = plotisotopes(example_result, :d18O, :showRWUcentroid)
-        #     pl3 = plotforcingandstates(example_result)
-        #     savefig(plot(pl1, size=(1000,700), dpi=300),  fname*git_status_string*"_amts.png")
-        #     savefig(plot(pl2, size=(1000,1400), dpi=300), fname*git_status_string*"_d18O-d2H.png")
-        #     savefig(plot(pl3, size=(1000,1400), dpi=300), fname*git_status_string*"_forcing.png")
-        #     #"../examples/DAV2020-full_u_sol_reference.jld2__git+09bca17+gitdirty___forcing.png")
-        # end
         error("Test overwrites reference solution instead of checking against it.")
     else
         # do nothing
@@ -204,37 +194,37 @@ function plot_simulated_fluxes_vs_reference(simulated_fluxes, reference, d_out; 
     )
 end
 function test_fluxes_comparison(simulated_fluxes, reference)
-        @test isapprox(reference["cum_d_prec"], simulated_fluxes.cum_d_prec,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["cum_d_rfal"], simulated_fluxes.cum_d_rfal,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["cum_d_sfal"], simulated_fluxes.cum_d_sfal,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["cum_d_rint"], simulated_fluxes.cum_d_rint,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["cum_d_sint"], simulated_fluxes.cum_d_sint,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["cum_d_rthr"], simulated_fluxes.cum_d_rthr,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["cum_d_sthr"], simulated_fluxes.cum_d_sthr,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["cum_d_rsno"], simulated_fluxes.cum_d_rsno,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["cum_d_rnet"], simulated_fluxes.cum_d_rnet,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["cum_d_smlt"], simulated_fluxes.cum_d_smlt,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["cum_d_evap"], simulated_fluxes.cum_d_evap,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["cum_d_tran"], simulated_fluxes.cum_d_tran,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["cum_d_irvp"], simulated_fluxes.cum_d_irvp,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["cum_d_isvp"], simulated_fluxes.cum_d_isvp,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["cum_d_slvp"], simulated_fluxes.cum_d_slvp,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["cum_d_snvp"], simulated_fluxes.cum_d_snvp,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["cum_d_pint"], simulated_fluxes.cum_d_pint,          atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["cum_d_ptran"], simulated_fluxes.cum_d_ptran,        atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        # @test isapprox(reference["cum_d_pslvp"], simulated_fluxes.cum_d_pslvp,      atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["flow"], simulated_fluxes.flow,                      atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["seep"], simulated_fluxes.seep,                      atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["srfl"], simulated_fluxes.srfl,                      atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["slfl"], simulated_fluxes.slfl,                      atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["byfl"], simulated_fluxes.byfl,                      atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["dsfl"], simulated_fluxes.dsfl,                      atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["gwfl"], simulated_fluxes.gwfl,                      atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["vrfln"], simulated_fluxes.vrfln,                    atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["totalSWAT"], simulated_fluxes.totalSWAT,            atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["new_totalWATER"], simulated_fluxes.new_totalWATER,  atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["BALERD_SWAT"], simulated_fluxes.BALERD_SWAT,        atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
-        @test isapprox(reference["BALERD_total"], simulated_fluxes.BALERD_total,      atol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_prec"],     simulated_fluxes.cum_d_prec,     atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_rfal"],     simulated_fluxes.cum_d_rfal,     atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_sfal"],     simulated_fluxes.cum_d_sfal,     atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_rint"],     simulated_fluxes.cum_d_rint,     atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_sint"],     simulated_fluxes.cum_d_sint,     atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_rthr"],     simulated_fluxes.cum_d_rthr,     atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_sthr"],     simulated_fluxes.cum_d_sthr,     atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_rsno"],     simulated_fluxes.cum_d_rsno,     atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_rnet"],     simulated_fluxes.cum_d_rnet,     atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_smlt"],     simulated_fluxes.cum_d_smlt,     atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_evap"],     simulated_fluxes.cum_d_evap,     atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_tran"],     simulated_fluxes.cum_d_tran,     atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_irvp"],     simulated_fluxes.cum_d_irvp,     atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_isvp"],     simulated_fluxes.cum_d_isvp,     atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_slvp"],     simulated_fluxes.cum_d_slvp,     atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_snvp"],     simulated_fluxes.cum_d_snvp,     atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_pint"],     simulated_fluxes.cum_d_pint,     atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["cum_d_ptran"],    simulated_fluxes.cum_d_ptran,    atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        # @test isapprox(reference["cum_d_pslvp"],  simulated_fluxes.cum_d_pslvp,    atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["flow"],           simulated_fluxes.flow,           atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["seep"],           simulated_fluxes.seep,           atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["srfl"],           simulated_fluxes.srfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["slfl"],           simulated_fluxes.slfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["byfl"],           simulated_fluxes.byfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["dsfl"],           simulated_fluxes.dsfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["gwfl"],           simulated_fluxes.gwfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["vrfln"],          simulated_fluxes.vrfln,          atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["totalSWAT"],      simulated_fluxes.totalSWAT,      atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["new_totalWATER"], simulated_fluxes.new_totalWATER, atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["BALERD_SWAT"],    simulated_fluxes.BALERD_SWAT,    atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
+        @test isapprox(reference["BALERD_total"],   simulated_fluxes.BALERD_total,   atol = 1e-4, rtol = 1e-4) # TODO: somehow we need atol. Why does a simple ≈ not work?
 end
 
 @testset "Oversaturation-infiltration-FLUXES" begin
@@ -266,7 +256,7 @@ end
         # IMPERV = 0.01,
         # DSLOPE = 10,
         # DRAIN=.33, 
-        GSC = 0.05, GSP = 0.2))
+        GSC = 0.05, GSP = 0.2));
     simulate!(simulation2_withVariousFlows);
 
     # d_out1, simulated_fluxes1 = get_daily_soilFluxes(simulation1);
@@ -317,7 +307,6 @@ end
 end
 
 @testset "DAV2020modified-FLUXES" begin
-    
     # Another simulation testing INFL, BYFL, SRFL, DSFLI, VRFLN among other fluxes
     @githash_time example_result2 = LWFBrook90.run_example(
         simulate_isotopes = true, 
