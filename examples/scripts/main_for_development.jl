@@ -924,3 +924,40 @@ run_main_with_isotopes(;input_prefix = input_prefix, input_path = input_path)
 input_prefix = "infiltrationSaturationINFEXP1";
 input_path = "examples/infiltrationSaturationINFEXP1/";
 run_main_with_isotopes(;input_prefix = input_prefix, input_path = input_path)
+
+
+
+
+
+
+####### Test case for cumulative daily water balance error (Ireson 2023)
+using LWFBrook90
+input_path = "examples/DAV2020-full/"; input_prefix = "DAV2020-full";
+model = loadSPAC(input_path, input_prefix; simulate_isotopes = true);
+simulation          = setup(model)
+simulate!(simulation, saveat = range(simulation.ODEProblem.tspan..., step = 30), save_everystep = false)
+simulate!(simulation)
+using Plots, Measures; gr();
+pl1 = plotamounts(simulation, :above_and_belowground, :showRWUcentroid)
+pl1
+
+t_ref = simulation.ODESolution.prob.p.REFERENCE_DATE
+# t_plot = simulation.ODESolution.t
+t_plot = range(extrema(simulation.ODESolution.t)..., step=1.0) # we want daily values exactly!
+x_plot = RelativeDaysFloat2DateTime.(t_plot, t_ref);
+
+plot(pl1[4])
+plot!(x_plot, [simulation.ODESolution(t).accum.ε_prev_totalSWAT  for t in t_plot])
+plot!(x_plot, [simulation.ODESolution(t).accum.ε_prev_totalWATER for t in t_plot])
+
+a.ε_prev_t
+a.ε_prev_totalSWAT
+a.ε_prev_totalWATER
+[simulation.ODESolution(t).accum.BALERD_SWAT for t in t_plot]
+
+plot(pl1[5])
+
+plot!(x_plot, [simulation.ODESolution(t).accum.BALERD_SWAT         for t in t_plot])
+plot!(x_plot, cumsum([simulation.ODESolution(t).accum.BALERD_SWAT  for t in t_plot]))
+plot!(x_plot, [simulation.ODESolution(t).accum.BALERD_total        for t in t_plot])
+plot!(x_plot, cumsum([simulation.ODESolution(t).accum.BALERD_total for t in t_plot]))
