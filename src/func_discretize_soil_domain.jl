@@ -190,14 +190,9 @@ function refine_soil_discretization(
         ]
     end
 
-    if length(needed_interfaces) != 0
-        @warn "Adding interfaces to soil discretization at depths $needed_interfaces, to allow for either requested IDEPTH/QDEPTH:  $(IDEPTH_m)m/$(QDEPTH_m)m, "*
-              "or to accomodate physically defined soil horizons: $(unique(vcat(input_soil_horizons[!,"Upper_m"], input_soil_horizons[!,"Lower_m"])))"*
-              ifelse(length(soil_output_depths_m)==0,".",", or `soil_output_depths_m`=$soil_output_depths_m.")
-    end
-
-    # Add them to the DataFrame and copy the properties of the cell above.
+   # Add them to the DataFrame and copy the properties of the cell above.
     refined_soil_discr = deepcopy(prior_soil_discretization) # otherwise input argument is modified in-place
+    added_interfaces = Float64[] # to report
     for interface_to_add in needed_interfaces
         for i in 1:nrow(refined_soil_discr)
             condition = interface_to_add > refined_soil_discr[i, "Lower_m"]
@@ -210,6 +205,7 @@ function refine_soil_discretization(
                         Matrix(refined_soil_discr)[pos-1,:]) # use properties from cell above
                 refined_soil_discr[pos-1, "Lower_m"] = interface_to_add[1] # modify
                 refined_soil_discr[pos,   "Upper_m"] = interface_to_add[1] # modify
+                push!(added_interfaces, interface_to_add[1])
                 break
             elseif (i == nrow(refined_soil_discr))
                 # If interface to add is below the lowest layer: add it only in case it is about ε lower
@@ -220,10 +216,16 @@ function refine_soil_discretization(
                         Matrix(refined_soil_discr)[pos-1,:]) # use properties from cell above
                     refined_soil_discr[pos, "Upper_m"] = refined_soil_discr[pos-1, "Lower_m"]
                     refined_soil_discr[pos, "Lower_m"] = interface_to_add[1]
+                    push!(added_interfaces, interface_to_add[1])
                     break
                 end
             end
         end
+    end
+    if length(added_interfaces) != 0
+        @warn "Adding interfaces to soil discretization at depths $added_interfaces, to allow for either requested IDEPTH/QDEPTH:  $(IDEPTH_m)m/$(QDEPTH_m)m, "*
+              "or to accomodate physically defined soil horizons: $(unique(vcat(input_soil_horizons[!,"Upper_m"], input_soil_horizons[!,"Lower_m"])))"*
+              ifelse(length(soil_output_depths_m)==0,".",", or `soil_output_depths_m`=$soil_output_depths_m.")
     end
 
     # Define IDEPTH_idx and QDEPTH_idx (to be used internally instead of IDEPTH_m and QDEPTH_m)
