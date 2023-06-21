@@ -194,37 +194,37 @@ function plot_simulated_fluxes_vs_reference(simulated_fluxes, reference, d_out; 
     )
 end
 function test_fluxes_comparison(simulated_fluxes, reference)
-        @test_skip isapprox(reference["cum_d_prec"],     simulated_fluxes.cum_d_prec,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["cum_d_rfal"],     simulated_fluxes.cum_d_rfal,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["cum_d_sfal"],     simulated_fluxes.cum_d_sfal,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["cum_d_rint"],     simulated_fluxes.cum_d_rint,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["cum_d_sint"],     simulated_fluxes.cum_d_sint,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["cum_d_rthr"],     simulated_fluxes.cum_d_rthr,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["cum_d_sthr"],     simulated_fluxes.cum_d_sthr,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["cum_d_rsno"],     simulated_fluxes.cum_d_rsno,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["cum_d_rnet"],     simulated_fluxes.cum_d_rnet,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["cum_d_smlt"],     simulated_fluxes.cum_d_smlt,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["cum_d_evap"],     simulated_fluxes.cum_d_evap,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["cum_d_tran"],     simulated_fluxes.cum_d_tran,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["cum_d_irvp"],     simulated_fluxes.cum_d_irvp,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["cum_d_isvp"],     simulated_fluxes.cum_d_isvp,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["cum_d_slvp"],     simulated_fluxes.cum_d_slvp,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["cum_d_snvp"],     simulated_fluxes.cum_d_snvp,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["cum_d_pint"],     simulated_fluxes.cum_d_pint,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["cum_d_ptran"],    simulated_fluxes.cum_d_ptran,    atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        # @test_skip isapprox(reference["cum_d_pslvp"],  simulated_fluxes.cum_d_pslvp,    atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["flow"],           simulated_fluxes.flow,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["seep"],           simulated_fluxes.seep,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["srfl"],           simulated_fluxes.srfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["slfl"],           simulated_fluxes.slfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["byfl"],           simulated_fluxes.byfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["dsfl"],           simulated_fluxes.dsfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["gwfl"],           simulated_fluxes.gwfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["vrfln"],          simulated_fluxes.vrfln,          atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["totalSWAT"],      simulated_fluxes.totalSWAT,      atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["new_totalWATER"], simulated_fluxes.new_totalWATER, atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["BALERD_SWAT"],    simulated_fluxes.BALERD_SWAT,    atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["BALERD_total"],   simulated_fluxes.BALERD_total,   atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["cum_d_prec"],     simulated_fluxes.cum_d_prec,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["cum_d_rfal"],     simulated_fluxes.cum_d_rfal,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["cum_d_sfal"],     simulated_fluxes.cum_d_sfal,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["cum_d_rint"],     simulated_fluxes.cum_d_rint,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["cum_d_sint"],     simulated_fluxes.cum_d_sint,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["cum_d_rthr"],     simulated_fluxes.cum_d_rthr,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["cum_d_sthr"],     simulated_fluxes.cum_d_sthr,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["cum_d_rsno"],     simulated_fluxes.cum_d_rsno,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["cum_d_rnet"],     simulated_fluxes.cum_d_rnet,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["cum_d_smlt"],     simulated_fluxes.cum_d_smlt,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["cum_d_evap"],     simulated_fluxes.cum_d_evap,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["cum_d_tran"],     simulated_fluxes.cum_d_tran,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["cum_d_irvp"],     simulated_fluxes.cum_d_irvp,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["cum_d_isvp"],     simulated_fluxes.cum_d_isvp,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["cum_d_slvp"],     simulated_fluxes.cum_d_slvp,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["cum_d_snvp"],     simulated_fluxes.cum_d_snvp,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["cum_d_pint"],     simulated_fluxes.cum_d_pint,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["cum_d_ptran"],    simulated_fluxes.cum_d_ptran,    atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        # @test isapprox(reference["cum_d_pslvp"],  simulated_fluxes.cum_d_pslvp,    atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["flow"],           simulated_fluxes.flow,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["seep"],           simulated_fluxes.seep,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["srfl"],           simulated_fluxes.srfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["slfl"],           simulated_fluxes.slfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["byfl"],           simulated_fluxes.byfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["dsfl"],           simulated_fluxes.dsfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["gwfl"],           simulated_fluxes.gwfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["vrfln"],          simulated_fluxes.vrfln,          atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["totalSWAT"],      simulated_fluxes.totalSWAT,      atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["new_totalWATER"], simulated_fluxes.new_totalWATER, atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["BALERD_SWAT"],    simulated_fluxes.BALERD_SWAT,    atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["BALERD_total"],   simulated_fluxes.BALERD_total,   atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
 end
 
 @testset "Oversaturation-infiltration-FLUXES" begin
