@@ -131,10 +131,13 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
 
 
     # Results
+    t_ref = solu.prob.p.REFERENCE_DATE
+    t1 = range(extrema(solu.t)..., step = 1) # Plot forcing as daily, even if solution output (ODESolution.t) is not dense
+    x1 = RelativeDaysFloat2DateTime.(t1, t_ref);
+    row_PREC_amt_dense = reshape(solu.prob.p.p_PREC.(t1), 1, :)
     rows_SWAT_amt  = reduce(hcat, [solu(t).SWATI.mm    for t in days_to_read_out_d])
     rows_RWU_mmDay = reduce(hcat, [solu(t).TRANI.mmday for t in days_to_read_out_d])
     row_NaN       = fill(NaN, 1,length(x))
-    row_PREC_amt = reshape(solu.prob.p.p_PREC.(days_to_read_out_d), 1, :)
     col_INTS_amt = [solu(t).INTS.mm for t in days_to_read_out_d]
     col_INTR_amt = [solu(t).INTR.mm   for t in days_to_read_out_d]
     col_SNOW_amt = [solu(t).SNOW.mm   for t in days_to_read_out_d]
@@ -157,16 +160,16 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
         # Compute In/Out Fluxes and Storages
         days = unique(round.(solution.t)) # we have to read this out in a regular grid!
         dat_daily_cumulativeFluxes_and_Storage = DataFrame(
-            # NOTE: we need not to take differences as these cumulative fluxes were set to 0 
+            # NOTE: we need not to take differences as these cumulative fluxes were set to 0
             #       every day by a solver callback
             slfl  = [solu(t).accum.slfl for t in days],
             byfl  = [solu(t).accum.byfl for t in days],
             vrfln = [solu(t).accum.vrfln for t in days],
             dsfl  = [solu(t).accum.dsfl for t in days],
             swat  = vcat([sum(solu(t).SWATI.mm, dims=1) for t in days]...), # storage
-            tran  = [solu(t).accum.cum_d_tran for t in days], 
-            slvp  = [solu(t).accum.cum_d_slvp for t in days], 
-            prec  = [solu(t).accum.cum_d_prec for t in days], 
+            tran  = [solu(t).accum.cum_d_tran for t in days],
+            slvp  = [solu(t).accum.cum_d_slvp for t in days],
+            prec  = [solu(t).accum.cum_d_prec for t in days],
             evap  = [solu(t).accum.cum_d_evap for t in days], # evap is sum of irvp, isvp, snvp, slvp, sum(trani)
             flow  = [solu(t).accum.flow for t in days],       # flow is sum of byfli, dsfli, gwfl
             seep  = [solu(t).accum.seep for t in days],
@@ -176,17 +179,17 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
             ints  = [solu(t).INTS.mm for t in days], # storage
             )
 
-        function compute_error_SWATI(df) # 
+        function compute_error_SWATI(df) #
             cumInflow_mm  = cumsum(df.slfl - df.byfl) # =INFL,               corresponds to q(t,0)  in Ireson 2023 eq 16 with additionally sources and sinks
             cumOutflow_mm = cumsum(df.vrfln + df.dsfl + df.tran + df.slvp) # corresponds to q(t,zN) in Ireson 2023 eq 16 with additionally sources and sinks
-            error_mm = (cumInflow_mm .- cumOutflow_mm) .- (df.swat .- df.swat[1])    
+            error_mm = (cumInflow_mm .- cumOutflow_mm) .- (df.swat .- df.swat[1])
             return cumInflow_mm, cumOutflow_mm, df.swat, error_mm
         end
-        function compute_error_ModelDomain(df) # 
+        function compute_error_ModelDomain(df) #
             cumInflow_mm  = cumsum(df.prec)                     # corresponds to q(t,0)  in Ireson 2023 eq 16 with additionally sources and sinks
             cumOutflow_mm = cumsum(df.evap + df.flow + df.seep) # corresponds to q(t,zN) in Ireson 2023 eq 16 with additionally sources and sinks
             storage = df.swat .+ df.gwat + df.snow + df.intr + df.ints
-            error_mm = (cumInflow_mm .- cumOutflow_mm) .- (storage .- storage[1])    
+            error_mm = (cumInflow_mm .- cumOutflow_mm) .- (storage .- storage[1])
             return cumInflow_mm, cumOutflow_mm, storage, error_mm
         end
 
@@ -206,9 +209,9 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
         return (εB_cumulative_SWATI, εB_cumulative_ALL, εB_SWATI, εB_ALL, εR_SWATI, εR_ALL,
                     (cum_qIn_SWATI, cum_qOut_SWATI, storage_SWATI, cum_qIn_ALL, cum_qOut_ALL, storage_ALL))
     end
-    
+
     (εB_cumulative_SWATI, εB_cumulative_ALL, εB_SWATI, εB_ALL, εR_SWATI, εR_ALL,
-        (cum_qIn_SWATI, cum_qOut_SWATI, SWATI_total, cum_qIn_ALL, cum_qOut_ALL, ALL_total)) = 
+        (cum_qIn_SWATI, cum_qOut_SWATI, SWATI_total, cum_qIn_ALL, cum_qOut_ALL, ALL_total)) =
         compute_WB_Ireson2023(solu);
 
     if (RWUcentroid == :showRWUcentroid)
@@ -289,7 +292,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
         legend := false
         subplot := 1
         # and other arguments:
-        reshape(x,1,:), reshape(row_PREC_amt,1,:)
+        reshape(x1,1,:), reshape(row_PREC_amt_dense,1,:)
     end
     if (compartments == :aboveground || compartments == :above_and_belowground)
         # plot(x, [col_INTS_amt col_INTR_amt col_SNOW_amt col_GWAT_amt col_XYL_amt],
@@ -324,12 +327,12 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
                 x, belowground_values[:, it]
             end
         end
-        
+
         # WB error as defined by Ireson 2023
         belowground2_labels = ["Inflow SWATI" "Outflow SWATI" "Storage SWATI" "Inflow Model" "Outflow Model" "Storage Model"]
         belowground2_values = [cum_qIn_SWATI   cum_qOut_SWATI  SWATI_total     cum_qIn_ALL    cum_qOut_ALL    ALL_total]
         belowground2_linestyles = [:solid :solid :solid :dash :dash :dash]
-        belowground2_colors = [1 2 3 1 2 3] 
+        belowground2_colors = [1 2 3 1 2 3]
         for it in 1:length(belowground2_labels)
             @series begin
                 # title := "Belowground"
@@ -618,7 +621,13 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     color_scheme = :heat
 
     # Results
-    row_PREC_amt = solu.prob.p.p_PREC.(days_to_read_out_d)
+    t_ref = solu.prob.p.REFERENCE_DATE
+    t1 = range(extrema(solu.t)..., step = 1) # Plot forcing as daily, even if solution output (ODESolution.t) is not dense
+    x1 = RelativeDaysFloat2DateTime.(t1, t_ref);
+    row_PREC_amt_dense  = reshape(solu.prob.p.p_PREC.(t1), 1, :)
+    row_PREC_d18O_dense = reshape(solu.prob.p.p_δ18O_PREC.(t1), 1, :)
+    row_PREC_d2H_dense  = reshape(solu.prob.p.p_δ2H_PREC.(t1), 1, :)
+
     # rows_SWAT_amt = solu[solu.prob.p.row_idx_SWATI, 1, :]./solu.prob.p.p_soil.p_THICK;
     rows_SWAT_amt  = reduce(hcat, [solu(t).SWATI.mm   for t in days_to_read_out_d]) ./ solu.prob.p.p_soil.p_THICK
     rows_SWAT_d18O = reduce(hcat, [solu(t).SWATI.d18O for t in days_to_read_out_d])
@@ -695,7 +704,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     # 3a) Precipitation
     # We reproduce the following plot:
     # Workaround for barplot # https://github.com/JuliaPlots/Plots.jl/issues/3880
-    # ts_PREC_δ18O = plot(reshape(x,1,:), reshape(row_PREC_amt,1,:), t = :bar, line_z = reshape(row_PREC_d18O,1,:), fill_z = reshape(row_PREC_d18O,1,:),
+    # ts_PREC_δ18O = plot(reshape(x,1,:), reshape(row_PREC_amt_dense,1,:), t = :bar, line_z = reshape(row_PREC_d18O,1,:), fill_z = reshape(row_PREC_d18O,1,:),
     #                 clims=clims_d18O, colorbar = true_to_check_colorbar, legend = false,
     #                 ylabel = "PREC [mm]"); # TODO(bernhard): make this work with a barplot
     # ts_PREC_δ2H = ...
@@ -704,8 +713,8 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
             title --> "δ18O"
             seriestype := :bar
             # linecolor := :match
-            line_z := reshape(row_PREC_d18O,1,:)
-            fill_z := reshape(row_PREC_d18O,1,:)
+            line_z := reshape(row_PREC_d18O_dense,1,:)
+            fill_z := reshape(row_PREC_d18O_dense,1,:)
             clims := clims_d18O
             colorbar_title := "δ18O [‰]"
             yguide := "PREC [mm]"
@@ -714,7 +723,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
             subplot := idx_d18O_PREC
 
             # and other arguments:
-            reshape(x,1,:), reshape(row_PREC_amt,1,:)
+            reshape(x1,1,:), reshape(row_PREC_amt_dense,1,:)
         end
     end
     if (isotope == :d2H || isotope == :d18O_and_d2H)
@@ -722,8 +731,8 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
             title --> "δ2H"
             seriestype := :bar
             # linecolor := :match
-            line_z := reshape(row_PREC_d2H,1,:)
-            fill_z := reshape(row_PREC_d2H,1,:)
+            line_z := reshape(row_PREC_d2H_dense,1,:)
+            fill_z := reshape(row_PREC_d2H_dense,1,:)
             clims := clims_d2H
             colorbar_title := "δ2H [‰]"
             yguide := "PREC [mm]"
@@ -732,7 +741,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
             subplot := idx_d2H_PREC
 
             # and other arguments:
-            reshape(x,1,:), reshape(row_PREC_amt,1,:)
+            reshape(x1,1,:), reshape(row_PREC_amt_dense,1,:)
         end
     end
 
@@ -850,13 +859,16 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
 
     # 1a) extract data from solution object `solu`
     # 1a) i) forcing (wind, vappres, globrad, tmax, tmin, prec, lai, )
-    x1  = simulation.ODESolution_datetime;
-    y11 = simulation.ODESolution.prob.p.p_WIND.(simulation.ODESolution.t);      lbl11 = "p_WIND [m/s]";
-    y12 = simulation.ODESolution.prob.p.p_VAPPRES.(simulation.ODESolution.t);   lbl12 = "p_VAPPRES [kPa]";
-    y13 = simulation.ODESolution.prob.p.p_GLOBRAD.(simulation.ODESolution.t);   lbl13 = "p_GLOBRAD [MJ/day/m2]"
-    y14 = hcat(simulation.ODESolution.prob.p.p_TMIN.(simulation.ODESolution.t),
-                    simulation.ODESolution.prob.p.p_TMAX.(simulation.ODESolution.t)); lbl14 = ["p_TMIN [°C]" "p_TMAX [°C]"]
-    y15 = simulation.ODESolution.prob.p.p_PREC.(simulation.ODESolution.t);      lbl15 = "p_PREC [mm]"
+    t_ref = solu.prob.p.REFERENCE_DATE
+    # t1 = range(simulation.ODEProblem.tspan..., step = 1)       # Plot forcing as daily, even if solution output (ODESolution.t) is not dense
+    t1 = range(extrema(simulation.ODESolution.t)..., step = 1) # Plot forcing as daily, even if solution output (ODESolution.t) is not dense
+    x1 = RelativeDaysFloat2DateTime.(t1, t_ref);
+    y11 = simulation.ODESolution.prob.p.p_WIND.(t1);      lbl11 = "p_WIND [m/s]";
+    y12 = simulation.ODESolution.prob.p.p_VAPPRES.(t1);   lbl12 = "p_VAPPRES [kPa]";
+    y13 = simulation.ODESolution.prob.p.p_GLOBRAD.(t1);   lbl13 = "p_GLOBRAD [MJ/day/m2]"
+    y14 = hcat(simulation.ODESolution.prob.p.p_TMIN.(t1),
+               simulation.ODESolution.prob.p.p_TMAX.(t1));lbl14 = ["p_TMIN [°C]" "p_TMAX [°C]"]
+    y15 = simulation.ODESolution.prob.p.p_PREC.(t1);      lbl15 = "p_PREC [mm]"
     # plot_forcing = plot(layout = (:,1),
     #     plot(x1, y11; labels = lbl11),
     #     plot(x1, y12; labels = lbl12),
@@ -864,16 +876,16 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
     #     plot(x1, y14; labels = lbl14),
     #     plot(x1, y15; labels = lbl15))
 
-    x2 = simulation.ODESolution_datetime;
-    y21 = hcat(simulation.ODESolution.prob.p.p_DENSEF.(simulation.ODESolution.t),
-                        simulation.ODESolution.prob.p.p_SAI.(simulation.ODESolution.t),
-                        simulation.ODESolution.prob.p.p_LAI.(simulation.ODESolution.t)); lbl21 = ["p_DENSEF [-]" "p_SAI [-]" "p_LAI [-]"];
-    y22 = simulation.ODESolution.prob.p.p_HEIGHT.(simulation.ODESolution.t); lbl22 = "p_HEIGHT [-]";
+    t2 = t1; x2 = x1;
+    y21 = hcat(simulation.ODESolution.prob.p.p_DENSEF.(t2),
+                        simulation.ODESolution.prob.p.p_SAI.(t2),
+                        simulation.ODESolution.prob.p.p_LAI.(t2)); lbl21 = ["p_DENSEF [-]" "p_SAI [-]" "p_LAI [-]"];
+    y22 = simulation.ODESolution.prob.p.p_HEIGHT.(t2);             lbl22 = "p_HEIGHT [-]";
     # plot_vegetation = plot(layout = (2,1), title = "Vegetation",
     #     plot(x2, y21; labels = lbl21),
     #     plot(x2, y22;labels = lbl22))
     #     # plot!(twinx(),100*rand(10))
-    #     # plot!(twinx(), simulation.ODESolution_datetime, simulation.ODESolution.prob.p.p_HEIGHT.(simulation.ODESolution.t))#;labels = "p_HEIGHT [-]")
+    #     # plot!(twinx(), simulation.ODESolution_datetime, simulation.ODESolution.prob.p.p_HEIGHT.(t2))               #;labels = "p_HEIGHT [-]")
 
     # 1a) ii) states (scalar and vector)
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) = LWFBrook90.get_auxiliary_variables(simulation.ODESolution)
