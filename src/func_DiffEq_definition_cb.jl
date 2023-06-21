@@ -287,8 +287,8 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         integrator.u.accum.cum_d_rthr     = p_DTP*(p_fT_RFAL - aux_du_RINT[1]) # cum_d_rthr
         integrator.u.accum.cum_d_sthr     = p_DTP*(p_fT_SFAL - aux_du_SINT[1]) # cum_d_sthr
         # integrator.u.accum.ε_prev_t          = t              # Update in separate daily callback
-        # integrator.u.accum.ε_prev_totalSWAT  = new_totalSWAT  # Update in separate daily callback
-        # integrator.u.accum.ε_prev_totalWATER = new_totalWATER # Update in separate daily callback
+        # integrator.u.accum.ε_prev_StorageSWAT  = StorageSWAT  # Update in separate daily callback
+        # integrator.u.accum.ε_prev_StorageWATER = StorageWATER # Update in separate daily callback
         # integrator.u.accum.BALERD_SWAT       = BALERD_SWAT    # Update in separate daily callback
         # integrator.u.accum.BALERD_total      = BALERD_total   # Update in separate daily callback
 
@@ -1301,16 +1301,16 @@ function LWFBrook90R_check_balance_errors!(integrator)
         # a) Get change in total storages
         # Get old total water volumes and compute new total water volumes
         # old_t          = integrator.uprev.accum.ε_prev_t
-        # old_SWAT       = integrator.uprev.accum.ε_prev_totalSWAT
-        # old_totalWATER = integrator.uprev.accum.ε_prev_totalWATER
-        old_SWAT       = integrator.uprev.accum.totalSWAT
-        old_totalWATER = integrator.uprev.accum.new_totalWATER
-        new_totalSWAT  = sum(u_SWATI)                                      # total soil water in all layers, mm
-        new_totalWATER = u_INTR + u_INTS + u_SNOW + new_totalSWAT + u_GWAT # total water in all compartments, mm
+        # old_SWAT       = integrator.uprev.accum.ε_prev_StorageSWAT
+        # old_StorageWATER = integrator.uprev.accum.ε_prev_StorageWATER
+        old_SWAT       = integrator.uprev.accum.StorageSWAT
+        old_StorageWATER = integrator.uprev.accum.StorageWATER
+        StorageSWAT  = sum(u_SWATI)                                      # total soil water in all layers, mm
+        StorageWATER = u_INTR + u_INTS + u_SNOW + StorageSWAT + u_GWAT # total water in all compartments, mm
 
         # b) Get fluxes that caused change in total storages
         # Across outer boundaries of above and belowground system:
-        # b1) BALERD_SWAT  = old_SWAT - new_totalSWAT + INFLI - DSFLI - VRFL(NLAYER) - TRANI - SLVP
+        # b1) BALERD_SWAT  = old_SWAT - StorageSWAT + INFLI - DSFLI - VRFL(NLAYER) - TRANI - SLVP
         # accum_qin corresponds to q(t,0)  in Ireson 2023 eq 16 with additionally sources and sinks:
         accum_qin  = 0 +  (integrator.u.accum.slfl - integrator.u.accum.byfl)
         # accum_qout corresponds to q(t,zN) in Ireson 2023 eq 16 with additionally sources and sinks:
@@ -1319,26 +1319,26 @@ function LWFBrook90R_check_balance_errors!(integrator)
             integrator.u.accum.cum_d_tran +
             integrator.u.accum.cum_d_slvp
 
-        # b2) BALERD_total = old_totalWATER - new_totalWATER + PRECD - EVAPD - FLOWD - SEEPD
+        # b2) BALERD_total = old_StorageWATER - StorageWATER + PRECD - EVAPD - FLOWD - SEEPD
         accum_qin_total  = integrator.u.accum.cum_d_prec
         accum_qout_total = integrator.u.accum.cum_d_evap + integrator.u.accum.flow + integrator.u.accum.seep
 
         # c) Compute balance error
         # d) Store balance errors into state vector
-        # BALERD_total = old_totalWATER - new_totalWATER + PRECD - EVAPD - FLOWD - SEEPD
+        # BALERD_total = old_StorageWATER - StorageWATER + PRECD - EVAPD - FLOWD - SEEPD
 
-        integrator.u.accum.BALERD_SWAT  = (accum_qin - accum_qout)             - (new_totalSWAT  - old_SWAT)       # implicitly assume accum.XXX are reset to zero daily AND this callback is called daily
-        integrator.u.accum.BALERD_total = (accum_qin_total - accum_qout_total) - (new_totalWATER - old_totalWATER) # implicitly assume accum.XXX are reset to zero daily AND this callback is called daily
+        integrator.u.accum.BALERD_SWAT  = (accum_qin - accum_qout)             - (StorageSWAT  - old_SWAT)       # implicitly assume accum.XXX are reset to zero daily AND this callback is called daily
+        integrator.u.accum.BALERD_total = (accum_qin_total - accum_qout_total) - (StorageWATER - old_StorageWATER) # implicitly assume accum.XXX are reset to zero daily AND this callback is called daily
         # alternatively:
-        # integrator.u.accum.BALERD_SWAT  = (accum_qin - accum_qout) * (integrator.t - old_t)             - (new_totalSWAT  - old_SWAT)
-        # integrator.u.accum.BALERD_total = (accum_qin_total - accum_qout_total) * (integrator.t - old_t) - (new_totalWATER - old_totalWATER)
+        # integrator.u.accum.BALERD_SWAT  = (accum_qin - accum_qout) * (integrator.t - old_t)             - (StorageSWAT  - old_SWAT)
+        # integrator.u.accum.BALERD_total = (accum_qin_total - accum_qout_total) * (integrator.t - old_t) - (StorageWATER - old_StorageWATER)
 
         # Save current totals into caches to check error for next period
-        integrator.u.accum.totalSWAT    = new_totalSWAT
-        integrator.u.accum.new_totalWATER   = new_totalWATER
+        integrator.u.accum.StorageSWAT    = StorageSWAT
+        integrator.u.accum.StorageWATER   = StorageWATER
         # integrator.u.accum.ε_prev_t            = integrator.t
-        # integrator.u.accum.ε_prev_totalSWAT    = new_totalSWAT
-        # integrator.u.accum.ε_prev_totalWATER   = new_totalWATER
+        # integrator.u.accum.ε_prev_StorageSWAT    = StorageSWAT
+        # integrator.u.accum.ε_prev_StorageWATER   = StorageWATER
         # integrator.u.accum.ε_prev_qcumInSWAT   = accum_qin        # no need to store these
         # integrator.u.accum.ε_prev_qcumOutSWAT  = accum_qout       # no need to store these
         # integrator.u.accum.ε_prev_qcumInWater  = accum_qin_total  # no need to store these

@@ -217,8 +217,8 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
             du.accum.vrfln          = aux_du_VRFLI[NLAYER]
             # du.accum.cum_d_rthr   = 0 # was computed in callback
             # du.accum.cum_d_sthr   = 0 # was computed in callback
-            du.accum.totalSWAT      = 0 # is computed in callback
-            du.accum.new_totalWATER = 0 # is computed in callback
+            du.accum.StorageSWAT    = 0 # is computed in callback
+            du.accum.StorageWATER   = 0 # is computed in callback
             du.accum.BALERD_SWAT    = 0 # is computed in callback
             du.accum.BALERD_total   = 0 # is computed in callback
 

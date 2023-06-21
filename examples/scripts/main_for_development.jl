@@ -947,12 +947,11 @@ t_plot = range(extrema(simulation.ODESolution.t)..., step=1.0) # we want daily 
 x_plot = RelativeDaysFloat2DateTime.(t_plot, t_ref);
 
 plot(pl1[4])
-plot!(x_plot, [simulation.ODESolution(t).accum.ε_prev_totalSWAT  for t in t_plot])
-plot!(x_plot, [simulation.ODESolution(t).accum.ε_prev_totalWATER for t in t_plot])
+plot!(x_plot, [simulation.ODESolution(t).accum.StorageSWAT  for t in t_plot])
+plot!(x_plot, [simulation.ODESolution(t).accum.StorageWATER for t in t_plot])
+# plot!(x_plot, [simulation.ODESolution(t).accum.ε_prev_StorageSWAT  for t in t_plot])
+# plot!(x_plot, [simulation.ODESolution(t).accum.ε_prev_StorageWATER for t in t_plot])
 
-a.ε_prev_t
-a.ε_prev_totalSWAT
-a.ε_prev_totalWATER
 [simulation.ODESolution(t).accum.BALERD_SWAT for t in t_plot]
 
 plot(pl1[5])

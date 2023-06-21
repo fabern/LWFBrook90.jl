@@ -12,7 +12,7 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
                     :cum_d_slvp, :cum_d_snvp, :cum_d_pint, :cum_d_ptran, :cum_d_pslvp,
                     :flow, :seep, :srfl, :slfl, :byfl, :dsfl, :gwfl, :vrfln,
                     :cum_d_rthr, :cum_d_sthr,
-                    :totalSWAT,  :new_totalWATER,  :BALERD_SWAT,  :BALERD_total)
+                    :StorageSWAT,  :StorageWATER,  :BALERD_SWAT,  :BALERD_total)
 
     variable_names = simulate_isotopes ? (d18O = 2, d2H = 3) : ()
     N_isotopes             = length(variable_names)
@@ -127,12 +127,12 @@ function init_LWFB90_u0!(;u0::ComponentArray, parametrizedSPAC, p_soil)
     if parametrizedSPAC.solver_options.compute_intermediate_quantities
         # initialize terms for balance errors with initial values from u0
         new_SWAT       = sum(u_SWATIinit_mm) # total soil water in all layers, mm
-        new_totalWATER = u0.INTR.mm + u0.INTS.mm + u0.SNOW.mm + new_SWAT + u0.GWAT.mm # total water in all compartments, mm
+        StorageWATER = u0.INTR.mm + u0.INTS.mm + u0.SNOW.mm + new_SWAT + u0.GWAT.mm # total water in all compartments, mm
 
-        u0.accum.totalSWAT = new_SWAT
-        u0.accum.new_totalWATER = new_totalWATER
-        # accums[:totalSWAT]       .= new_SWAT
-        # accums[:new_totalWATER]  .= new_totalWATER
+        u0.accum.StorageSWAT = new_SWAT
+        u0.accum.StorageWATER = StorageWATER
+        # accums[:StorageSWAT]       .= new_SWAT
+        # accums[:StorageWATER]  .= StorageWATER
     end
 
     return nothing

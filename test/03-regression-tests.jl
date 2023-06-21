@@ -151,8 +151,8 @@ function get_daily_soilFluxes(simulation)
         dsfl            = [simulation.ODESolution(t_days).accum.dsfl            for t_days = t_out],
         gwfl            = [simulation.ODESolution(t_days).accum.gwfl            for t_days = t_out],
         vrfln           = [simulation.ODESolution(t_days).accum.vrfln           for t_days = t_out],
-        totalSWAT       = [simulation.ODESolution(t_days).accum.totalSWAT       for t_days = t_out],
-        new_totalWATER  = [simulation.ODESolution(t_days).accum.new_totalWATER  for t_days = t_out],
+        StorageSWAT     = [simulation.ODESolution(t_days).accum.StorageSWAT     for t_days = t_out],
+        StorageWATER    = [simulation.ODESolution(t_days).accum.StorageWATER    for t_days = t_out],
         BALERD_SWAT     = [simulation.ODESolution(t_days).accum.BALERD_SWAT     for t_days = t_out],
         BALERD_total    = [simulation.ODESolution(t_days).accum.BALERD_total    for t_days = t_out],
         )
@@ -187,8 +187,8 @@ function plot_simulated_fluxes_vs_reference(simulated_fluxes, reference, d_out; 
         plot(d_out, [simulated_fluxes.dsfl            reference["dsfl"]],           linestyle = [:solid :dot], label = labels, title = "accum.dsfl", kwargs...),
         plot(d_out, [simulated_fluxes.gwfl            reference["gwfl"]],           linestyle = [:solid :dot], label = labels, title = "accum.gwfl", kwargs...),
         plot(d_out, [simulated_fluxes.vrfln           reference["vrfln"]],          linestyle = [:solid :dot], label = labels, title = "accum.vrfln", kwargs...),
-        plot(d_out, [simulated_fluxes.totalSWAT       reference["totalSWAT"]],      linestyle = [:solid :dot], label = labels, title = "accum.totalSWAT", kwargs...),
-        plot(d_out, [simulated_fluxes.new_totalWATER  reference["new_totalWATER"]], linestyle = [:solid :dot], label = labels, title = "accum.new_totalWATER", kwargs...),
+        plot(d_out, [simulated_fluxes.StorageSWAT     reference["StorageSWAT"]],    linestyle = [:solid :dot], label = labels, title = "accum.StorageSWAT", kwargs...),
+        plot(d_out, [simulated_fluxes.StorageWATER    reference["StorageWATER"]],   linestyle = [:solid :dot], label = labels, title = "accum.StorageWATER", kwargs...),
         plot(d_out, [simulated_fluxes.BALERD_SWAT     reference["BALERD_SWAT"]],    linestyle = [:solid :dot], label = labels, title = "accum.BALERD_SWAT", kwargs...),
         plot(d_out, [simulated_fluxes.BALERD_total    reference["BALERD_total"]],   linestyle = [:solid :dot], label = labels, title = "accum.BALERD_total", kwargs...)
     )
@@ -206,29 +206,29 @@ function test_fluxes_comparison(simulated_fluxes, reference)
         @test isapprox(reference["cum_d_smlt"],     simulated_fluxes.cum_d_smlt,     atol = 1e-4, rtol = 1e-4)
         @test_skip isapprox(reference["cum_d_evap"],     simulated_fluxes.cum_d_evap,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
         @test_skip isapprox(reference["cum_d_tran"],     simulated_fluxes.cum_d_tran,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test isapprox(reference["cum_d_irvp"],     simulated_fluxes.cum_d_irvp,     atol = 1e-4, rtol = 1e-4) 
-        @test isapprox(reference["cum_d_isvp"],     simulated_fluxes.cum_d_isvp,     atol = 1e-4, rtol = 1e-4) 
+        @test isapprox(reference["cum_d_irvp"],     simulated_fluxes.cum_d_irvp,     atol = 1e-4, rtol = 1e-4)
+        @test isapprox(reference["cum_d_isvp"],     simulated_fluxes.cum_d_isvp,     atol = 1e-4, rtol = 1e-4)
         @test_skip isapprox(reference["cum_d_slvp"],     simulated_fluxes.cum_d_slvp,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test isapprox(reference["cum_d_snvp"],     simulated_fluxes.cum_d_snvp,     atol = 1e-4, rtol = 1e-4) 
-        @test isapprox(reference["cum_d_pint"],     simulated_fluxes.cum_d_pint,     atol = 1e-4, rtol = 1e-4) 
-        @test isapprox(reference["cum_d_ptran"],    simulated_fluxes.cum_d_ptran,    atol = 1e-4, rtol = 1e-4) 
-        # @test isapprox(reference["cum_d_pslvp"],  simulated_fluxes.cum_d_pslvp,    atol = 1e-4, rtol = 1e-4) 
+        @test isapprox(reference["cum_d_snvp"],     simulated_fluxes.cum_d_snvp,     atol = 1e-4, rtol = 1e-4)
+        @test isapprox(reference["cum_d_pint"],     simulated_fluxes.cum_d_pint,     atol = 1e-4, rtol = 1e-4)
+        @test isapprox(reference["cum_d_ptran"],    simulated_fluxes.cum_d_ptran,    atol = 1e-4, rtol = 1e-4)
+        # @test isapprox(reference["cum_d_pslvp"],  simulated_fluxes.cum_d_pslvp,    atol = 1e-4, rtol = 1e-4)
         @test_skip isapprox(reference["flow"],           simulated_fluxes.flow,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test isapprox(reference["seep"],           simulated_fluxes.seep,           atol = 1e-4, rtol = 1e-4) 
+        @test isapprox(reference["seep"],           simulated_fluxes.seep,           atol = 1e-4, rtol = 1e-4)
         @test_skip isapprox(reference["srfl"],           simulated_fluxes.srfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
         @test_skip isapprox(reference["slfl"],           simulated_fluxes.slfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
         @test_skip isapprox(reference["byfl"],           simulated_fluxes.byfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
         @test isapprox(reference["dsfl"],           simulated_fluxes.dsfl,           atol = 1e-4, rtol = 1e-4) #
         @test_skip isapprox(reference["gwfl"],           simulated_fluxes.gwfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
         @test_skip isapprox(reference["vrfln"],          simulated_fluxes.vrfln,          atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test isapprox(reference["totalSWAT"],      simulated_fluxes.totalSWAT,      atol = 1e-4, rtol = 1e-4) 
-        @test isapprox(reference["new_totalWATER"], simulated_fluxes.new_totalWATER, atol = 1e-4, rtol = 1e-4) 
+        @test isapprox(reference["StorageSWAT"],    simulated_fluxes.StorageSWAT,    atol = 1e-4, rtol = 1e-4)
+        @test isapprox(reference["StorageWATER"],   simulated_fluxes.StorageWATER,   atol = 1e-4, rtol = 1e-4)
         @test_skip isapprox(reference["BALERD_SWAT"],    simulated_fluxes.BALERD_SWAT,    atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
         @test_skip isapprox(reference["BALERD_total"],   simulated_fluxes.BALERD_total,   atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
 end
 
 @testset "Oversaturation-infiltration-FLUXES" begin
-    model2 = loadSPAC("../examples/infiltrationSaturationINFEXP1/", "infiltrationSaturationINFEXP1"; 
+    model2 = loadSPAC("../examples/infiltrationSaturationINFEXP1/", "infiltrationSaturationINFEXP1";
         simulate_isotopes = false,
         Δz_thickness_m = [fill(0.05, 42);],
         IC_soil = (PSIM_init_kPa = -6.3, delta18O_init_permil = -13.0, delta2H_init_permil = -95.0),
@@ -240,13 +240,13 @@ end
         BYPAR=1, QDEPTH_m = 0.40, QFFC = 0.2, QFPAR = 0.3,
         # IMPERV = 0.01,
         # DSLOPE = 10,
-        # DRAIN=.33, 
+        # DRAIN=.33,
         GSC = 0.05, GSP = 0.2));
     simulate!(simulation2_withVariousFlows);
 
     d_out2,  simulated_fluxes2  = get_daily_soilFluxes(simulation2);
     d_out2b, simulated_fluxes2b = get_daily_soilFluxes(simulation2_withVariousFlows);
-    
+
     fname2  = "../examples/INFEXP1_fluxes_reference.jld2"
     fname2b = "../examples/INFEXP1-modified_fluxes_reference.jld2"
     if task == "test"
@@ -267,7 +267,7 @@ end
     if !is_a_CI_system && plot_flag
         fname_illustrations = "out/$git_status_string/TESTSET_Oversaturation-infiltration-FLUXES"
         mkpath(dirname(fname_illustrations))
-        
+
         pl_fluxes2 = plot_simulated_fluxes_vs_reference(simulated_fluxes2, loaded2, loaded2["d_out2"]);
         plot!(legend = :topleft, size=(2000,1000), layout = (7,5))
         savefig(plot(pl_fluxes2, size=(2000,1000), dpi=300),  fname_illustrations*"_fluxes_noBYFL_regressionTest.png")
@@ -275,11 +275,11 @@ end
         pl_fluxes2b = plot_simulated_fluxes_vs_reference(simulated_fluxes2b, loaded2b, loaded2b["d_out2b"]);
         plot!(legend = :topleft, size=(2000,1000), layout = (7,5))
         savefig(plot(pl_fluxes2b, size=(2000,1000), dpi=300),  fname_illustrations*"_fluxes_withBYFL_regressionTest.png")
-        
+
         pl_fluxes2vs2b = plot_simulated_fluxes_vs_reference(
-            simulated_fluxes2, 
-            Dict(String(k) => v for (k,v) in pairs(simulated_fluxes2b)), 
-            d_out2b, 
+            simulated_fluxes2,
+            Dict(String(k) => v for (k,v) in pairs(simulated_fluxes2b)),
+            d_out2b,
             labels = ["Without BYFL" "With BYFL"]);
         plot!(legend = :topleft, size=(2000,1000), layout = (7,5))
         savefig(plot(pl_fluxes2vs2b, size=(2000,1000), dpi=300),  fname_illustrations*"_fluxes_BYFL_comparison.png")
@@ -293,7 +293,7 @@ end
 @testset "DAV2020modified-FLUXES" begin
     # Another simulation testing INFL, BYFL, SRFL, DSFLI, VRFLN among other fluxes
     @githash_time example_result2 = LWFBrook90.run_example(
-        simulate_isotopes = true, 
+        simulate_isotopes = true,
         canopy_evolution = (DENSEF_rel = 100,
                             HEIGHT_rel = 100,
                             SAI_rel    = 100,
@@ -303,9 +303,9 @@ end
                                         Cduration  = 60,
                                         LAI_perc_BtoC = 100,
                                         LAI_perc_CtoB = 20)),
-        Δz_thickness_m = fill(0.02, 40), 
+        Δz_thickness_m = fill(0.02, 40),
         root_distribution = (beta = 0.98, z_rootMax_m=-0.5),
-        IC_soil = (PSIM_init_kPa = -7.0, delta18O_init_permil = -9.0, delta2H_init_permil = -11.0), 
+        IC_soil = (PSIM_init_kPa = -7.0, delta18O_init_permil = -9.0, delta2H_init_permil = -11.0),
         IC_scalar = (
             amount = (u_GWAT_init_mm = 0,
                       u_INTS_init_mm = 0,
@@ -329,11 +329,11 @@ end
         root_distribution = (beta = 0.88, z_rootMax_m = -0.6,),
         params = (
                 # test flow processes INFL, BYFL, SRFL DSFLI, SEEP/GWFL
-                IDEPTH_m=0.50, INFEXP=0.33, 
+                IDEPTH_m=0.50, INFEXP=0.33,
                 BYPAR=1, QDEPTH_m = 0.70, QFFC = 0.2, QFPAR = 0.3,
                 IMPERV = 0.01,
                 DSLOPE = 10,
-                DRAIN=.33, 
+                DRAIN=.33,
                 GSC = 0.05, GSP = 0.2,
             ALB=0.15, ALBSN=0.7, RSSA=720., PSICR=-1.6, FXYLEM=0.4, MXKPL=16.5, MAXLAI=9.999,
             GLMAX=.00801, R5=235., CVPD=1.9, CINTRL=0.18,))
