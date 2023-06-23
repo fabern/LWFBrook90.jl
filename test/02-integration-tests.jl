@@ -149,7 +149,7 @@ end
         # fname_illustrations = "out/$(today())/"
         fname_illustrations = "out/$git_status_string/"
         mkpath(dirname(fname_illustrations))
-        
+
         pl_θ = plot(sim.θ.time,
                 Matrix(sim.θ[:,Not(:time)]), line = :solid, labels = "LWFBrook90.jl:" .* string.(depth_to_read_out_mm) .* "mm",
                 ylabel = "θ (-)", legend_position = :bottomright)
@@ -234,9 +234,9 @@ function plot_Hammel_Dense(sim, ref, hyd, depth_to_read_out_mm, title; subtitle 
         args...)
 end
 print_timed_statistics = function(time, gctime, gcstats)
-    # Printf.@sprintf("%.2f seconds (%.2f M allocations: %.3f MiB, %.2f%% gc time)", 
+    # Printf.@sprintf("%.2f seconds (%.2f M allocations: %.3f MiB, %.2f%% gc time)",
     #         time, gcstats.poolalloc/10^6, gcstats.allocd/1024^2, gctime*100)
-    Printf.@sprintf("%.2f seconds (%.2f M allocations: %.3f MiB)", 
+    Printf.@sprintf("%.2f seconds (%.2f M allocations: %.3f MiB)",
             time, gcstats.poolalloc/10^6, gcstats.allocd/1024^2)
 end
 
@@ -276,10 +276,9 @@ end
     # Illustrate with a plot what will be compared in the tests below
     if !is_a_CI_system && plot_flag
         # if (true) # Do these manually outside of automatic testing in order not to require Plots pkg
-        using Plots, Measures
         depth_to_read_out_mm = [100 500 1000 1500 1900]
         # fname_illustrations = "out/$(today())/"
-        
+
         fname_illustrations = "out/$git_status_string/"
         mkpath(dirname(fname_illustrations))
 
@@ -288,7 +287,7 @@ end
             subtitle = print_timed_statistics(time1, gctime1, gcstats1)*"\n"*git_status_string, topmargin = 15mm)
         pl2 = plot_Hammel_Dense(sim2, ref2, hyd2, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(700,900), dpi=300,
             subtitle = print_timed_statistics(time2, gctime2, gcstats2)*"\n"*git_status_string, topmargin = 15mm)
-        
+
         # Plot Sand simulations
         pl4 = plot_Hammel_Dense(sim4, ref4, hyd4, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(700,900), dpi=300,
             subtitle = print_timed_statistics(time4, gctime4, gcstats4)*"\n"*git_status_string, topmargin = 15mm)
@@ -299,7 +298,7 @@ end
             subtitle = print_timed_statistics(time3, gctime3, gcstats3)*"\n"*git_status_string, topmargin = 15mm))
         high_resolution_flag && (pl6 = plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(700,900), dpi=300,
             subtitle = print_timed_statistics(time6, gctime6, gcstats6)*"\n"*git_status_string, topmargin = 15mm))
-        
+
         savefig(pl1, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim1.png")
         savefig(pl2, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim2.png")
         high_resolution_flag && (savefig(pl3, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim3.png"))
@@ -397,31 +396,31 @@ end
         using Plots, Measures
         depth_to_read_out_mm = [100 500 1000 1500 1900]
         # fname_illustrations = "out/$(today())/"
-        
+
         fname_illustrations = "out/$git_status_string/"
         mkpath(dirname(fname_illustrations))
-        
+
         # Plot Loam simulations
         pl1 = plot_Hammel_Dense(sim1, ref1, hyd1, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
-            subtitle = print_timed_statistics(time1, gctime1, gcstats1)*"\n"*git_status_string, 
+            subtitle = print_timed_statistics(time1, gctime1, gcstats1)*"\n"*git_status_string,
             topmargin = 17mm, layout = (2,2))
         pl2 = plot_Hammel_Dense(sim2, ref2, hyd2, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
-            subtitle = print_timed_statistics(time2, gctime2, gcstats2)*"\n"*git_status_string, 
+            subtitle = print_timed_statistics(time2, gctime2, gcstats2)*"\n"*git_status_string,
             topmargin = 17mm, layout = (2,2))
         high_resolution_flag && (pl3 = plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
-            subtitle = print_timed_statistics(time3, gctime3, gcstats3)*"\n"*git_status_string, 
+            subtitle = print_timed_statistics(time3, gctime3, gcstats3)*"\n"*git_status_string,
             topmargin = 17mm, layout = (2,2)))
         # Plot Sand simulations
         pl4 = plot_Hammel_Dense(sim4, ref4, hyd4, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
-            subtitle = print_timed_statistics(time4, gctime4, gcstats4)*"\n"*git_status_string, 
+            subtitle = print_timed_statistics(time4, gctime4, gcstats4)*"\n"*git_status_string,
             topmargin = 17mm, layout = (2,2))
         pl5 = plot_Hammel_Dense(sim5, ref5, hyd5, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
-            subtitle = print_timed_statistics(time5, gctime5, gcstats5)*"\n"*git_status_string, 
+            subtitle = print_timed_statistics(time5, gctime5, gcstats5)*"\n"*git_status_string,
             topmargin = 17mm, layout = (2,2))
         high_resolution_flag && (pl6 = plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
-            subtitle = print_timed_statistics(time6, gctime6, gcstats6)*"\n"*git_status_string, 
+            subtitle = print_timed_statistics(time6, gctime6, gcstats6)*"\n"*git_status_string,
             topmargin = 17mm, layout = (2,2)))
-        
+
         savefig(pl1, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim1.png")
         savefig(pl2, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim2.png")
         high_resolution_flag && (savefig(pl3, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim3.png"))

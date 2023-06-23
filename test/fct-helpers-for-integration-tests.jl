@@ -76,9 +76,9 @@ function prepare_θψδ_from_sim_and_reference(;
             LWFBrook90.get_auxiliary_variables(simulation; days_to_read_out_d = times_to_read_out_days)
     sim_θ = DataFrame(u_aux_θ[idx,:]', :auto);
     sim_θ.time = times_to_read_out_days;
-
     sim_ψ = DataFrame(u_aux_PSIM[idx,:]', :auto);
     sim_ψ.time = times_to_read_out_days;
+
     (u_SWATI_dense, u_aux_WETNES_dense, u_aux_PSIM_dense, u_aux_PSITI_dense, u_aux_θ_dense, p_fu_KK_dense) =
             LWFBrook90.get_auxiliary_variables(simulation; days_to_read_out_d = nothing)
     θdense    = u_aux_θ_dense[idx,:]'
@@ -89,8 +89,8 @@ function prepare_θψδ_from_sim_and_reference(;
         (u_δ18O_soil, u_δ2H_soil) = get_δsoil(simulation; days_to_read_out_d = times_to_read_out_days)
 
         sim_δ18O = DataFrame(u_δ18O_soil[idx,:]', :auto)
-        sim_δ18O.time = times_to_read_out_days
         sim_δ2H = DataFrame(u_δ2H_soil[idx,:]', :auto)
+        sim_δ18O.time = times_to_read_out_days
         sim_δ2H.time = times_to_read_out_days
 
         (u_δ18O_soil_dense, u_δ2H_soil_dense) = get_δsoil(simulation; days_to_read_out_d = nothing)
@@ -409,4 +409,3 @@ function read_LWFBrook90R_layerCSV_extract_depths(;path, depth_to_read_out_mm)
 
     return (θ = ref_θ, ψ = ref_ψ)
 end
-

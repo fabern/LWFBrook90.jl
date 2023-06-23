@@ -43,6 +43,7 @@ Random.seed!(1234)
 include("01-unit-tests.jl")
 
 plot_flag = false; high_resolution_flag = false;
+# plot_flag = true; high_resolution_flag = false; using Plots, Measures
 # plot_flag = true; high_resolution_flag = true; using Plots, Measures # run this line for plotting outside of default testing
 
 include("02-integration-tests.jl")
