@@ -424,7 +424,7 @@ end
 @testset "bare-minimum provided to loadSPAC" begin
     Δz_m = fill(0.1, 11)
     parametrizedSPAC = loadSPAC(
-        # "test-assets/DAV2020-bare-minimum/", "DAV2020-minimal";
+        # "examples/DAV2020-bare-minimum/", "DAV2020-minimal";
         "../examples/DAV2020-bare-minimum/", "DAV2020-minimal";
         simulate_isotopes = true,
         Δz_thickness_m = Δz_m,
@@ -453,6 +453,7 @@ end
                                u_INTR_init_permil = -95.333,
                                u_SNOW_init_permil = -95.444)));
 
+    @test_throws r"tspan \([0-9., ]*\) goes beyond input forcing data" setup(parametrizedSPAC, requested_tspan = (0., 400)) # forcing only defined from 0 to 364
     @test_throws AssertionError simulation = setup(parametrizedSPAC, soil_output_depths_m = [-1.0755, -1.096])
     simulation                             = setup(parametrizedSPAC, soil_output_depths_m = [-1.0755, -1.096], ε = 0.005);
     # Test soil discretization

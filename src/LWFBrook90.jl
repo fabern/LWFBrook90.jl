@@ -361,15 +361,20 @@ function setup(parametrizedSPAC::SPAC;
 
     @assert all(soil_output_depths_m .< 0)
 
-    if (!isnothing(requested_tspan) && requested_tspan[1] isa DateTime)
-        requested_tspan = LWFBrook90.DateTime2RelativeDaysFloat.(
-            requested_tspan, parametrizedSPAC.reference_date)
-    end
-    if (!isnothing(requested_tspan) && !(requested_tspan[1] ≈ 0))
-        @warn """
-        Requested time span doesn't start at 0. This is supported and correctly takes into account atmospheric forcing.
-        Note, however, that initial conditions are applied to t=$(requested_tspan[1]), i.e. at $(parametrizedSPAC.reference_date + Second(floor(requested_tspan[1] * 24*3600))).
-        """
+    if !isnothing(requested_tspan) # if argument requested_tspan provided, check its value:
+        if requested_tspan[1] isa DateTime
+            requested_tspan = LWFBrook90.DateTime2RelativeDaysFloat.(
+                requested_tspan, parametrizedSPAC.reference_date)
+        end
+        if ((parametrizedSPAC.tspan[1] > requested_tspan[1]) |  (parametrizedSPAC.tspan[2] < requested_tspan[2]))
+            error("Requested simulation tspan $requested_tspan goes beyond input forcing data: $(parametrizedSPAC.tspan)")
+        end
+        if !(requested_tspan[1] ≈ 0)
+            @warn """
+            Requested time span doesn't start at 0. This is supported and correctly takes into account atmospheric forcing.
+            Note, however, that initial conditions are applied to t=$(requested_tspan[1]), i.e. at $(parametrizedSPAC.reference_date + Second(floor(requested_tspan[1] * 24*3600))).
+            """
+        end
     end
     # This function prepares a discretizedSPAC, which is a container for a DifferentialEquations::ODEProblem.
     # A discretizedSPAC stores:

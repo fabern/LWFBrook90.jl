@@ -110,8 +110,6 @@ function loadSPAC(folder::String, prefix::String;
     reference_date, input_meteoveg, meteo_iso_forcing, storm_durations =
         init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes, storm_durations_h)
 
-    tspan = extrema(input_meteoveg.days)
-
     meteo_forcing = input_meteoveg[:, [:days, :GLOBRAD, :TMAX, :TMIN, :VAPPRES, :WIND, :PRECIN]]
     @assert all(meteo_forcing.GLOBRAD .>= 0) "Error in vegetation parameters: GLOBRAD must be above 0."
     # @assert all(meteo_forcing.TMAX    .> 0) "Error in vegetation parameters: TMAX must be above 0."
@@ -277,7 +275,7 @@ function loadSPAC(folder::String, prefix::String;
     extended_soil_horizons = extend_lowest_horizon(soil_horizons, soil_discretization)
 
     ## Make time dependent input parameters continuous in time (interpolate)
-    (meteo_forcing_cont, meteo_iso_forcing_cont) =
+    (meteo_forcing_cont, meteo_iso_forcing_cont, tspan) =
         LWFBrook90.interpolate_meteo(;
             meteo_forcing                 = meteo_forcing,
             meteo_iso_forcing             = meteo_iso_forcing);

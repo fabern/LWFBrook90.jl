@@ -705,13 +705,18 @@ function interpolate_meteo(;
     @assert unique(diff(meteo_forcing.days)) == [1.0] """
         Error: LWFBrook90.jl expects the input data in meteoveg.csv to provided as daily values.
     """
-    time_range = range(minimum(meteo_forcing.days), maximum(meteo_forcing.days), length=length(meteo_forcing.days))
-    p_GLOBRAD = extrapolate(scale(interpolate(meteo_forcing.GLOBRAD, (BSpline(Constant{Previous}()))), time_range) , Throw())
-    p_TMAX    = extrapolate(scale(interpolate(meteo_forcing.TMAX,    (BSpline(Constant{Previous}()))), time_range) , Throw())
-    p_TMIN    = extrapolate(scale(interpolate(meteo_forcing.TMIN,    (BSpline(Constant{Previous}()))), time_range) , Throw())
-    p_VAPPRES = extrapolate(scale(interpolate(meteo_forcing.VAPPRES, (BSpline(Constant{Previous}()))), time_range) , Throw())
-    p_WIND    = extrapolate(scale(interpolate(meteo_forcing.WIND,    (BSpline(Constant{Previous}()))), time_range) , Throw())
-    p_PREC    = extrapolate(scale(interpolate(meteo_forcing.PRECIN,  (BSpline(Constant{Previous}()))), time_range) , Throw())
+    # Given that we interpolate with Constant{Previous}: we have to extend the last day (e.g. 31.12.2010 00h00 for 24h to 23h59...)
+    # therefore time_range is +1 and last element of meteo_forcing is duplicated
+    tspan      = (minimum(meteo_forcing.days), maximum(meteo_forcing.days) + 1) # duplicate last day
+    time_range = range(tspan..., step = 1)
+    meteo_forcing_forInt = meteo_forcing[[1:end..., end],:] # duplicate last day
+
+    p_GLOBRAD = extrapolate(scale(interpolate(meteo_forcing_forInt.GLOBRAD, (BSpline(Constant{Previous}()))), time_range) , Throw())
+    p_TMAX    = extrapolate(scale(interpolate(meteo_forcing_forInt.TMAX,    (BSpline(Constant{Previous}()))), time_range) , Throw())
+    p_TMIN    = extrapolate(scale(interpolate(meteo_forcing_forInt.TMIN,    (BSpline(Constant{Previous}()))), time_range) , Throw())
+    p_VAPPRES = extrapolate(scale(interpolate(meteo_forcing_forInt.VAPPRES, (BSpline(Constant{Previous}()))), time_range) , Throw())
+    p_WIND    = extrapolate(scale(interpolate(meteo_forcing_forInt.WIND,    (BSpline(Constant{Previous}()))), time_range) , Throw())
+    p_PREC    = extrapolate(scale(interpolate(meteo_forcing_forInt.PRECIN,  (BSpline(Constant{Previous}()))), time_range) , Throw())
     ###
 
     # Note that meteoiso does not need to be regularly spaced:
@@ -738,7 +743,7 @@ function interpolate_meteo(;
         ("p_d18OPREC",  p_d18OPREC),
         ("p_d2HPREC",   p_d2HPREC)])
 
-    return (meteo_forcing_cont, meteo_iso_forcing_cont)
+    return (meteo_forcing_cont, meteo_iso_forcing_cont, tspan)
 end
 
 """
