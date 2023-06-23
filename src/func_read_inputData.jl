@@ -422,9 +422,8 @@ function init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes = t
     meteo_forcing, reference_date = read_path_meteoveg(path_meteoveg)
 
     if (simulate_isotopes)
-        meteo_iso_forcing, meteo_forcing = read_path_meteoiso(path_meteoiso,
-            meteo_forcing,
-            reference_date)
+        meteo_iso_forcing = read_path_meteoiso(
+            path_meteoiso, meteo_forcing, reference_date)
     else
         meteo_iso_forcing = nothing
     end
@@ -678,39 +677,24 @@ function read_path_meteoiso(path_meteoiso,
 
     # Check period
     # Check if overlap with meteoveg exists
-    startday_iso = minimum(input_meteoiso[:,"days"])
-    startday_veg = minimum(input_meteoveg[:,"days"])
-    stopday_iso  = maximum(input_meteoiso[:,"days"])
-    stopday_veg  = maximum(input_meteoveg[:,"days"])
-    startday = max(startday_iso, startday_veg)
-    endday   = min(stopday_iso, stopday_veg)
+    startday_iso   = minimum(input_meteoiso[:,"days"])
+    stopday_iso    = maximum(input_meteoiso[:,"days"])
+    startday_meteo = minimum(input_meteoveg[:,"days"])
+    stopday_meteo  = maximum(input_meteoveg[:,"days"])
 
-    if ((stopday_iso > stopday_veg) | (startday_iso < startday_veg))
-        @warn """
-        Isotopic signature of precipitation data covers the period from
-        $(input_meteoveg_reference_date + Day(startday_iso)) to $(input_meteoveg_reference_date + Day(stopday_iso))
-        it will be cropped to the period determined by the other meteorologic inputs going from
-        $(input_meteoveg_reference_date + Day(startday_veg)) to $(input_meteoveg_reference_date + Day(stopday_veg)).
-        """
-        # input_meteoiso = @chain input_meteoiso begin
-        #    where(:days .>= startday, :days .<= endday) # Acutally not needed to crop
-        #    end
-        input_meteoveg_mod = input_meteoveg #Not needed to crop
-    elseif ((stopday_iso < stopday_veg) | (startday_iso > startday_veg))
-        @warn """
-        Isotopic signature of precipitation data covers the period from
-            $(input_meteoveg_reference_date + Day(startday_iso)) to $(input_meteoveg_reference_date + Day(stopday_iso))
-        It does therefore not cover the entire period of other meteorologic inputs going from
-            $(input_meteoveg_reference_date + Day(startday_veg)) to $(input_meteoveg_reference_date + Day(stopday_veg)).
-        Simulation period will be limited to the period when isotopic signatures are available.
-        Note that the initial conditions will be applied to the beginning of the new simulation period.
-        """
-        input_meteoveg_mod = filter(:days => (d) -> d .>= startday && d .<= endday, input_meteoveg)
-    else
-        input_meteoveg_mod = input_meteoveg #Not needed to crop
+    startdate_iso   = input_meteoveg_reference_date + Day(startday_iso)
+    startdate_meteo = input_meteoveg_reference_date + Day(startday_meteo)
+    stopdate_iso    = input_meteoveg_reference_date + Day(stopday_iso)
+    stopdate_meteo  = input_meteoveg_reference_date + Day(stopday_meteo)
+
+    if ((stopday_iso <= stopday_meteo - 15) |
+        (startday_iso <= startday_meteo + 15))
+        @warn "Isotopic signature of precipitation is available for the period ($startdate_iso - $stopdate_iso), i.e. (days $startday_iso - $stopday_iso)" * "\n" *
+        "         Whereas the other meteorologic inputs are available for ($startdate_meteo - $stopdate_meteo), i.e. (days $startday_meteo - $stopday_meteo)." * "\n" *
+        "         Isotopic signatures will be extrapolated with constant values before and after the available period."
     end
 
-    return input_meteoiso, input_meteoveg_mod
+    return input_meteoiso
 end
 
 # path_initial_conditions = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_initial_conditions.csv"

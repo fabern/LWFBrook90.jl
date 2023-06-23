@@ -706,39 +706,24 @@ function interpolate_meteo(;
         Error: LWFBrook90.jl expects the input data in meteoveg.csv to provided as daily values.
     """
     time_range = range(minimum(meteo_forcing.days), maximum(meteo_forcing.days), length=length(meteo_forcing.days))
-    p_GLOBRAD = extrapolate(scale(interpolate(meteo_forcing.GLOBRAD, (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_TMAX    = extrapolate(scale(interpolate(meteo_forcing.TMAX,    (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_TMIN    = extrapolate(scale(interpolate(meteo_forcing.TMIN,    (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_VAPPRES = extrapolate(scale(interpolate(meteo_forcing.VAPPRES, (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_WIND    = extrapolate(scale(interpolate(meteo_forcing.WIND,    (BSpline(Constant{Previous}()))), time_range) ,0)
-    p_PREC    = extrapolate(scale(interpolate(meteo_forcing.PRECIN,  (BSpline(Constant{Previous}()))), time_range) ,0)
+    p_GLOBRAD = extrapolate(scale(interpolate(meteo_forcing.GLOBRAD, (BSpline(Constant{Previous}()))), time_range) , Throw())
+    p_TMAX    = extrapolate(scale(interpolate(meteo_forcing.TMAX,    (BSpline(Constant{Previous}()))), time_range) , Throw())
+    p_TMIN    = extrapolate(scale(interpolate(meteo_forcing.TMIN,    (BSpline(Constant{Previous}()))), time_range) , Throw())
+    p_VAPPRES = extrapolate(scale(interpolate(meteo_forcing.VAPPRES, (BSpline(Constant{Previous}()))), time_range) , Throw())
+    p_WIND    = extrapolate(scale(interpolate(meteo_forcing.WIND,    (BSpline(Constant{Previous}()))), time_range) , Throw())
+    p_PREC    = extrapolate(scale(interpolate(meteo_forcing.PRECIN,  (BSpline(Constant{Previous}()))), time_range) , Throw())
     ###
 
     # Note that meteoiso does not need to be regularly spaced:
     # Interpolate irregular data with Next and shift to noon
 
     if (isnothing(meteo_iso_forcing))
-        function p_d18OPREC(t)
-            return nothing
-        end
-        function p_d2HPREC(t)
-            return nothing
-        end
+        p_d18OPREC = (t) -> nothing
+        p_d2HPREC  = (t) -> nothing
     else
-        ## Quickfix:
-        # @assert 1==length(unique(diff(meteo_iso_forcing.days))) """
-        #     Error: LWFBrook90.jl expects the input data in meeoiso.csv to be regularly spaced in time.
-        # """
-        # @assert unique(diff(meteo_iso_forcing.days)) == [1.0] """
-        #     Error: LWFBrook90.jl expects the input data in meeoiso.csv to provided as daily values.
-        # """
-        # time_range_iso = range(minimum(meteo_iso_forcing.days), maximum(meteo_iso_forcing.days), length=length(meteo_iso_forcing.days))
-        # p_d18OPREC= extrapolate(scale(interpolate(meteo_iso_forcing.delta18O_permil,    (BSpline(Constant{Previous}()))), time_range_iso) ,0)
-        # p_d2HPREC = extrapolate(scale(interpolate(meteo_iso_forcing.delta2H_permil,     (BSpline(Constant{Previous}()))), time_range_iso) ,0)
-        ## End Quickfix:
         # Here we shift the days of collection of the cumulative samples to noon. => + 12/24 days
-        p_d18OPREC= extrapolate(interpolate((meteo_iso_forcing.days .+ 12/24, ), meteo_iso_forcing.delta18O_permil,    (Gridded(Constant{Next}()))), Flat()) #extrapolate flat, alternative: Throw())
-        p_d2HPREC = extrapolate(interpolate((meteo_iso_forcing.days .+ 12/24, ), meteo_iso_forcing.delta2H_permil,     (Gridded(Constant{Next}()))), Flat()) #extrapolate flat, alternative: Throw())
+        p_d18OPREC = extrapolate(interpolate((meteo_iso_forcing.days .+ 12/24, ), meteo_iso_forcing.delta18O_permil,    (Gridded(Constant{Next}()))), Flat()) #extrapolate flat, alternative: Throw())
+        p_d2HPREC  = extrapolate(interpolate((meteo_iso_forcing.days .+ 12/24, ), meteo_iso_forcing.delta2H_permil,     (Gridded(Constant{Next}()))), Flat()) #extrapolate flat, alternative: Throw())
     end
 
     meteo_forcing_cont = Dict([
@@ -853,7 +838,7 @@ function interpolate_aboveground_veg(
     @assert all(veg_evolution_Aboveground.SAI_     .>= 0)    #-
 
     time_range = range(minimum(veg_evolution_Aboveground.days), maximum(veg_evolution_Aboveground.days), length=length(veg_evolution_Aboveground.days))
-    
+
     p_DENSEF  = extrapolate(scale(interpolate(veg_evolution_Aboveground.DENSEF_  ,(BSpline(Constant{Previous}()))), time_range) ,0)
     p_HEIGHT  = extrapolate(scale(interpolate(veg_evolution_Aboveground.HEIGHT_m ,(BSpline(Constant{Previous}()))), time_range) ,0)
     p_LAI     = extrapolate(scale(interpolate(veg_evolution_Aboveground.LAI_     ,(BSpline(Constant{Previous}()))), time_range) ,0)

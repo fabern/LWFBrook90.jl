@@ -78,10 +78,8 @@ function extend_lowest_horizon(soil_horizons, soil_discretizationDF)
     if soil_horizon_extent[2] ≈ soil_discretizationDF.Lower_m[end]
         # all okay no need to extend z horizon
     elseif soil_horizon_extent[2] < soil_discretizationDF.Lower_m[end]
-        @warn """
-        Spatial domain soil discretization is smaller than the provided soil horizon information ($soil_horizon_extent m)
-        (lower end of requested soil discr.: $(soil_discretizationDF.Lower_m[end]))
-        """
+        @warn    "Spatial domain soil discretization is smaller than the provided soil horizon information ($soil_horizon_extent m)" * "\n" *
+        "         (lower end of requested soil discr.: $(soil_discretizationDF.Lower_m[end]))"
     elseif soil_horizon_extent[2] > soil_discretizationDF.Lower_m[end]
         @warn """
         Spatial domain soil discretization is larger than the provided soil horizon information. Lowest soil horizon will be extended.
