@@ -157,7 +157,7 @@ simulate_LWFBrook90.jl_input_folder_withLWFBrook90R <-
       lwidth = param$LWIDTH,
       z0s = param$Z0S,
       lpc = param$LPC,
-      cs =  0.0035,
+      cs =  0.035,
       czs = param$CZS,
       czr = param$CZR,
       hs =  param$HS,
