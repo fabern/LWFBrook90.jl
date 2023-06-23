@@ -234,6 +234,7 @@ function MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM
 
     p_fu_PTR = fill(NaN, 2)
     p_fu_GER = fill(NaN, 2)
+    p_fu_PGER = fill(NaN, 2) # potential ground evaporation (not needed for model computations, just for comparison with LWFBrook90R)
     p_fu_PIR = fill(NaN, 2)
     p_fu_GIR = fill(NaN, 2)
     p_fu_ATRI=fill(NaN,2,NLAYER)
@@ -281,11 +282,11 @@ function MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM
 
         #print("\nIDAY:$(@sprintf("% 3d", IDAY)), J = $J     AA:$(@sprintf("% 8.4f", AA)), ASUBS:$(@sprintf("% 8.4f", ASUBS)), VPD:$(@sprintf("% 8.4f", VPD)), RAA:$(@sprintf("% 8.4f", RAA)), RAC:$(@sprintf("% 8.4f", RAC)), RAS:$(@sprintf("% 8.4f", RAS)), RSC:$(@sprintf("% 8.4f", RSC)), p_fu_RSS:$(@sprintf("% 8.4f", p_fu_RSS)), DELTA:$(@sprintf("% 8.4f", DELTA))")
 
-        # S.-W. potential transpiration and ground evaporation rates
+        # S.-W. potential transpiration and potential ground evaporation rates (dry canopy)
         p_fu_PTR[J], p_fu_GER[J] =  LWFBrook90.PET.SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, p_fu_RSS, DELTA)
-        # S.-W. potential interception evaporation and ground evap. rates
-        # RSC = 0, p_fu_RSS not changed
-        p_fu_PIR[J], p_fu_GIR[J] =  LWFBrook90.PET.SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, 0,   p_fu_RSS, DELTA)
+        # S.-W. potential interception evaporation and potential ground evap. rates (wet canopy)
+        p_fu_PIR[J], p_fu_GIR[J] =  LWFBrook90.PET.SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, 0,   p_fu_RSS, DELTA) # RSC = 0, p_fu_RSS not changed
+        _,          p_fu_PGER[J] =  LWFBrook90.PET.SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, 0,        DELTA) # potential ground evaporation (not needed for model computations, just for comparison with LWFBrook90R)
 
         # actual transpiration and ground evaporation rates
         if (p_fu_PTR[J] > 0.001)
@@ -317,7 +318,8 @@ function MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM
             p_fu_GER, # ground evaporation rate for daytime or night (mm/d)
             p_fu_PIR, # potential interception rate for daytime or night (mm/d)
             p_fu_GIR, # ground evap. rate with intercep. for daytime or night (mm/d)
-            p_fu_ATRI)# actual transp.rate from layer for daytime and night (mm/d)
+            p_fu_ATRI,# actual transp.rate from layer for daytime and night (mm/d)
+            p_fu_PGER)# hypothetical, potential ground evaporation (not needed for model computations, just for comparison with LWFBrook90R)
 
     # return (#SLRAD[2],SLRAD[1],TAJ,UAJ, SOVERI, AA, ASUBS
     #         #ES, DELTA, VPD, RAA, RAC, RAS, RSC,

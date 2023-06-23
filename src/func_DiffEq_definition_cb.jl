@@ -164,7 +164,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     # during day and rate during night:
     #* * * * *  B E G I N   D A Y - N I G H T   E T   L O O P  * * * * * * * * *
     # Compute day and night rates
-    (p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR, p_fu_ATRI) =
+    (p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR, p_fu_ATRI, p_fu_PGER) =
         MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM[1], p_fu_UADTM, p_fT_TANTM, p_fu_UANTM,
                     p_fT_I0HDAY,
                     # for AVAILEN:
@@ -275,7 +275,8 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         integrator.u.accum.cum_d_snvp       = p_DTP * (aux_du_SNVP[1])                                                                # cum_d_snvp
         integrator.u.accum.cum_d_pint       = p_DTP * (p_fu_PINT)                                                                  # cum_d_pint
         integrator.u.accum.cum_d_ptran      = p_DTP * (p_fu_PTRAN)                                                                 # cum_d_ptran
-        integrator.u.accum.cum_d_pslvp      = 0 # p_DTP * (p_fu_PSLVP)                                                             # cum_d_pslvp # Deactivated as p_fu_PSLVP is never used
+        p_fu_PSLVP = (p_fu_PGER[1] * p_fT_DAYLEN + p_fu_PGER[2] * (1 - p_fT_DAYLEN)) # (not needed for model computations, just for comparison with LWFBrook90R)
+        integrator.u.accum.cum_d_pslvp      = p_DTP * (p_fu_PSLVP)                                                             # cum_d_pslvp # Deactivated as p_fu_PSLVP is never used
         integrator.u.accum.flow             = 0 # flow,  is computed in ODE
         integrator.u.accum.seep             = 0 # seep,  is computed in ODE
         integrator.u.accum.srfl             = 0 # srfl,  is computed in ODE
