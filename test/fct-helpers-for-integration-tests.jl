@@ -206,8 +206,7 @@ function prepare_θψδ_from_sim_and_reference(;
                ψdense,
                δ18Odense,
                δ2Hdense),
-        # also remove from ref_θ a day at the end to have same number:
-        ref = (θ = ref_θ[Not(end),:], ψ = ref_ψ[Not(end),:], δ18O = ref_δ18O[Not(end),:], δ2H = ref_δ2H[Not(end),:]),
+        ref = (θ = ref_θ, ψ = ref_ψ, δ18O = ref_δ18O, δ2H = ref_δ2H),
         hyd = (θ = hyd_θ,             ψ = hyd_ψ,             δ18O = hyd_δ18O,             δ2H = hyd_δ2H,
                 # this is densely output in time
                θdense    =  HydrusSolution_sparseTime_θ_wide,

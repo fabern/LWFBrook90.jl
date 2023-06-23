@@ -5,28 +5,35 @@
 # # Reinstall either published version (Reset=1) or modified version (Reset=0)
 # run_R_simulations = FALSE
 # run_julia_simulations = FALSE
-Reset = FALSE
+Reset = TRUE
 if (Reset){
-  # install.packages("LWFBrook90R")
-  devtools::install(
-    pkg = "~/switchdrive/Documents/Job/Anstellung_2019_WSL/Doktorat/Projects/Soil-water-model/Brook/LWFBrook90R/LWFBrook90R-0.5.2/",
-    reload = TRUE,
-    quick = FALSE,
-    args = getOption("devtools.install.args"),
-    quiet = FALSE,
-    dependencies = NA,
-    upgrade = "never",
-    build_vignettes = FALSE,
-    keep_source = getOption("keep.source.pkgs"),
-    force = FALSE
-  )
-  
-  library(LWFBrook90R)
-  LWFB90version <- paste0(packageVersion("LWFBrook90R"), "")
+  published = FALSE
+  if (published){
+    # install.packages("LWFBrook90R")
+    library(LWFBrook90R)
+    LWFB90version <- paste0(packageVersion("LWFBrook90R"), "")
+  } else {  
+    devtools::install(
+      pkg = "~/switchdrive/Documents/Job/Anstellung_2019_WSL/Doktorat/Projects/Soil-water-model/Brook/LWFBrook90R/LWFBrook90R-0.5.2/",
+      reload = TRUE,
+      quick = FALSE,
+      args = getOption("devtools.install.args"),
+      quiet = FALSE,
+      dependencies = NA,
+      upgrade = "never",
+      build_vignettes = FALSE,
+      keep_source = getOption("keep.source.pkgs"),
+      force = FALSE
+    )
+    
+    library(LWFBrook90R)
+    LWFB90version <- paste0(packageVersion("LWFBrook90R"), "_recompiled")
+  }
 }
 if (!Reset){
   devtools::install(
     pkg = "~/switchdrive/Documents/Job/Anstellung_2019_WSL/Doktorat/Projects/Soil-water-model/Brook/LWFBrook90R/LWFBrook90R-0.5.2_modReset0/",
+    # pkg = "~/switchdrive/Documents/Job/Anstellung_2019_WSL/Doktorat/Projects/Soil-water-model/Brook/LWFBrook90R/LWFBrook90R-0.5.2_modReset0-and-printing/",
     # pkg = "~/switchdrive/Documents/Job/Anstellung_2019_WSL/Doktorat/Projects/Soil-water-model/Brook/LWFBrook90R/LWFBrook90R-0.4.3_modReset0-and-printing/",
     # pkg = "~/switchdrive/Documents/Job/Anstellung_2019_WSL/Doktorat/Projects/Soil-water-model/Brook/LWFBrook90R/LWFBrook90R-0.4.3_modReset0/",
     # pkg = "~/switchdrive/Documents/Job/Anstellung_2019_WSL/Doktorat/Projects/Soil-water-model/Brook/LWFBrook90R/LWFBrook90R",
@@ -51,7 +58,6 @@ if (!Reset){
 
 
 
-rm(list=ls())
 # packageVersion("LWFBrook90R")
 # version
 # sessionInfo()
@@ -323,6 +329,6 @@ for (iter in list(list(res = resInfiltrationTest, out_dir = "infiltrationSaturat
     theme(strip.background = element_blank(),
           strip.text = element_blank(), legend.background = element_blank(),
           legend.position = c(0.98,0.51), legend.justification = c(1,0))
-  ggsave(filename = gsub(".png","_error.png",fnamePNG), 
+  ggsave(filename = gsub(".png","error.png",fnamePNG), 
          width = 1200, height = 1000, units = "px", dpi = 220, pl_error)
 }
