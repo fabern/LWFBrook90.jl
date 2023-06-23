@@ -5,14 +5,14 @@
 Compute state dependent parameters for updating states INTS, INTR, SNOW, CC, SNOWLQ in
 callback function.
 
-A) get: 1) sunshine durations, 2) SFAL, 3) plant resistance (TODO: could be done before simulation) 
-B) get_windspeed_from_canopy_and_snowpack: (p_fu_UADTM, p_fu_UANTM) = f(...) 
+A) get: 1) sunshine durations, 2) SFAL, 3) plant resistance (TODO: could be done before simulation)
+B) get_windspeed_from_canopy_and_snowpack: (p_fu_UADTM, p_fu_UANTM) = f(...)
 C) get_potential_snowpack_and_soil_evaporation_from_canopy,snowpack,atmosphere,: (p_fu_UADTM, p_fu_UANTM) = f(...)
 
 # Arguments
 - many
 
-" From ecoshift: 
+" From ecoshift:
 Subroutine MSUBSETVARS contains subroutines that calulate derived variables for the day.
 SUNDS, CANOPY, ROUGH, and PLNTRES are called to get solar, canopy structure, roughness, and
 plant resistance variables that depend on day of the year. Subsurface heat flux (SHEAT) is
@@ -146,15 +146,15 @@ http://www.ecoshift.net/brook/b90.html:
 Subroutine MSBDAYNIGHT contains routines that calculate the five components of evaporation
 (see Flow Chart):
 
-- evaporation of intercepted rain (IRVP) 
-- evaporation of intercepted snow (ISVP) 
-- evaporation from snow (SNVP) 
-- soil evaporation (SLVP) from the top soil layer 
-- transpiration (TRANI) from each soil layer that contains roots 
+- evaporation of intercepted rain (IRVP)
+- evaporation of intercepted snow (ISVP)
+- evaporation from snow (SNVP)
+- soil evaporation (SLVP) from the top soil layer
+- transpiration (TRANI) from each soil layer that contains roots
 
-These evaporation values are obtained separately for daytime and nightime, then combined 
+These evaporation values are obtained separately for daytime and nightime, then combined
 into a daily values.
-Note that evaporation of intercepted storage and snow evaporation (IRVP, ISVP, SNVP) are 
+Note that evaporation of intercepted storage and snow evaporation (IRVP, ISVP, SNVP) are
 reduced if their sources disappear. (This happens later in MSBPREINT.)
 
 Potential evaporation rates are obtained using the Shuttleworth and Wallace (1985)
@@ -450,7 +450,7 @@ function MSBPREINT(#arguments:
         # LWFBrook90 additionally: if(u_aux_PSIM[i] < PsiCrit[i]) FRSS=1.e+20 end # where PsiCrit (! not PSICR) is a cutoff pressure for evaporation but also transpiration
     end
     # end B) Effect of wet/snow-covered canopy on fluxes ################
-    
+
     # C) Effect of snowpack on fluxes ################
     # compute soil evaporation as average of wet and non-wet canopy computations
     if (u_SNOW <= 0 && p_fu_STHR <= 0)
@@ -496,7 +496,7 @@ function MSBPREINT(#arguments:
     # end D) Interception by snowpack (RSNO), snowmelt (SMLT) and snow evaporation (SNVP) ################
 
     # Compute net rain arriving at soil surface (together with snow melt SMLT)
-    p_fu_RNET = p_fu_RTHR - aux_du_RSNO 
+    p_fu_RNET = p_fu_RTHR - aux_du_RSNO
     # aux_du_SMLT: snowmelt arriving at soil surface (together with snow melt RNET)
 
     return (# compute some fluxes as intermediate results:
@@ -514,7 +514,7 @@ end
 """
     MSBITERATE()
 
-http://www.ecoshift.net/brook/b90.html 
+http://www.ecoshift.net/brook/b90.html
 
 Subsurface water movement is determined in several to many iterations per precipitation
 time-step. Remaining model calculations are done within subroutine MSBITERATE for each
@@ -522,10 +522,10 @@ iteration loop.
 
 Net throughfall (RNET) plus snowmelt (SMLT) may:
 
-1. infiltrate into the soil matrix of the surface horizon (INFLI(1)), 
-2. infiltrate directly to deeper horizons via vertical macropore flow (INFLI), 
-3. go immediately to streamflow via vertical macropore flow followed by downslope pipe flow (BYFLI), 
-4. or go immediately to streamflow via impaction on a variable saturated source area (SRFL). 
+1. infiltrate into the soil matrix of the surface horizon (INFLI(1)),
+2. infiltrate directly to deeper horizons via vertical macropore flow (INFLI),
+3. go immediately to streamflow via vertical macropore flow followed by downslope pipe flow (BYFLI),
+4. or go immediately to streamflow via impaction on a variable saturated source area (SRFL).
 
 The fraction of area acting as a saturated source area (SAFRAC) is obtained in subroutine
 SRFLFR. Source area flow (SRFL) is obtained as SAFRAC plus impervious area (IMPERV) times
@@ -579,7 +579,7 @@ function MSBITERATE!(
                     p_IMPERV, p_fu_RNET, aux_du_SMLT,
                     p_LENGTH_SLOPE, p_DSLOPE,
                     # for DSLOP:
-                    p_RHOWG, u_aux_PSIM, p_fu_KK, 
+                    p_RHOWG, u_aux_PSIM, p_fu_KK,
                     #
                     u_aux_PSITI, p_DPSIMAX,
                     #
@@ -614,7 +614,7 @@ function MSBITERATE!(
         aux_du_DSFLI .= 0
     else
         # aux_du_DSFLI .= LWFBrook90.WAT.DSLOP(p_DSLOPE, p_LENGTH_SLOPE, p_RHOWG, p_soil, u_aux_PSIM, p_fu_KK) # 5 allocations 1.094 KiB
-        LWFBrook90.WAT.DSLOP!(aux_du_DSFLI, cache1, cache2, 
+        LWFBrook90.WAT.DSLOP!(aux_du_DSFLI, cache1, cache2,
                              p_DSLOPE, p_LENGTH_SLOPE, p_RHOWG, p_soil, u_aux_PSIM, p_fu_KK)
     end
 

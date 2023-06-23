@@ -236,18 +236,8 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     integrator.u.CC.MJm2   = u_CC
     integrator.u.SNOWLQ.mm = u_SNOWLQ
 
-    # save intermediate results for use in ODE (function f()) or other callbacks
-    # integrator.p[3][1] .= [p_fu_δ18O_SLFL, p_fu_δ2H_SLFL,
-    #                        p_fT_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
-    #                        p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
-    #                        aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old]
-    # integrator.p[3][1] .= [NaN, NaN,        # NaNs are directly after overwritten by callback for isotopes
-    #                         p_fT_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
-    #                         p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
-    #                         aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old]
-    # integrator.p[3][2] .= aux_du_TRANI
-    integrator.p.p_fu_δ18O_SLFL .= NaN # NaNs are directly after overwritten by callback for isotopes
-    integrator.p.p_fu_δ2H_SLFL  .= NaN # NaNs are directly after overwritten by callback for isotopes
+    p_fu_δ18O_SLFL .= NaN # NOTE: safety check to assert NaNs are directly after overwritten by callback for isotopes
+    p_fu_δ2H_SLFL  .= NaN # NOTE: safety check to assert NaNs are directly after overwritten by callback for isotopes
     ##########################################
     # Accumulate flows to compute daily sums
     # Note that below state variables serve only as accumulator but do not affect
