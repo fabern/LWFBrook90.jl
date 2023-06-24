@@ -686,7 +686,7 @@ function read_path_meteoiso(path_meteoiso,
     stopdate_meteo  = input_meteoveg_reference_date + Day(stopday_meteo)
 
     if ((stopday_iso <= stopday_meteo - 15) |
-        (startday_iso <= startday_meteo + 15))
+        (startday_iso >= startday_meteo + 15))
         @warn "Isotopic signature of precipitation is available for the period ($startdate_iso - $stopdate_iso), i.e. (days $startday_iso - $stopday_iso)" * "\n" *
         "         Whereas the other meteorologic inputs are available for ($startdate_meteo - $stopdate_meteo), i.e. (days $startday_meteo - $stopday_meteo)." * "\n" *
         "         Isotopic signatures will be extrapolated with constant values before and after the available period."
