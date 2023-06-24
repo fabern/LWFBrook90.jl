@@ -108,7 +108,7 @@ if basename(pwd()) != "test"; cd("test"); end
         mkpath(dirname(fname_illustrations))
 
         pl1 = plotamounts(example_result, :above_and_belowground, :showRWUcentroid)
-        pl2 = plotisotopes(example_result, :d18O, :showRWUcentroid)
+        pl2 = plotisotopes(example_result, :d18O, (d18O = (-16, -6), d2H = (-125, -40)), :showRWUcentroid)
         pl3 = plotforcingandstates(example_result)
         savefig(plot(pl1, size=(1000,1400), dpi=300),  fname_illustrations*"_amts.png")
         savefig(plot(pl2, size=(1000,700), dpi=300), fname_illustrations*"_d18O-d2H.png")

@@ -539,7 +539,8 @@ end
 """
     plotisotopes(simulation::DiscretizedSPAC)
     plotisotopes(simulation::DiscretizedSPAC, isotope::Symbol)
-    plotisotopes(simulation::DiscretizedSPAC, isotope::Symbol, RWUcentroid::Symbol)
+    plotisotopes(simulation::DiscretizedSPAC, isotope::Symbol, (d18O = (-6, -16), d2H = (-125, -40)))
+    plotisotopes(simulation::DiscretizedSPAC, isotope::Symbol, (d18O = (-6, -16), d2H = (-125, -40)), RWUcentroid::Symbol))
 
 Plots the isotope results of a SPAC Simulation. By default both δ18O and δ2H.
 The user can override this with the second argument isotope as one of `:d18O`, `:d2H`, or `:d18O_and_d2H`.
@@ -548,17 +549,25 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
 @userplot PlotIsotopes
 @recipe function f(pliso::PlotIsotopes)
     # 0) parse input arguments
-    if length(pliso.args) == 3
+    if length(pliso.args) == 4
         simulation = pliso.args[1]
         isotope    = pliso.args[2]
-        RWUcentroid= pliso.args[3]
+        clims      = pliso.args[3]
+        RWUcentroid= pliso.args[4]
+    elseif length(pliso.args) == 3
+        simulation = pliso.args[1]
+        isotope    = pliso.args[2]
+        clims      = pliso.args[3]
+        RWUcentroid= :dontShowRWUcentroid
     elseif length(pliso.args) == 2
         simulation = pliso.args[1]
         isotope    = pliso.args[2]
+        clims      = (d18O = :auto, d2H = :auto)
         RWUcentroid= :dontShowRWUcentroid
     elseif length(pliso.args) == 1
         simulation = pliso.args[1]
         isotope    = :d18O_and_d2H
+        clims      = (d18O = :auto, d2H = :auto)
         RWUcentroid= :dontShowRWUcentroid
     else
         error("plotisotopes requires an unnamed first argument of type DiscretizedSPAC, and optional unnamed second/third arguments (:d18O_and_d2H, :d18O, or :d2H) and (:dontShowRWUcentroid, :showRWUcentroid). Other arguments to plot() should be separated by `;`.")
@@ -602,10 +611,6 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
 
     # Some hardcoded options:
     xlimits = RelativeDaysFloat2DateTime.(solu.prob.tspan, t_ref)
-
-    clims_d18O = (-16, -6)
-    clims_d2H  = (-125, -40)
-    true_to_check_colorbar = false; # set this flag to false for final plot, true for debugging.
     tick_function = (x1, x2) -> PlotUtils.optimize_ticks(x1, x2; k_min = 4)
     # color_scheme = :default # https://docs.juliaplots.org/latest/generated/colorschemes
     # color_scheme = :blues
@@ -644,22 +649,14 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
         row_RWU_centroid_mm, RWUcentroidLabel = get_RWU_centroid(rows_RWU_mmDay, y_center)
     end
 
-    # # 1b) define some plot arguments based on the extracted data
-    # # color scheme:
-    # all_d18O_values = [rows_SWAT_d18O; row_PREC_d18O; row_INTS_d18O; row_INTR_d18O; row_SNOW_d18O; row_GWAT_d18O; row_RWU_d18O][:]
-    # all_d2H_values  = [rows_SWAT_d2H ; row_PREC_d2H ; row_INTS_d2H ; row_INTR_d2H ; row_SNOW_d2H ; row_GWAT_d2H ; row_RWU_d2H ][:]
-    # if clims_d18O == :auto
-    #     clims_d18O = extrema(filter(!isnan, all_d18O_values))
-    # else
-    #     clims_d18O = (-16, -6)
-    # end
-    # if clims_d2H == :auto
-    #     clims_d2H = clims_d2H  = extrema(filter(!isnan, all_d2H_values))
-    # else
-    #     clims_d2H  = (-125, -40)
-    # end
-    # true_to_check_colorbar = true; # set this flag to false for final plot, true for debugging.
+    # 1b) define some plot arguments based on the extracted data
+    # color scheme:
+    true_to_check_colorbar = false; # set this flag to false for final plot, true for debugging.
 
+    clims_d18O = ifelse(clims.d18O == :auto, extrema(filter(!isnan, row_PREC_d18O)), clims.d18O)
+    clims_d2H  = ifelse(clims.d2H  == :auto, extrema(filter(!isnan, row_PREC_d2H)),  clims.d2H)
+    @show clims_d18O
+    @show clims_d2H
     # 2) set up the common arguments for all plots below
     if (isotope == :d18O || isotope == :d2H)
         lay = RecipesBase.@layout([ °{0.91w} _ ;   #1 have no colorbar

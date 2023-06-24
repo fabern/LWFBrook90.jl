@@ -131,7 +131,7 @@ using Plots, Measures; gr();
 pl1 = plotamounts(simulation_modified, :above_and_belowground, :showRWUcentroid)
 pl1
 
-pl2 = plotisotopes(simulation_modified, :d18O, :showRWUcentroid)
+pl2 = plotisotopes(simulation_modified, :d18O, (d18O = :auto, d2H = :auto), :showRWUcentroid)
 pl2
 
 pl3 = plotforcingandstates(simulation_modified)
@@ -142,7 +142,7 @@ pl3
 ## plotisotopes(simulation_modified, :d18O)
 ## plotisotopes(simulation_modified;
 ##              xlim = (DateTime("2010-01-01"), DateTime("2010-03-31")))
-## plotisotopes(simulation_modified, :d2H;
+## plotisotopes(simulation_modified, :d2H, (d18O = :auto, d2H = :auto), :showRWUcentroid;
 ##              xlim = (DateTime("2010-01-01"), DateTime("2010-08-30")))
 
 # Saving plots can be done with `savefig`

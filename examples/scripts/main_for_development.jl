@@ -270,13 +270,13 @@ function run_main_with_isotopes(;input_prefix, input_path)
     savefig(pl1, fname*"_plotRecipe_AMT.png")
 
     # 0b) Isotopes
-    pl2 = plotisotopes(simulation, :d18O, :showRWUcentroid)
+    pl2 = plotisotopes(simulation, :d18O, (d18O = :auto, d2H = :auto), :showRWUcentroid)
     pl2
     # plotisotopes(simulation, :d2H)
     # plotisotopes(simulation, :d18O)
     # plotisotopes(simulation;
     #              xlim = (DateTime("2010-01-01"), DateTime("2010-03-31")))
-    # plotisotopes(simulation, :d2H;
+    # plotisotopes(simulation, :d2H, (d18O = :auto, d2H = :auto), :showRWUcentroid;
     #              xlim = (DateTime("2010-01-01"), DateTime("2010-08-30")))
 
     savefig(pl2, fname*"_plotRecipe_ISO.png")

@@ -67,8 +67,8 @@ plot!(pl_ab_4,
         ref_aboveground.ints], label = "LWFBrook90R", line = :dash, color = :black)
 ## savefig(fname*"_plot-INTS_INTR.png")
 
-pl2 = plotisotopes(simulation_modified, :d18O, :showRWUcentroid)
-pl2
+pl2 = plotisotopes(simulation_modified, :d18O, (d18O = :auto, d2H = :auto), :showRWUcentroid)
+pl2 = plotisotopes(simulation_modified, :d18O_and_d2H, (d18O = :auto, d2H = :auto), :showRWUcentroid)
 
 
 # Belowground quantities (θ,ψ,δ of soil water)
