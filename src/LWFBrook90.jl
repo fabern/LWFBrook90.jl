@@ -366,14 +366,13 @@ function setup(parametrizedSPAC::SPAC;
             requested_tspan = LWFBrook90.DateTime2RelativeDaysFloat.(
                 requested_tspan, parametrizedSPAC.reference_date)
         end
-        if ((parametrizedSPAC.tspan[1] > requested_tspan[1]) |  (parametrizedSPAC.tspan[2] < requested_tspan[2]))
-            error("Requested simulation tspan $requested_tspan goes beyond input forcing data: $(parametrizedSPAC.tspan)")
+        available_forcing_data = extrema(opt_simulation[best_simulation_idx].parametrizedSPAC.forcing.meteo["p_days"])
+        if ((requested_tspan[1] < available_forcing_data[1]) |  (requested_tspan[2] > available_forcing_data[2]))
+            error("Requested simulation tspan $requested_tspan goes beyond input forcing data: $(available_forcing_data)")
         end
         if !(requested_tspan[1] ≈ 0)
-            @warn """
-            Requested time span doesn't start at 0. This is supported and correctly takes into account atmospheric forcing.
-            Note, however, that initial conditions are applied to t=$(requested_tspan[1]), i.e. at $(parametrizedSPAC.reference_date + Second(floor(requested_tspan[1] * 24*3600))).
-            """
+            @warn    "Requested time span doesn't start at 0. This is supported and correctly takes into account atmospheric forcing." * "\n" *
+            "         Note, however, that initial conditions are applied at $(parametrizedSPAC.reference_date + Second(floor(requested_tspan[1] * 24*3600))), i.e. at t=$(requested_tspan[1])."
         end
     end
     # This function prepares a discretizedSPAC, which is a container for a DifferentialEquations::ODEProblem.
