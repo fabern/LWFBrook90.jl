@@ -366,7 +366,7 @@ function setup(parametrizedSPAC::SPAC;
             requested_tspan = LWFBrook90.DateTime2RelativeDaysFloat.(
                 requested_tspan, parametrizedSPAC.reference_date)
         end
-        available_forcing_data = extrema(opt_simulation[best_simulation_idx].parametrizedSPAC.forcing.meteo["p_days"])
+        available_forcing_data = extrema(parametrizedSPAC.forcing.meteo["p_days"])
         if ((requested_tspan[1] < available_forcing_data[1]) |  (requested_tspan[2] > available_forcing_data[2]))
             error("Requested simulation tspan $requested_tspan goes beyond input forcing data: $(available_forcing_data)")
         end
