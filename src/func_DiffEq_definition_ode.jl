@@ -18,32 +18,20 @@ function norm_to_use(u::Real,           t) norm(u)                              
 # function norm_to_use(u::ArrayPartition, t) DiffEqBase.ODE_DEFAULT_NORM([u[1,1],u[2,1],u[3,1],u[4,1],u[5,1],u[6,1],u[7,1],u[8,1],u[9,1],u[10,1],    #u[11,1], # Not for aux...
 #                                                                         u[12,1]], t) end
 function norm_to_use(u::ComponentVector, t)
-    # DiffEqBase.ODE_DEFAULT_NORM(u.SWATI, t)
-    # NOTE: `aux`` is missing on purpose
-    DiffEqBase.ODE_DEFAULT_NORM(reduce(vcat, [u.GWAT.mm,
-                                                u.INTS.mm,
-                                                u.INTR.mm,
-                                                u.SNOW.mm,
-                                                u.CC.MJm2,
-                                                u.SNOWLQ.mm,
-                                                u.SWATI.mm,
-                                                u.RWU.mmday,
-                                                u.XYLEM.mm,
-                                                u.TRANI.mmday,
-                                                u.aux.θ, #u.aux.ψ, u.aux.K,
-                                                u.accum
-            ]),
-        t)
-    # DiffEqBase.ODE_DEFAULT_NORM(vcat(u.GWAT.mm,
-    #                                  u.INTS.mm,
-    #                                  u.INTR.mm,
-    #                                  u.SNOW.mm,
-    #                                  u.CC.MJm2,
-    #                                  u.SNOWLQ.mm,
-    #                                  u.SWATI.mm,
-    #                                  u.RWU.mmday,
-    #                                  u.XYLEM.mm,
-    #                                  u.TRANI.mmday,
-    #                                  u.accum),
-    # t)
+    # DiffEqBase.ODE_DEFAULT_NORM(reduce(vcat, [u.GWAT.mm,
+    #                                             u.INTS.mm,
+    #                                             u.INTR.mm,
+    #                                             u.SNOW.mm,
+    #                                             u.CC.MJm2,
+    #                                             u.SNOWLQ.mm,
+    #                                             u.SWATI.mm,
+    #                                             u.RWU.mmday,
+    #                                             u.XYLEM.mm,
+    #                                             u.TRANI.mmday,
+    #                                             u.aux.θ, #u.aux.ψ, u.aux.K,
+    #                                             u.accum
+    #         ]),
+    DiffEqBase.ODE_DEFAULT_NORM(u.SWATI.mm, t)
+    # DiffEqBase.ODE_DEFAULT_NORM(reduce(vcat, [u.SWATI.mm]),t)
+    # DiffEqBase.ODE_DEFAULT_NORM(reduce(vcat, [u.SWATI.mm]),t)
 end
