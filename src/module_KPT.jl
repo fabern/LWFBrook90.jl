@@ -420,7 +420,7 @@ function derive_auxiliary_SOILVAR(u_SWATI,  p::KPT_SOILPAR_Mvg1d)
     u_aux_WETNES = (p.p_THSAT .* u_SWATI ./ p.p_SWATMAX .- p.p_θr) ./ (p.p_THSAT .- p.p_θr)
     u_aux_WETNES .= min.(1, u_aux_WETNES)
 
-    u_aux_PSIM   = FPSIM(u_aux_WETNES, p)
+    u_aux_PSIM   = fill(NaN, length(p.p_SWATMAX)); FPSIM!( u_aux_PSIM, u_aux_WETNES, p)
     u_aux_θ      = FTheta(u_aux_WETNES, p)
     p_fu_KK      = fill(NaN, length(p.p_SWATMAX)); FK_MvG!(p_fu_KK,    u_aux_WETNES, p.p_KSAT, p.p_MvGl, p.p_MvGn, p.p_MvGm)
     u_aux_PSITI  = u_aux_PSIM .+ p.p_PSIG
@@ -434,7 +434,7 @@ function derive_auxiliary_SOILVAR!(u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_
     u_aux_WETNES .= (p.p_THSAT .* u_SWATI ./ p.p_SWATMAX .- p.p_θr) ./ (p.p_THSAT .- p.p_θr)
     u_aux_WETNES .= min.(1, u_aux_WETNES)
 
-    u_aux_PSIM   .= FPSIM(u_aux_WETNES, p)
+    FPSIM!( u_aux_PSIM, u_aux_WETNES, p)
     u_aux_θ      .= FTheta(u_aux_WETNES, p)
     FK_MvG!(p_fu_KK,    u_aux_WETNES, p.p_KSAT, p.p_MvGl, p.p_MvGn, p.p_MvGm)
 
@@ -447,7 +447,7 @@ function derive_auxiliary_SOILVAR(u_SWATI,  p::KPT_SOILPAR_Ch1d)
     NLAYER   = size(p.p_KSAT,1)
 
     u_aux_WETNES = u_SWATI./p.p_SWATMAX
-    u_aux_PSIM  = FPSIM(u_aux_WETNES, p)
+    u_aux_PSIM   = fill(NaN, length(p.p_SWATMAX)); FPSIM!( u_aux_PSIM, u_aux_WETNES, p)
     u_aux_θ     = FTheta(u_aux_WETNES, p)
 
     u_aux_PSITI = fill(NaN, NLAYER)
@@ -496,6 +496,26 @@ end
 
 Compute ψ(Se) = h(Se) a.k.a ψ(W) = h(W).
 """
+function FPSIM!(ψM, u_aux_WETNES, p::KPT_SOILPAR_Ch1d)
+    # FPSIM obtains Ψi from Wi for one layer using equation (7) in the clearly
+    # unsaturated region and equation (4) in the near-saturation region.
+    NLAYER = length(p.p_SWATMAX)
+    for i in 1:NLAYER
+        if u_aux_WETNES[i] <= 0.
+            ψM[i] = -10000000000
+        elseif u_aux_WETNES[i] < p.p_WETINF[i]
+            # in clearly unsaturated range (eq. 7)
+            ψM[i] = p.p_PSIF[i] * (u_aux_WETNES[i] / p.p_WETF[i]) ^ (-p.p_BEXP[i])
+        elseif u_aux_WETNES[i] < 1.0
+            # in near-saturated range (eq. 4)
+            ψM[i] = p.p_CHM[i]* (u_aux_WETNES[i] - p.p_CHN[i]) * (u_aux_WETNES[i] - 1)
+        else
+            # saturated
+            ψM[i] = 0.0
+        end
+    end
+    return nothing
+end
 function FPSIM(u_aux_WETNES, p::KPT_SOILPAR_Ch1d)
     # FPSIM obtains Ψi from Wi for one layer using equation (7) in the clearly
     # unsaturated region and equation (4) in the near-saturation region.
@@ -539,6 +559,19 @@ function FPSIM_CH(u_aux_WETNES,p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN)
         end
     end
     return ψM
+end
+function FPSIM!(result, u_aux_WETNES, p::KPT_SOILPAR_Mvg1d)
+    FPSIM_MvG!(result, u_aux_WETNES, p.p_MvGα, p.p_MvGn, p.p_MvGm)
+end
+function FPSIM_MvG!(ψM, u_aux_WETNES, p_MvGα, p_MvGn, p_MvGm)
+    eps = 1.e-6
+    # MvGm = 1-1/MvGn
+    # AWET = max.(u_aux_WETNES, eps)
+    # ψM = 9.81 .* (-1 ./ p_MvGα) .* (AWET .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
+    # ψM = 9.81 .* (-1 ./ p_MvGα) .* (max.(u_aux_WETNES, eps) .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
+    ψM .= 9.81 .* (-1 ./ p_MvGα) .* (max.(u_aux_WETNES, eps) .^ (-1 ./ (p_MvGm)) .-1) .^ (1 ./ p_MvGn)
+
+    # 9.81 conversion from m to kPa #TODO define and use const
 end
 function FPSIM(u_aux_WETNES, p::KPT_SOILPAR_Mvg1d)
     FPSIM_MvG(u_aux_WETNES, p.p_MvGα, p.p_MvGn, p.p_MvGm)
