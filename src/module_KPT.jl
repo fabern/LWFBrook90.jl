@@ -421,7 +421,7 @@ function derive_auxiliary_SOILVAR(u_SWATI,  p::KPT_SOILPAR_Mvg1d)
     u_aux_WETNES .= min.(1, u_aux_WETNES)
 
     u_aux_PSIM   = fill(NaN, length(p.p_SWATMAX)); FPSIM!( u_aux_PSIM, u_aux_WETNES, p)
-    u_aux_θ      = FTheta(u_aux_WETNES, p)
+    u_aux_θ      = fill(NaN, length(p.p_SWATMAX)); FTheta!(u_aux_θ,    u_aux_WETNES, p)
     p_fu_KK      = fill(NaN, length(p.p_SWATMAX)); FK_MvG!(p_fu_KK,    u_aux_WETNES, p.p_KSAT, p.p_MvGl, p.p_MvGn, p.p_MvGm)
     u_aux_PSITI  = u_aux_PSIM .+ p.p_PSIG
 
@@ -435,7 +435,7 @@ function derive_auxiliary_SOILVAR!(u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_
     u_aux_WETNES .= min.(1, u_aux_WETNES)
 
     FPSIM!( u_aux_PSIM, u_aux_WETNES, p)
-    u_aux_θ      .= FTheta(u_aux_WETNES, p)
+    FTheta!(u_aux_θ,    u_aux_WETNES, p)
     FK_MvG!(p_fu_KK,    u_aux_WETNES, p.p_KSAT, p.p_MvGl, p.p_MvGn, p.p_MvGm)
 
     u_aux_PSITI  .= u_aux_PSIM .+ p.p_PSIG
@@ -448,7 +448,7 @@ function derive_auxiliary_SOILVAR(u_SWATI,  p::KPT_SOILPAR_Ch1d)
 
     u_aux_WETNES = u_SWATI./p.p_SWATMAX
     u_aux_PSIM   = fill(NaN, length(p.p_SWATMAX)); FPSIM!( u_aux_PSIM, u_aux_WETNES, p)
-    u_aux_θ     = FTheta(u_aux_WETNES, p)
+    u_aux_θ      = fill(NaN, length(p.p_SWATMAX)); FTheta!(u_aux_θ,    u_aux_WETNES, p)
 
     u_aux_PSITI = fill(NaN, NLAYER)
     p_fu_KK     = fill(NaN, NLAYER)
@@ -673,7 +673,22 @@ function FTheta(u_aux_WETNES, p::KPT_SOILPAR_Ch1d)
     # variant 2:
     return u_aux_WETNES .* p.p_THSAT
 end
+function FTheta!(result, u_aux_WETNES, p::KPT_SOILPAR_Mvg1d)
+    FTheta_MvG!(result, u_aux_WETNES, p.p_THSAT, p.p_θr)
+end
+function FTheta_MvG!(result, u_aux_WETNES, p_THSAT, p_θr)
+    # Computes θ(Se) = Se*(θs-θr) + θr
+    result .= u_aux_WETNES .* (p_THSAT .- p_θr) .+ p_θr
+end
+function FTheta!(result, u_aux_WETNES, p::KPT_SOILPAR_Ch1d)
+    # Computes θ(Se) = Se*(θs-θr) + θr
 
+    # variant 1:
+    # p_θr = 0
+    # u_aux_WETNES*(p_THSAT-p_θr)+p_θr
+    # variant 2:
+    result .= u_aux_WETNES .* p.p_THSAT
+end
 """
     FWETNES(u_aux_PSIM, p_soil)
 
