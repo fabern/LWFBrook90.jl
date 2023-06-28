@@ -16,14 +16,14 @@ using Plots
         # soil_output_depths_m = zeros(Float64, 0)
         # parametrizedSPAC.tspan
         # DS = LWFBrook90.setup(parametrizedSPAC::SPAC; Δz = Δz,  tspan = (0,10));
-        # # Test the f and cb() functions (LWFBrook90.f_LWFBrook90R, )
+        # # Test the f and cb() functions (LWFBrook90.f_LWFBrook90!, )
         # t0 = 0.0
         # u0 = DS.ODEProblem.u0
         # p = DS.ODEProblem.p
         # du = copy(u0)
         # @btime states = NamedTuple{p[1][4].u0_field_names}(u0.x);
 
-        # LWFBrook90.f_LWFBrook90R(du, u0, p, 1.0)
+        # LWFBrook90.f_LWFBrook90!(du, u0, p, 1.0)
         # # integrator = init(DS.ODEProblem, Tsit5();)
         # # LWFBrook90.LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         # # LWFBrook90.LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
@@ -173,7 +173,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
                     #             unstable_check = unstable_check_function) # = (dt,u,p,t) -> false, #any(isnan,u))
                     # du = copy(integrator.u)
                     # du .= 0
-                    # LWFBrook90.f_LWFBrook90R(du, integrator.u, p, 0);
+                    # LWFBrook90.f_LWFBrook90!(du, integrator.u, p, 0);
                     # du
                     # step!(integrator)
 

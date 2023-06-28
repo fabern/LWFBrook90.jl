@@ -539,7 +539,7 @@ function setup(parametrizedSPAC::SPAC;
     # Note that documentation for solve()-arguemnts can be found at:
     # https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/#solver_options
     ode_LWFBrook90 =
-        ODEProblem(LWFBrook90.f_LWFBrook90R, u0, tspan_to_use, p;
+        ODEProblem(LWFBrook90.f_LWFBrook90!, u0, tspan_to_use, p;
                     callback = cb_func,
                     # below the default value for keyword-arguments for solve(),
                     # note they can still be overwritten when calling solve() (or simulate!())

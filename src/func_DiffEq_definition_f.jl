@@ -4,7 +4,7 @@
 Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq.jl package.
 """
 # function define_LWFB90_f()
-    function f_LWFBrook90R(du,u,p,t)
+    function f_LWFBrook90!(du,u,p,t)
         # computes right hand side (du) of states: u_GWAT, u_SWATI
 
         # NOTE: Within the ufnction we can make use of:
@@ -241,6 +241,6 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         #                   https://github.com/pschmidtwalter/LWFBrook90R/blob/6f23dc1f6be9e1723b8df5b188804da5acc92e0f/src/md_brook90.f95#L703
 
     end
-#     f_func = f_LWFBrook90R
+#     f_func = f_LWFBrook90!
 #     return f_func
 # end
