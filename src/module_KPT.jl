@@ -325,7 +325,7 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
     function KPT_SOILPAR_Mvg1d{T}(;p_THICK, p_STONEF, p_THSAT, p_Kθfc, p_KSAT, p_MvGα, p_MvGn, p_MvGm, p_MvGl, p_θr) where {T<:AbstractVector}
         NLAYER = length(p_THICK)
         @assert size(p_THICK) == size(p_STONEF) == size(p_THSAT) == size(p_Kθfc) ==
-                size(p_KSAT) == size(p_MvGα) == size(p_MvGn) == size(p_MvGm) == 
+                size(p_KSAT) == size(p_MvGα) == size(p_MvGn) == size(p_MvGm) ==
                 size(p_MvGl) == size(p_θr)
         @assert !any(isnan.(p_Kθfc))
 
@@ -349,7 +349,7 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
             # Actually not finding θ but wetness = θ/porosity.
             # plot(-0.15:0.01:1.0, FK_MvG.(-0.15:0.01:1.0, p_KSAT[i], p_MvGl[i], p_MvGn[i]))
             p_WETF[i] = try
-                f_root(x) = - p_Kθfc[i] + FK_MvG(x, p_KSAT[i], p_MvGl[i], p_MvGn[i])
+                f_root(x) = - p_Kθfc[i] + FK_MvG(x, p_KSAT[i], p_MvGl[i], p_MvGn[i], p_MvGm[i])
                 find_zero(f_root, (0.0, 1.0), Bisection())  # find_zero((x) -> x, (0.1, 1.0), Bisection())
                 # In LWFBrook90R: this was done using FWETK()
                 # In LWFBrook90R: if p_WETF[i] == -99999. error("Computed invalid p_WETF by FWETK()") end
@@ -422,8 +422,7 @@ function derive_auxiliary_SOILVAR(u_SWATI,  p::KPT_SOILPAR_Mvg1d)
 
     u_aux_PSIM   = FPSIM(u_aux_WETNES, p)
     u_aux_θ      = FTheta(u_aux_WETNES, p)
-    p_fu_KK      = FK_MvG(u_aux_WETNES, p.p_KSAT, p.p_MvGl, p.p_MvGn)
-
+    p_fu_KK      = fill(NaN, length(p.p_SWATMAX)); FK_MvG!(p_fu_KK,    u_aux_WETNES, p.p_KSAT, p.p_MvGl, p.p_MvGn, p.p_MvGm)
     u_aux_PSITI  = u_aux_PSIM .+ p.p_PSIG
 
     return (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
@@ -437,7 +436,7 @@ function derive_auxiliary_SOILVAR!(u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_
 
     u_aux_PSIM   .= FPSIM(u_aux_WETNES, p)
     u_aux_θ      .= FTheta(u_aux_WETNES, p)
-    p_fu_KK      .= FK_MvG(u_aux_WETNES, p.p_KSAT, p.p_MvGl, p.p_MvGn)
+    FK_MvG!(p_fu_KK,    u_aux_WETNES, p.p_KSAT, p.p_MvGl, p.p_MvGn, p.p_MvGm)
 
     u_aux_PSITI  .= u_aux_PSIM .+ p.p_PSIG
 
@@ -473,12 +472,21 @@ Compute hydraulic conductivity from wetness for the Mualem van Genuchten paramet
 Compute unsaturated hydraulic conductivity: K(Se) a.k.a. K(W) using MvG equation 8)
 K = Ks*W^l*[ 1 - (1-W^(1/m))^m ]^2 using m = 1-1/n yields: K = Ks*W^l*[ 1 - (1-W^(n/(n-1)))^(1-1/n) ]^2
 """
-function FK_MvG(WETNES, KSAT, MvGl, MvGn)
-    eps = 1.e-6
-    AWET = max.(WETNES, eps)
-
+# function FK_MvG(WETNES, KSAT, MvGl, MvGn)
+#     eps = 1.e-6
+#     # return: hydraulic conductivity, mm/d
+#     return KSAT .* max.(WETNES, eps) .^ MvGl .*
+#         (1 .- (1 .- max.(WETNES, eps) .^ (MvGn ./ (MvGn .- 1)) ).^(1 .- 1 ./ MvGn) ) .^ 2
+# end
+function FK_MvG(WETNES, KSAT, MvGl, MvGn, MvGm)
     # return: hydraulic conductivity, mm/d
-    return KSAT .* AWET .^ MvGl .* (1 .- (1 .- AWET .^ (MvGn ./ (MvGn .- 1)) ).^(1 .- 1 ./ MvGn) ) .^ 2
+    KSAT .* WETNES .^ MvGl .*
+        (1 .- (1 .- WETNES .^ (1 ./ MvGm) ).^(MvGm) ) .^ 2
+end
+function FK_MvG!(result, WETNES, KSAT, MvGl, MvGn, MvGm)
+    # return: hydraulic conductivity, mm/d
+    result .= KSAT .* WETNES .^ MvGl .*
+        (1 .- (1 .- WETNES .^ (1 ./ MvGm) ).^(MvGm) ) .^ 2
 end
 
 """
@@ -540,7 +548,7 @@ function FPSIM_MvG(u_aux_WETNES, p_MvGα, p_MvGn, p_MvGm)
     # ψM = 9.81 .* (-1 ./ p_MvGα) .* (AWET .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
     # ψM = 9.81 .* (-1 ./ p_MvGα) .* (max.(u_aux_WETNES, eps) .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
     ψM = 9.81 .* (-1 ./ p_MvGα) .* (max.(u_aux_WETNES, eps) .^ (-1 ./ (p_MvGm)) .-1) .^ (1 ./ p_MvGn)
-    
+
     # 9.81 conversion from m to kPa #TODO define and use const
 end
 
