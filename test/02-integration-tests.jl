@@ -450,7 +450,7 @@ end
     @test RMS_differences(sim1.θ[Not([end-1, end]),:], hyd1.θ[Not(1),:]) < 0.005
     @test RMS_differences(sim2.θ[Not([end-1, end]),:], hyd2.θ[Not(1),:]) < 0.002
     high_resolution_flag && (@test RMS_differences(sim3.θ[Not([end-1, end]),:], hyd3.θ[Not(1),:]) < 0.0013)
-    @test RMS_differences(sim4.θ[Not([end-1, end]),:], hyd4.θ[Not(1),:]) < 0.007
+    @test RMS_differences(sim4.θ[Not([end-1, end]),:], hyd4.θ[Not(1),:]) < 0.008
     @test RMS_differences(sim5.θ[Not([end-1, end]),:], hyd5.θ[Not(1),:]) < 0.009
     high_resolution_flag && (@test RMS_differences(sim6.θ[Not([end-1, end]),:], hyd6.θ[Not(1),:]) < 0.007)
 

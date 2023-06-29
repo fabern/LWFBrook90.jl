@@ -325,7 +325,7 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
     function KPT_SOILPAR_Mvg1d{T}(;p_THICK, p_STONEF, p_THSAT, p_Kθfc, p_KSAT, p_MvGα, p_MvGn, p_MvGm, p_MvGl, p_θr) where {T<:AbstractVector}
         NLAYER = length(p_THICK)
         @assert size(p_THICK) == size(p_STONEF) == size(p_THSAT) == size(p_Kθfc) ==
-                size(p_KSAT) == size(p_MvGα) == size(p_MvGn) == size(p_MvGm) == 
+                size(p_KSAT) == size(p_MvGα) == size(p_MvGn) == size(p_MvGm) ==
                 size(p_MvGl) == size(p_θr)
         @assert !any(isnan.(p_Kθfc))
 
@@ -349,7 +349,7 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
             # Actually not finding θ but wetness = θ/porosity.
             # plot(-0.15:0.01:1.0, FK_MvG.(-0.15:0.01:1.0, p_KSAT[i], p_MvGl[i], p_MvGn[i]))
             p_WETF[i] = try
-                f_root(x) = - p_Kθfc[i] + FK_MvG(x, p_KSAT[i], p_MvGl[i], p_MvGn[i])
+                f_root(x) = - p_Kθfc[i] + FK_MvG(x, p_KSAT[i], p_MvGl[i], p_MvGn[i], p_MvGm[i])
                 find_zero(f_root, (0.0, 1.0), Bisection())  # find_zero((x) -> x, (0.1, 1.0), Bisection())
                 # In LWFBrook90R: this was done using FWETK()
                 # In LWFBrook90R: if p_WETF[i] == -99999. error("Computed invalid p_WETF by FWETK()") end
@@ -370,7 +370,7 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
                     θ(ψ_fc)/(p_THSAT[i] .- p_θr[i])
                     # find_zero((θ_toFind) -> LWFBrook90.KPT.FPSIM_MvG((θ_toFind - p_θr[i])./(p_THSAT .- p_θr), p_MvGα[i], p_MvGn[i]), (0.0, 1.0), Bisection())
                 else
-                    stop("When setting up soil hydr. parameters: Computed invalid p_WETF in KPT_SOILPAR_Mvg1d")
+                    error("When setting up soil hydr. parameters: Computed invalid p_WETF in KPT_SOILPAR_Mvg1d")
                 end
             end
         end
@@ -420,10 +420,9 @@ function derive_auxiliary_SOILVAR(u_SWATI,  p::KPT_SOILPAR_Mvg1d)
     u_aux_WETNES = (p.p_THSAT .* u_SWATI ./ p.p_SWATMAX .- p.p_θr) ./ (p.p_THSAT .- p.p_θr)
     u_aux_WETNES .= min.(1, u_aux_WETNES)
 
-    u_aux_PSIM   = FPSIM(u_aux_WETNES, p)
-    u_aux_θ      = FTheta(u_aux_WETNES, p)
-    p_fu_KK      = FK_MvG(u_aux_WETNES, p.p_KSAT, p.p_MvGl, p.p_MvGn)
-
+    u_aux_PSIM   = fill(NaN, length(p.p_SWATMAX)); FPSIM!( u_aux_PSIM, u_aux_WETNES, p)
+    u_aux_θ      = fill(NaN, length(p.p_SWATMAX)); FTheta!(u_aux_θ,    u_aux_WETNES, p)
+    p_fu_KK      = fill(NaN, length(p.p_SWATMAX)); FK_MvG!(p_fu_KK,    u_aux_WETNES, p.p_KSAT, p.p_MvGl, p.p_MvGn, p.p_MvGm)
     u_aux_PSITI  = u_aux_PSIM .+ p.p_PSIG
 
     return (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
@@ -435,9 +434,9 @@ function derive_auxiliary_SOILVAR!(u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_
     u_aux_WETNES .= (p.p_THSAT .* u_SWATI ./ p.p_SWATMAX .- p.p_θr) ./ (p.p_THSAT .- p.p_θr)
     u_aux_WETNES .= min.(1, u_aux_WETNES)
 
-    u_aux_PSIM   .= FPSIM(u_aux_WETNES, p)
-    u_aux_θ      .= FTheta(u_aux_WETNES, p)
-    p_fu_KK      .= FK_MvG(u_aux_WETNES, p.p_KSAT, p.p_MvGl, p.p_MvGn)
+    FPSIM!( u_aux_PSIM, u_aux_WETNES, p)
+    FTheta!(u_aux_θ,    u_aux_WETNES, p)
+    FK_MvG!(p_fu_KK,    u_aux_WETNES, p.p_KSAT, p.p_MvGl, p.p_MvGn, p.p_MvGm)
 
     u_aux_PSITI  .= u_aux_PSIM .+ p.p_PSIG
 
@@ -448,8 +447,8 @@ function derive_auxiliary_SOILVAR(u_SWATI,  p::KPT_SOILPAR_Ch1d)
     NLAYER   = size(p.p_KSAT,1)
 
     u_aux_WETNES = u_SWATI./p.p_SWATMAX
-    u_aux_PSIM  = FPSIM(u_aux_WETNES, p)
-    u_aux_θ     = FTheta(u_aux_WETNES, p)
+    u_aux_PSIM   = fill(NaN, length(p.p_SWATMAX)); FPSIM!( u_aux_PSIM, u_aux_WETNES, p)
+    u_aux_θ      = fill(NaN, length(p.p_SWATMAX)); FTheta!(u_aux_θ,    u_aux_WETNES, p)
 
     u_aux_PSITI = fill(NaN, NLAYER)
     p_fu_KK     = fill(NaN, NLAYER)
@@ -473,12 +472,23 @@ Compute hydraulic conductivity from wetness for the Mualem van Genuchten paramet
 Compute unsaturated hydraulic conductivity: K(Se) a.k.a. K(W) using MvG equation 8)
 K = Ks*W^l*[ 1 - (1-W^(1/m))^m ]^2 using m = 1-1/n yields: K = Ks*W^l*[ 1 - (1-W^(n/(n-1)))^(1-1/n) ]^2
 """
-function FK_MvG(WETNES, KSAT, MvGl, MvGn)
-    eps = 1.e-6
-    AWET = max.(WETNES, eps)
-
+# function FK_MvG(WETNES, KSAT, MvGl, MvGn)
+#     eps = 1.e-6
+#     # return: hydraulic conductivity, mm/d
+#     return KSAT .* max.(WETNES, eps) .^ MvGl .*
+#         (1 .- (1 .- max.(WETNES, eps) .^ (MvGn ./ (MvGn .- 1)) ).^(1 .- 1 ./ MvGn) ) .^ 2
+# end
+function FK_MvG(WETNES, KSAT, MvGl, MvGn, MvGm)
     # return: hydraulic conductivity, mm/d
-    return KSAT .* AWET .^ MvGl .* (1 .- (1 .- AWET .^ (MvGn ./ (MvGn .- 1)) ).^(1 .- 1 ./ MvGn) ) .^ 2
+    eps = 1.e-6
+    KSAT .* max.(WETNES, eps) .^ MvGl .*
+        (1 .- (1 .- max.(WETNES, eps) .^ (1 ./ MvGm) ).^(MvGm) ) .^ 2
+end
+function FK_MvG!(result, WETNES, KSAT, MvGl, MvGn, MvGm)
+    eps = 1.e-6
+    # return: hydraulic conductivity, mm/d
+    result .= KSAT .* max.(WETNES, eps) .^ MvGl .*
+        (1 .- (1 .- max.(WETNES, eps) .^ (1 ./ MvGm) ).^(MvGm) ) .^ 2
 end
 
 """
@@ -486,6 +496,26 @@ end
 
 Compute ψ(Se) = h(Se) a.k.a ψ(W) = h(W).
 """
+function FPSIM!(ψM, u_aux_WETNES, p::KPT_SOILPAR_Ch1d)
+    # FPSIM obtains Ψi from Wi for one layer using equation (7) in the clearly
+    # unsaturated region and equation (4) in the near-saturation region.
+    NLAYER = length(p.p_SWATMAX)
+    for i in 1:NLAYER
+        if u_aux_WETNES[i] <= 0.
+            ψM[i] = -10000000000
+        elseif u_aux_WETNES[i] < p.p_WETINF[i]
+            # in clearly unsaturated range (eq. 7)
+            ψM[i] = p.p_PSIF[i] * (u_aux_WETNES[i] / p.p_WETF[i]) ^ (-p.p_BEXP[i])
+        elseif u_aux_WETNES[i] < 1.0
+            # in near-saturated range (eq. 4)
+            ψM[i] = p.p_CHM[i]* (u_aux_WETNES[i] - p.p_CHN[i]) * (u_aux_WETNES[i] - 1)
+        else
+            # saturated
+            ψM[i] = 0.0
+        end
+    end
+    return nothing
+end
 function FPSIM(u_aux_WETNES, p::KPT_SOILPAR_Ch1d)
     # FPSIM obtains Ψi from Wi for one layer using equation (7) in the clearly
     # unsaturated region and equation (4) in the near-saturation region.
@@ -530,6 +560,19 @@ function FPSIM_CH(u_aux_WETNES,p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN)
     end
     return ψM
 end
+function FPSIM!(result, u_aux_WETNES, p::KPT_SOILPAR_Mvg1d)
+    FPSIM_MvG!(result, u_aux_WETNES, p.p_MvGα, p.p_MvGn, p.p_MvGm)
+end
+function FPSIM_MvG!(ψM, u_aux_WETNES, p_MvGα, p_MvGn, p_MvGm)
+    eps = 1.e-6
+    # MvGm = 1-1/MvGn
+    # AWET = max.(u_aux_WETNES, eps)
+    # ψM = 9.81 .* (-1 ./ p_MvGα) .* (AWET .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
+    # ψM = 9.81 .* (-1 ./ p_MvGα) .* (max.(u_aux_WETNES, eps) .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
+    ψM .= 9.81 .* (-1 ./ p_MvGα) .* (max.(u_aux_WETNES, eps) .^ (-1 ./ (p_MvGm)) .-1) .^ (1 ./ p_MvGn)
+
+    # 9.81 conversion from m to kPa #TODO define and use const
+end
 function FPSIM(u_aux_WETNES, p::KPT_SOILPAR_Mvg1d)
     FPSIM_MvG(u_aux_WETNES, p.p_MvGα, p.p_MvGn, p.p_MvGm)
 end
@@ -540,7 +583,7 @@ function FPSIM_MvG(u_aux_WETNES, p_MvGα, p_MvGn, p_MvGm)
     # ψM = 9.81 .* (-1 ./ p_MvGα) .* (AWET .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
     # ψM = 9.81 .* (-1 ./ p_MvGα) .* (max.(u_aux_WETNES, eps) .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
     ψM = 9.81 .* (-1 ./ p_MvGα) .* (max.(u_aux_WETNES, eps) .^ (-1 ./ (p_MvGm)) .-1) .^ (1 ./ p_MvGn)
-    
+
     # 9.81 conversion from m to kPa #TODO define and use const
 end
 
@@ -630,7 +673,22 @@ function FTheta(u_aux_WETNES, p::KPT_SOILPAR_Ch1d)
     # variant 2:
     return u_aux_WETNES .* p.p_THSAT
 end
+function FTheta!(result, u_aux_WETNES, p::KPT_SOILPAR_Mvg1d)
+    FTheta_MvG!(result, u_aux_WETNES, p.p_THSAT, p.p_θr)
+end
+function FTheta_MvG!(result, u_aux_WETNES, p_THSAT, p_θr)
+    # Computes θ(Se) = Se*(θs-θr) + θr
+    result .= u_aux_WETNES .* (p_THSAT .- p_θr) .+ p_θr
+end
+function FTheta!(result, u_aux_WETNES, p::KPT_SOILPAR_Ch1d)
+    # Computes θ(Se) = Se*(θs-θr) + θr
 
+    # variant 1:
+    # p_θr = 0
+    # u_aux_WETNES*(p_THSAT-p_θr)+p_θr
+    # variant 2:
+    result .= u_aux_WETNES .* p.p_THSAT
+end
 """
     FWETNES(u_aux_PSIM, p_soil)
 

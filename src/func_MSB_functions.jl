@@ -57,6 +57,7 @@ function MSBSETVARS(# arguments
 
     # start A: get: 1) sunshine durations, 2) SFAL, 3) plant resistance
     # TODO(bernhard): a) Do this outside of integration loop in define_LWFB90_p() p_fT_DAYLEN
+    #                 Needs to define: p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY, p_fT_LAIeff, p_fT_SAIeff, p_fT_RTLENeff, p_fT_RPLANT, p_fT_SNOFRC, p_fT_RXYLEM, p_fT_RROOTI, p_fT_ALPHA
     # solar parameters depending on only on DOY
     p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY = LWFBrook90.SUN.SUNDS(p_LAT, p_ESLOPE, DOY, p_L1, p_L2, LWFBrook90.CONSTANTS.p_SC, LWFBrook90.CONSTANTS.p_PI, LWFBrook90.CONSTANTS.p_WTOMJ)
     # canopy evolution depending only on DOY
@@ -295,7 +296,7 @@ function MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM
                 p_fu_ATRI[J,i] = ATRANI[i]
             end
             if (ATR[J] < p_fu_PTR[J])
-                # soil water limitation, new GER
+                # soil water limitation, recompute GER considering lower transpiration rate
                 p_fu_GER[J]=LWFBrook90.PET.SWGE(AA, ASUBS, VPD, RAA, RAS, p_fu_RSS, DELTA, ATR[J])
             end
         else
@@ -308,24 +309,13 @@ function MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM
             p_fu_GER[J]=LWFBrook90.PET.SWGE(AA, ASUBS, VPD, RAA, RAS, p_fu_RSS, DELTA, 0)
         end
     end
-    #print("\nIDAY:$(@sprintf("% 3d", IDAY)), p_fu_GER[1]: $(@sprintf("% 8.4f",p_fu_GER[1])), p_fu_GIR[1]: $(@sprintf("% 8.4f",p_fu_GIR[1]))")
-    # print(", p_fu_GER[2]: $(@sprintf("% 8.4f",p_fu_GER[2])), p_fu_GIR[2]: $(@sprintf("% 8.4f",p_fu_GIR[2]))")
 
-    # print(", AA:$(@sprintf("% 8.4f", AA)), ASUBS:$(@sprintf("% 8.4f", ASUBS)), VPD:$(@sprintf("% 8.4f", VPD)), RAA:$(@sprintf("% 8.4f", RAA)), RAC:$(@sprintf("% 8.4f", RAC)), RAS:$(@sprintf("% 8.4f", RAS)), p_fu_RSS:$(@sprintf("% 8.4f", p_fu_RSS)), DELTA:$(@sprintf("% 8.4f", DELTA))")
-    # print(", J:$(@sprintf("% 8.4f", J)), p_fu_PIR[J]:$(@sprintf("% 8.4f", p_fu_PIR[J])))")
-    # print("\n        ")
     return (p_fu_PTR, # potential transpiration rate for daytime or night (mm/d)
             p_fu_GER, # ground evaporation rate for daytime or night (mm/d)
             p_fu_PIR, # potential interception rate for daytime or night (mm/d)
             p_fu_GIR, # ground evap. rate with intercep. for daytime or night (mm/d)
             p_fu_ATRI,# actual transp.rate from layer for daytime and night (mm/d)
             p_fu_PGER)# hypothetical, potential ground evaporation (not needed for model computations, just for comparison with LWFBrook90R)
-
-    # return (#SLRAD[2],SLRAD[1],TAJ,UAJ, SOVERI, AA, ASUBS
-    #         #ES, DELTA, VPD, RAA, RAC, RAS, RSC,
-    #         p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR,
-    #         #ATR, ATRANI,
-    #         p_fu_ATRI)
 end
 
 """
