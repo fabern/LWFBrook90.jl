@@ -373,6 +373,252 @@ function Base.show(io::IO, mime::MIME"text/plain", model::SPAC; show_SPAC_title=
     println(io, model.solver_options)
 end
 
+"""
+    function saveSPAC(sim::DiscretizedSPAC, out_dir; prefix = basename(dirname(out_dir)))
+
+Writes input files for a simulation `sim` to a specified directory `out_dir`, with a specified file `prefix`.
+"""
+function saveSPAC(sim::DiscretizedSPAC, out_dir; prefix = basename(dirname(out_dir)))
+    mkpath(out_dir)
+
+    function write_with_subheader(file, table, subheader = nothing; kwargs...)
+        if (!isnothing(subheader) && size(table,2) != length(subheader))
+            error("Subheader must have same length as number of columns.")
+        end
+        # make sure NaN -> missing -> "NA" in output
+        table_out = mapcols(col -> replace(col, NaN => missing), allowmissing(table))
+
+        # Header
+        CSV.write(file, table_out[[],:]) # write main header (taken from column names)
+        # Subheader
+        if (!isnothing(subheader))
+            open(file, "a") do f write(f, join(subheader, ",") * "\n") end # does append # https://stackoverflow.com/questions/71033626/create-a-text-file-in-julia
+        end
+        # Data
+        CSV.write(file, table_out, append = true, header = false, missingstring = "NA", kwargs...) # write the data without header
+    end
+
+    # "meteoveg.csv": mv
+    t = collect(sim.parametrizedSPAC.forcing.meteo["p_days"])
+    mv_col1 = Date.(LWFBrook90.RelativeDaysFloat2DateTime.(t, sim.parametrizedSPAC.reference_date));
+    mv_col2 = sim.parametrizedSPAC.forcing.meteo["p_GLOBRAD"].(t);
+    mv_col3 = sim.parametrizedSPAC.forcing.meteo["p_TMAX"].(t);
+    mv_col4 = sim.parametrizedSPAC.forcing.meteo["p_TMIN"].(t);
+    mv_col5 = sim.parametrizedSPAC.forcing.meteo["p_VAPPRES"].(t);
+    mv_col6 = sim.parametrizedSPAC.forcing.meteo["p_WIND"].(t);
+    mv_col7 = sim.parametrizedSPAC.forcing.meteo["p_PREC"].(t);
+    mv_col8 = round.(Int, sim.ODEProblem.p.p_DENSEF.(t) * 100)
+    mv_col9 = round.(Int, sim.ODEProblem.p.p_HEIGHT.(t) / maximum(sim.ODEProblem.p.p_HEIGHT.itp.itp.coefs) * 100)
+    mv_col10= round.(Int, sim.ODEProblem.p.p_LAI.(t) / maximum(sim.ODEProblem.p.p_LAI.itp.itp.coefs) * 100)
+    mv_col11= round.(Int, sim.ODEProblem.p.p_SAI.(t) / maximum(sim.ODEProblem.p.p_SAI.itp.itp.coefs) * 100)
+
+    mv_df = DataFrame(
+        dates           = mv_col1,
+        globrad_MJDayM2 = mv_col2,
+        tmax_degC       = mv_col3,
+        tmin_degC       = mv_col4,
+        vappres_kPa     = mv_col5,
+        windspeed_ms    = mv_col6,
+        prec_mmDay      = mv_col7,
+        densef_percent  = mv_col8,
+        height_percent  = mv_col9,
+        lai_percent     = mv_col10,
+        sai_percent     = mv_col11)
+    mv_df = mv_df[1:end-1,:] # croping last row, that was added for correct subdaily interpolation
+    mv_subheader = ["YYYY-MM-DD","MJ/Day/m2","degree C","degree C","kPa","m per s","mm per day","percent","percent","percent","percent"]
+    write_with_subheader(joinpath(out_dir, prefix*"_meteoveg.csv"), mv_df, mv_subheader)
+        # dates,globrad_MJDayM2,tmax_degC,tmin_degC,vappres_kPa,windspeed_ms,prec_mmDay,densef_percent,height_percent,lai_percent,sai_percent
+        # YYYY-MM-DD,MJ/Day/m2,degree C,degree C,kPa,m per s,mm per day,percent,percent,percent,percent
+        # 2015-01-01,3.53,-4,-8.4,0.34,1,0,100,100,20,100
+        # 2015-01-02,3.38,3.7,-5.4,0.56,2,3.3,100,100,20,100
+        # 2015-01-03,2.65,7.2,0.9,0.73,3.3,41.5,100,100,20,100
+
+    # "meteoiso.csv": mi
+    if (sim.parametrizedSPAC.solver_options.simulate_isotopes)
+        sim.parametrizedSPAC.forcing.meteo_iso["p_d18OPREC"].(t)
+        sim.parametrizedSPAC.forcing.meteo_iso["p_d2HPREC"].(t)
+        error("TODO: writing out inputs for simulation with isotopes not yet implemented completely. Please contact package author.")
+
+        mi = DataFrame(dates = nothing, delta18O_permil = nothing, delta2H_permil = nothing)
+        mi_subheader = ["YYYY-MM-DD","permil","permil"]
+        write_with_subheader(joinpath(out_dir, prefix*"_meteoiso.csv"), mi, mi_subheader)
+            # dates,delta18O_permil,delta2H_permil
+            # YYYY-MM-DD,permil,permil
+            # 2014-01-15,-15.6,-118
+            # 2014-02-15,-13.5,-102
+    end
+
+    # meteo_storm_durations.csv
+    meteosd = rename(sim.parametrizedSPAC.forcing.storm_durations,
+                    :storm_durations_h => :average_storm_duration_h)
+    meteosd_subheader = ["### Typical average durations of a single storm event for each month -------", "NA"]
+    write_with_subheader(joinpath(out_dir, prefix*"_meteo_storm_durations.csv"), meteosd, meteosd_subheader)
+            # month,average_storm_duration_h
+            # ### Typical average durations of a single storm event for each month -------,NA
+            # January,4
+            # Februrary,4
+            # ...
+            # November,4
+            # December,4
+
+    # initial_conditions.csv
+    sim.parametrizedSPAC.pars.IC_scalar
+    ic_col1 = names(sim.parametrizedSPAC.pars.IC_scalar)
+    ic_col2 = Vector(sim.parametrizedSPAC.pars.IC_scalar[1,:])
+    ic_col3 = Vector(sim.parametrizedSPAC.pars.IC_scalar[2,:])
+    ic_col4 = Vector(sim.parametrizedSPAC.pars.IC_scalar[3,:])
+    ic = DataFrame(
+        param_id               = ic_col1,
+        amount                 = ic_col2,
+        u_delta18O_init_permil = ic_col3,
+        u_delta2H_init_permil  = ic_col4,)
+    ic_subheader = ["### Initial conditions (of vector states) -------","NA","NA","NA"]
+    write_with_subheader(joinpath(out_dir, prefix*"_initial_conditions.csv"), ic, ic_subheader)
+            # param_id,amount,u_delta18O_init_permil,u_delta2H_init_permil
+            # ### Initial conditions (of vector states) -------,NA,NA,NA
+            # u_GWAT_init_mm,1,-13,-95
+            # u_INTS_init_mm,0,-13,-95
+            # u_INTR_init_mm,0,-13,-95
+            # u_SNOW_init_mm,0,-13,-95
+            # u_CC_init_MJ_per_m2,0,NA,NA
+            # u_SNOWLQ_init_mm,0,NA,NA
+
+    # "soil_discretization.csv": sd
+    (u0_aux_WETNES, u0_aux_PSIM, u0_aux_PSITI, u0_aux_θ, p_fu0_KK) =
+        LWFBrook90.KPT.derive_auxiliary_SOILVAR(sim.ODEProblem.u0.SWATI.mm, sim.ODEProblem.p.p_soil);
+    sim.parametrizedSPAC.soil_discretization.df       # <- (pars.root_distribution) (pars.IC_soil)
+    sd = sim.parametrizedSPAC.soil_discretization.df[:,["Upper_m","Lower_m","Rootden_","uAux_PSIM_init_kPa","u_delta18O_init_permil","u_delta2H_init_permil"]]
+    sd_subheader = ["m","m","-","kPa","permil","permil"]
+
+    if (sim.parametrizedSPAC.solver_options.simulate_isotopes)
+        error("TODO: writing out inputs for simulation with isotopes not yet implemented completely. Please contact package author.")
+        #sim.ODEProblem.u0.SWATI.d18O
+        #sim.ODEProblem.u0.SWATI.d2H
+    end
+    write_with_subheader(joinpath(out_dir, prefix*"_soil_discretization.csv"), mapcols(col -> round.(col; digits=4), sd), sd_subheader)
+            # Upper_m,Lower_m,Rootden_,uAux_PSIM_init_kPa,u_delta18O_init_permil,u_delta2H_init_permil
+            # m,m,-,kPa,permil,permil
+            # 0,-0.05,0.02,-6.3,-13,-95
+            # -0.05,-0.1,0.02,-6.3,-13,-95
+            # -0.1,-0.15,0.02,-6.3,-13,-95
+            # -0.15,-0.2,0.02,-6.3,-13,-95
+            # -0.2,-0.25,0.02,-6.3,-13,-95
+
+   # "soil_horizons.csv": sh
+    typeof(sim.parametrizedSPAC.pars.soil_horizons.shp[1]) == LWFBrook90.KPT.MualemVanGenuchtenSHP ||
+        error("TODO: writing out inputs for simulation Brooks Corey parmetrization not yet implemented completely. Please contact package author.")
+    sh_col1 = sim.parametrizedSPAC.pars.soil_horizons.HorizonNr
+    sh_col2 = sim.parametrizedSPAC.pars.soil_horizons.Upper_m
+    sh_col3 = sim.parametrizedSPAC.pars.soil_horizons.Lower_m
+    sh_col4 = [shp.p_THSAT  for shp in sim.parametrizedSPAC.pars.soil_horizons.shp]
+    sh_col5 = [shp.p_θr     for shp in sim.parametrizedSPAC.pars.soil_horizons.shp]
+    sh_col6 = [shp.p_MvGα   for shp in sim.parametrizedSPAC.pars.soil_horizons.shp]
+    sh_col7 = [shp.p_MvGn   for shp in sim.parametrizedSPAC.pars.soil_horizons.shp]
+    sh_col8 = [shp.p_KSAT   for shp in sim.parametrizedSPAC.pars.soil_horizons.shp]
+    sh_col9 = [shp.p_MvGl   for shp in sim.parametrizedSPAC.pars.soil_horizons.shp]
+    sh_col10= [shp.p_STONEF for shp in sim.parametrizedSPAC.pars.soil_horizons.shp]
+
+    MvGm = [1 - 1/shp.p_MvGm   for shp in sim.parametrizedSPAC.pars.soil_horizons.shp]
+    all(1 .- 1 ./ MvGm .≈ sh_col7) || error("Only simulations with Mualem-VanGenuchten parameters where n = 1 - 1/m can to be exported.")
+    sh = DataFrame(
+        HorizonNr      = sh_col1,
+        Upper_m        = sh_col2,
+        Lower_m        = sh_col3,
+        ths_volFrac    = sh_col4,
+        thr_volFrac    = sh_col5,
+        alpha_perMeter = sh_col6,
+        npar_          = sh_col7,
+        ksat_mmDay     = sh_col8,
+        tort_          = sh_col9,
+        gravel_volFrac = sh_col10)
+    sh_subheader = ["-","m","m","volume fraction (-)","volume fraction (-)","perMeter","-","mm per day","-","volume fraction (-)"]
+    sh_file = joinpath(out_dir, prefix*"_soil_horizons.csv")
+    write_with_subheader(sh_file, mapcols(col -> round.(col; digits=3), sh), sh_subheader)
+        # correct the format of soil horizon first column to Integer type by removing the dot (".0")
+        (tmppath, tmpio) = mktemp() # https://stackoverflow.com/a/58015840
+        open(sh_file) do io
+            for line in eachline(io, keep=true) # keep so the new line isn't chomped
+                if contains(line, r"^[0-9]*\.")
+                    line = replace(line, r"^([0-9]*)\.[0-9]," => s"\1,")
+                end
+                write(tmpio, line)
+            end
+        end
+        close(tmpio)
+        mv(tmppath, sh_file, force=true)
+
+        # HorizonNr","Upper_m,Lower_m,ths_volFrac,thr_volFrac,alpha_perMeter,npar_,ksat_mmDay,tort_,gravel_volFrac
+        # -,m,m,volume fraction (-),volume fraction (-),perMeter,-,mm per day,-,volume fraction (-)
+        # 1,0,-0.05,0.25,0.001,7,1.35,982,-3.226,0.05
+        # 2,-0.05,-0.1,0.25,0.001,7,1.35,625.31,-3.18,0.05
+        # 3,-0.1,-0.2,0.25,0.001,7,1.35,982,-3.226,0.175
+        # 4,-0.2,-0.4,0.275,0.001,3,1.3,982,-3.226,0.175
+        # 5,-0.4,-1,0.295,0.001,17,1.1,982,-3.226,0.175
+        # 6,-1,-1.6,0.17,0.001,13,1.2,982,-3.226,0.375
+        # 7,-1.6,-1.9,0.17,0.001,13,1.2,1699,-3.604,0.375
+        # 8,-1.9,-2.2,0.17,0.001,13,1.2,625.31,-3.18,0.05
+
+    # "param.csv": par
+    params = sim.parametrizedSPAC.pars.params
+    sim.parametrizedSPAC.solver_options
+    par_col2 = [
+        NaN,NaN,NaN,params.VXYLEM_mm,params.DISPERSIVITY_mm,
+        NaN,params.LAT_DEG,params.ESLOPE_DEG,params.ASPECT_DEG,params.ALB,params.ALBSN,params.C1,params.C2,params.C3,params.WNDRAT,params.FETCH,params.Z0W,params.ZW,
+        NaN,params.MAXLAI,params.DENSEF_baseline_,params.SAI_baseline_,params.AGE_baseline_yrs,params.HEIGHT_baseline_m,params.LWIDTH,params.Z0G,params.Z0S,params.LPC,params.CZS,params.CZR,params.HS,params.HR,params.ZMINH,params.RHOTP,params.NN,
+        NaN,params.FRINTLAI,params.FSINTLAI,params.FRINTSAI,params.FSINTSAI,params.CINTRL,params.CINTRS,params.CINTSL,params.CINTSS,params.RSTEMP,
+        NaN,params.MELFAC,params.CCFAC,params.LAIMLT,params.SAIMLT,params.GRDMLT,params.MAXLQF,params.KSNVP,params.SNODEN,
+        NaN,params.GLMAX,params.GLMIN,params.CR,params.RM,params.R5,params.CVPD,params.TL,params.T1,params.T2,params.TH,
+        NaN,params.MXKPL,params.MXRTLN,params.INITRLEN,params.INITRDEP,params.RGRORATE,params.RGROPER,params.FXYLEM,params.PSICR,params.RTRAD,params.NOOUTF,
+        NaN,params.IDEPTH_m,params.QDEPTH_m,params.RSSA,params.RSSB,params.INFEXP,params.BYPAR,params.QFPAR,params.QFFC,params.IMPERV,params.DSLOPE,params.LENGTH_SLOPE,params.DRAIN,params.GSC,params.GSP,
+        NaN,sim.parametrizedSPAC.solver_options.DTIMAX,sim.parametrizedSPAC.solver_options.DSWMAX, sim.parametrizedSPAC.solver_options.DPSIMAX]
+    par_col1 = ["### Isotope transport parameters  -------", "### TODO", "### TODO2", "VXYLEM_mm", "DISPERSIVITY_mm",
+                "### Meteorologic site parameters -------", "LAT_DEG", "ESLOPE_DEG", "ASPECT_DEG", "ALB", "ALBSN", "C1", "C2", "C3", "WNDRAT", "FETCH", "Z0W", "ZW",
+                "### Canopy parameters -------", "MAXLAI", "DENSEF_baseline_", "SAI_baseline_", "AGE_baseline_yrs", "HEIGHT_baseline_m", "LWIDTH", "Z0G", "Z0S", "LPC", "CZS", "CZR", "HS", "HR", "ZMINH", "RHOTP", "NN",
+                "### Interception parameters -------", "FRINTLAI", "FSINTLAI", "FRINTSAI", "FSINTSAI", "CINTRL", "CINTRS", "CINTSL", "CINTSS", "RSTEMP",
+                "### Snowpack parameters -------", "MELFAC", "CCFAC", "LAIMLT", "SAIMLT", "GRDMLT", "MAXLQF", "KSNVP", "SNODEN",
+                "### Leaf evaporation parameters (affecting PE) -------", "GLMAX", "GLMIN", "CR", "RM", "R5", "CVPD", "TL", "T1", "T2", "TH",
+                "### Plant parameters (affecting soil-water supply) -------", "MXKPL", "MXRTLN", "INITRLEN", "INITRDEP", "RGRORATE", "RGROPER", "FXYLEM", "PSICR", "RTRAD", "NOOUTF",
+                "### Soil parameters -------", "IDEPTH_m", "QDEPTH_m", "RSSA", "RSSB", "INFEXP", "BYPAR", "QFPAR", "QFFC", "IMPERV", "DSLOPE", "LENGTH_SLOPE", "DRAIN", "GSC", "GSP",
+                "### Numerical solver parameters -------", "DTIMAX", "DSWMAX", "DPSIMAX",]
+    par = DataFrame(param_id = par_col1, x = round.(par_col2, digits=4))
+    param_file = joinpath(out_dir, prefix*"_param.csv")
+    write_with_subheader(param_file, par, nothing)
+        # correct the format of booleans NOOUTF and BYPAR to Integer type by removing the dot (".0")
+        (tmppath, tmpio) = mktemp() # https://stackoverflow.com/a/58015840
+        open(param_file) do io
+            for line in eachline(io, keep=true) # keep so the new line isn't chomped
+                if contains(line, r"^((BYPAR,[0-9]*)|(NOOUTF,[0-9]*))\.")
+                    line = replace(line, r"^((BYPAR,[0-9]*)|(NOOUTF,[0-9]*))\.[0-9]*" => s"\1")
+                end
+                write(tmpio, line)
+            end
+        end
+        close(tmpio)
+        mv(tmppath, param_file, force=true)
+
+        # param_id,x
+        # ### Isotope transport parameters  -------,NA
+        # ### TODO,42
+        # ### TODO2,42
+        # VXYLEM_mm,20
+        # DISPERSIVITY_mm,40
+        # ### Meteorologic site parameters -------,NA
+        # LAT_DEG,47.164
+        # ESLOPE_DEG,36.9
+        # ASPECT_DEG,270
+        # ALB,0.2
+        # ALBSN,0.5
+        # C1,0.25
+        # C2,0.5
+end
+
+
+
+
+
+
+
+
 ######################
 # Define functions to handle DateTimes and convert into Days as Floats
 """
@@ -464,7 +710,6 @@ function init_param(path_param; simulate_isotopes = true)
     input_param, solver_opts = read_path_param(path_param; simulate_isotopes = simulate_isotopes)
 end
 
-# path_meteoveg = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_meteoveg.csv"
 function read_path_meteoveg(path_meteoveg)
 
     if (File(path_meteoveg).cols == 7)
@@ -695,7 +940,6 @@ function read_path_meteoiso(path_meteoiso,
     return input_meteoiso
 end
 
-# path_initial_conditions = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_initial_conditions.csv"
 function read_path_initial_conditions(path_initial_conditions)
     parsing_types =
         Dict(# Initial conditions (of vector states) -------
@@ -721,7 +965,6 @@ function read_path_initial_conditions(path_initial_conditions)
     return input_initial_conditions
 end
 
-# path_param = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_param.csv"
 # TODO: check why read_path_param does not appear in the docs...
 """
     read_path_param(path_param; simulate_isotopes::Bool = false)
@@ -770,11 +1013,11 @@ function read_path_param(path_param; simulate_isotopes::Bool = false)
             "MXKPL" => Float64,
             "MXRTLN" => Float64,           "INITRLEN" => Float64,         "INITRDEP" => Float64,
             "RGRORATE" => Float64,         "RGROPER" => Float64,          "FXYLEM" => Float64,
-            "PSICR" => Float64,            "RTRAD" => Float64,            "NOOUTF" => Int64,    # TODO(bernhard): make boolean
+            "PSICR" => Float64,            "RTRAD" => Float64,            "NOOUTF" => Float64,
             # Soil parameters -------
             "IDEPTH_m" => Float64,           "QDEPTH_m" => Float64,
             "RSSA" => Float64,             "RSSB" => Float64,             "INFEXP" => Float64,
-            "BYPAR" => Int64  ,             # TODO(bernhard): make boolean
+            "BYPAR" => Float64  ,
             "QFPAR" => Float64,            "QFFC" => Float64,
             "IMPERV" => Float64,           "DSLOPE" => Float64,           "LENGTH_SLOPE" => Float64,
             "DRAIN" => Float64,            "GSC" => Float64,              "GSP" => Float64,
@@ -799,6 +1042,10 @@ function read_path_param(path_param; simulate_isotopes::Bool = false)
     input_param_df[:,:INITRLEN] = max.(input_param_df[:,:INITRLEN], 0.010)
     input_param_df[:,:INITRDEP] = max.(input_param_df[:,:INITRDEP], 0.010)
 
+    # Transform to Int64 # TODO: make boolean
+    input_param_df.BYPAR = round.(Int64, input_param_df.BYPAR)
+    input_param_df.NOOUTF = round.(Int64, input_param_df.NOOUTF)
+
     # Impose type of Float64 instead of Float64?
     disallowmissing!(input_param_df)
     # Transform to NamedTuple
@@ -808,7 +1055,6 @@ function read_path_param(path_param; simulate_isotopes::Bool = false)
     return input_param, solver_opts
 end
 
-# path_storm_durations = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_meteo_storm_durations.csv"
 function read_path_storm_durations(path_storm_durations)
     parsing_types =
         Dict("month" => String, "average_storm_duration_h" => Float64)
@@ -836,7 +1082,7 @@ function read_path_storm_durations(path_storm_durations)
 
     return input_storm_durations
 end
-# path_soil_horizons = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_soil_horizons.csv"
+
 function read_path_soil_horizons(path_soil_horizons)
     # Derive whether to use Clapp Hornberger or MualemVanGenuchten based on the input data
     MualVanGen_expected_column_names =
@@ -914,7 +1160,6 @@ function read_path_soil_horizons(path_soil_horizons)
     return soil_horizons
 end
 
-# path_soil_discretization = "examples/BEA2016-reset-FALSE-input/BEA2016-reset-FALSE_soil_discretization.csv"
 function read_path_soil_discretization(path_soil_discretization)
     parsing_types =
         Dict("Upper_m"      => Float64,
