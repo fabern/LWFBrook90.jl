@@ -591,7 +591,7 @@ function read_path_meteoiso(path_meteoiso,
     if is_from_PisoAI
         parsing_types =
                 Dict(#:Column1        => Int64, # is directly removed afterwards
-                    :Site            => Char,
+                    :Site            => String,
                     :Date            => DateTime,
                     :Latitude        => Float64,
                     :Longitude       => Float64,
