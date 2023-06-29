@@ -370,7 +370,7 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
                     θ(ψ_fc)/(p_THSAT[i] .- p_θr[i])
                     # find_zero((θ_toFind) -> LWFBrook90.KPT.FPSIM_MvG((θ_toFind - p_θr[i])./(p_THSAT .- p_θr), p_MvGα[i], p_MvGn[i]), (0.0, 1.0), Bisection())
                 else
-                    stop("When setting up soil hydr. parameters: Computed invalid p_WETF in KPT_SOILPAR_Mvg1d")
+                    error("When setting up soil hydr. parameters: Computed invalid p_WETF in KPT_SOILPAR_Mvg1d")
                 end
             end
         end
@@ -480,13 +480,15 @@ K = Ks*W^l*[ 1 - (1-W^(1/m))^m ]^2 using m = 1-1/n yields: K = Ks*W^l*[ 1 - (1-W
 # end
 function FK_MvG(WETNES, KSAT, MvGl, MvGn, MvGm)
     # return: hydraulic conductivity, mm/d
-    KSAT .* WETNES .^ MvGl .*
-        (1 .- (1 .- WETNES .^ (1 ./ MvGm) ).^(MvGm) ) .^ 2
+    eps = 1.e-6
+    KSAT .* max.(WETNES, eps) .^ MvGl .*
+        (1 .- (1 .- max.(WETNES, eps) .^ (1 ./ MvGm) ).^(MvGm) ) .^ 2
 end
 function FK_MvG!(result, WETNES, KSAT, MvGl, MvGn, MvGm)
+    eps = 1.e-6
     # return: hydraulic conductivity, mm/d
-    result .= KSAT .* WETNES .^ MvGl .*
-        (1 .- (1 .- WETNES .^ (1 ./ MvGm) ).^(MvGm) ) .^ 2
+    result .= KSAT .* max.(WETNES, eps) .^ MvGl .*
+        (1 .- (1 .- max.(WETNES, eps) .^ (1 ./ MvGm) ).^(MvGm) ) .^ 2
 end
 
 """
