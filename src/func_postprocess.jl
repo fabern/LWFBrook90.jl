@@ -951,6 +951,8 @@ function get_soil_idx(simulation::DiscretizedSPAC, depths_to_read_out_mm; only_v
     @assert all(depths_to_read_out_mm .> 0) # depths and lower_boundaries must all be positive numbers
     lower_boundaries = cumsum(simulation.ODESolution.prob.p.p_soil.p_THICK)
 
+    depths_to_read_out_mm = sort(depths_to_read_out_mm)
+
     idx_to_read_out = fill(0, length(depths_to_read_out_mm))
     for (it, curr_depth_mm) in enumerate(depths_to_read_out_mm)
         if (curr_depth_mm > maximum(lower_boundaries))
@@ -961,7 +963,7 @@ function get_soil_idx(simulation::DiscretizedSPAC, depths_to_read_out_mm; only_v
             idx_to_read_out[it] = findfirst(curr_depth_mm .<= lower_boundaries)
         end
     end
-    all_idxs = sort(Dict((d => i) for (d,i) in zip(depths_to_read_out_mm, idx_to_read_out)))
+    all_idxs = Dict((d => i) for (d,i) in zip(depths_to_read_out_mm, idx_to_read_out))
     if only_valid_idxs
         return valid_idxs = collect(values(all_idxs))[values(all_idxs) .!= 0]
     else # default
