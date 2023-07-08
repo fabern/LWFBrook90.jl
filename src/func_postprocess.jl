@@ -951,8 +951,6 @@ function get_soil_idx(simulation::DiscretizedSPAC, depths_to_read_out_mm; only_v
     @assert all(depths_to_read_out_mm .> 0) # depths and lower_boundaries must all be positive numbers
     lower_boundaries = cumsum(simulation.ODESolution.prob.p.p_soil.p_THICK)
 
-    depths_to_read_out_mm = sort(depths_to_read_out_mm)
-
     idx_to_read_out = fill(0, length(depths_to_read_out_mm))
     for (it, curr_depth_mm) in enumerate(depths_to_read_out_mm)
         if (curr_depth_mm > maximum(lower_boundaries))
@@ -1052,7 +1050,8 @@ function get_soil_(symbols, simulation::DiscretizedSPAC; depths_to_read_out_mm =
             df = [df DataFrame(permutedims(variable_to_return[:, :]), string(symbol) .* "_Lay" .* string.(1:size(variable_to_return, 1)))]
         else
             # append requested layers with the depths as column titles
-            [df[:, Symbol("$(string(symbol))_$(Int(k))mm")] = variable_to_return[v,:] for (k,v) in pairs(idxs) if v != 0];
+            [df[:, Symbol("$(string(symbol))_$(Int(k))mm")] = variable_to_return[v,:] for
+                (k,v) in sort(collect(idxs)) if v != 0]; # Note we sort the idxs by depth
         end
     end
 
