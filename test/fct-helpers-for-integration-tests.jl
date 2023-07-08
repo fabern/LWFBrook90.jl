@@ -86,6 +86,7 @@ function prepare_θψδ_from_sim_and_reference(;
 
 
     if (simulate_isotopes)
+        # TODO: replace get_δsoil(...) by get_soil_(:δ18O, ...)
         (u_δ18O_soil, u_δ2H_soil) = get_δsoil(simulation; days_to_read_out_d = times_to_read_out_days)
 
         sim_δ18O = DataFrame(u_δ18O_soil[idx,:]', :auto)
@@ -93,6 +94,7 @@ function prepare_θψδ_from_sim_and_reference(;
         sim_δ18O.time = times_to_read_out_days
         sim_δ2H.time = times_to_read_out_days
 
+        # TODO: replace get_δsoil(...) by get_soil_(:δ18O, ...)
         (u_δ18O_soil_dense, u_δ2H_soil_dense) = get_δsoil(simulation; days_to_read_out_d = nothing)
         δ18Odense = u_δ18O_soil_dense[idx,:]'
         δ2Hdense  = u_δ2H_soil_dense[idx,:]'

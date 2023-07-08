@@ -767,16 +767,26 @@ end
     simulate!(simulation)
 
     # check output
-    depths_to_test_mm = [100., 1000, 1200, 200, 300, 400, 150, ] # test unsorted input
-    @test_logs (:warn, r"below simulation domain") get_soil_idx(simulation, depths_to_read_out_mm)
-    idx_to_read_out = get_soil_idx(simulation, depths_to_read_out_mm)
+    depths_to_test_mm = [100, 1000, 1200, 200, 300, 400, 150, ] # test unsorted input
+    @test_logs (:warn, r"below simulation domain") LWFBrook90.get_soil_idx(simulation, depths_to_test_mm)
+    idx_to_read_out = LWFBrook90.get_soil_idx(simulation, depths_to_test_mm)
     @test idx_to_read_out == Dict(
-        150.0  => 3, 100.0  => 2, 200.0  => 4, 300.0  => 6, 400.0  => 8, 1000.0 => 21,
-        1200.0 => 0) # below the simulation domain!
-    valid_idx_to_read_out = LWFBrook90.get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = true)
+        150  => 3, 100  => 2, 200  => 4, 300  => 6, 400  => 8, 1000 => 21,
+        1200 => 0) # below the simulation domain!
+    valid_idx_to_read_out = LWFBrook90.get_soil_idx(simulation, depths_to_test_mm; only_valid_idxs = true)
 
-    depths_to_test_mm_noWarning = [100., 1000, 200, 300, 400, 150, ]
-    @test all(-7 .≈ get_ψ(simulation; depths_to_read_out_mm = depths_to_test_mm_noWarning, days_to_read_out_d = 0))
-    @test all(0.20058687988 .≈ get_θ(simulation; depths_to_read_out_mm = depths_to_test_mm_noWarning, days_to_read_out_d = 0))
+    depths_to_test_mm_noWarning = [100, 1000, 200, 300, 400, 150, ]
+    @test_throws r"ambiguous which colum represents" all(-7 .≈ get_soil_([:ψ,:θ], simulation; depths_to_read_out_mm = depths_to_test_mm_noWarning, days_to_read_out_d = 0, flag_return_Matrix = true)) # flag_return_Matrix is deprecated
+    @test all(-7            .≈ get_soil_(:ψ, simulation; depths_to_read_out_mm = depths_to_test_mm_noWarning, days_to_read_out_d = 0, flag_return_Matrix = true)) # flag_return_Matrix is deprecated
+    @test all(0.20058687988 .≈ get_soil_(:θ, simulation; depths_to_read_out_mm = depths_to_test_mm_noWarning, days_to_read_out_d = 0, flag_return_Matrix = true)) # flag_return_Matrix is deprecated
+    # TODO: replace get_δsoil(...) by get_soil_(:δ18O, ...)
     @test all(-10.11111 .≈ get_δsoil(simulation; depths_to_read_out_mm = depths_to_test_mm_noWarning, days_to_read_out_d = 0).d18O)
+
+    # get_soil_(:θ, simulation)
+    # get_soil_([:θ], simulation)
+    # get_soil_([:θ], simulation; depths_to_read_out_mm = [100, 200, 500, 1200])
+    # get_soil_([:θ, :ψ], simulation; depths_to_read_out_mm = [100, 200, 500, 1200])
+    # get_soil_([:θ, :ψ, :K], simulation; depths_to_read_out_mm = [100, 200, 500, 1200])
+    # get_soil_([:θ, :ψ, :W, :SWATI, :K], simulation; depths_to_read_out_mm = [100, 500])
+    # # get_soil_([:θ, :ψ, :δ18O, :δ2H, :W, :SWATI, :K], simulation; depths_to_read_out_mm = [100, 200, 500, 1200])
 end

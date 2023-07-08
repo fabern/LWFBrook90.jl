@@ -996,12 +996,84 @@ function get_auxiliary_variables(solution::ODESolution; days_to_read_out_d = not
 end
 
 """
+    get_soil_(symbols, simulation; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing))
+
+Function to read out soil variables from a simulated simulation.
+- `symbols`: can be a single symbol (:θ) or a vector of symbols [:θ] or [:θ, :ψ, :δ18O, :δ2H, :W, :SWATI, :K]
+    - Please note that also non-Unicode symbols are accepted: e.g. [:theta, :psi, :delta18O, :delta2H]
+- `simulation`: is a `DiscretizedSPAC` that has been simulated.
+- `depths_to_read_out_mm`: either `nothing` or vector of Integers.
+- `days_to_read_out_d`: either  `nothing` or vector of Floats representing days.
+
+Examples
+    get_soil_(:θ, simulation)
+    get_soil_([:θ, :ψ, :K], simulation; depths_to_read_out_mm = [100, 200, 500, 1200])
+"""
+function get_soil_(symbols, simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing,
+    flag_return_Matrix = false, # legacy flag that can be set to request Matrix output... will be deprecated in future...
+    )
+    solution = simulation.ODESolution
+    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
+    @assert (isnothing(depths_to_read_out_mm) || eltype(depths_to_read_out_mm) <: Integer) "`depths_to_read_out_mm` must be Vector{Int}. They are $(typeof(depths_to_read_out_mm))"
+    @assert (isnothing(days_to_read_out_d) || all(days_to_read_out_d .>= 0)) "`days_to_read_out_d` must be Vector{Float64} and all >= 0. Received $(days_to_read_out_d)"
+
+    # parse requested time points
+    timepoints = isnothing(days_to_read_out_d) ? solution.t : days_to_read_out_d;
+
+    # get auxiliary variables with requested time resolution (i.e. days_to_read_out_d)
+    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+        LWFBrook90.get_auxiliary_variables(simulation; days_to_read_out_d = days_to_read_out_d)
+
+    # Setup DataFrame to fill
+    timepoints = (timepoints isa AbstractArray ? timepoints : [timepoints]) # transform to vector even if input as scalar
+    df = DataFrame()
+    df[:, :time] = timepoints
+
+    # Fill DataFrame with requested soil layers and requested variables
+    idxs = (isnothing(depths_to_read_out_mm) ? nothing : LWFBrook90.get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = false))
+    symbols = (symbols isa AbstractArray ? symbols : [symbols]) # transform to vector even if input as scalar
+    for symbol in sort(symbols)
+        variable_to_return = (
+            symbol == :θ      ? u_aux_θ :     symbol == :theta  ? u_aux_θ :    # also accept non-unicode
+            symbol == :ψ      ? u_aux_PSIM :  symbol == :psi    ? u_aux_PSIM : # also accept non-unicode
+            # symbol == :ψtot ? u_aux_PSITI :
+            # symbol == :δ18O ? ... :         symbol == :delta18O ? ... :
+            # symbol == :δ2H  ? ... :         symbol == :delta2H  ? ... :
+            symbol == :W      ? u_aux_WETNES :
+            symbol == :SWATI  ? u_SWATI :
+            symbol == :K      ? p_fu_KK :
+            error("Unknown symobl $(symbol) requested in `get_soil_()`"))
+
+        # Add columns
+        if isnothing(depths_to_read_out_mm)
+            # append all layers with generic column titles
+            df = [df DataFrame(permutedims(variable_to_return[:, :]), string(symbol) .* "_Lay" .* string.(1:size(variable_to_return, 1)))]
+        else
+            # append requested layers with the depths as column titles
+            [df[:, Symbol("$(string(symbol))_$(Int(k))mm")] = variable_to_return[v,:] for (k,v) in pairs(idxs) if v != 0];
+        end
+    end
+
+    # Return as DataFrame or Matrix (latter is to support legacy code)
+    if (flag_return_Matrix)
+        @assert length(symbols)==1 """
+            Aborting `get_soil_()` with non-DataFrame output for more than 1 soil variable. It is ambiguous which colum represents which variable (θ, ψ, ...).
+            Correct by either requesting only 1 variable type by supplying only one `symbols`. Alternatively mutliple variable types are supported for specified `depths_to_read_out_mm`.
+        """
+        return permutedims(Matrix(df[:,Not(:time)]))
+    else
+        return df
+    end
+end
+
+"""
     get_θ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
 
 Returns a 2D matrix of volumetric soil moisture values (m3/m3) with soil layers as rows and time steps as columns.
 The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
 that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `days_to_read_out_d = 1:1.0:100`
 """
+ # TODO get rid of get_θ, get_ψ, ... etc. and replace them with get_soil_(:ψ)
 function get_θ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
     solution = simulation.ODESolution
     @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
@@ -1024,6 +1096,7 @@ Returns a 2D matrix of soil matric potential (kPa) with soil layers as rows and 
 The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
 that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `saveat = 1:1.0:100`
 """
+ # TODO get rid of get_θ, get_ψ, ... etc. and replace them with get_soil_(:ψ)
 function get_ψ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
     solution = simulation.ODESolution
     @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
@@ -1115,6 +1188,7 @@ The 2D matrix with soil layers as rows and time steps as columns can be accessed
 The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
 that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `saveat = 1:1.0:100`
 """
+ # TODO get rid of get_θ, get_ψ, ... etc. and replace them with get_soil_(:ψ)
 function get_δsoil(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
     solution = simulation.ODESolution
     @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"

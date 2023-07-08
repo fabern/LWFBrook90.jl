@@ -61,6 +61,7 @@ if basename(pwd()) != "test"; cd("test"); end
     u_δ     = get_δ(example_result; days_to_read_out_d = t_out)
     ## vector quantities
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) = LWFBrook90.get_auxiliary_variables(example_result; days_to_read_out_d = t_out)
+    # TODO: replace get_δsoil(...) by get_soil_(:δ18O, ...)
     u_δsoil = get_δsoil(example_result; days_to_read_out_d = t_out);
 
     # test or overwrite

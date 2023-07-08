@@ -80,7 +80,8 @@ if simulate_isotopes
 end
 
 pl_θ = plot(simulation_modified.ODESolution_datetime,
-    get_θ(simulation_modified, depths_to_read_out_mm = depth_to_read_out_mm)',
+    # TODO: replace get_θ(...) by get_soil_(:θ, ...)
+    get_θ(simulation_modified, depths_to_read_out_mm = depth_to_read_out_mm)',  # TODO
     labels = string.(depth_to_read_out_mm) .* "mm",
     xlabel = "Date",
     ylabel = "θ\n[-]",
@@ -88,6 +89,7 @@ pl_θ = plot(simulation_modified.ODESolution_datetime,
 pl_ψ = plot(simulation_modified.ODESolution_datetime,
     ## -LWFBrook90.get_ψ(depth_to_read_out_mm, simulation_modified.ODESolution) .+ 1, yaxis = :log, yflip = true,
     get_ψ(simulation_modified, depths_to_read_out_mm = depth_to_read_out_mm)',
+    # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
     labels = string.(depth_to_read_out_mm) .* "mm",
     xlabel = "Date",
     ylabel = "ψ\n[kPa]",
