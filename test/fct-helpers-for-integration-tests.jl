@@ -68,7 +68,7 @@ function prepare_θψδ_from_sim_and_reference(;
     # Compare simulation and reference
     ## Extract various variables at certain depths
     depth_to_read_out_mm = [100 500 1000 1500 1900]
-    idx = LWFBrook90.find_soilDiscr_indices(depth_to_read_out_mm, sim_sol)
+    idx = LWFBrook90.get_soil_idx(simulation, depth_to_read_out_mm; only_valid_idxs = true)
     times_to_read_out_days = minimum(sim_sol.t):1.0:maximum(sim_sol.t) #sort(unique(HydrusSolution_sparseTime.time))
 
     ### Sim
@@ -273,7 +273,8 @@ function prepare_θψAboveground_from_sim_and_ref(
     timesteps = ref_below_1.θ.time;
     ## Extract certain depths of simulation
     depth_to_read_out_mm = [100 500 1000 1500 1900];
-    idx_sim_sol = LWFBrook90.find_soilDiscr_indices(depth_to_read_out_mm, sim_sol);
+    idx_Dict = LWFBrook90.get_soil_idx(simulation, depth_to_read_out_mm)
+    idx_sim_sol = collect(values(idx_Dict))[values(idx_Dict) .!= 0]
 
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
             LWFBrook90.get_auxiliary_variables(simulation; days_to_read_out_d = timesteps)

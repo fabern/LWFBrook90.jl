@@ -746,3 +746,37 @@ end
     # - maxlai                       # MAXLAI                                all in parametrizedSPAC.pars.params
     # - maxrootdepth, betaroot       # beta, z_rootMax_m                     all in parametrizedSPAC.pars.root_distribution
 end
+
+@testset "simulate-and-postprocess" begin
+    Δz_m = fill(0.05, 22)
+    parametrizedSPAC = loadSPAC(
+            "../examples/DAV2020-full/", "DAV2020-full"; simulate_isotopes = true,
+            # "../examples/DAV2020-bare-minimum/", "DAV2020-minimal"; simulate_isotopes = true,
+            Δz_thickness_m = Δz_m,
+            root_distribution = (beta = 0.77, z_rootMax_m = -0.5),
+            IC_soil = (PSIM_init_kPa = -7.0, delta18O_init_permil = -10.11111, delta2H_init_permil = -91.1111),
+            canopy_evolution = (DENSEF_rel = 100, HEIGHT_rel = 100, SAI_rel    = 100,
+                                            LAI_rel = (DOY_Bstart = 120,
+                                                Bduration  = 21,
+                                                DOY_Cstart = 270,
+                                                Cduration  = 60,
+                                                LAI_perc_BtoC = 95,
+                                                LAI_perc_CtoB = 70)));
+
+    simulation = setup(parametrizedSPAC);
+    simulate!(simulation)
+
+    # check output
+    depths_to_test_mm = [100., 1000, 1200, 200, 300, 400, 150, ] # test unsorted input
+    @test_logs (:warn, r"below simulation domain") get_soil_idx(simulation, depths_to_read_out_mm)
+    idx_to_read_out = get_soil_idx(simulation, depths_to_read_out_mm)
+    @test idx_to_read_out == Dict(
+        150.0  => 3, 100.0  => 2, 200.0  => 4, 300.0  => 6, 400.0  => 8, 1000.0 => 21,
+        1200.0 => 0) # below the simulation domain!
+    valid_idx_to_read_out = LWFBrook90.get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = true)
+
+    depths_to_test_mm_noWarning = [100., 1000, 200, 300, 400, 150, ]
+    @test all(-7 .≈ get_ψ(simulation; depths_to_read_out_mm = depths_to_test_mm_noWarning, days_to_read_out_d = 0))
+    @test all(0.20058687988 .≈ get_θ(simulation; depths_to_read_out_mm = depths_to_test_mm_noWarning, days_to_read_out_d = 0))
+    @test all(-10.11111 .≈ get_δsoil(simulation; depths_to_read_out_mm = depths_to_test_mm_noWarning, days_to_read_out_d = 0).d18O)
+end

@@ -947,29 +947,26 @@ end
 
 ##########################
 # Functions to get values linked to soil domain:
+function get_soil_idx(simulation::DiscretizedSPAC, depths_to_read_out_mm; only_valid_idxs = false)
+    @assert all(depths_to_read_out_mm .> 0) # depths and lower_boundaries must all be positive numbers
+    lower_boundaries = cumsum(simulation.ODESolution.prob.p.p_soil.p_THICK)
 
-function find_soilDiscr_indices(simulation::DiscretizedSPAC, depths_to_read_out_mm)
-    solution = simulation.ODESolution
-    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
-
-    find_soilDiscr_indices(depths_to_read_out_mm, solution)
-end
-# TODO(bernhard): get rid of all uses of find_soilDiscr_indices(depths_to_read_out_mm, solution::ODESolution)
-function find_soilDiscr_indices(depths_to_read_out_mm, solution::ODESolution)
-    # depths and lower_boundaries must all be positive numbers
-    @assert all(depths_to_read_out_mm .> 0)
-
-    lower_boundaries = cumsum(solution.prob.p.p_soil.p_THICK)
-
-    # Only read out values that are within the simulation domain
-    depths_to_read_out_mm = depths_to_read_out_mm[depths_to_read_out_mm .<= maximum(lower_boundaries)]
-
-    idx_to_read_out = []
-    for curr_depth_mm in depths_to_read_out_mm
-        # idx_to_read_out = findfirst(curr_depth_mm .<= y)
-        append!(idx_to_read_out, findfirst(curr_depth_mm .<= lower_boundaries))
+    idx_to_read_out = fill(0, length(depths_to_read_out_mm))
+    for (it, curr_depth_mm) in enumerate(depths_to_read_out_mm)
+        if (curr_depth_mm > maximum(lower_boundaries))
+            # Only read out values that are within the simulation domain
+            idx_to_read_out[it] = 0 # 0 means this depth has not been simulated
+            @warn "Requested read-out depth of $curr_depth_mm is below simulation domain and is silently omitted for the output."
+        else
+            idx_to_read_out[it] = findfirst(curr_depth_mm .<= lower_boundaries)
+        end
     end
-    return idx_to_read_out
+    all_idxs = sort(Dict((d => i) for (d,i) in zip(depths_to_read_out_mm, idx_to_read_out)))
+    if only_valid_idxs
+        return valid_idxs = collect(values(all_idxs))[values(all_idxs) .!= 0]
+    else # default
+        return all_idxs
+    end
 end
 
 function get_auxiliary_variables(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
@@ -1017,7 +1014,7 @@ function get_θ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, da
     if isnothing(depths_to_read_out_mm)
         return u_aux_θ[:, :]
     else
-        return u_aux_θ[find_soilDiscr_indices(simulation, depths_to_read_out_mm), :]
+        return u_aux_θ[get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = true), :]
     end
 end
 """
@@ -1039,7 +1036,7 @@ function get_ψ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, da
     if isnothing(depths_to_read_out_mm)
         return u_aux_PSIM[:, :]
     else
-        return u_aux_PSIM[find_soilDiscr_indices(simulation, depths_to_read_out_mm), :]
+        return u_aux_PSIM[get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = true), :]
     end
 end
 """
@@ -1061,7 +1058,7 @@ function get_WETNES(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing
     if isnothing(depths_to_read_out_mm)
         return u_aux_WETNES[:, :]
     else
-        return u_aux_WETNES[find_soilDiscr_indices(simulation, depths_to_read_out_mm), :]
+        return u_aux_WETNES[get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = true), :]
     end
 end
 """
@@ -1084,7 +1081,7 @@ function get_SWATI(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing,
     if isnothing(depths_to_read_out_mm)
         return u_SWATI[:, :]
     else
-        return u_SWATI[find_soilDiscr_indices(simulation, depths_to_read_out_mm), :]
+        return u_SWATI[get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = true), :]
     end
 end
 """
@@ -1106,7 +1103,7 @@ function get_K(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, day
     if isnothing(depths_to_read_out_mm)
         return p_fu_KK[:, :]
     else
-        return p_fu_KK[find_soilDiscr_indices(simulation, depths_to_read_out_mm), :]
+        return p_fu_KK[get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = true), :]
     end
 end
 
@@ -1138,7 +1135,7 @@ function get_δsoil(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing
         return (d18O = rows_SWAT_d18O[:, :],
                 d2H  = rows_SWAT_d2H[ :, :])
     else
-        idx_soil_layers = find_soilDiscr_indices(simulation, depths_to_read_out_mm)
+        idx_soil_layers = get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = true)
         return (d18O = rows_SWAT_d18O[idx_soil_layers, :],
                 d2H  = rows_SWAT_d2H[ idx_soil_layers, :])
     end
