@@ -779,8 +779,9 @@ end
     @test_throws r"ambiguous which colum represents" all(-7 .≈ get_soil_([:ψ,:θ], simulation; depths_to_read_out_mm = depths_to_test_mm_noWarning, days_to_read_out_d = 0, flag_return_Matrix = true)) # flag_return_Matrix is deprecated
     @test all(-7            .≈ get_soil_(:ψ, simulation; depths_to_read_out_mm = depths_to_test_mm_noWarning, days_to_read_out_d = 0, flag_return_Matrix = true)) # flag_return_Matrix is deprecated
     @test all(0.20058687988 .≈ get_soil_(:θ, simulation; depths_to_read_out_mm = depths_to_test_mm_noWarning, days_to_read_out_d = 0, flag_return_Matrix = true)) # flag_return_Matrix is deprecated
-    # TODO: replace get_δsoil(...) by get_soil_(:δ18O, ...)
-    @test all(-10.11111 .≈ get_δsoil(simulation; depths_to_read_out_mm = depths_to_test_mm_noWarning, days_to_read_out_d = 0).d18O)
+    @test all(-10.11111 .≈ get_soil_(:δ18O, simulation; depths_to_read_out_mm = depths_to_test_mm_noWarning, days_to_read_out_d = 0, flag_return_Matrix = true)) # flag_return_Matrix is deprecated
+    @test all(-10.11111 .≈ get_soil_(:delta18O, simulation; depths_to_read_out_mm = depths_to_test_mm_noWarning, days_to_read_out_d = 0, flag_return_Matrix = true)) # flag_return_Matrix is deprecated
+    @test all(-91.1111  .≈ get_soil_(:δ2H, simulation; depths_to_read_out_mm = depths_to_test_mm_noWarning, days_to_read_out_d = 0, flag_return_Matrix = true)) # flag_return_Matrix is deprecated
 
     # get_soil_(:θ, simulation)
     # get_soil_([:θ], simulation)
@@ -788,5 +789,5 @@ end
     # get_soil_([:θ, :ψ], simulation; depths_to_read_out_mm = [100, 200, 500, 1200])
     # get_soil_([:θ, :ψ, :K], simulation; depths_to_read_out_mm = [100, 200, 500, 1200])
     # get_soil_([:θ, :ψ, :W, :SWATI, :K], simulation; depths_to_read_out_mm = [100, 500])
-    # # get_soil_([:θ, :ψ, :δ18O, :δ2H, :W, :SWATI, :K], simulation; depths_to_read_out_mm = [100, 200, 500, 1200])
+    # get_soil_([:θ, :ψ, :δ18O, :δ2H, :W, :SWATI, :K], simulation; depths_to_read_out_mm = [100, 200, 500, 1200])
 end

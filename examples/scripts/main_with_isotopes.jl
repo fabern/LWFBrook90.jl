@@ -75,7 +75,7 @@ pl2 = plotisotopes(simulation_modified, :d18O_and_d2H, (d18O = :auto, d2H = :aut
 PREC_color = :black
 depth_to_read_out_mm = [150, 500, 800, 1500]
 if true # simulate_isotopes
-    δ_resultsSoil = get_δsoil(simulation_modified, depths_to_read_out_mm = depth_to_read_out_mm)
+    df_δsoil = get_soil_([:δ18O, :δ2H], example_result; depths_to_read_out_mm = depth_to_read_out_mm)
     δ_results = get_δ(simulation_modified)
 end
 
@@ -98,14 +98,14 @@ pl_ψ = plot(timepoints, #df_θψ.time,
 
 if simulate_isotopes
     pl_δ18O = plot(simulation_modified.ODESolution_datetime,
-        δ_resultsSoil.d18O',
-        labels = string.(permutedims(depth_to_read_out_mm)) .* "mm",
+        Matrix(select(df_δsoil, r"δ18O_")),
+        labels = permutedims(names(select(df_δsoil, r"δ18O_"))),
         xlabel = "Date",
         ylabel = "δ¹⁸O soil\n[‰]",
         legend = :outerright);
     pl_δ2H = plot(simulation_modified.ODESolution_datetime,
-        δ_resultsSoil.d2H',
-        labels = string.(permutedims(depth_to_read_out_mm)) .* "mm",
+        Matrix(select(df_δsoil, r"δ2H_")),
+        labels = permutedims(names(select(df_δsoil, r"δ2H_"))),
         xlabel = "Date",
         ylabel = "δ²H soil\n[‰]",
         legend = :outerright);

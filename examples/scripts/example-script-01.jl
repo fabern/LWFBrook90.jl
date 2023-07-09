@@ -22,11 +22,9 @@ using LWFBrook90
 #jl ## - `DiscretizedSPAC()`
 #jl ## - `discretize()`
 #jl ## - `simulate!()`
-#jl ## - `get_δsoil()`
 #jl ## - `get_soil_()`
 #jl ## - `get_aboveground()`
 #jl ## - `get_δ()`,
-#jl ## - `get_deltasoil()`
 
 # Define simulation model by reading in system definition and input data from input files
 

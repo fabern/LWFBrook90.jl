@@ -19,7 +19,7 @@ export run_simulation
 export Rootden_beta_
 export RelativeDaysFloat2DateTime
 # read out results for soil domain variables
-export get_δsoil, get_soil_ # TODO(bernhard): make sure we have documentation for these exported variables
+export get_soil_
 export get_deltasoil, get_theta, get_psi
 # read out results for aboveground/scalar variables
 export get_aboveground, get_δ, get_delta # get_mm # # TODO(bernhard): make sure we have documentation for these exported variables

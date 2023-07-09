@@ -1019,36 +1019,50 @@ Examples
     get_soil_(:θ, simulation)
     get_soil_([:θ, :ψ, :K], simulation; depths_to_read_out_mm = [100, 200, 500, 1200])
 """
-function get_soil_(symbols, simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing,
-    flag_return_Matrix = false, # legacy flag that can be set to request Matrix output... will be deprecated in future...
-    )
-    solution = simulation.ODESolution
+function get_soil_(
+    symbols, simulation::DiscretizedSPAC;
+    depths_to_read_out_mm = nothing,
+    days_to_read_out_d = nothing,
+    flag_return_Matrix = false) # legacy flag that can be set to request Matrix output... will be deprecated in future...
+
+    solution          = simulation.ODESolution
+    simulate_isotopes = simulation.parametrizedSPAC.solver_options.simulate_isotopes
+
     @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
     @assert (isnothing(depths_to_read_out_mm) || eltype(depths_to_read_out_mm) <: Integer) "`depths_to_read_out_mm` must be Vector{Int}. They are $(typeof(depths_to_read_out_mm))"
     @assert (isnothing(days_to_read_out_d) || all(days_to_read_out_d .>= 0)) "`days_to_read_out_d` must be Vector{Float64} and all >= 0. Received $(days_to_read_out_d)"
 
     # parse requested time points
     timepoints = isnothing(days_to_read_out_d) ? solution.t : days_to_read_out_d;
+    timepoints = (timepoints isa AbstractArray ? timepoints : [timepoints]) # transform to vector even if input as scalar
+    symbols    = (symbols    isa AbstractArray ? symbols    : [symbols]   ) # transform to vector even if input as scalar
 
     # get auxiliary variables with requested time resolution (i.e. days_to_read_out_d)
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
         LWFBrook90.get_auxiliary_variables(simulation; days_to_read_out_d = days_to_read_out_d)
+    if simulate_isotopes
+        u_SWATI_d18O = reduce(hcat, [solution(t_days).SWATI.d18O for t_days = timepoints])
+        u_SWATI_d2H  = reduce(hcat, [solution(t_days).SWATI.d2H  for t_days = timepoints])
+    else
+        u_SWATI_d18O = fill(missing, size(u_SWATI))
+        u_SWATI_d2H  = fill(missing, size(u_SWATI))
+        # old variant: # remove requested symbols from
+        # old variant: symbols[symbols .!= (:δ18O) .&& symbols .!= (:delta18O) .&& symbols .!= (:delta2H) .&& symbols .!= (:delta2H)]
+    end
 
     # Setup DataFrame to fill
-    timepoints = (timepoints isa AbstractArray ? timepoints : [timepoints]) # transform to vector even if input as scalar
     df = DataFrame()
     df[:, :time] = timepoints
 
     # Fill DataFrame with requested soil layers and requested variables
     idxs = (isnothing(depths_to_read_out_mm) ? nothing : LWFBrook90.get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = false))
-    symbols = (symbols isa AbstractArray ? symbols : [symbols]) # transform to vector even if input as scalar
     for symbol in sort(symbols)
         variable_to_return = (
-            symbol == :θ      ? u_aux_θ :     symbol == :theta  ? u_aux_θ :    # also accept non-unicode
-            symbol == :ψ      ? u_aux_PSIM :  symbol == :psi    ? u_aux_PSIM : # also accept non-unicode
+            symbol == :θ      ? u_aux_θ :      symbol == :theta    ? u_aux_θ :      # also accept non-unicode
+            symbol == :ψ      ? u_aux_PSIM :   symbol == :psi      ? u_aux_PSIM :   # also accept non-unicode
             # symbol == :ψtot ? u_aux_PSITI :
-            # symbol == :δ18O ? ... :         symbol == :delta18O ? ... :
-            # symbol == :δ2H  ? ... :         symbol == :delta2H  ? ... :
+            symbol == :δ18O   ? u_SWATI_d18O : symbol == :delta18O ? u_SWATI_d18O : # also accept non-unicode
+            symbol == :δ2H    ? u_SWATI_d2H :  symbol == :delta2H  ? u_SWATI_d2H :  # also accept non-unicode
             symbol == :W      ? u_aux_WETNES :
             symbol == :SWATI  ? u_SWATI :
             symbol == :K      ? p_fu_KK :

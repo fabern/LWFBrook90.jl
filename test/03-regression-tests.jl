@@ -1,5 +1,5 @@
 # Regression tests
-using JLD2: jldsave, load # TODO: comment in again as soon  https://github.com/JuliaIO/JLD2.jl/issues/428 is fixed
+using JLD2: jldsave, load
 # using FileIO
 import FileIO
 
@@ -60,9 +60,14 @@ if basename(pwd()) != "test"; cd("test"); end
     )
     u_δ     = get_δ(example_result; days_to_read_out_d = t_out)
     ## vector quantities
-    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) = LWFBrook90.get_auxiliary_variables(example_result; days_to_read_out_d = t_out)
-    # TODO: replace get_δsoil(...) by get_soil_(:δ18O, ...)
-    u_δsoil = get_δsoil(example_result; days_to_read_out_d = t_out);
+    df_belowground = get_soil_([:SWATI, :W, :ψ, :θ, :K, :δ18O, :δ2H], example_result;
+        days_to_read_out_d = t_out)
+
+    u_SWATI       = Matrix(permutedims(select(df_belowground, r"SWATI_")));
+    u_aux_WETNES  = Matrix(permutedims(select(df_belowground, r"W_")));
+    u_aux_PSIM    = Matrix(permutedims(select(df_belowground, r"ψ_")));
+    u_aux_θ       = Matrix(permutedims(select(df_belowground, r"θ_")));
+    p_fu_KK       = Matrix(permutedims(select(df_belowground, r"K_")));
 
     # test or overwrite
     # fname = input_path*input_prefix
@@ -83,13 +88,14 @@ if basename(pwd()) != "test"; cd("test"); end
         @test all(loaded["u_ref"]      .≈ u_ref)
         @test all(isapprox.(Matrix(loaded["u_δ"]), Matrix(u_δ), nans=true)) # NOTE: δ_RWU can be NaN if no water taken up, hence nans=true
         # Test vector results
-        @test all(loaded["u_SWATI"]    .≈ u_SWATI)
-        @test all(loaded["u_aux_PSIM"] .≈ u_aux_PSIM)
-        @test all(loaded["u_aux_θ"]    .≈ u_aux_θ)
-        @test all(loaded["u_δsoil"].d18O .≈ u_δsoil.d18O)
-        @test all(loaded["u_δsoil"].d2H .≈ u_δsoil.d2H)
+        @test all(loaded["u_SWATI"]      .≈ u_SWATI)
+        @test all(loaded["u_aux_PSIM"]   .≈ u_aux_PSIM)
+        @test all(loaded["u_aux_θ"]      .≈ u_aux_θ)
+        @test all(loaded["u_δsoil"].d18O .≈ Matrix(permutedims(select(df_belowground, r"δ18O_"))))
+        @test all(loaded["u_δsoil"].d2H  .≈ Matrix(permutedims(select(df_belowground, r"δ2H_" ))))
     elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
         # overwrite output
+        u_δsoil = (d18O = Matrix(permutedims(select(df_belowground, r"δ18O_"))), d2H = Matrix(permutedims(select(df_belowground, r"δ2H_"))))
         jldsave(fname, compress=false;
                 (currSPAC   = currSPAC,
                  u_ref      = u_ref,

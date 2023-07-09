@@ -337,8 +337,8 @@ function run_main_with_isotopes(;input_prefix, input_path)
         PREC_color = :black
         depth_to_read_out_mm = [150, 500, 800, 1500]
         if simulate_isotopes
-            # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
-            δ_resultsSoil = get_δsoil(simulation; depths_to_read_out_mm = depth_to_read_out_mm)
+            df_δsoil      = get_soil_([:SWATI, :W, :ψ, :θ, :K, :δ18O, :δ2H], example_result; days_to_read_out_d = t_out, depths_to_read_out_mm = depth_to_read_out_mm)
+            δ_resultsSoil = (d18O = Matrix(permutedims(select(df_δsoil, r"δ18O_"))), d2H = Matrix(permutedims(select(df_δsoil, r"δ2H_"))))
             δ_results = get_δ(simulation)
         end
         θ_limits = (minimum(simulation.ODESolution.prob.p.p_soil.p_θr), maximum(simulation.ODESolution.prob.p.p_soil.p_THSAT))
@@ -362,14 +362,14 @@ function run_main_with_isotopes(;input_prefix, input_path)
             legend = :outerright);
         # if simulate_isotopes
             pl_δ18O = plot(simulation.ODESolution_datetime,
-                δ_resultsSoil[1]',
-                labels = string.(permutedims(depth_to_read_out_mm)) .* "mm",
+                Matrix(select(df_δsoil, r"δ18O_")),
+                labels = permutedims(names(select(df_δsoil, r"δ18O_"))),
                 xlabel = "Date",
                 ylabel = "δ¹⁸O soil\n[‰]",
                 legend = :outerright);
             pl_δ2H = plot(simulation.ODESolution_datetime,
-                δ_resultsSoil[2]',
-                labels = string.(permutedims(depth_to_read_out_mm)) .* "mm",
+                Matrix(select(df_δsoil, r"δ2H_")),
+                labels = permutedims(names(select(df_δsoil, r"δ2H_"))),
                 xlabel = "Date",
                 ylabel = "δ²H soil\n[‰]",
                 legend = :outerright);
@@ -839,11 +839,11 @@ function run_main_with_isotopes(;input_prefix, input_path)
                 group = _.depth_cm,
                 color_palette = col_palette,
                 marker = (0.7, :o), markerstrokewidth = 0)
+        df_δsoil      = get_soil_([:δ18O, :δ2H], example_result; depths_to_read_out_mm = depth_to_read_out_mm  .+ 1)
         pl_δsoil = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(simulation.ODESolution.t, simulation.parametrizedSPAC.reference_date),
-            # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
-            LWFBrook90.get_δsoil(simulation; depths_to_read_out_mm = depth_to_read_out_mm  .+ 0.01).d18O',
+            Matrix(select(df_δsoil, r"δ18O_")),
             ylabel = "δ18O [permil]",
-            labels = reshape(string.(permutedims(depth_to_read_out_mm)) .* "mm",1,:),
+            labels = permutedims(names(select(df_δsoil, r"δ18O_"))),
             xlabel = "Date", legend = :outerright, color_palette = col_palette,
             linewidth = 3, alpha = 0.5)
         # add precipitation
