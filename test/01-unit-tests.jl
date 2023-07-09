@@ -772,7 +772,7 @@ end
     idx_to_read_out = LWFBrook90.get_soil_idx(simulation, depths_to_test_mm)
     @test idx_to_read_out == Dict(
         150  => 3, 100  => 2, 200  => 4, 300  => 6, 400  => 8, 1000 => 21,
-        1200 => 0) # below the simulation domain!
+        1200 => 0) # 1200 is below the simulation domain!
     valid_idx_to_read_out = LWFBrook90.get_soil_idx(simulation, depths_to_test_mm; only_valid_idxs = true)
 
     depths_to_test_mm_noWarning = [100, 1000, 200, 300, 400, 150, ]

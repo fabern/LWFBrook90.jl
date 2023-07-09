@@ -73,7 +73,7 @@ pl2 = plotisotopes(simulation_modified, :d18O_and_d2H, (d18O = :auto, d2H = :aut
 
 # Belowground quantities (θ,ψ,δ of soil water)
 PREC_color = :black
-depth_to_read_out_mm = [150 500 800 1500]
+depth_to_read_out_mm = [150, 500, 800, 1500]
 if simulate_isotopes
     δ_resultsSoil = get_δsoil(simulation_modified, depths_to_read_out_mm = depth_to_read_out_mm)
     δ_results = get_δ(simulation_modified)
@@ -82,7 +82,7 @@ end
 pl_θ = plot(simulation_modified.ODESolution_datetime,
     # TODO: replace get_θ(...) by get_soil_(:θ, ...)
     get_θ(simulation_modified, depths_to_read_out_mm = depth_to_read_out_mm)',  # TODO
-    labels = string.(depth_to_read_out_mm) .* "mm",
+    labels = string.(permutedims(depth_to_read_out_mm)) .* "mm",
     xlabel = "Date",
     ylabel = "θ\n[-]",
     legend = :outerright);
@@ -90,7 +90,7 @@ pl_ψ = plot(simulation_modified.ODESolution_datetime,
     ## -LWFBrook90.get_ψ(depth_to_read_out_mm, simulation_modified.ODESolution) .+ 1, yaxis = :log, yflip = true,
     get_ψ(simulation_modified, depths_to_read_out_mm = depth_to_read_out_mm)',
     # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
-    labels = string.(depth_to_read_out_mm) .* "mm",
+    labels = string.(permutedims(depth_to_read_out_mm)) .* "mm",
     xlabel = "Date",
     ylabel = "ψ\n[kPa]",
     legend = :outerright);
@@ -98,13 +98,13 @@ pl_ψ = plot(simulation_modified.ODESolution_datetime,
 if simulate_isotopes
     pl_δ18O = plot(simulation_modified.ODESolution_datetime,
         δ_resultsSoil.d18O',
-        labels = string.(depth_to_read_out_mm) .* "mm",
+        labels = string.(permutedims(depth_to_read_out_mm)) .* "mm",
         xlabel = "Date",
         ylabel = "δ¹⁸O soil\n[‰]",
         legend = :outerright);
     pl_δ2H = plot(simulation_modified.ODESolution_datetime,
         δ_resultsSoil.d2H',
-        labels = string.(depth_to_read_out_mm) .* "mm",
+        labels = string.(permutedims(depth_to_read_out_mm)) .* "mm",
         xlabel = "Date",
         ylabel = "δ²H soil\n[‰]",
         legend = :outerright);

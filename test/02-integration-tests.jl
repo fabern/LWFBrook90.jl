@@ -118,26 +118,26 @@ end
 
     # Compare with LWFBrook90R as reference solution
     # θ:
-    @test RMS_differences(sim.θ, ref_NLAYER7.θ) < 0.02
+    @test RMS_differences(sim.θψ[:,[:time, :θ_100mm, :θ_500mm, :θ_1000mm]], ref_NLAYER7.θ) < 0.02
     # ψ:
-    @test RMS_differences(sim.ψ, ref_NLAYER7.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.24,5)
+    @test RMS_differences(sim.θψ[:,[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm]], ref_NLAYER7.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.24,5)
     # "GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)", (not done for: "CC (MJ/m2)" "SNOWLQ (mm)"]):
-    @test RMS_differences(sim.above[Not(1),[:time,:GWAT, :INTS, :INTR, :SNOW]],
+    @test RMS_differences(sim.above[:,[:time,:GWAT, :INTS, :INTR, :SNOW]],
                             ref_NLAYER7.above[Not(end),[:time, :gwat,:ints,:intr,:snow]]) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.51,1.8)
 
     # Note that below we compare a NLAYER7 LWFBrook90.jl solution, with finer resolved
     # LWFBrook90R solutions. It is therefore normal, that the uncertainty can increase...
-    @test RMS_differences(sim.θ, ref_NLAYER14.θ) < 0.03
-    @test RMS_differences(sim.ψ, ref_NLAYER14.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.65,5.0)
-    @test RMS_differences(sim.above[Not(1),[:time,:GWAT,:INTS,:INTR,:SNOW]],
+    @test RMS_differences(sim.θψ[:,[:time, :θ_100mm, :θ_500mm, :θ_1000mm]], ref_NLAYER14.θ) < 0.03
+    @test RMS_differences(sim.θψ[:,[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm]], ref_NLAYER14.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.65,5.0)
+    @test RMS_differences(sim.above[:,[:time,:GWAT,:INTS,:INTR,:SNOW]],
                             ref_NLAYER14.above[Not(end),[:time,:gwat,:ints,:intr,:snow]]) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.51,1.8)
-    @test RMS_differences(sim.θ, ref_NLAYER21.θ) < 0.04
-    @test RMS_differences(sim.ψ, ref_NLAYER21.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.6,5.0)
-    @test RMS_differences(sim.above[Not(1),[:time,:GWAT,:INTS,:INTR,:SNOW]],
+    @test RMS_differences(sim.θψ[:,[:time, :θ_100mm, :θ_500mm, :θ_1000mm]], ref_NLAYER21.θ) < 0.04
+    @test RMS_differences(sim.θψ[:,[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm]], ref_NLAYER21.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.6,5.0)
+    @test RMS_differences(sim.above[:,[:time,:GWAT,:INTS,:INTR,:SNOW]],
                             ref_NLAYER21.above[Not(end),[:time,:gwat,:ints,:intr,:snow]]) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.51,1.8)
-    @test RMS_differences(sim.θ, ref_NLAYER70.θ) < 0.04
-    @test RMS_differences(sim.ψ, ref_NLAYER70.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.7,5.0)
-    @test RMS_differences(sim.above[Not(1),[:time,:GWAT,:INTS,:INTR,:SNOW]],
+    @test RMS_differences(sim.θψ[:,[:time, :θ_100mm, :θ_500mm, :θ_1000mm]], ref_NLAYER70.θ) < 0.04
+    @test RMS_differences(sim.θψ[:,[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm]], ref_NLAYER70.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.7,5.0)
+    @test RMS_differences(sim.above[:,[:time,:GWAT,:INTS,:INTR,:SNOW]],
                             ref_NLAYER70.above[Not(end),[:time,:gwat,:ints,:intr,:snow]]) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.51,1.8)
 
     # TODO(bernhard): we could run multiple LWFBrook90.jl simulations and compare with the
@@ -150,16 +150,18 @@ end
         fname_illustrations = "out/$git_status_string/"
         mkpath(dirname(fname_illustrations))
 
-        pl_θ = plot(sim.θ.time,
-                Matrix(sim.θ[:,Not(:time)]), line = :solid, labels = "LWFBrook90.jl:" .* string.(depth_to_read_out_mm) .* "mm",
+        pl_θ = plot(sim.θψ.time,
+                Matrix(sim.θψ[:,[:θ_100mm, :θ_500mm, :θ_1000mm]]),
+                line = :solid, labels = "LWFBrook90.jl:" .* string.(depth_to_read_out_mm) .* "mm",
                 ylabel = "θ (-)", legend_position = :bottomright)
         plot!(Matrix(ref_NLAYER7.θ[:,Not(:time)]), line = :dash, color = :black,
                 labels = "LWFBrook90R_NLayer7:" .* string.(depth_to_read_out_mm) .* "mm")
         # plot!(Matrix(ref_NLAYER14.θ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer14")
         # plot!(Matrix(ref_NLAYER21.θ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer21")
         # plot!(Matrix(ref_NLAYER70.θ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer70")
-        pl_ψ = plot(sim.ψ.time,
-                Matrix(sim.ψ[:,Not(:time)]), line = :solid, labels = "LWFBrook90.jl:" .* string.(depth_to_read_out_mm) .* "mm",
+        pl_ψ = plot(sim.θψ.time,
+                Matrix(sim.θψ[:,[:ψ_100mm, :ψ_500mm, :ψ_1000mm]]),
+                line = :solid, labels = "LWFBrook90.jl:" .* string.(depth_to_read_out_mm) .* "mm",
                 ylabel = "ψ (kPa)", legend_position = :bottomright)
         plot!(Matrix(ref_NLAYER7.ψ[:,Not(:time)]), line = :dash, color = :black,
                 labels = "LWFBrook90R_NLayer7:" .* string.(depth_to_read_out_mm) .* "mm")
@@ -182,7 +184,6 @@ end
         #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
         plot(pl_θ, pl_ψ, pl_a, layout = (3,1), size = (600,800),
             leftmargin = 5mm)
-        # savefig(out_figure_string*git_status_string*".png")
         savefig(fname_illustrations*"TESTSET_site-θ-ψ-aboveground-states_$(site).png")
     end
 end
@@ -276,7 +277,7 @@ end
     # Illustrate with a plot what will be compared in the tests below
     if !is_a_CI_system && plot_flag
         # if (true) # Do these manually outside of automatic testing in order not to require Plots pkg
-        depth_to_read_out_mm = [100 500 1000 1500 1900]
+        depth_to_read_out_mm = [100, 500, 1000, 1500, 1900]
         # fname_illustrations = "out/$(today())/"
 
         fname_illustrations = "out/$git_status_string/"
@@ -394,7 +395,7 @@ end
     if !is_a_CI_system && plot_flag
         # if (true) # Do these manually outside of automatic testing in order not to require Plots pkg
         using Plots, Measures
-        depth_to_read_out_mm = [100 500 1000 1500 1900]
+        depth_to_read_out_mm = [100, 500, 1000, 1500, 1900]
         # fname_illustrations = "out/$(today())/"
 
         fname_illustrations = "out/$git_status_string/"

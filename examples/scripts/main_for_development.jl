@@ -335,7 +335,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
         simulate_isotopes = true
         # theme(:default) # theme(:sand)
         PREC_color = :black
-        depth_to_read_out_mm = [150 500 800 1500]
+        depth_to_read_out_mm = [150, 500, 800, 1500]
         if simulate_isotopes
             # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
             δ_resultsSoil = get_δsoil(simulation; depths_to_read_out_mm = depth_to_read_out_mm)
@@ -347,7 +347,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
         pl_θ = plot(simulation.ODESolution_datetime,
             # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
             get_θ(simulation; depths_to_read_out_mm = depth_to_read_out_mm)',
-            labels = string.(depth_to_read_out_mm) .* "mm",
+            labels = string.(permutedims(depth_to_read_out_mm)) .* "mm",
             xlabel = "Date",
             ylabel = "θ\n[-]", ylims = θ_limits,
             legend = :outerright)
@@ -357,19 +357,19 @@ function run_main_with_isotopes(;input_prefix, input_path)
             log10.(-10 .* get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm))',  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
              # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
             ylims = ψ_pF_limits,
-            labels = string.(depth_to_read_out_mm) .* "mm",
+            labels = string.(permutedims(depth_to_read_out_mm)) .* "mm",
             xlabel = "Date",
             legend = :outerright);
         # if simulate_isotopes
             pl_δ18O = plot(simulation.ODESolution_datetime,
                 δ_resultsSoil[1]',
-                labels = string.(depth_to_read_out_mm) .* "mm",
+                labels = string.(permutedims(depth_to_read_out_mm)) .* "mm",
                 xlabel = "Date",
                 ylabel = "δ¹⁸O soil\n[‰]",
                 legend = :outerright);
             pl_δ2H = plot(simulation.ODESolution_datetime,
                 δ_resultsSoil[2]',
-                labels = string.(depth_to_read_out_mm) .* "mm",
+                labels = string.(permutedims(depth_to_read_out_mm)) .* "mm",
                 xlabel = "Date",
                 ylabel = "δ²H soil\n[‰]",
                 legend = :outerright);
@@ -618,7 +618,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
 
     # # plot(x,
     # #      z[LWFBrook90.find_soilDiscr_indices(simulation; depth_to_read_out_mm = depth_to_read_out_mm), :]',
-    # #      labels = string.(depth_to_read_out_mm) .* "mm",
+    # #      labels = string.(permutedims(depth_to_read_out_mm)) .* "mm",
     # #      xlabel = "Date",
     # #      ylabel = "θ [-]",
     # #      legend = :bottomright)
@@ -680,7 +680,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
         @chain dat_δ_soilbulk      scatter(_.dates, _.delta18O_permil, group = _.depth_cm)
         @chain dat_δ_xylem         scatter(_.dates, _.delta18O_permil, group = _.treeID)
 
-        depth_to_read_out_mm = [150 500 800 1500]
+        depth_to_read_out_mm = [150, 500, 800, 1500]
 
         @chain dat_ψ_tensiometer[1:100,:]   scatter(convert.(DateTime, _.dates), _.psim_median_kPa, group = _.depth_cm .* 10)
         pl_ψ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(simulation.ODESolution.t, simulation.parametrizedSPAC.reference_date),
@@ -688,14 +688,14 @@ function run_main_with_isotopes(;input_prefix, input_path)
             LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm),  ylabel = "ψ\n[kPa]",
                          # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
             # log10.(-10 .* LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
-            labels = string.(depth_to_read_out_mm) .* "mm",
+            labels = string.(permutedims(depth_to_read_out_mm)) .* "mm",
             xlabel = "Date",
             legend = :outerright)
 
         @chain dat_θ_EC5Waldner[1:900,:]    scatter(convert.(DateTime, _.dates), _.theta_m3m3,      group = _.depth_cm)
         pl_θ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(simulation.ODESolution.t, simulation.parametrizedSPAC.reference_date),
             LWFBrook90.get_θ(simulation; depths_to_read_out_mm = depth_to_read_out_mm),  # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
-            labels = string.(depth_to_read_out_mm) .* "mm",
+            labels = string.(permutedims(depth_to_read_out_mm)) .* "mm",
             xlabel = "Date",
             ylabel = "θ\n[-]",
             legend = :outerright)
@@ -726,7 +726,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
             LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm)',  ylabel = "ψ\n[kPa]",
              # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
             # log10.(-10 .* LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
-            labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
+            labels = reshape(string.(permutedims(depth_to_read_out_mm)) .* "mm",1,:),
             xlabel = "Date", legend = :outerright, color_palette = col_palette,
             linewidth = 3)
         xlims!(extrema(convert.(DateTime, dat_ψ_tensiomarkAVG.dates)));
@@ -743,7 +743,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
         pl_ψ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(simulation.ODESolution.t, simulation.parametrizedSPAC.reference_date),
             log10.(-10 .* LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm))',  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
             # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
-            labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
+            labels = reshape(string.(permutedims(depth_to_read_out_mm)) .* "mm",1,:),
             xlabel = "Date", legend = :outerright, color_palette = col_palette,
             linewidth = 3)
         xlims!(extrema(convert.(DateTime, dat_ψ_tensiomarkAVG.dates)))
@@ -770,7 +770,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
             LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm)',  ylabel = "ψ\n[kPa]",
              # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
             # log10.(-10 .* LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
-            labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
+            labels = reshape(string.(permutedims(depth_to_read_out_mm)) .* "mm",1,:),
             xlabel = "Date", legend = :outerright, color_palette = col_palette,
             linewidth = 3)
         xlims!(extrema(convert.(DateTime, dat_ψ_tensiomarkAVG.dates)));
@@ -789,7 +789,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
         pl_ψ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(simulation.ODESolution.t, simulation.parametrizedSPAC.reference_date),
             log10.(-10 .* LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm))',  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
             # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
-            labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
+            labels = reshape(string.(permutedims(depth_to_read_out_mm)) .* "mm",1,:),
             xlabel = "Date", legend = :outerright, color_palette = col_palette,
             linewidth = 3)
         xlims!(extrema(convert.(DateTime, dat_ψ_tensiomarkAVG.dates)));
@@ -817,7 +817,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
             # log10.(-10 .* LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm)),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
             # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
             LWFBrook90.get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm)',  ylabel = "ψ [kPa]",
-            labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
+            labels = reshape(string.(permutedims(depth_to_read_out_mm)) .* "mm",1,:),
             xlabel = "Date", legend = :outerright, color_palette = col_palette,
             linewidth = 3)
         ylims!(-15,0)
@@ -842,7 +842,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
             # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
             LWFBrook90.get_δsoil(simulation; depths_to_read_out_mm = depth_to_read_out_mm  .+ 0.01).d18O',
             ylabel = "δ18O [permil]",
-            labels = reshape(string.(depth_to_read_out_mm) .* "mm",1,:),
+            labels = reshape(string.(permutedims(depth_to_read_out_mm)) .* "mm",1,:),
             xlabel = "Date", legend = :outerright, color_palette = col_palette,
             linewidth = 3, alpha = 0.5)
         # add precipitation

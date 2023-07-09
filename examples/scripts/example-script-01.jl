@@ -164,7 +164,7 @@ using CSV, DataFrames
 
 ## How to get θ?
 get_θ(simulation_modified; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
-depth_to_read_out_mm = [10 150 500 1000 1150]
+depth_to_read_out_mm = [10, 150, 500, 1000, 1150]
 get_θ(simulation_modified; depths_to_read_out_mm = depth_to_read_out_mm, days_to_read_out_d = nothing)
 get_θ(simulation_modified; depths_to_read_out_mm = depth_to_read_out_mm)
 
@@ -178,7 +178,7 @@ df_out_daily = DataFrame(
         get_θ(simulation_modified; # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
             depths_to_read_out_mm = depth_to_read_out_mm,
             days_to_read_out_d    = days_to_read_out)),
-    "θ_" .* string.(depth_to_read_out_mm[:]) .* "mm")
+    "θ_" .* string.(permutedims(depth_to_read_out_mm[:])) .* "mm")
 
 insertcols!(df_out_daily, 1, :dates => dates_to_read_out)
 
@@ -190,7 +190,7 @@ CSV.write(
 ## For every day:
 ## df_out_eachtimestep = DataFrame(
 ##     transpose(get_θ(simulation_modified; depths_to_read_out_mm = depth_to_read_out_mm)), # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
-##     "θ_" .* string.(depth_to_read_out_mm[:]) .* "mm")
+##     "θ_" .* string.(permutedims(depth_to_read_out_mm[:])) .* "mm")
 ## insertcols!(df_out_eachtimestep, 1, :dates => simulation_modified.ODESolution_datetime)
 ## CSV.write(
 ##     joinpath(out_dir, fname * "_θ_depths_eachtimestep.csv"),

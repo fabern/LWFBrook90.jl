@@ -67,7 +67,7 @@ function prepare_θψδ_from_sim_and_reference(;
 
     # Compare simulation and reference
     ## Extract various variables at certain depths
-    depth_to_read_out_mm = [100 500 1000 1500 1900]
+    depth_to_read_out_mm = [100, 500, 1000, 1500, 1900]
     idx = LWFBrook90.get_soil_idx(simulation, depth_to_read_out_mm; only_valid_idxs = true)
     times_to_read_out_days = minimum(sim_sol.t):1.0:maximum(sim_sol.t) #sort(unique(HydrusSolution_sparseTime.time))
 
@@ -224,7 +224,6 @@ function prepare_θψAboveground_from_sim_and_ref(
     # folder_with_sim_input_and_ref_output = "test-assets/BEA-2016";input_prefix = "BEA2016-reset-FALSE";NLAYERBASE = 7
     # folder_with_sim_input_and_ref_output = "test-assets/DAV-2020"; NLAYERBASE = 5; input_prefix = "DAV_LW1_def"
 
-
     # Load LWFbrook90R solution
     ## Aboveground
     ref_above_1 = read_LWFBrook90R_dailyCSV(path =
@@ -248,52 +247,46 @@ function prepare_θψAboveground_from_sim_and_ref(
     ref_below_1 = read_LWFBrook90R_layerCSV_extract_depths(;
         path = joinpath(folder_with_sim_input_and_ref_output, "output_LWFBrook90R",
                         input_prefix*"_NLAYER$(NLAYERBASE*1)_LWFBrook90R-0.4.5layer_output.csv"),
-        depth_to_read_out_mm = [100 500 1000 1500 1900])
+        depth_to_read_out_mm = [100, 500, 1000, 1500, 1900])
 
     ref_below_2 = read_LWFBrook90R_layerCSV_extract_depths(;
         path = joinpath(folder_with_sim_input_and_ref_output, "output_LWFBrook90R",
                         input_prefix*"_NLAYER$(NLAYERBASE*2)_LWFBrook90R-0.4.5layer_output.csv"),
-        depth_to_read_out_mm = [100 500 1000 1500 1900])
+        depth_to_read_out_mm = [100, 500, 1000, 1500, 1900])
 
     ref_below_3 = read_LWFBrook90R_layerCSV_extract_depths(;
         path = joinpath(folder_with_sim_input_and_ref_output, "output_LWFBrook90R",
                         input_prefix*"_NLAYER$(NLAYERBASE*3)_LWFBrook90R-0.4.5layer_output.csv"),
-        depth_to_read_out_mm = [100 500 1000 1500 1900])
+        depth_to_read_out_mm = [100, 500, 1000, 1500, 1900])
 
     ref_below_4 = read_LWFBrook90R_layerCSV_extract_depths(;
         path = joinpath(folder_with_sim_input_and_ref_output, "output_LWFBrook90R",
                         input_prefix*"_NLAYER$(NLAYERBASE*10)_LWFBrook90R-0.4.5layer_output.csv"),
-        depth_to_read_out_mm = [100 500 1000 1500 1900])
+        depth_to_read_out_mm = [100, 500, 1000, 1500, 1900])
 
 
     # Run  simulation
-    simulation, _, _ = run_simulation(
-        [joinpath(folder_with_sim_input_and_ref_output, "input-files/") input_prefix "false"]
-        );
-    sim_sol = simulation.ODESolution
+    model = loadSPAC(
+        joinpath(folder_with_sim_input_and_ref_output, "input-files/"),
+        input_prefix;
+        simulate_isotopes = false);
+    simulation = LWFBrook90.setup(model);
+    LWFBrook90.simulate!(simulation)
+
     # Postprocess simulation
     timesteps = ref_below_1.θ.time;
-    ## Extract certain depths of simulation
-    depth_to_read_out_mm = [100 500 1000 1500 1900];
-    idx_Dict = LWFBrook90.get_soil_idx(simulation, depth_to_read_out_mm)
-    idx_sim_sol = collect(values(idx_Dict))[values(idx_Dict) .!= 0]
-
-    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-            LWFBrook90.get_auxiliary_variables(simulation; days_to_read_out_d = timesteps)
     u_aboveground = LWFBrook90.get_aboveground(simulation; days_to_read_out_d = timesteps);
-
-    sim = (θ = insertcols!(DataFrame(u_aux_θ[idx_sim_sol,:]', :auto),
-                :time => timesteps),
-           ψ = insertcols!(DataFrame(u_aux_PSIM[idx_sim_sol,:]', :auto),
-                :time => timesteps),
-           above = insertcols!(u_aboveground, :time => timesteps))
-
+    ## Extract certain depths of simulation
+    depth_to_read_out_mm = [100, 500, 1000, 1500, 1900];
+    u_belowground = get_soil_([:θ, :ψ], simulation; days_to_read_out_d = timesteps, depths_to_read_out_mm = depth_to_read_out_mm)
+    sim = (θψ    = u_belowground,
+           above = u_aboveground)
 
     # Make simulation and reference comparable (formatting)
     # TODO(bernhard): currently sim_θ needs to be shifted by 1 day.
     #                 is it the initial conditions? (That are not reported by LWFBrook90R?)
     return (
-        (θ = sim.θ[Not(1),:], ψ = sim.ψ[Not(1),:], above = sim.above),
+        (θψ = sim.θψ[Not(1),:], above = sim.above[Not(1),:]),
         # also remove from ref_below_.XXX a day at the end to have same number
         (θ = ref_below_1.θ[Not(end),:], ψ = ref_below_1.ψ[Not(end),:], above = ref_above_1),
         (θ = ref_below_2.θ[Not(end),:], ψ = ref_below_2.ψ[Not(end),:], above = ref_above_2),
@@ -329,28 +322,27 @@ function prepare_θψAboveground_from_sim_and_ref(
 
     #     ## Belowground
     #     ## θ
-
-    #     pl = plot(sim.θ.time, Matrix(sim.θ[:,Not(:time)]), line = :solid,
-    #         labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-    #     plot!(ref_below_1.θ.time, Matrix(ref_below_1.θ[:, Not(:time)]), line = :dash, color = :black,
-    #         labels = "LWFBrook90R: " .* string.(depth_to_read_out_mm) .* " mm")
-    #     plot!(ref_below_1.θ.time, Matrix(ref_below_2.θ[:, Not(:time)]), line = :dash, color = :black,
-    #         labels = "LWFBrook90R: " .* string.(depth_to_read_out_mm) .* " mm")
-    #     plot!(ref_below_1.θ.time, Matrix(ref_below_3.θ[:, Not(:time)]), line = :dash, color = :black,
-    #         labels = "LWFBrook90R: " .* string.(depth_to_read_out_mm) .* " mm")
-    #     plot!(ref_below_1.θ.time, Matrix(ref_below_4.θ[:, Not(:time)]), line = :dash, color = :black,
-    #         labels = "LWFBrook90R: " .* string.(depth_to_read_out_mm) .* " mm")
-    #     ## ψ
-    #     pl = plot(sim.θ.time, Matrix(sim.ψ[:,Not(:time)]), line = :solid,
-    #         labels = "LWFBrook90.jl: " .* string.(depth_to_read_out_mm) .* " mm")
-    #     plot!(ref_below_1.ψ.time, Matrix(ref_below_1.ψ[:, Not(:time)]), line = :dash, color = :black,
-    #         labels = "LWFBrook90R: " .* string.(depth_to_read_out_mm) .* " mm")
-    #     plot!(ref_below_1.ψ.time, Matrix(ref_below_2.ψ[:, Not(:time)]), line = :dash, color = :black,
-    #         labels = "LWFBrook90R: " .* string.(depth_to_read_out_mm) .* " mm")
-    #     plot!(ref_below_1.ψ.time, Matrix(ref_below_3.ψ[:, Not(:time)]), line = :dash, color = :black,
-    #         labels = "LWFBrook90R: " .* string.(depth_to_read_out_mm) .* " mm")
-    #     plot!(ref_below_1.ψ.time, Matrix(ref_below_4.ψ[:, Not(:time)]), line = :dash, color = :black,
-    #         labels = "LWFBrook90R: " .* string.(depth_to_read_out_mm) .* " mm")
+    #    pl = plot(sim.θψ.time, Matrix(sim.θψ[:,[:θ_100mm, :θ_500mm, :θ_1000mm]]), line = :solid,
+    #        labels = "LWFBrook90.jl: " .* string.(permutedims(depth_to_read_out_mm)) .* " mm")
+    #    plot!(ref_below_1.θ.time, Matrix(ref_below_1.θ[:, Not(:time)]), line = :dash, color = :black,
+    #        labels = "LWFBrook90R: " .* string.(permutedims(depth_to_read_out_mm)) .* " mm")
+    #    plot!(ref_below_1.θ.time, Matrix(ref_below_2.θ[:, Not(:time)]), line = :dash, color = :black,
+    #        labels = "LWFBrook90R: " .* string.(permutedims(depth_to_read_out_mm)) .* " mm")
+    #    plot!(ref_below_1.θ.time, Matrix(ref_below_3.θ[:, Not(:time)]), line = :dash, color = :black,
+    #        labels = "LWFBrook90R: " .* string.(permutedims(depth_to_read_out_mm)) .* " mm")
+    #    plot!(ref_below_1.θ.time, Matrix(ref_below_4.θ[:, Not(:time)]), line = :dash, color = :black,
+    #        labels = "LWFBrook90R: " .* string.(permutedims(depth_to_read_out_mm)) .* " mm")
+    #    ## ψ
+    #    pl = plot(sim.θψ.time, Matrix(sim.θψ[:,Not(:time)]), line = :solid,
+    #        labels = "LWFBrook90.jl: " .* string.(permutedims(depth_to_read_out_mm)) .* " mm")
+    #    plot!(ref_below_1.ψ.time, Matrix(ref_below_1.ψ[:, Not(:time)]), line = :dash, color = :black,
+    #        labels = "LWFBrook90R: " .* string.(permutedims(depth_to_read_out_mm)) .* " mm")
+    #    plot!(ref_below_1.ψ.time, Matrix(ref_below_2.ψ[:, Not(:time)]), line = :dash, color = :black,
+    #        labels = "LWFBrook90R: " .* string.(permutedims(depth_to_read_out_mm)) .* " mm")
+    #    plot!(ref_below_1.ψ.time, Matrix(ref_below_3.ψ[:, Not(:time)]), line = :dash, color = :black,
+    #        labels = "LWFBrook90R: " .* string.(permutedims(depth_to_read_out_mm)) .* " mm")
+    #    plot!(ref_below_1.ψ.time, Matrix(ref_below_4.ψ[:, Not(:time)]), line = :dash, color = :black,
+    #        labels = "LWFBrook90R: " .* string.(permutedims(depth_to_read_out_mm)) .* " mm")
     # end
 end
 
