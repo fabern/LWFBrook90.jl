@@ -317,37 +317,37 @@ end
     # 3) Test RMSE
     # Compare θ
     # Compare with LWFBrook90R as reference solution
-    @test RMS_differences(sim1.θ, ref1.θ) < 0.0020
-    @test RMS_differences(sim2.θ, ref2.θ) < 0.00070
-    high_resolution_flag && (@test RMS_differences(sim3.θ, ref3.θ) < 0.00053)
-    @test RMS_differences(sim4.θ, ref4.θ) < 0.00035
-    @test RMS_differences(sim5.θ, ref5.θ) < 0.00035
-    high_resolution_flag && (@test RMS_differences(sim6.θ, ref6.θ) < 0.00035)
+    @test RMS_differences(sim1.θψ[:,[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], ref1.θ) < 0.0020
+    @test RMS_differences(sim2.θψ[:,[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], ref2.θ) < 0.00070
+    high_resolution_flag && (@test RMS_differences(sim3.θψ[:,[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], ref3.θ) < 0.00053)
+    @test RMS_differences(sim4.θψ[:,[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], ref4.θ) < 0.00035
+    @test RMS_differences(sim5.θψ[:,[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], ref5.θ) < 0.00035
+    high_resolution_flag && (@test RMS_differences(sim6.θψ[:,[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], ref6.θ) < 0.00035)
 
     # Compare with Hydrus1D
-    @test RMS_differences(sim1.θ[Not([end-1, end]),:], hyd1.θ[Not(1),:]) < 0.005
-    @test RMS_differences(sim2.θ[Not([end-1, end]),:], hyd2.θ[Not(1),:]) < 0.002
-    high_resolution_flag && (@test RMS_differences(sim3.θ[Not([end-1, end]),:], hyd3.θ[Not(1),:]) < 0.0015)
-    @test RMS_differences(sim4.θ[Not([end-1, end]),:], hyd4.θ[Not(1),:]) < 0.008
-    @test RMS_differences(sim5.θ[Not([end-1, end]),:], hyd5.θ[Not(1),:]) < 0.009
-    high_resolution_flag && (@test RMS_differences(sim6.θ[Not([end-1, end]),:], hyd6.θ[Not(1),:]) < 0.007)
+    @test RMS_differences(sim1.θψ[Not([end-1, end]),[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], hyd1.θ[Not(1),:]) < 0.005
+    @test RMS_differences(sim2.θψ[Not([end-1, end]),[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], hyd2.θ[Not(1),:]) < 0.002
+    high_resolution_flag && (@test RMS_differences(sim3.θψ[Not([end-1, end]),[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], hyd3.θ[Not(1),:]) < 0.0015)
+    @test RMS_differences(sim4.θψ[Not([end-1, end]),[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], hyd4.θ[Not(1),:]) < 0.008
+    @test RMS_differences(sim5.θψ[Not([end-1, end]),[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], hyd5.θ[Not(1),:]) < 0.009
+    high_resolution_flag && (@test RMS_differences(sim6.θψ[Not([end-1, end]),[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], hyd6.θ[Not(1),:]) < 0.007)
 
     # Compare ψ
     # Compare with LWFBrook90R as reference solution
-    @test RMS_differences(sim1.ψ, ref1.ψ) < 2.0 # kPa
-    @test RMS_differences(sim2.ψ, ref2.ψ) < 0.60 # kPa
-    high_resolution_flag && (@test RMS_differences(sim3.ψ, ref3.ψ) < 0.42) # kPa
-    @test RMS_differences(sim4.ψ, ref4.ψ) < 0.004 # kPa
-    @test RMS_differences(sim5.ψ, ref5.ψ) < 0.0080 # kPa
-    high_resolution_flag && (@test RMS_differences(sim6.ψ, ref6.ψ) < 0.0025) # kPa
+    @test RMS_differences(sim1.θψ[:,[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], ref1.ψ) < 2.0 # kPa
+    @test RMS_differences(sim2.θψ[:,[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], ref2.ψ) < 0.60 # kPa
+    high_resolution_flag && (@test RMS_differences(sim3.θψ[:,[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], ref3.ψ) < 0.42) # kPa
+    @test RMS_differences(sim4.θψ[:,[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], ref4.ψ) < 0.004 # kPa
+    @test RMS_differences(sim5.θψ[:,[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], ref5.ψ) < 0.0080 # kPa
+    high_resolution_flag && (@test RMS_differences(sim6.θψ[:,[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], ref6.ψ) < 0.0025) # kPa
 
     # Compare with Hydrus1D
-    @test RMS_differences(sim1.ψ[Not([end-1, end]),:], hyd1.ψ[Not(1),:]) < 6.1 # kPa
-    @test RMS_differences(sim2.ψ[Not([end-1, end]),:], hyd2.ψ[Not(1),:]) < 2.8 # kPa
-    high_resolution_flag && (@test RMS_differences(sim3.ψ[Not([end-1, end]),:], hyd3.ψ[Not(1),:]) < 2.1) # kPa
-    @test RMS_differences(sim4.ψ[Not([end-1, end]),:], hyd4.ψ[Not(1),:]) < 1.0 # kPa
-    @test RMS_differences(sim5.ψ[Not([end-1, end]),:], hyd5.ψ[Not(1),:]) < 1.5 # kPa
-    high_resolution_flag && (@test RMS_differences(sim6.ψ[Not([end-1, end]),:], hyd6.ψ[Not(1),:]) < 1.0) # kPa
+    @test RMS_differences(sim1.θψ[Not([end-1, end]),[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], hyd1.ψ[Not(1),:]) < 6.1 # kPa
+    @test RMS_differences(sim2.θψ[Not([end-1, end]),[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], hyd2.ψ[Not(1),:]) < 2.8 # kPa
+    high_resolution_flag && (@test RMS_differences(sim3.θψ[Not([end-1, end]),[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], hyd3.ψ[Not(1),:]) < 2.1) # kPa
+    @test RMS_differences(sim4.θψ[Not([end-1, end]),[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], hyd4.ψ[Not(1),:]) < 1.0 # kPa
+    @test RMS_differences(sim5.θψ[Not([end-1, end]),[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], hyd5.ψ[Not(1),:]) < 1.5 # kPa
+    high_resolution_flag && (@test RMS_differences(sim6.θψ[Not([end-1, end]),[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], hyd6.ψ[Not(1),:]) < 1.0) # kPa
 end
 
 # # NOTE: locally, i.e. not on CI system, one might need to do manually cd("test")
@@ -440,37 +440,37 @@ end
     # 3) Test RMSE
     # Compare θ
     # θ: Compare with LWFBrook90R as reference solution
-    @test RMS_differences(sim1.θ, ref1.θ) < 0.00194
-    @test RMS_differences(sim2.θ, ref2.θ) < 0.00060
-    high_resolution_flag && (@test RMS_differences(sim3.θ, ref3.θ) < 0.00053)
-    @test RMS_differences(sim4.θ, ref4.θ) < 0.00040
-    @test RMS_differences(sim5.θ, ref5.θ) < 0.00035
-    high_resolution_flag && (@test RMS_differences(sim6.θ, ref6.θ) < 0.00035)
+    @test RMS_differences(sim1.θψ[:,[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], ref1.θ) < 0.00194
+    @test RMS_differences(sim2.θψ[:,[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], ref2.θ) < 0.00060
+    high_resolution_flag && (@test RMS_differences(sim3.θψ[:,[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], ref3.θ) < 0.00053)
+    @test RMS_differences(sim4.θψ[:,[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], ref4.θ) < 0.00040
+    @test RMS_differences(sim5.θψ[:,[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], ref5.θ) < 0.00035
+    high_resolution_flag && (@test RMS_differences(sim6.θψ[:,[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], ref6.θ) < 0.00035)
 
     # θ: Compare with Hydrus1D-Iso
-    @test RMS_differences(sim1.θ[Not([end-1, end]),:], hyd1.θ[Not(1),:]) < 0.005
-    @test RMS_differences(sim2.θ[Not([end-1, end]),:], hyd2.θ[Not(1),:]) < 0.002
-    high_resolution_flag && (@test RMS_differences(sim3.θ[Not([end-1, end]),:], hyd3.θ[Not(1),:]) < 0.0013)
-    @test RMS_differences(sim4.θ[Not([end-1, end]),:], hyd4.θ[Not(1),:]) < 0.007
-    @test RMS_differences(sim5.θ[Not([end-1, end]),:], hyd5.θ[Not(1),:]) < 0.009
-    high_resolution_flag && (@test RMS_differences(sim6.θ[Not([end-1, end]),:], hyd6.θ[Not(1),:]) < 0.007)
+    @test RMS_differences(sim1.θψ[Not([end-1, end]),[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], hyd1.θ[Not(1),:]) < 0.005
+    @test RMS_differences(sim2.θψ[Not([end-1, end]),[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], hyd2.θ[Not(1),:]) < 0.002
+    high_resolution_flag && (@test RMS_differences(sim3.θψ[Not([end-1, end]),[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], hyd3.θ[Not(1),:]) < 0.0013)
+    @test RMS_differences(sim4.θψ[Not([end-1, end]),[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], hyd4.θ[Not(1),:]) < 0.007
+    @test RMS_differences(sim5.θψ[Not([end-1, end]),[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], hyd5.θ[Not(1),:]) < 0.009
+    high_resolution_flag && (@test RMS_differences(sim6.θψ[Not([end-1, end]),[:time, :θ_100mm, :θ_500mm, :θ_1000mm, :θ_1500mm, :θ_1900mm]], hyd6.θ[Not(1),:]) < 0.007)
 
     # Compare ψ
     # ψ: Compare with LWFBrook90R as reference solution
-    @test RMS_differences(sim1.ψ, ref1.ψ) < 1.72 # kPa
-    @test RMS_differences(sim2.ψ, ref2.ψ) < 0.50 # kPa
-    high_resolution_flag && (@test RMS_differences(sim3.ψ, ref3.ψ) < 0.42) # kPa
-    @test RMS_differences(sim4.ψ, ref4.ψ) < 0.003 # kPa
-    @test RMS_differences(sim5.ψ, ref5.ψ) < 0.004 # kPa
-    high_resolution_flag && (@test RMS_differences(sim6.ψ, ref6.ψ) < 0.0035) # kPa
+    @test RMS_differences(sim1.θψ[:,[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], ref1.ψ) < 1.72 # kPa
+    @test RMS_differences(sim2.θψ[:,[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], ref2.ψ) < 0.50 # kPa
+    high_resolution_flag && (@test RMS_differences(sim3.θψ[:,[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], ref3.ψ) < 0.42) # kPa
+    @test RMS_differences(sim4.θψ[:,[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], ref4.ψ) < 0.003 # kPa
+    @test RMS_differences(sim5.θψ[:,[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], ref5.ψ) < 0.004 # kPa
+    high_resolution_flag && (@test RMS_differences(sim6.θψ[:,[:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], ref6.ψ) < 0.0035) # kPa
 
     # ψ: Compare with Hydrus1D-Iso
-    @test RMS_differences(sim1.ψ[Not([end-1, end]),:], hyd1.ψ[Not(1),:]) < 6 # kPa
-    @test RMS_differences(sim2.ψ[Not([end-1, end]),:], hyd2.ψ[Not(1),:]) < 2.8 # kPa
-    high_resolution_flag && (@test RMS_differences(sim3.ψ[Not([end-1, end]),:], hyd3.ψ[Not(1),:]) < 2.1) # kPa
-    @test RMS_differences(sim4.ψ[Not([end-1, end]),:], hyd4.ψ[Not(1),:]) < 0.6 # kPa
-    @test RMS_differences(sim5.ψ[Not([end-1, end]),:], hyd5.ψ[Not(1),:]) < 1.1 # kPa
-    high_resolution_flag && (@test RMS_differences(sim6.ψ[Not([end-1, end]),:], hyd6.ψ[Not(1),:]) < 0.5) # kPa
+    @test RMS_differences(sim1.θψ[Not([end-1, end]), [:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], hyd1.ψ[Not(1),:]) < 6 # kPa
+    @test RMS_differences(sim2.θψ[Not([end-1, end]), [:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], hyd2.ψ[Not(1),:]) < 2.8 # kPa
+    high_resolution_flag && (@test RMS_differences(sim3.θψ[Not([end-1, end]), [:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], hyd3.ψ[Not(1),:]) < 2.1) # kPa
+    @test RMS_differences(sim4.θψ[Not([end-1, end]), [:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], hyd4.ψ[Not(1),:]) < 0.6 # kPa
+    @test RMS_differences(sim5.θψ[Not([end-1, end]), [:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], hyd5.ψ[Not(1),:]) < 1.1 # kPa
+    high_resolution_flag && (@test RMS_differences(sim6.θψ[Not([end-1, end]), [:time, :ψ_100mm, :ψ_500mm, :ψ_1000mm, :ψ_1500mm, :ψ_1900mm]], hyd6.ψ[Not(1),:]) < 0.5) # kPa
 
     # Compare δ18O with Hydrus1D-Iso
     @test RMS_differences(sim1.δ18O[Not([end-1, end]),:], hyd1.δ18O[Not(1),:]) < 0.5 # unit: ‰

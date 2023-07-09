@@ -68,22 +68,12 @@ function prepare_θψδ_from_sim_and_reference(;
     # Compare simulation and reference
     ## Extract various variables at certain depths
     depth_to_read_out_mm = [100, 500, 1000, 1500, 1900]
-    idx = LWFBrook90.get_soil_idx(simulation, depth_to_read_out_mm; only_valid_idxs = true)
+    idx = sort(LWFBrook90.get_soil_idx(simulation, depth_to_read_out_mm; only_valid_idxs = true))
     times_to_read_out_days = minimum(sim_sol.t):1.0:maximum(sim_sol.t) #sort(unique(HydrusSolution_sparseTime.time))
 
     ### Sim
-    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-            LWFBrook90.get_auxiliary_variables(simulation; days_to_read_out_d = times_to_read_out_days)
-    sim_θ = DataFrame(u_aux_θ[idx,:]', :auto);
-    sim_θ.time = times_to_read_out_days;
-    sim_ψ = DataFrame(u_aux_PSIM[idx,:]', :auto);
-    sim_ψ.time = times_to_read_out_days;
-
-    (u_SWATI_dense, u_aux_WETNES_dense, u_aux_PSIM_dense, u_aux_PSITI_dense, u_aux_θ_dense, p_fu_KK_dense) =
-            LWFBrook90.get_auxiliary_variables(simulation; days_to_read_out_d = nothing)
-    θdense    = u_aux_θ_dense[idx,:]'
-    ψdense    = u_aux_PSIM_dense[idx,:]'
-
+    simθψ       = get_soil_([:θ, :ψ], simulation; days_to_read_out_d = times_to_read_out_days, depths_to_read_out_mm = depth_to_read_out_mm)
+    simθψ_dense = get_soil_([:θ, :ψ], simulation; days_to_read_out_d = nothing,                depths_to_read_out_mm = depth_to_read_out_mm)
 
     if (simulate_isotopes)
         # TODO: replace get_δsoil(...) by get_soil_(:δ18O, ...)
@@ -99,15 +89,13 @@ function prepare_θψδ_from_sim_and_reference(;
         δ18Odense = u_δ18O_soil_dense[idx,:]'
         δ2Hdense  = u_δ2H_soil_dense[idx,:]'
     else
-        sim_δ18O = allowmissing(copy(sim_ψ))
-        sim_δ18O[:,Not(:time)] .= missing
-        sim_δ2H = allowmissing(copy(sim_ψ))
-        sim_δ2H[:,Not(:time)] .= missing
+        sim_δ18O = copy(simθψ) # allowmissing(copy(sim_ψ))
+        # sim_δ18O[:,Not(:time)] .= missing
+        sim_δ2H = copy(simθψ) # allowmissing(copy(sim_ψ))
+        # sim_δ2H[:,Not(:time)] .= missing
 
         (δ18Odense, δ2Hdense) = (nothing, nothing)
     end
-
-    sim = (θ = sim_θ, ψ = sim_ψ, δ18O = sim_δ18O, δ2H = sim_δ2H)
 
     ### Ref
     @assert sim_sol.prob.p.p_soil.NLAYER == length(unique(referenceSolution_layer.nl)) """
@@ -202,10 +190,9 @@ function prepare_θψδ_from_sim_and_reference(;
     # TODO(bernhard): Check why currently sim_θ needs to be shifted by 1 day.
     #                 Is it the initial conditions? (That are not reported by LWFBrook90R?)
     return (
-        sim = (θ = sim_θ[Not(1),:],   ψ = sim_ψ[Not(1),:],   δ18O = sim_δ18O[Not(1),:],   δ2H = sim_δ2H[Not(1),:],
+        sim = (θψ = simθψ[Not(1),:],   δ18O = sim_δ18O[Not(1),:],   δ2H = sim_δ2H[Not(1),:],
                ODEsolution = sim_sol, # TODO(for debuggin: remove again.)
-               θdense,
-               ψdense,
+               simθψ_dense,
                δ18Odense,
                δ2Hdense),
         ref = (θ = ref_θ, ψ = ref_ψ, δ18O = ref_δ18O, δ2H = ref_δ2H),
