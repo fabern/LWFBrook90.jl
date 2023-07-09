@@ -1228,24 +1228,33 @@ The user can define timesteps as `days_to_read_out_d` by optionally providing a 
 function get_aboveground(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
     solution = simulation.ODESolution
     @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
+    @assert (isnothing(days_to_read_out_d) || all(days_to_read_out_d .>= 0)) "`days_to_read_out_d` must be Vector{Float64} and all >= 0. Received $(days_to_read_out_d)"
 
-    # compartments_to_extract = [:GWAT, :INTS, :INTR, :SNOW, :SNOWLQ]
+    # parse requested time points
+    timepoints = isnothing(days_to_read_out_d) ? solution.t : days_to_read_out_d;
     compartments_to_extract = [:GWAT, :INTS, :INTR, :SNOW, :CC, :SNOWLQ] # CC is in MJm2
 
+    # Setup DataFrame to fill
+    timepoints = (timepoints isa AbstractArray ? timepoints : [timepoints]) # transform to vector even if input as scalar
+    df = DataFrame()
+    df[:, :time] = timepoints
+
     if isnothing(days_to_read_out_d)
+        u_aboveground = [solution[t_idx][compartment][1]    for t_idx = eachindex(solution), compartment in compartments_to_extract]  # CC is in MJm2, by using [1] we avoid specifiyng :mm or :MJm2
         # u_aboveground = [solution[t_idx][compartment].mm  for t_idx = eachindex(solution), compartment in compartments_to_extract]
-        u_aboveground = [solution[t_idx][compartment][1]  for t_idx = eachindex(solution), compartment in compartments_to_extract]  # CC is in MJm2, by using [1] we avoid specifiyng :mm or :MJm2
-        # [solution[t_idx][compartment].d18O  for t_idx = eachindex(solution), compartment in compartments_to_extract]
-        # [solution[t_idx][compartment].d2H  for t_idx = eachindex(solution), compartment in compartments_to_extract]
+        # [solution[t_idx][compartment].d18O                for t_idx = eachindex(solution), compartment in compartments_to_extract]
+        # [solution[t_idx][compartment].d2H                 for t_idx = eachindex(solution), compartment in compartments_to_extract]
     else
+        u_aboveground = [solution(t_days)[compartment][1]    for t_days = days_to_read_out_d, compartment in compartments_to_extract] # CC is in MJm2, by using [1] we avoid specifiyng :mm or :MJm2
         # u_aboveground = [solution(t_days)[compartment].mm  for t_days = days_to_read_out_d, compartment in compartments_to_extract]
-        u_aboveground = [solution(t_days)[compartment][1]  for t_days = days_to_read_out_d, compartment in compartments_to_extract] # CC is in MJm2, by using [1] we avoid specifiyng :mm or :MJm2
-        # [solution[t_idx][compartment].d18O  for t_idx = eachindex(solution), compartment in compartments_to_extract]
-        # [solution[t_idx][compartment].d2H  for t_idx = eachindex(solution), compartment in compartments_to_extract]
+        # [solution[t_idx][compartment].d18O                 for t_days = days_to_read_out_d, compartment in compartments_to_extract]
+        # [solution[t_idx][compartment].d2H                  for t_days = days_to_read_out_d, compartment in compartments_to_extract]
     end
 
-    # returns DataFrame of dimenstion (t,6) where t is number of time steps and 6 number of aboveground compartments
-    return DataFrame(u_aboveground, string.(compartments_to_extract))
+    df = [df DataFrame(u_aboveground, string.(compartments_to_extract))]
+
+    # returns DataFrame of dimenstion (t,7) where t is number of time steps and 7 = 1 (time) + 6 (number of aboveground compartments)
+    return df
 end
 
 """
