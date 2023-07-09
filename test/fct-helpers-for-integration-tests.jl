@@ -41,9 +41,10 @@ function prepare_θψδ_from_sim_and_reference(;
         # path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand_ISO2"
 
     # Run  simulation
-    simulation, input_prefix, input_path = run_simulation([dirname(path_jl_prefix),
-                                    basename(path_jl_prefix),
-                                    ifelse(simulate_isotopes,"true","false")]); # "Hammel_loam-NLayer-27-RESET=TRUE"]
+    model = loadSPAC(dirname(path_jl_prefix), basename(path_jl_prefix); simulate_isotopes = simulate_isotopes);
+    simulation = setup(model);
+    simulate!(simulation)
+
     sim_sol = simulation.ODESolution
     @assert (SciMLBase.successful_retcode(sim_sol)) "Problem with simulation: Return code of simulation was '$(sim_sol.retcode)'"
     sim_sol.prob.tspan
