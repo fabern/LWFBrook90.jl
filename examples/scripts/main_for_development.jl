@@ -344,20 +344,20 @@ function run_main_with_isotopes(;input_prefix, input_path)
         θ_limits = (minimum(simulation.ODESolution.prob.p.p_soil.p_θr), maximum(simulation.ODESolution.prob.p.p_soil.p_THSAT))
         ψ_pF_limits = (-2, 7)
 
+        df_θψ = get_soil_([:θ, :ψ], simulation, depths_to_read_out_mm = depth_to_read_out_mm)
+
         pl_θ = plot(simulation.ODESolution_datetime,
-            # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
-            get_θ(simulation; depths_to_read_out_mm = depth_to_read_out_mm)',
-            labels = string.(permutedims(depth_to_read_out_mm)) .* "mm",
+            Matrix(select(df_θψ, r"θ_")),
+            labels = permutedims(names(select(df_θψ, r"θ_"))),
             xlabel = "Date",
             ylabel = "θ\n[-]", ylims = θ_limits,
             legend = :outerright)
         pl_ψ = plot(simulation.ODESolution_datetime,
-            # -get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm) .+ 1, yaxis = :log, yflip = true,
-            # get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm),  ylabel = "ψ\n[kPa]",
-            log10.(-10 .* get_ψ(simulation; depths_to_read_out_mm = depth_to_read_out_mm))',  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
-             # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
+            # -Matrix(select(df_θψ, r"ψ_")) .+ 1, yaxis = :log, yflip = true,
+            # Matrix(select(df_θψ, r"ψ_")),  ylabel = "ψ\n[kPa]",
+            log10.(-10 .* Matrix(select(df_θψ, r"ψ_"))),  yflip = true, ylabel = "pF = \nlog₁₀(-ψ hPa)", #ylabel = "pF = \nlog₁₀(-ψₕₚₐ)",
             ylims = ψ_pF_limits,
-            labels = string.(permutedims(depth_to_read_out_mm)) .* "mm",
+            labels = permutedims(names(select(df_θψ, r"ψ_"))),
             xlabel = "Date",
             legend = :outerright);
         # if simulate_isotopes
@@ -693,9 +693,10 @@ function run_main_with_isotopes(;input_prefix, input_path)
             legend = :outerright)
 
         @chain dat_θ_EC5Waldner[1:900,:]    scatter(convert.(DateTime, _.dates), _.theta_m3m3,      group = _.depth_cm)
+        df_θψ = get_soil_([:θ, :ψ], simulation, depths_to_read_out_mm = depth_to_read_out_mm)
         pl_θ = plot!(LWFBrook90.RelativeDaysFloat2DateTime.(simulation.ODESolution.t, simulation.parametrizedSPAC.reference_date),
-            LWFBrook90.get_θ(simulation; depths_to_read_out_mm = depth_to_read_out_mm),  # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
-            labels = string.(permutedims(depth_to_read_out_mm)) .* "mm",
+            Matrix(select(df_θψ, r"θ_")),
+            labels = permutedims(names(select(df_θψ, r"θ_"))),
             xlabel = "Date",
             ylabel = "θ\n[-]",
             legend = :outerright)

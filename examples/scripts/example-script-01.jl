@@ -23,17 +23,10 @@ using LWFBrook90
 #jl ## - `discretize()`
 #jl ## - `simulate!()`
 #jl ## - `get_δsoil()`
-#jl ## - `get_θ()`
-#jl ## - `get_ψ()`
-#jl ## - `get_W()`
-#jl ## - `get_SWATI()`
-#jl ## - `get_K()`
+#jl ## - `get_soil_()`
 #jl ## - `get_aboveground()`
 #jl ## - `get_δ()`,
 #jl ## - `get_deltasoil()`
-#jl ## - `get_theta()`
-#jl ## - `get_psi()`
-#jl ## - `get_delta()`
 
 # Define simulation model by reading in system definition and input data from input files
 
@@ -163,36 +156,21 @@ savefig(pl3, joinpath(out_dir, fname*"_plotRecipe_CHECK.png"))
 using CSV, DataFrames
 
 ## How to get θ?
-get_θ(simulation_modified; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
+get_soil_(:θ, simulation_modified; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
 depth_to_read_out_mm = [10, 150, 500, 1000, 1150]
-get_θ(simulation_modified; depths_to_read_out_mm = depth_to_read_out_mm, days_to_read_out_d = nothing)
-get_θ(simulation_modified; depths_to_read_out_mm = depth_to_read_out_mm)
+get_soil_(:θ, simulation_modified; depths_to_read_out_mm = depth_to_read_out_mm, days_to_read_out_d = nothing)
+get_soil_(:θ, simulation_modified; depths_to_read_out_mm = depth_to_read_out_mm)
 
 ## How to export θ as CSV?
 ## Only every day, provide days_to_read_out
 days_to_read_out = range(simulation_modified.ODESolution.prob.tspan...)
 dates_to_read_out = LWFBrook90.RelativeDaysFloat2DateTime.(days_to_read_out, simulation_modified.parametrizedSPAC.reference_date)
-
-df_out_daily = DataFrame(
-    transpose(
-        get_θ(simulation_modified; # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
-            depths_to_read_out_mm = depth_to_read_out_mm,
-            days_to_read_out_d    = days_to_read_out)),
-    "θ_" .* string.(permutedims(depth_to_read_out_mm[:])) .* "mm")
+df_out_daily = get_soil_(:θ, simulation_modified; depths_to_read_out_mm = depth_to_read_out_mm, days_to_read_out_d    = days_to_read_out)
 
 insertcols!(df_out_daily, 1, :dates => dates_to_read_out)
 
-plot(df_out_daily[:,:dates], Matrix(df_out_daily[:,Not(:dates)]))
+plot(df_out_daily[:,:dates], Matrix(df_out_daily[:,Not([:dates, :time])]))
 CSV.write(
     joinpath(out_dir, fname * "_θ_depths_daily.csv"),
     df_out_daily)
-
-## For every day:
-## df_out_eachtimestep = DataFrame(
-##     transpose(get_θ(simulation_modified; depths_to_read_out_mm = depth_to_read_out_mm)), # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
-##     "θ_" .* string.(permutedims(depth_to_read_out_mm[:])) .* "mm")
-## insertcols!(df_out_eachtimestep, 1, :dates => simulation_modified.ODESolution_datetime)
-## CSV.write(
-##     joinpath(out_dir, fname * "_θ_depths_eachtimestep.csv"),
-##     df_out_eachtimestep)
 ####################

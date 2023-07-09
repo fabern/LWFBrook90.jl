@@ -998,6 +998,16 @@ end
 """
     get_soil_(symbols, simulation; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing))
 
+Returns a 2D DataFrame of soil variables with soil layers as columns and time steps as rows.
+Supports a number of varaibles:
+    - `:θ` (= `:theta`) = volumetric soil moisture values (m3/m3)
+    - `:ψ` (= `:psi`) = soil matric potential (kPa)
+    - `:W` = soil wetness (-)
+    - `:SWATI` = soil water volumes contained in discretized layers (mm)
+    - `:K` = soil hydraulic conductivities (mm/day)
+The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
+that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `days_to_read_out_d = 1:1.0:100`
+
 Function to read out soil variables from a simulated simulation.
 - `symbols`: can be a single symbol (:θ) or a vector of symbols [:θ] or [:θ, :ψ, :δ18O, :δ2H, :W, :SWATI, :K]
     - Please note that also non-Unicode symbols are accepted: e.g. [:theta, :psi, :delta18O, :delta2H]
@@ -1067,119 +1077,6 @@ function get_soil_(symbols, simulation::DiscretizedSPAC; depths_to_read_out_mm =
     end
 end
 
-"""
-    get_θ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
-
-Returns a 2D matrix of volumetric soil moisture values (m3/m3) with soil layers as rows and time steps as columns.
-The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
-that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `days_to_read_out_d = 1:1.0:100`
-"""
- # TODO get rid of get_θ, get_ψ, ... etc. and replace them with get_soil_(:ψ)
-function get_θ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
-    solution = simulation.ODESolution
-    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
-
-    # get auxiliary variables with requested time resolution (i.e. days_to_read_out_d)
-    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-        get_auxiliary_variables(simulation; days_to_read_out_d = days_to_read_out_d)
-
-    # return requested soil layers
-    if isnothing(depths_to_read_out_mm)
-        return u_aux_θ[:, :]
-    else
-        return u_aux_θ[get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = true), :]
-    end
-end
-"""
-    get_ψ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
-
-Returns a 2D matrix of soil matric potential (kPa) with soil layers as rows and time steps as columns.
-The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
-that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `saveat = 1:1.0:100`
-"""
- # TODO get rid of get_θ, get_ψ, ... etc. and replace them with get_soil_(:ψ)
-function get_ψ(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
-    solution = simulation.ODESolution
-    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
-
-    # get auxiliary variables with requested time resolution (i.e. days_to_read_out_d)
-    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-        get_auxiliary_variables(simulation; days_to_read_out_d = days_to_read_out_d)
-
-    # return requested soil layers
-    if isnothing(depths_to_read_out_mm)
-        return u_aux_PSIM[:, :]
-    else
-        return u_aux_PSIM[get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = true), :]
-    end
-end
-"""
-    get_WETNES(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
-
-Returns a 2D matrix of soil wetness (-) with soil layers as rows and time steps as columns.
-The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
-that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `saveat = 1:1.0:100`
-"""
-function get_WETNES(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
-    solution = simulation.ODESolution
-    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
-
-    # get auxiliary variables with requested time resolution (i.e. days_to_read_out_d)
-    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-        get_auxiliary_variables(simulation; days_to_read_out_d = days_to_read_out_d)
-
-    # return requested soil layers
-    if isnothing(depths_to_read_out_mm)
-        return u_aux_WETNES[:, :]
-    else
-        return u_aux_WETNES[get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = true), :]
-    end
-end
-"""
-    get_SWATI(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
-
-Returns a 2D matrix of soil water volumes contained in discretized layers (mm) with soil layers as rows and time steps as columns.
-Note that the values depend on the thickness of the layers and thus on the discretization.
-The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
-that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `saveat = 1:1.0:100`
-"""
-function get_SWATI(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
-    solution = simulation.ODESolution
-    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
-
-    # get auxiliary variables with requested time resolution (i.e. days_to_read_out_d)
-    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-        get_auxiliary_variables(simulation; days_to_read_out_d = days_to_read_out_d)
-
-    # return requested soil layers
-    if isnothing(depths_to_read_out_mm)
-        return u_SWATI[:, :]
-    else
-        return u_SWATI[get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = true), :]
-    end
-end
-"""
-    get_K(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
-
-Returns a 2D matrix of soil hydraulic conductivities (mm/day) with soil layers as rows and time steps as columns.
-The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
-that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `saveat = 1:1.0:100`
-"""
-function get_K(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
-    solution = simulation.ODESolution
-    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
-
-    # get auxiliary variables with requested time resolution (i.e. days_to_read_out_d)
-    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-        get_auxiliary_variables(simulation; days_to_read_out_d = days_to_read_out_d)
-
-    # return requested soil layers
-    if isnothing(depths_to_read_out_mm)
-        return p_fu_KK[:, :]
-    else
-        return p_fu_KK[get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = true), :]
-    end
-end
 
 """
     get_δsoil(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
@@ -1297,13 +1194,6 @@ function get_δ(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
                       "PREC_d2H" ; string.(compartments_to_extract).*"_d2H"])
 
 end
-
-# also make non-unicode variants:
-get_theta     = get_θ
-get_psi       = get_ψ
-get_deltasoil = get_δsoil
-
-get_delta     = get_δ
 
 ############################################################################################
 ############################################################################################

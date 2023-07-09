@@ -74,23 +74,24 @@ pl2 = plotisotopes(simulation_modified, :d18O_and_d2H, (d18O = :auto, d2H = :aut
 # Belowground quantities (θ,ψ,δ of soil water)
 PREC_color = :black
 depth_to_read_out_mm = [150, 500, 800, 1500]
-if simulate_isotopes
+if true # simulate_isotopes
     δ_resultsSoil = get_δsoil(simulation_modified, depths_to_read_out_mm = depth_to_read_out_mm)
     δ_results = get_δ(simulation_modified)
 end
 
-pl_θ = plot(simulation_modified.ODESolution_datetime,
-    # TODO: replace get_θ(...) by get_soil_(:θ, ...)
-    get_θ(simulation_modified, depths_to_read_out_mm = depth_to_read_out_mm)',  # TODO
-    labels = string.(permutedims(depth_to_read_out_mm)) .* "mm",
+timepoints = simulation_modified.ODESolution_datetime
+df_θψ = get_soil_([:θ, :ψ], simulation_modified, depths_to_read_out_mm = depth_to_read_out_mm)
+
+pl_θ = plot(timepoints, #df_θψ.time,
+    Matrix(select(df_θψ, r"θ_")),
+    labels = permutedims(names(select(df_θψ, r"θ_"))),
     xlabel = "Date",
     ylabel = "θ\n[-]",
-    legend = :outerright);
-pl_ψ = plot(simulation_modified.ODESolution_datetime,
-    ## -LWFBrook90.get_ψ(depth_to_read_out_mm, simulation_modified.ODESolution) .+ 1, yaxis = :log, yflip = true,
-    get_ψ(simulation_modified, depths_to_read_out_mm = depth_to_read_out_mm)',
-    # TODO: replace get_θ(...) by get_soil_(:ψ, ...)
-    labels = string.(permutedims(depth_to_read_out_mm)) .* "mm",
+    legend = :outerright)
+pl_ψ = plot(timepoints, #df_θψ.time,
+    ## -Matrix(select(df_θψ, r"ψ_")),
+    Matrix(select(df_θψ, r"ψ_")),
+    labels = permutedims(names(select(df_θψ, r"ψ_"))),
     xlabel = "Date",
     ylabel = "ψ\n[kPa]",
     legend = :outerright);
