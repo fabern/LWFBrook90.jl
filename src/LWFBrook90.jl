@@ -62,7 +62,7 @@ Base.@kwdef mutable struct SPAC
     # A) Assumed known: will not be estimated
     # A1) Simulation related (non-physical)
     reference_date
-    tspan
+    tspan               # this is available_forcing_tspan
     solver_options
     soil_discretization
     # A2) Physical forcing
@@ -575,7 +575,16 @@ function setup(parametrizedSPAC::SPAC;
 end
 
 function Base.show(io::IO, mime::MIME"text/plain", discSPAC::DiscretizedSPAC)
+    # Print discretization:
     println(io, "Discretized SPAC model: =============== solution was computed: $(!isnothing(discSPAC.ODESolution))")
+    println(io, "\n===== SIMULATION PERIOD:===============")
+    requested_tspan_dates = LWFBrook90.RelativeDaysFloat2DateTime.(discSPAC.ODEProblem.tspan, discSPAC.parametrizedSPAC.reference_date)
+    requested_tspan_duration = discSPAC.ODEProblem.tspan[2] - discSPAC.ODEProblem.tspan[1]
+    println("Requested/simulated simulation period: ", format.(requested_tspan_dates, "YYYY-mm-dd"),
+            " (duration of $(requested_tspan_duration) days)")
+
+    # Print parametrization
+    println(io, "")
     Base.show(io, mime, discSPAC.parametrizedSPAC; show_SPAC_title=false)
 
     # DO WE NEED BELOW EXPLICIT CANOPY EVOLUTION? NO.

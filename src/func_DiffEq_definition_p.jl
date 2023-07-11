@@ -707,8 +707,8 @@ function interpolate_meteo(;
     """
     # Given that we interpolate with Constant{Previous}: we have to extend the last day (e.g. 31.12.2010 00h00 for 24h to 23h59...)
     # therefore time_range is +1 and last element of meteo_forcing is duplicated
-    tspan      = (minimum(meteo_forcing.days), maximum(meteo_forcing.days) + 1) # duplicate last day
-    time_range = range(tspan..., step = 1)
+    available_forcing_tspan      = (minimum(meteo_forcing.days), maximum(meteo_forcing.days) + 1) # duplicate last day
+    time_range = range(available_forcing_tspan..., step = 1)
     meteo_forcing_forInt = meteo_forcing[[1:end..., end],:] # duplicate last day
 
     p_GLOBRAD = extrapolate(scale(interpolate(meteo_forcing_forInt.GLOBRAD, (BSpline(Constant{Previous}()))), time_range) , Throw())
@@ -743,7 +743,7 @@ function interpolate_meteo(;
         ("p_d18OPREC",  p_d18OPREC),
         ("p_d2HPREC",   p_d2HPREC)])
 
-    return (meteo_forcing_cont, meteo_iso_forcing_cont, tspan)
+    return (meteo_forcing_cont, meteo_iso_forcing_cont, available_forcing_tspan)
 end
 
 """

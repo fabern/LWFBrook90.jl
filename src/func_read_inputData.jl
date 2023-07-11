@@ -275,14 +275,14 @@ function loadSPAC(folder::String, prefix::String;
     extended_soil_horizons = extend_lowest_horizon(soil_horizons, soil_discretization)
 
     ## Make time dependent input parameters continuous in time (interpolate)
-    (meteo_forcing_cont, meteo_iso_forcing_cont, tspan) =
+    (meteo_forcing_cont, meteo_iso_forcing_cont, available_forcing_tspan) =
         LWFBrook90.interpolate_meteo(;
             meteo_forcing                 = meteo_forcing,
             meteo_iso_forcing             = meteo_iso_forcing);
 
     return SPAC(;
         reference_date    = reference_date,
-        tspan             = tspan,
+        tspan             = available_forcing_tspan,
         solver_options    = solver_options,
         soil_discretization    = (Δz = _to_use_Δz_thickness_m,
                                   df = soil_discretization),
@@ -303,7 +303,9 @@ function Base.show(io::IO, mime::MIME"text/plain", model::SPAC; show_SPAC_title=
     if (show_SPAC_title) println(io, "SPAC model:") end
 
     println(io, "===== DATES:===============")
-    println(io, format(model.reference_date, "YYYY-mm-dd"), ", tspan:", model.tspan, "days")
+    available_forcing_tspan_dates = LWFBrook90.RelativeDaysFloat2DateTime.(model.tspan, model.reference_date)
+    println("Available forcing period:              ", format.(available_forcing_tspan_dates, "YYYY-mm-dd"),
+            " (reference datum: "       , format.(model.reference_date,          "YYYY-mm-dd"),")")
     println(io, "\n===== METEO FORCING:===============")
     show_avg_and_range = function(vector, title)
         # "$(title)avg:$(round(Statistics.mean(vector); digits=2)), range:$(extrema(vector))"
@@ -341,20 +343,21 @@ function Base.show(io::IO, mime::MIME"text/plain", model::SPAC; show_SPAC_title=
     println(io, "\n===== MODEL PARAMETRIZATION:===============")
     # println(io, model.params)
     #display(io, model.params) # dump(model.params); using PrettyPrinting; pprintln(model.params)
-    # maxlength = maximum(length.(string.(keys(model.params)))) # 17
-    # maxlength # 17
-    # for (k,v) in pairs(model.params) println(@sprintf("%18s",k) => v) end
-    # for (k,v) in pairs(model.params) println(@sprintf("%18s",k) => @sprintf("% 8.1f",v)) end
-    # for (k,v) in pairs(model.params) println(@sprintf("%18s => % 8.1f",k,v)) end
+    # maxlengthname = maximum(length.(string.(keys(model.pars.params)))) == 17 -> 18 is safe:
     string_vec = [@sprintf("%18s => % 8.1f",k,v) for (k,v) in pairs(model.pars.params)];
-    # reshape(string_vec, 27, 3)
-    # reduce.(*, reshape(string_vec, 27, 3))
-    # reduce.(*, reshape(vcat(string_vec, fill("", 21*4-length(string_vec))), 21, 4))
-    # reshape(vcat(string_vec, fill("", 21*4-length(string_vec))), 21, 4)
-    show(IOContext(io, :limit => true), "text/plain",
-         reshape(vcat(string_vec, fill("", 21*4-length(string_vec))), 21, 4))
+
+    ncols = 3
+    # what's needed to allow a rectangular form for reshape:
+    nrows, n_last_row   = divrem(length(string_vec), ncols)
+    n_fillup            = ncols - n_last_row
+    # string_vec_to_print = [string_vec; fill("", n_fillup)]
+    string_vec_to_print = [string_vec; fill(repeat(" ", 18+4+8), n_fillup)]
     # show(IOContext(io, :limit => true), "text/plain",
-    #      reshape(vcat(string_vec, fill("", 42*2-length(string_vec))), 42, 2))
+    #      reshape(vcat(string_vec, fill("", 21*4-length(string_vec))), 21, 4))
+    # display.(join.(eachrow(reshape(string_vec_to_print, :, ncols))));
+    # show(IOContext(io, :limit => false), "text/plain",
+    #     join.(eachrow(reshape(string_vec_to_print, :, ncols)), "|"))
+    println(io, join(join.(eachrow(reshape(string_vec_to_print, :, ncols)), " |")," |\n"))
 
     println(io, "\n===== SOIL DOMAIN:===============")
     print(  io, "Root distribution:       "); println(io, model.pars.root_distribution)
