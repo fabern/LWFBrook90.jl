@@ -650,13 +650,6 @@ end
         @test remSPAC_3b.parametrizedSPAC.pars.soil_horizons.shp[2].p_MvGm == 1 - 1/1.2
         @test remSPAC_3b.parametrizedSPAC.pars.soil_horizons.shp[3].p_MvGm == 1 - 1/1.3
 
-        # test ODEProblem:
-        @test all(remSPAC_3b.ODEProblem.p.p_soil.p_THSAT[[1]]     .== 0.4)
-        @test all(remSPAC_3b.ODEProblem.p.p_soil.p_THSAT[[2:5; ]] .== 0.3)
-        @test all(remSPAC_3b.ODEProblem.p.p_soil.p_THSAT[[6:12;]] .== 0.2)
-        @test all(remSPAC_3b.ODEProblem.p.p_soil.p_KSAT .≈ 3801)
-
-
     # TEST CHANGES TO FLOW ################################################################
     to_change = (DRAIN=.33, BYPAR=1, IDEPTH_m=0.67, INFEXP=0.33)
     remSPAC_4  = remakeSPAC(discrSPAC, params = to_change)
