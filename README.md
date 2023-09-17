@@ -1,5 +1,5 @@
 # LWFBrook90.jl
-Implementation of the LWF-BROOK90 hydrological model in Julia
+Isotope-enabled implementation of the LWF-BROOK90 hydrological model in Julia
 
 <p align="center">User info:
 <a href="https://www.repostatus.org/#wip"><img title="Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public." src="https://www.repostatus.org/badges/latest/wip.svg"/></a>

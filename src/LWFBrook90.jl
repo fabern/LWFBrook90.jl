@@ -249,8 +249,11 @@ function remakeSPAC(parametrizedSPAC::SPAC;
 end
 function remake_soil_horizons(spac, changesNT)
     shp_names = Dict(:ths_           => :p_THSAT,
+                     :thr_           => :p_θr,
                      :Ksat_mmday     => :p_KSAT,
                      :alpha_per_m    => :p_MvGα,
+                     :npar_          => :p_MvGn,
+                     :tort_          => :p_MvGl,
                      :gravel_volFrac => :p_STONEF)
     for (key, val) in zip(keys(changesNT), changesNT)
         @assert key ∈ keys(shp_names) "Unclear how to remake '$key' provided to soil_horizons."
@@ -273,6 +276,9 @@ function remake_soil_horizons(spac, changesNT)
         # update values with target values
         for idx in 1:N_horizons
             setproperty!(spac.pars.soil_horizons.shp[idx], shp_names[key], target[idx])
+            if key == :npar_
+                setproperty!(spac.pars.soil_horizons.shp[idx], :p_MvGm, 1 .- 1 ./ target[idx]) # m = 1 - 1/n
+            end
         end
     end
     return spac

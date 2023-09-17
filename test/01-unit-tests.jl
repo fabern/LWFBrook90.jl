@@ -638,6 +638,25 @@ end
         @test all(remSPAC_1b.ODEProblem.p.p_soil.p_THSAT[[6:12;]] .== 0.2)
         @test all(remSPAC_1b.ODEProblem.p.p_soil.p_KSAT .≈ 3801)
 
+        @test_throws AssertionError remSPAC_3b  = remakeSPAC(discrSPAC, soil_horizons = (npar_ = [0.4, 0.3, 0.3, 0.2], ))
+        remSPAC_3b  = remakeSPAC(discrSPAC, soil_horizons = (npar_ = [1.1, 1.2, 1.3], Ksat_mmday = 3801, ))
+        # test parametrizedSPAC:
+        @test names(discrSPAC.parametrizedSPAC.soil_discretization.df) == names(remSPAC_3b.parametrizedSPAC.soil_discretization.df)
+        @test remSPAC_3b.parametrizedSPAC.pars.soil_horizons.shp[1].p_MvGn == 1.1
+        @test remSPAC_3b.parametrizedSPAC.pars.soil_horizons.shp[2].p_MvGn == 1.2
+        @test remSPAC_3b.parametrizedSPAC.pars.soil_horizons.shp[3].p_MvGn == 1.3
+
+        @test remSPAC_3b.parametrizedSPAC.pars.soil_horizons.shp[1].p_MvGm == 1 - 1/1.1
+        @test remSPAC_3b.parametrizedSPAC.pars.soil_horizons.shp[2].p_MvGm == 1 - 1/1.2
+        @test remSPAC_3b.parametrizedSPAC.pars.soil_horizons.shp[3].p_MvGm == 1 - 1/1.3
+
+        # test ODEProblem:
+        @test all(remSPAC_3b.ODEProblem.p.p_soil.p_THSAT[[1]]     .== 0.4)
+        @test all(remSPAC_3b.ODEProblem.p.p_soil.p_THSAT[[2:5; ]] .== 0.3)
+        @test all(remSPAC_3b.ODEProblem.p.p_soil.p_THSAT[[6:12;]] .== 0.2)
+        @test all(remSPAC_3b.ODEProblem.p.p_soil.p_KSAT .≈ 3801)
+
+
     # TEST CHANGES TO FLOW ################################################################
     to_change = (DRAIN=.33, BYPAR=1, IDEPTH_m=0.67, INFEXP=0.33)
     remSPAC_4  = remakeSPAC(discrSPAC, params = to_change)
