@@ -616,7 +616,7 @@ function HammelKennel_lateral_rootgrowth(;final_Rootden_profile, INITRDEP_m, INI
             end
         end
     else
-        stop("When setting up root distributions: called function 'HammelKennel_lateral_rootgrowth' with invalid value of RGROPER_yrs: $(RGROPER_yrs).")
+        error("When setting up root distributions: called function 'HammelKennel_lateral_rootgrowth' with invalid value of RGROPER_yrs: $(RGROPER_yrs).")
     end
 
     return p_fT_RELDEN

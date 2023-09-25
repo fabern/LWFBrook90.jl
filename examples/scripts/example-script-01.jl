@@ -85,7 +85,6 @@ model_modified =
 ## Setup and run simulation
 simulation          = setup(model)
 simulation_modified = setup(model_modified)
-
 ## Inputs can be checked with:
 ## `plot_inputs(simulation)`. Note: NOT YET IMPLEMENTED
 
@@ -103,16 +102,16 @@ typeof(simulation.ODESolution);
 ## HINT: To get these names, type `simulation.` and wait for the autocomplete!
 
 ## `simulation.ODESolution` is a ODESolution object: documentation how to access under:
-## https://docs.sciml.ai/DiffEqDocs/stable/basics/solution/
+## `https://docs.sciml.ai/DiffEqDocs/stable/basics/solution/`
 ## and more generally:
-## https://docs.sciml.ai/Overview/stable/
+## `https://docs.sciml.ai/Overview/stable/`
 ## simulation.ODESolution.t
 ## simulation.ODESolution.u
 ## simulation.ODESolution.retcode
 ## simulation.ODESolution.destats
 
 # Note, that it is possible to use R Code from within Julia, e.g ggplot:
-# https://stackoverflow.com/a/70073193/3915004
+# `https://stackoverflow.com/a/70073193/3915004`
 
 # ### Plotting (using provided functions)
 # Below an example script using the provided plot recipes that plot a) amounts, b) isotopes, or c) forcing and states as an additional internal check:

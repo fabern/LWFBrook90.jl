@@ -437,7 +437,7 @@ function INFLOW!(VRFLI_posterior, INFLI, BYFLI, # these are modified in-place
                     VRFLI_posterior[i-1] = MAXIN - INFLI[i]
                     # With that VRFLI + INFLI == MAXIN
                     # By decreasing VRFLI_posterior[i-1], this will also have an
-                    #    effect on the layer above (i.e. in the next loop iteration). It will 
+                    #    effect on the layer above (i.e. in the next loop iteration). It will
                     #    indeed decrease MAXIN for the layer above.
                 end
             else

@@ -108,7 +108,7 @@ end
 include("func_read_inputData.jl") # defines RelativeDaysFloat2DateTime which is used in module ISO
 
 # Define modules
-# on modules: https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
+# on modules: `https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5`
 include("module_CONSTANTS.jl");  # to bring into scope: using .CONSTANTS
 include("module_KPT.jl");        using .KPT # using to bring exports into scope here
 include("module_WAT.jl");        using .WAT # using to bring exports into scope
@@ -541,8 +541,9 @@ function setup(parametrizedSPAC::SPAC;
     #   a2) modify `internalnorm` for adaptive time stepping
     # - to set default solver algorithm
     # - to set default time stepping criteria
-    # Note that documentation for solve()-arguemnts can be found at:
-    # https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/#solver_options
+    # Note that documentation for solve()-arguments can be found at:
+    # `https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/#solver_options`
+    # `https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/`
     ode_LWFBrook90 =
         ODEProblem(LWFBrook90.f_LWFBrook90!, u0, tspan_to_use, p;
                     callback = cb_func,
@@ -609,7 +610,7 @@ end
 Simulates a SPAC model and stores the solution in s.ODESolution.
 
 `kwargs...` are passed through to solve(SciML::ODEProblem; ...) and are
-documented under https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/#solver_options
+documented under `https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/#solver_options`
 """
 function simulate!(s::DiscretizedSPAC; assert_retcode = true, kwargs...)
     if (:saveat ∈ keys(kwargs))

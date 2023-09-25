@@ -325,7 +325,7 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
     function KPT_SOILPAR_Mvg1d{T}(;p_THICK, p_STONEF, p_THSAT, p_Kθfc, p_KSAT, p_MvGα, p_MvGn, p_MvGm, p_MvGl, p_θr) where {T<:AbstractVector}
         NLAYER = length(p_THICK)
         @assert size(p_THICK) == size(p_STONEF) == size(p_THSAT) == size(p_Kθfc) ==
-                size(p_KSAT) == size(p_MvGα) == size(p_MvGn) == size(p_MvGm) == 
+                size(p_KSAT) == size(p_MvGα) == size(p_MvGn) == size(p_MvGm) ==
                 size(p_MvGl) == size(p_θr)
         @assert !any(isnan.(p_Kθfc))
 
@@ -370,7 +370,7 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
                     θ(ψ_fc)/(p_THSAT[i] .- p_θr[i])
                     # find_zero((θ_toFind) -> LWFBrook90.KPT.FPSIM_MvG((θ_toFind - p_θr[i])./(p_THSAT .- p_θr), p_MvGα[i], p_MvGn[i]), (0.0, 1.0), Bisection())
                 else
-                    stop("When setting up soil hydr. parameters: Computed invalid p_WETF in KPT_SOILPAR_Mvg1d")
+                    error("When setting up soil hydr. parameters: Computed invalid p_WETF in KPT_SOILPAR_Mvg1d")
                 end
             end
         end
@@ -540,7 +540,7 @@ function FPSIM_MvG(u_aux_WETNES, p_MvGα, p_MvGn, p_MvGm)
     # ψM = 9.81 .* (-1 ./ p_MvGα) .* (AWET .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
     # ψM = 9.81 .* (-1 ./ p_MvGα) .* (max.(u_aux_WETNES, eps) .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
     ψM = 9.81 .* (-1 ./ p_MvGα) .* (max.(u_aux_WETNES, eps) .^ (-1 ./ (p_MvGm)) .-1) .^ (1 ./ p_MvGn)
-    
+
     # 9.81 conversion from m to kPa #TODO define and use const
 end
 
