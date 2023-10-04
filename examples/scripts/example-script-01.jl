@@ -12,7 +12,8 @@
 ## a) start `julia` -> `]` -> activate . -> add LWFBrook90
 ## b) in VSCode -> click at bottom and select "pgm" as Julia env
 ## c) run the code
-## alternatively right-click on the folder in VSCode -> Change to this Directory and Activate this environment
+## alternatively right-click on the folder in VSCode
+##   -> Change to this Directory and Activate this environment
 
 ## Load packages:
 using LWFBrook90
@@ -31,7 +32,7 @@ using LWFBrook90
 ## Read in input data
 #src input_path = "../isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
 input_path = "examples/DAV2020-full/"; input_prefix = "DAV2020-full";
-# input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
+## input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
 model = loadSPAC(input_path, input_prefix; simulate_isotopes = false);
 model = loadSPAC(input_path, input_prefix; simulate_isotopes = true);
 model
@@ -80,7 +81,7 @@ model_modified =
 
 # The objects `model` and `model_modified` are instances of a `SPAC()` (soil-plant-atmosphere continuum)
 # and contain fully specified simulations. To run them they need to be transformed into a
-# system of ODES and solved by calling `setup()` and `simulate()`:
+# system of ODES (`setup()`) and solved (`simulate()`):
 
 ## Setup and run simulation
 simulation          = setup(model)
@@ -91,26 +92,26 @@ simulation_modified = setup(model_modified)
 simulate!(simulation)
 simulate!(simulation_modified)
 ## The computed solution is stored within the object.
-## When `using ProgressLogging` a progress bar is shown
+## When using VSCode a progress bar is shown in the status bar.
 
 # ## Postprocessing results
-# These simulations can then be post-processed with predefined functions
+# These simulations can then be post-processed with predefined functions.
 # Alternatively the followig variables contain the simuation results for user-defined post-processing:
 simulation.ODESolution;
 simulation.ODESolution_datetime;
 typeof(simulation.ODESolution);
 ## HINT: To get these names, type `simulation.` and wait for the autocomplete!
 
-## `simulation.ODESolution` is a ODESolution object: documentation how to access under:
-## `https://docs.sciml.ai/DiffEqDocs/stable/basics/solution/`
-## and more generally:
-## `https://docs.sciml.ai/Overview/stable/`
-## simulation.ODESolution.t
-## simulation.ODESolution.u
-## simulation.ODESolution.retcode
-## simulation.ODESolution.destats
+# `simulation.ODESolution` is a ODESolution object: documentation how to access under:
+# `https://docs.sciml.ai/DiffEqDocs/stable/basics/solution/`
+# and more generally:
+# `https://docs.sciml.ai/Overview/stable/`
+# simulation.ODESolution.t
+# simulation.ODESolution.u
+# simulation.ODESolution.retcode
+# simulation.ODESolution.destats
 
-# Note, that it is possible to use R Code from within Julia, e.g ggplot:
+# Note that it is possible to use R Code from within Julia, e.g ggplot:
 # `https://stackoverflow.com/a/70073193/3915004`
 
 # ### Plotting (using provided functions)
@@ -127,7 +128,8 @@ pl2
 pl3 = plotforcingandstates(simulation_modified)
 pl3
 
-## Use of additional arguments to `plotisotopes` is illustrated here. Note that typing `?plotisotopes` provides the documentation to the function.
+## Use of additional arguments to `plotisotopes` is illustrated here.
+## Note that typing `?plotisotopes` provides the documentation to the function.
 ## plotisotopes(simulation_modified, :d2H)
 ## plotisotopes(simulation_modified, :d18O)
 ## plotisotopes(simulation_modified;
@@ -153,16 +155,21 @@ savefig(pl3, joinpath(out_dir, fname*"_plotRecipe_CHECK.png"))
 using CSV, DataFrames
 
 ## How to get θ?
-get_soil_(:θ, simulation_modified; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
+get_soil_(:θ, simulation_modified;
+    depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
 depth_to_read_out_mm = [10, 150, 500, 1000, 1150]
-get_soil_(:θ, simulation_modified; depths_to_read_out_mm = depth_to_read_out_mm, days_to_read_out_d = nothing)
-get_soil_(:θ, simulation_modified; depths_to_read_out_mm = depth_to_read_out_mm)
+get_soil_(:θ, simulation_modified;
+    depths_to_read_out_mm = depth_to_read_out_mm, days_to_read_out_d = nothing)
+get_soil_(:θ, simulation_modified;
+    depths_to_read_out_mm = depth_to_read_out_mm)
 
 ## How to export θ as CSV?
 ## Only every day, provide days_to_read_out
 days_to_read_out = range(simulation_modified.ODESolution.prob.tspan...)
-dates_to_read_out = LWFBrook90.RelativeDaysFloat2DateTime.(days_to_read_out, simulation_modified.parametrizedSPAC.reference_date)
-df_out_daily = get_soil_(:θ, simulation_modified; depths_to_read_out_mm = depth_to_read_out_mm, days_to_read_out_d    = days_to_read_out)
+dates_to_read_out = LWFBrook90.RelativeDaysFloat2DateTime.(
+    days_to_read_out, simulation_modified.parametrizedSPAC.reference_date)
+df_out_daily = get_soil_(:θ, simulation_modified;
+    depths_to_read_out_mm = depth_to_read_out_mm, days_to_read_out_d = days_to_read_out)
 
 insertcols!(df_out_daily, 1, :dates => dates_to_read_out)
 
