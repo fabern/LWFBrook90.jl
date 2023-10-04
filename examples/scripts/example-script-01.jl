@@ -30,6 +30,7 @@ using LWFBrook90
 # Define simulation model by reading in system definition and input data from input files
 
 ## Read in input data
+@show pwd() #hide
 #src input_path = "../isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
 input_path = "examples/DAV2020-full/"; input_prefix = "DAV2020-full";
 ## input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
