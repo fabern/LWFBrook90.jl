@@ -31,9 +31,9 @@ using LWFBrook90
 
 ## Read in input data
 @show pwd() #hide
-#src input_path = "../isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
-input_path = "examples/DAV2020-full/"; input_prefix = "DAV2020-full";
-## input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
+#src input_path = "../examplesisoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
+input_path = "../examples/DAV2020-full/"; input_prefix = "DAV2020-full";
+## input_path = "../examples/isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
 model = loadSPAC(input_path, input_prefix; simulate_isotopes = false);
 model = loadSPAC(input_path, input_prefix; simulate_isotopes = true);
 model
