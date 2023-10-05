@@ -21,7 +21,7 @@ Intended use cases of this impelemntation are:
 - increased model flexibility
 
 To read about the model structure, see section [SVAT Model](@ref).
-For a quick start refer to the step-by-step guide in section [Example](@ref)
+For a quick start refer to the step-by-step guide in section [Example Script 01](@ref)
 For further details read through the section [User Guide](@ref) or refer to sections [Code Listing](@ref) and [Function Documentations](@ref) for further technical intricacies e.g. for development of the package.
 
 

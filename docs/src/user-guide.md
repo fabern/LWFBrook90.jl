@@ -15,7 +15,7 @@ To install LWFBrook90.jl open a Julia REPL, enter the Pkg REPL by pressing `]` a
 Dependencies of LWFBrook90.jl should automatically be installed. After that hit `Ctrl-C` to quit the Pkg REPL and return to the default Julia REPL. Now the installation can be tested with a single line `using LWFBrook90; run_example()`.
 
 ### Usage
-Check out a step-by-step guide for a simulation in section [Example manual](@ref) or [Example Script 01](@ref)
+Check out a step-by-step guide for a simulation in section [Example Script 01](@ref)
 
 The steps in a typical simulation script are:
 - load the package `using LWFBrook90`
@@ -51,7 +51,7 @@ The structure of the input CSV's is illustrated by the example input data sets `
 
 For convenience, input CSV files can be generated from a script that sets up a simulation with the R package [LWFBrook90R (v0.4.3)](https://github.com/pschmidtwalter/LWFBrook90R#usage). Instead of running the simulation with `run_LWFB90()`, the same arguments can be used to generate the input files for LWFBrook90.jl using the R function provided in the file `generate_LWFBrook90jl_Input.R`. Note that the input file `meteoiso.csv` needs to be generated separately and the files containing the initial conditions (`initial_conditions.csv` and `soil_discretization.csv`) also need to be extended manually with the isotope values (see structure of these input files below).
 
-To load input data and prepare a simulation follow the instructions in section [Example](@ref) or alternatively use the sample script `main_with_isotopes.jl`. NOTE: these will be replaced with Jupyter-notebooks generated with Literate.jl (TODO).
+To load input data and prepare a simulation follow the instructions in section [Example Script 01](@ref) or alternatively use the sample script `main_with_isotopes.jl`. NOTE: these will be replaced with Jupyter-notebooks generated with Literate.jl (TODO).
 
 In case you're unfamiliar with Julia, there are various ways to run a script such as `main.jl`: One possibility is to open the Julia REPL and run the script using `include(“main.jl”)`. Alternatively, the editor VS Code in combination with the Julia extension ([julia-vscode.org](https://www.julia-vscode.org)), provides a complete IDE for programming in Julia.
 
