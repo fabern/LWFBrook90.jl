@@ -30,7 +30,12 @@ using LWFBrook90
 # Define simulation model by reading in system definition and input data from input files
 
 ## Read in input data
+println(pwd())
+@info pwd() # to debug Documenter.jl #hide
 @warn pwd() # to debug Documenter.jl #hide
+println(@__DIR__)
+@info @__DIR__ # to debug Documenter.jl #hide
+@warn @__DIR__ # to debug Documenter.jl #hide
 #src input_path = "../examplesisoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
 input_path = "../examples/DAV2020-full/"; input_prefix = "DAV2020-full";
 ## input_path = "../examples/isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
