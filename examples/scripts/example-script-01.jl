@@ -27,7 +27,8 @@ using LWFBrook90
 #jl ## - `get_aboveground()`
 #jl ## - `get_δ()`,
 
-# Define simulation model by reading in system definition and input data from input files
+# Define simulation model by reading in system definition and input data from input files.
+# When printed, the generated SPAC model gives a summary.
 
 ## Read in input data
 #src NOTE: Literate sets `pwd()` to the Literate.markdown(... , outputdir).
@@ -40,6 +41,7 @@ model = loadSPAC(input_path, input_prefix; simulate_isotopes = true);
 model
 
 # If wanted, arguments can be supplied to modify the loaded SPAC (e.g. for parameter estimation), hence requiring less input CSVs.
+# Warnings are output (see below) to signal to the user that existing input CSVs might be ignored.
 ## Read in providing arguments, requiring less CSVs
 model_modified =
     loadSPAC(input_path, input_prefix;
@@ -91,10 +93,13 @@ simulation_modified = setup(model_modified)
 ## Inputs can be checked with:
 ## `plot_inputs(simulation)`. Note: NOT YET IMPLEMENTED
 
-simulate!(simulation)
+## simulate!(simulation)
+simulate!(simulation_modified)
 simulate!(simulation_modified)
 ## The computed solution is stored within the object.
 ## When using VSCode a progress bar is shown in the status bar.
+
+# Notice that the first time a model is simulated, the runtime is longer because it includes compilation.
 
 # ## Postprocessing results
 # These simulations can then be post-processed with predefined functions.
@@ -140,14 +145,14 @@ pl3
 
 # Saving plots can be done with `savefig`
 
-using Dates: today;
-out_dir = joinpath("gitignored","out", string(today()))
-mkpath(out_dir)
+## using Dates: today;
+## out_dir = joinpath("gitignored","out", string(today()))
+## mkpath(out_dir)
 
-fname = input_prefix
-savefig(pl1, joinpath(out_dir, fname*"_plotRecipe_AMT.png"))
-savefig(pl2, joinpath(out_dir, fname*"_plotRecipe_ISO.png"))
-savefig(pl3, joinpath(out_dir, fname*"_plotRecipe_CHECK.png"))
+## fname = input_prefix
+## savefig(pl1, joinpath(out_dir, fname*"_plotRecipe_AMT.png"))
+## savefig(pl2, joinpath(out_dir, fname*"_plotRecipe_ISO.png"))
+## savefig(pl3, joinpath(out_dir, fname*"_plotRecipe_CHECK.png"))
 
 
 # ### Extract values
@@ -174,10 +179,12 @@ df_out_daily = get_soil_(:θ, simulation_modified;
 
 insertcols!(df_out_daily, 1, :dates => dates_to_read_out)
 
-plot(df_out_daily[:,:dates], Matrix(df_out_daily[:,Not([:dates, :time])]))
-CSV.write(
-    joinpath(out_dir, fname * "_θ_depths_daily.csv"),
-    df_out_daily)
+##plot(df_out_daily[:,:dates], Matrix(df_out_daily[:,Not([:dates, :time])]))
+##CSV.write(
+##    joinpath(out_dir, fname * "_θ_depths_daily.csv"),
+##    df_out_daily)
+
+#-
 
 
 ## # ### Plotting (using your own functions)
@@ -203,13 +210,15 @@ CSV.write(
 ## PREC_color = :black
 ## depth_to_read_out_mm = [150, 500, 800, 1500]
 ## if true # simulate_isotopes
-##     df_δsoil = get_soil_([:δ18O, :δ2H], example_result; depths_to_read_out_mm = depth_to_read_out_mm)
+##     df_δsoil = get_soil_([:δ18O, :δ2H],
+##         example_result; depths_to_read_out_mm = depth_to_read_out_mm)
 ##     δ_results = get_δ(simulation_modified)
 ## end
-#
+##
 ## timepoints = simulation_modified.ODESolution_datetime
-## df_θψ = get_soil_([:θ, :ψ], simulation_modified, depths_to_read_out_mm = depth_to_read_out_mm)
-#
+## df_θψ = get_soil_([:θ, :ψ],
+##     simulation_modified, depths_to_read_out_mm = depth_to_read_out_mm)
+##
 ## pl_θ = plot(timepoints, #df_θψ.time,
 ##     Matrix(select(df_θψ, r"θ_")),
 ##     labels = permutedims(names(select(df_θψ, r"θ_"))),
@@ -248,7 +257,9 @@ CSV.write(
 ##     pl_δ18O = plot();
 ##     pl_δ2H = plot();
 ## end
-#
+##
+##
+##
 ## pl_PREC = plot(
 ##     simulation_modified.ODESolution_datetime,
 ##     simulation_modified.ODESolution.prob.p.p_PREC.(simulation_modified.ODESolution.t),
