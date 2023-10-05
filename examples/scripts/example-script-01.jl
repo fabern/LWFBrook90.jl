@@ -36,9 +36,16 @@ println(pwd())
 println(@__DIR__)
 @info @__DIR__ # to debug Documenter.jl #hide
 @warn @__DIR__ # to debug Documenter.jl #hide
-#src input_path = "../examplesisoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
-input_path = "../examples/DAV2020-full/"; input_prefix = "DAV2020-full";
-## input_path = "../examples/isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
+println(readdir(pwd()))
+@info readdir(pwd()) # to debug Documenter.jl #hide
+@warn readdir(pwd()) # to debug Documenter.jl #hide
+println(readdir("../"))
+@info readdir("../") # to debug Documenter.jl #hide
+@warn readdir("../") # to debug Documenter.jl #hide
+
+#src input_path = "examplesisoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
+input_path = "examples/DAV2020-full/"; input_prefix = "DAV2020-full";
+## input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
 model = loadSPAC(input_path, input_prefix; simulate_isotopes = false);
 model = loadSPAC(input_path, input_prefix; simulate_isotopes = true);
 model
