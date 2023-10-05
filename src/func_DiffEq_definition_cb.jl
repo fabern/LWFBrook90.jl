@@ -524,105 +524,105 @@ end
 
 
 
-function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
-    # Define flag to switch between different methods
-    use_method = ["numerical_ForwardEuler", "analytical"][1]
-    # Note that the method "numerical_ForwardEuler" has been implemented more efficiently and
-    # with diffusive fluxes in LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!().
-    # The code below relating to "numerical_ForwardEuler" is redundant... the code relating
-    # to analytical however might still be used.
+        # function LWFBrook90R_updateIsotopes_GWAT_SWAT!(u, t, integrator)
+        #     # Define flag to switch between different methods
+        #     use_method = ["numerical_ForwardEuler", "analytical"][1]
+        #     # Note that the method "numerical_ForwardEuler" has been implemented more efficiently and
+        #     # with diffusive fluxes in LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!().
+        #     # The code below relating to "numerical_ForwardEuler" is redundant... the code relating
+        #     # to analytical however might still be used.
 
-    @unpack simulate_isotopes = integrator.p
-    if simulate_isotopes
-        u_GWAT     = integrator.u.GWAT.mm
-        # u_INTS     = integrator.u.INTS.mm
-        # u_INTR     = integrator.u.INTR.mm
-        # u_SNOW     = integrator.u.SNOW.mm
-        # u_CC       = integrator.u.CC.MJm2
-        # u_SNOWLQ   = integrator.u.SNOWLQ.mm
-        u_SWATI    = integrator.u.SWATI.mm
+        #     @unpack simulate_isotopes = integrator.p
+        #     if simulate_isotopes
+        #         u_GWAT     = integrator.u.GWAT.mm
+        #         # u_INTS     = integrator.u.INTS.mm
+        #         # u_INTR     = integrator.u.INTR.mm
+        #         # u_SNOW     = integrator.u.SNOW.mm
+        #         # u_CC       = integrator.u.CC.MJm2
+        #         # u_SNOWLQ   = integrator.u.SNOWLQ.mm
+        #         u_SWATI    = integrator.u.SWATI.mm
 
-        ####################################################################
-        # 2) Update states of isotopic compositions of interception storages and snowpack:
-        #       u_δ18O_INTS, u_δ18O_INTR, u_δ18O_SNOW
-        #       u_δ2H_INTS, u_δ2H_INTR, u_δ2H_SNOW
-        ############
-        ### Compute parameters
-        ## B) time dependent parameters
-        # p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
-        #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_fT_RELDEN,
-        #     p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p[2]
-        @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
-            p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_fT_RELDEN,
-            p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE                = integrator.p
+        #         ####################################################################
+        #         # 2) Update states of isotopic compositions of interception storages and snowpack:
+        #         #       u_δ18O_INTS, u_δ18O_INTR, u_δ18O_SNOW
+        #         #       u_δ2H_INTS, u_δ2H_INTR, u_δ2H_SNOW
+        #         ############
+        #         ### Compute parameters
+        #         ## B) time dependent parameters
+        #         # p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
+        #         #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_fT_RELDEN,
+        #         #     p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p[2]
+        #         @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
+        #             p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_fT_RELDEN,
+        #             p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE                = integrator.p
 
-        ## C) state dependent parameters or intermediate results:
-        # These were computed in the callback and are kept constant in between two callbacks.
-        @unpack p_fu_δ18O_SLFL, p_fu_δ2H_SLFL, p_fT_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
-            p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
-            aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old = integrator.p
-        @unpack aux_du_TRANI                                       = integrator.p # mm/day
-        @unpack aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, du_NTFLI = integrator.p # all in mm/day
-        @unpack u_aux_WETNES                                       = integrator.p # mm/day
-        @unpack du_GWFL, du_SEEP                                   = integrator.p # all in mm/day
+        #         ## C) state dependent parameters or intermediate results:
+        #         # These were computed in the callback and are kept constant in between two callbacks.
+        #         @unpack p_fu_δ18O_SLFL, p_fu_δ2H_SLFL, p_fT_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
+        #             p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
+        #             aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old = integrator.p
+        #         @unpack aux_du_TRANI                                       = integrator.p # mm/day
+        #         @unpack aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, du_NTFLI = integrator.p # all in mm/day
+        #         @unpack u_aux_WETNES                                       = integrator.p # mm/day
+        #         @unpack du_GWFL, du_SEEP                                   = integrator.p # all in mm/day
 
-        u_δ18O_GWAT  = integrator.u.GWAT.d18O
-        u_δ2H_GWAT   = integrator.u.GWAT.d2H
-        u_δ18O_SWATI = integrator.u.SWATI.d18O
-        u_δ2H_SWATI  = integrator.u.SWATI.d2H
+        #         u_δ18O_GWAT  = integrator.u.GWAT.d18O
+        #         u_δ2H_GWAT   = integrator.u.GWAT.d2H
+        #         u_δ18O_SWATI = integrator.u.SWATI.d18O
+        #         u_δ2H_SWATI  = integrator.u.SWATI.d2H
 
-        EffectiveDiffusivity_18O = 0  # TODO(bernhard): compute correct values using eq 33 Zhou-2021-Environ_Model_Softw.pdf
-        EffectiveDiffusivity_2H  = 0  # TODO(bernhard): compute correct values using eq 33 Zhou-2021-Environ_Model_Softw.pdf
-        δ18O_INFLI = p_fu_δ18O_SLFL
-        δ2H_INFLI  = p_fu_δ2H_SLFL
+        #         EffectiveDiffusivity_18O = 0  # TODO(bernhard): compute correct values using eq 33 Zhou-2021-Environ_Model_Softw.pdf
+        #         EffectiveDiffusivity_2H  = 0  # TODO(bernhard): compute correct values using eq 33 Zhou-2021-Environ_Model_Softw.pdf
+        #         δ18O_INFLI = p_fu_δ18O_SLFL
+        #         δ2H_INFLI  = p_fu_δ2H_SLFL
 
-        if use_method == "numerical_ForwardEuler"
-            du_δ18O_GWAT, du_δ2H_GWAT, du_δ18O_SWATI, du_δ2H_SWATI =
-                compute_isotope_GWAT_SWATI("numerical-du", NaN,
-                    # for GWAT:
-                    u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT, NaN,NaN,
-                    # for SWATI:
-                    du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI,  # (non-fractionating)
-                    aux_du_SLVP[1], p_fT_TADTM[1], p_VAPPRES(integrator.t), p_δ2H_PREC(integrator.t), p_δ18O_PREC(integrator.t), u_aux_WETNES, # (fractionating)
-                    u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, 0, 0) #EffectiveDiffusivity_18O, EffectiveDiffusivity_2H)
-            # update δ values of GWAT and SWATI
-            # du.GWAT.d18O = du_δ18O_GWAT     #TODO(bernhard)
-            # du.GWAT.d2H  = du_δ2H_GWAT      #TODO(bernhard)
-            # du.SWATI.d18O      = du_δ18O_SWATI    #TODO(bernhard)
-            # du.SWATI.d2H       = du_δ2H_SWATI     #TODO(bernhard)
+        #         if use_method == "numerical_ForwardEuler"
+        #             du_δ18O_GWAT, du_δ2H_GWAT, du_δ18O_SWATI, du_δ2H_SWATI =
+        #                 compute_isotope_du_GWAT_SWATI(
+        #                     # for GWAT:
+        #                     u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT,
+        #                     # for SWATI:
+        #                     du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI,  # (non-fractionating)
+        #                     aux_du_SLVP[1], p_fT_TADTM[1], p_VAPPRES(integrator.t), p_δ2H_PREC(integrator.t), p_δ18O_PREC(integrator.t), u_aux_WETNES, # (fractionating)
+        #                     u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, 0, 0) #EffectiveDiffusivity_18O, EffectiveDiffusivity_2H)
+        #             # update δ values of GWAT and SWATI
+        #             # du.GWAT.d18O = du_δ18O_GWAT     #TODO(bernhard)
+        #             # du.GWAT.d2H  = du_δ2H_GWAT      #TODO(bernhard)
+        #             # du.SWATI.d18O      = du_δ18O_SWATI    #TODO(bernhard)
+        #             # du.SWATI.d2H       = du_δ2H_SWATI     #TODO(bernhard)
 
-            # Since we update this in the callback we can't overwrite `du` and let DiffEq.jl do
-            # the work, so we need to update `u` instead of `du`
-            # Using a simple forward euler update:
-            integrator.u.GWAT.d18O   += integrator.dt * du_δ18O_GWAT     #TODO(bernhard)
-            integrator.u.GWAT.d2H    += integrator.dt * du_δ2H_GWAT      #TODO(bernhard)
-            integrator.u.SWATI.d18O  .+= integrator.dt * du_δ18O_SWATI    #TODO(bernhard)
-            integrator.u.SWATI.d2H   .+= integrator.dt * du_δ2H_SWATI     #TODO(bernhard)
-        elseif use_method == "analytical"
-            #TODO(bernhard): this update generates an error message with adaptive solvers:
-            # Warning: dt <= dtmin. Aborting. There is either an error in your model specification or the true solution is unstable.
-            # └ @ SciMLBase ~/.julia/packages/SciMLBase/BoNUy/src/integrator_interface.jl:345
-            # TODO(bernhard): we can force the solving by using force_dtmin = true
-            u_δ18O_GWAT, u_δ2H_GWAT, u_δ18O_SWATI, u_δ2H_SWATI =
-                compute_isotope_GWAT_SWATI("analytical-u", integrator,
-                # compute_isotope_u_GWAT_SWATI(integrator,
-                    # for GWAT:
-                    u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT, du_GWFL[1], du_SEEP[1],
-                    # for SWATI:
-                    du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI,  # (non-fractionating)
-                    aux_du_SLVP[1], p_fT_TADTM[1], p_VAPPRES(integrator.t), p_δ2H_PREC(integrator.t), p_δ18O_PREC(integrator.t), u_aux_WETNES, # (fractionating)
-                    u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, 0, 0) #EffectiveDiffusivity_18O, EffectiveDiffusivity_2H)
-            integrator.u.GWAT.d18O   = u_δ18O_GWAT
-            integrator.u.GWAT.d2H    = u_δ2H_GWAT
-            integrator.u.SWATI.d18O   = u_δ18O_SWATI
-            integrator.u.SWATI.d2H    = u_δ2H_SWATI
-        else
-            error("Unknown method for updating Isotopes in GWAT and SWAT specified.")
-        end
-    end
+        #             # Since we update this in the callback we can't overwrite `du` and let DiffEq.jl do
+        #             # the work, so we need to update `u` instead of `du`
+        #             # Using a simple forward euler update:
+        #             integrator.u.GWAT.d18O   += integrator.dt * du_δ18O_GWAT     #TODO(bernhard)
+        #             integrator.u.GWAT.d2H    += integrator.dt * du_δ2H_GWAT      #TODO(bernhard)
+        #             integrator.u.SWATI.d18O  .+= integrator.dt * du_δ18O_SWATI    #TODO(bernhard)
+        #             integrator.u.SWATI.d2H   .+= integrator.dt * du_δ2H_SWATI     #TODO(bernhard)
+        #         elseif use_method == "analytical"
+        #             #TODO(bernhard): this update generates an error message with adaptive solvers:
+        #             # Warning: dt <= dtmin. Aborting. There is either an error in your model specification or the true solution is unstable.
+        #             # └ @ SciMLBase ~/.julia/packages/SciMLBase/BoNUy/src/integrator_interface.jl:345
+        #             # TODO(bernhard): we can force the solving by using force_dtmin = true
+        #             u_δ18O_GWAT, u_δ2H_GWAT, u_δ18O_SWATI, u_δ2H_SWATI =
+        #                 compute_isotope_u_GWAT_SWATI(integrator,
+        #                     # for GWAT:
+        #                     u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT, du_GWFL[1], du_SEEP[1],
+        #                     # for SWATI:
+        #                     du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI,  # (non-fractionating)
+        #                     aux_du_SLVP[1], p_fT_TADTM[1], p_VAPPRES(integrator.t), p_δ2H_PREC(integrator.t), p_δ18O_PREC(integrator.t), u_aux_WETNES, # (fractionating)
+        #                     u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, 0, 0) #EffectiveDiffusivity_18O, EffectiveDiffusivity_2H)
 
-    return nothing
-end
+        #             integrator.u.GWAT.d18O   = u_δ18O_GWAT
+        #             integrator.u.GWAT.d2H    = u_δ2H_GWAT
+        #             integrator.u.SWATI.d18O   = u_δ18O_SWATI
+        #             integrator.u.SWATI.d2H    = u_δ2H_SWATI
+        #         else
+        #             error("Unknown method for updating Isotopes in GWAT and SWAT specified.")
+        #         end
+        #     end
+
+        #     return nothing
+        # end
 
 
 function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
