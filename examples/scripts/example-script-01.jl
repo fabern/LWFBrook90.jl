@@ -95,11 +95,12 @@ simulation_modified = setup(model_modified)
 
 ## simulate!(simulation)
 simulate!(simulation_modified)
-simulate!(simulation_modified)
+simulate!(simulation_modified) # Run it a second time to showcase shorter runtime
 ## The computed solution is stored within the object.
 ## When using VSCode a progress bar is shown in the status bar.
 
-# Notice that the first time a model is simulated, the runtime is longer because it includes compilation.
+# Notice that the very first time a model is simulated, the runtime is longer because it includes compilation.
+# This compilation is not needed for any subsequent run.
 
 # ## Postprocessing results
 # These simulations can then be post-processed with predefined functions.
@@ -177,8 +178,8 @@ dates_to_read_out = LWFBrook90.RelativeDaysFloat2DateTime.(
 df_out_daily = get_soil_(:θ, simulation_modified;
     depths_to_read_out_mm = depth_to_read_out_mm, days_to_read_out_d = days_to_read_out)
 
-insertcols!(df_out_daily, 1, :dates => dates_to_read_out)
-
+insertcols!(df_out_daily, 1, :dates => dates_to_read_out);
+show(df_out_daily)
 ##plot(df_out_daily[:,:dates], Matrix(df_out_daily[:,Not([:dates, :time])]))
 ##CSV.write(
 ##    joinpath(out_dir, fname * "_θ_depths_daily.csv"),
