@@ -379,13 +379,13 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
 
         # Variant 2) resulting in no effect (but is fast, so not generating any allocation problems)
         p_fu_δ2H_SLFL[1]   = p_δ2H_PREC(integrator.t)
-        u_δ2H_INTS = p_δ2H_PREC(integrator.t)
-        u_δ2H_INTR = p_δ2H_PREC(integrator.t)
-        u_δ2H_SNOW = p_δ2H_PREC(integrator.t)
+        u_δ2H_INTS         = p_δ2H_PREC(integrator.t)
+        u_δ2H_INTR         = p_δ2H_PREC(integrator.t)
+        u_δ2H_SNOW         = p_δ2H_PREC(integrator.t)
         p_fu_δ18O_SLFL[1]   = p_δ18O_PREC(integrator.t)
-        u_δ18O_INTS = p_δ18O_PREC(integrator.t)
-        u_δ18O_INTR = p_δ18O_PREC(integrator.t)
-        u_δ18O_SNOW = p_δ18O_PREC(integrator.t)
+        u_δ18O_INTS         = p_δ18O_PREC(integrator.t)
+        u_δ18O_INTR         = p_δ18O_PREC(integrator.t)
+        u_δ18O_SNOW         = p_δ18O_PREC(integrator.t)
         # # END variant 2
 
         # # Variant 3) trying to unwrap variant 1) by reducing allocations. Currently not working and also not faster than 1)
@@ -524,8 +524,6 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         integrator.u.INTR.d2H  = u_δ2H_INTR
         integrator.u.SNOW.d18O = u_δ18O_SNOW
         integrator.u.SNOW.d2H  = u_δ2H_SNOW
-        # integrator.u[idx_u_vector_isotopes_d18O]    = u_δ18O_SWATI
-        # integrator.u[idx_u_vector_isotopes_d2H]     = u_δ2H_SWATI
     end
 
     return nothing
@@ -657,7 +655,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
     #   |      |     the solve() function uses the f function to integrate uᵏ to uᵏ⁺¹
     #   tᵏ     tᵏ⁺¹
     #   uᵏ     uᵏ⁺¹
-    #               i.e. states where f returns a du ≂̸ 0 are already updated uᵏ⁺¹ ≂̸ uᵏ
+    #               i.e. states where f returns a du ≠ 0 are already updated uᵏ⁺¹ ≠ uᵏ
     #               for  states where f returns a du = 0 are still uᵏ⁺¹ = uᵏ
     #               in the callback we compute uᵏ⁺¹
     #
@@ -671,26 +669,11 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # Unpack pre-allocated caches and update them with the current u
         # Bind memory to variable names to avoid re-allocating.
         # Note that these values will be overwritten, this line is just about memory allocation.
-        # (u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
-        #     aux_du_DSFLI,aux_du_VRFLI,aux_du_VRFLI_1st_approx,aux_du_INFLI,aux_du_BYFLI, du_NTFLI,
-        #     p_fu_BYFRAC) = integrator.p[4][1]
-        # @unpack(u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
-        #     aux_du_DSFLI,aux_du_VRFLI,aux_du_VRFLI_1st_approx,aux_du_INFLI,aux_du_BYFLI, du_NTFLI,
-        #     p_fu_BYFRAC) = integrator.p
-        @unpack aux_du_DSFLI,aux_du_VRFLI, aux_du_INFLI, du_NTFLI = integrator.p
-        #TODO(bernhard): check that u_aux_θ_tminus1 and u_aux_θ are indeed different
+        @unpack aux_du_DSFLI, aux_du_VRFLI, aux_du_INFLI, du_NTFLI = integrator.p
         ##### END This update could be done in a separate FunctionCallingCallback
 
 
         # # load pre-allocated memory locations (values are unimportant and will be overwritten further down)
-        # (θᵏ⁺¹, θᵏ, C_¹⁸Oᵏ⁺¹, C_¹⁸Oᵏ, C_²Hᵏ⁺¹, C_²Hᵏ, q, Tsoil_K, τw, Λ,
-        # D⁰_¹⁸O, D⁰_²H, D_¹⁸O_ᵏ⁺¹, D_²H_ᵏ⁺¹,
-        # C_¹⁸O_SLVP, C_²H_SLVP,
-        # # diff¹⁸O_interfaces, diff²H_interfaces, qCᵢ¹⁸O_interfaces, qCᵢ²H_interfaces,
-        # diff¹⁸O_upp, diff²H_upp, qCᵢ¹⁸O_upp, qCᵢ²H_upp,
-        # diff¹⁸O_low, diff²H_low, qCᵢ¹⁸O_low, qCᵢ²H_low,
-        # , ) =  integrator.p[4][2]
-        # TODO(bernhard): above generates somehow still many allocations
         @unpack cache_for_ADE_28 = integrator.p
         θᵏ⁺¹,θᵏ,C_¹⁸Oᵏ⁺¹,C_¹⁸Oᵏ,C_²Hᵏ⁺¹,C_²Hᵏ,q,
         D⁰_¹⁸O,D⁰_²H,D_¹⁸O_ᵏ⁺¹,D_²H_ᵏ⁺¹,
@@ -703,9 +686,9 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         #     integrator.p[4][3]
 
         @unpack p_soil = integrator.p
-        # @unpack p_STONEF, p_THICK = integrator.p.p_soil;
         p_STONEF = p_soil.p_STONEF
         p_THICK  = p_soil.p_THICK
+        p_THSAT  = p_soil.p_THSAT
 
         # FLOW state variables (i.e. amounts, already updated from tᵏ to tᵏ⁺¹)
         u_SWATIᵏ⁺¹ = integrator.u.SWATI.mm # @view integrator.u[    integrator.p[1][4].row_idx_SWATI, 1]
@@ -820,8 +803,8 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # Define (constant) soil transport properties
         N = NLAYER
         Tsoil_K .= (p_fT_TADTM[1] + 273.15) .* ones(N) # °C, TODO: use solution from heat equation instead of approximation of p_fT_TADTM
-        # τw = θᵏ⁺¹ .^ (7/3) ./ (θsat .^ 2)         # TODO: express tortuosity as function of θ, (Millington and Quirk 1961 as shown in Radcliffe et al. 2018, eq 6.6)
-        τw .= 1.0 .* ones(N)   # -, tortuosity in liquid phase (w = water), using 1.0 will overestimate diffusion
+        # τw = θᵏ⁺¹ .^ (7/3) ./ (p_THSAT .^ 2) # -, tortuosity in liquid phase (w = water) as function of θ, (Millington and Quirk 1961 as shown in Radcliffe et al. 2018, eq 6.6)
+        τw = 1.0 .* ones(N) # TODO: outcomment and use above
         # τg = 1.0 .* ones(N) # -, tortuosity in vapor phase (g = gas), unused as no vapor transport is considered
         # p_Λ = p_soil.p_DISPER #(instead of p_DISPERSIVITY .* ones(N))         # m, dispersivity length (if we want to have different dispersivities per soil layer)
         D⁰_¹⁸O .= 0.96691 .* 10^-9 .* exp.(-535400 ./ Tsoil_K.^2 .+ 1393.3 ./ Tsoil_K .+ 2.1876)  .* 3600 .* 24 # m²/day molecular diffusion constant of ¹⁸O in liquid water (eq. A3, Zhou et al. 2021)
