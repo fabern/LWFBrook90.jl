@@ -27,8 +27,8 @@ For further details read through the section [User Guide](@ref) or refer to sect
 
 
 ## Citing LWFBrook90.jl
-When using LWFBrook90.jl please cite <!-- [TODO.et.al (2021)](TODO) -->
->TODO: generate citation: (Journal of Open Source Software? Zenodo? Journal of Open Research Software (DifferentialEquations.jl)? Alternatives?)
+When using LWFBrook90.jl please cite <!-- [Bernhard et al. (2020)](http://dx.doi.org/10.5194/egusphere-egu2020-17975) -->
+>TODO: update citation with published article.
 
 
 
