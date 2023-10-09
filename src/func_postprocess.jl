@@ -839,7 +839,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
         error("First unnamed argument to plotamounts should be of type DiscretizedSPAC. Got: $(typeof(simulation))")
     end
     if isnothing(simulation.ODESolution)
-        error("plotamounts requires a solved system. Please `simulate!()` the DiscretizedSPAC first.")
+        error("plotforcingandstates requires a solved system. Please `simulate!()` the DiscretizedSPAC first.")
     end
 
     # 1) prepare data to plot

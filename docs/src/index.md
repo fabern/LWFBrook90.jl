@@ -21,14 +21,14 @@ Intended use cases of this impelemntation are:
 - increased model flexibility
 
 To read about the model structure, see section [SVAT Model](@ref).
-For a quick start refer to the step-by-step guide in section [Example](@ref)
+For a quick start refer to the step-by-step guide in section [Example Script 01](@ref)
 For further details read through the section [User Guide](@ref) or refer to sections [Code Listing](@ref) and [Function Documentations](@ref) for further technical intricacies e.g. for development of the package.
 
 
 
 ## Citing LWFBrook90.jl
-When using LWFBrook90.jl please cite <!-- [TODO.et.al (2021)](TODO) -->
->TODO: generate citation: (Journal of Open Source Software? Zenodo? Journal of Open Research Software (DifferentialEquations.jl)? Alternatives?)
+When using LWFBrook90.jl please cite <!-- [Bernhard et al. (2020)](http://dx.doi.org/10.5194/egusphere-egu2020-17975) -->
+>TODO: update citation with published article.
 
 
 
