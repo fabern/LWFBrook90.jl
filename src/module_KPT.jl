@@ -242,6 +242,8 @@ struct KPT_SOILPAR_Ch1d{T<:AbstractVector} <: AbstractKptSoilpar
     p_PSIG::T
     p_SWATMAX::T
     p_WETF::T
+    Δz_m::T # for transport equation: distance between cell interfaces (thickness of cell)
+    dz_m::T # for transport equation: distance between cell centres    (current to next)
 
     # # Inner constructor:
     function KPT_SOILPAR_Ch1d{T}(;p_THICK, p_STONEF, p_THSAT, p_PSIF, p_THETAF, p_KF, p_BEXP, p_WETINF) where {T<:AbstractVector}
@@ -285,9 +287,14 @@ struct KPT_SOILPAR_Ch1d{T<:AbstractVector} <: AbstractKptSoilpar
         #                  - computation of u_aux_SWATI = u_aux_WETNES .* p_SWATMAX
         #                  - computation of p_PsiCrit = FPSIM_CH(p_ThCrit./p_THSAT, p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN)
 
+        # dz and Δz to be used for transport equation
+        Δz_m = p_THICK / 1000 # m
+        # z_center = (cumsum(Δz_m) .+ cumsum([0; Δz_m[1:NLAYER-1]]))/2 # m
+        dz_m = diff((cumsum(Δz_m) .+ cumsum([0; Δz_m[1:NLAYER-1]]))/2)   # m
+
         # Instantiate
         new(p_THICK, p_STONEF, p_THSAT, p_PSIF, p_THETAF, p_KF, p_BEXP, p_WETINF,
-            NLAYER, p_CHM, p_CHN, p_PSIG, p_SWATMAX, p_WETF)
+            NLAYER, p_CHM, p_CHN, p_PSIG, p_SWATMAX, p_WETF, Δz_m, dz_m)
     end
 end
 KPT_SOILPAR_Ch1d(;p_THICK::T, p_STONEF::T, p_THSAT::T, p_PSIF::T, p_THETAF::T, p_KF::T, p_BEXP::T, p_WETINF::T) where {T<:AbstractVector} =
@@ -319,7 +326,8 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
     p_PSIG::T    # gravity potential negative down from surface, kPa
     p_SWATMAX::T  # maximum water storage for layer, mm
     p_WETF::T    # wetness at field capacity, dimensionless
-
+    Δz_m::T # for transport equation: distance between cell interfaces (thickness of cell)
+    dz_m::T # for transport equation: distance between cell centres    (current to next)
 
     # # Inner constructor:
     function KPT_SOILPAR_Mvg1d{T}(;p_THICK, p_STONEF, p_THSAT, p_Kθfc, p_KSAT, p_MvGα, p_MvGn, p_MvGm, p_MvGl, p_θr) where {T<:AbstractVector}
@@ -387,9 +395,14 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
         #                       - u_aux_SWATI[i] = FTheta_MvG(u_aux_WETNES[i], p_THSAT[i], p_θr[i]) * p_SWATMAX[i]/p_THSAT[i]
         #                  - computation of p_PsiCrit = FPSIM_CH(p_ThCrit./p_THSAT, p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN)
 
+        # dz and Δz to be used for transport equation
+        Δz_m = p_THICK / 1000 # m
+        # z_center = (cumsum(Δz_m) .+ cumsum([0; Δz_m[1:NLAYER-1]]))/2 # m
+        dz_m = diff((cumsum(Δz_m) .+ cumsum([0; Δz_m[1:NLAYER-1]]))/2)   # m
+
         # Instantiate
         new(p_THICK,p_STONEF,p_THSAT,p_Kθfc,p_KSAT,p_MvGα,p_MvGn,p_MvGm,p_MvGl,p_θr,
-            NLAYER, p_PSIF, p_THETAF,p_PSIG,p_SWATMAX,p_WETF)
+            NLAYER, p_PSIF, p_THETAF,p_PSIG,p_SWATMAX,p_WETF, Δz_m, dz_m)
     end
 end
 KPT_SOILPAR_Mvg1d(;p_THICK::T, p_STONEF::T, p_THSAT::T, p_Kθfc::T, p_KSAT::T, p_MvGα::T, p_MvGn::T, p_MvGm::T, p_MvGl::T, p_θr::T) where {T<:AbstractVector} =

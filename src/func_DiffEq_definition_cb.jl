@@ -779,7 +779,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
 
         # Define (constant) soil transport properties
         N = NLAYER
-        Tsoil_K .= (p_fT_TADTM[1] + 273.15) .* ones(N) # °C, TODO: use solution from heat equation instead of approximation of p_fT_TADTM
+        Tsoil_K .= (p_fT_TADTM[1] + 273.15) .* ones(N) # °C, NOTE: at a later point solution from heat equation instead of approximation of p_fT_TADTM could be used
         # τw = θᵏ⁺¹ .^ (7/3) ./ (p_THSAT .^ 2) # -, tortuosity in liquid phase (w = water) as function of θ, (Millington and Quirk 1961 as shown in Radcliffe et al. 2018, eq 6.6)
         τw = 1.0 .* ones(N) # TODO: outcomment and use above
         # τg = 1.0 .* ones(N) # -, tortuosity in vapor phase (g = gas), unused as no vapor transport is considered
@@ -827,10 +827,9 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
 
         ### Prepare terms to evaluate linear system to be solved
         Δt = integrator.t - integrator.tprev # days
-        # TODO(bernhard): below dz and Δz could be computed once only when setting up the simulation
-        Δz = integrator.p.p_soil.p_THICK / 1000 # m
-        # z_center = (cumsum(Δz) .+ cumsum([0; Δz[1:NLAYER-1]]))/2 # m
-        dz = diff((cumsum(Δz) .+ cumsum([0; Δz[1:NLAYER-1]]))/2)   # m
+        # dz and Δz were computed once only when setting up the simulation
+        Δz = integrator.p.p_soil.Δz_m # m
+        dz = integrator.p.p_soil.dz_m # m
 
         ################
         ################
