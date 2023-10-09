@@ -8,6 +8,10 @@ using Printf
 using Logging
 using Dates: today
 
+if haskey(ENV, "GITHUB_ACTIONS")
+    ENV["GKSwstype"] = "100" # following https://github.com/JuliaPlots/Plots.jl/issues/1182
+end
+
 # Note the git hash-string and repository status (can be optionally used in filenames for plots etc.)
 git_status_string = "$(today())-git+"*
             "__"*chomp(Base.read(`git branch --show-current`, String))*

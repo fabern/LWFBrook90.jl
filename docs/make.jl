@@ -11,10 +11,12 @@ using
     LWFBrook90,
     Dates
 
+
 #### code pertaining to Literate.jl
-### From Literate.jl (https://github.com/fredrikekre/Literate.jl/blob/master/docs/make.jl):
 if haskey(ENV, "GITHUB_ACTIONS")
+    ### From Literate.jl (https://github.com/fredrikekre/Literate.jl/blob/master/docs/make.jl):
     ENV["JULIA_DEBUG"] = "Documenter"
+    ENV["GKSwstype"] = "100" # following https://github.com/JuliaPlots/Plots.jl/issues/1182
 end
 
 deployconfig = Documenter.auto_detect_deploy_system()
