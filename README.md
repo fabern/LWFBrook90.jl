@@ -8,7 +8,7 @@ Isotope-enabled implementation of the LWF-BROOK90 hydrological model in Julia
 <a href="https://fabern.github.io/LWFBrook90.jl/stable"><img title="Stable" src="https://img.shields.io/badge/docs-stable-blue.svg"></a>
 </p>
 <p align="center">Developer info:
-<a href="https://github.com/fabern/LWFBrook90.jl/actions"><img title="Build Status" src="https://github.com/fabern/LWFBrook90.jl/workflows/CI/badge.svg"/></a>
+<a href="https://github.com/fabern/LWFBrook90.jl/actions/workflows/CI.yml"><img title="Build Status" src="https://github.com/fabern/LWFBrook90.jl/actions/workflows/CI.yml/badge.svg?branch=develop"/></a>
 <a href="https://codecov.io/gh/fabern/LWFBrook90.jl"><img title="Coverage" src="https://codecov.io/gh/fabern/LWFBrook90.jl/branch/develop/graph/badge.svg?token=6F1BUJ8UR9"/>
 <a href="https://github.com/invenia/BlueStyle"><img title="Code Style: Blue" src="https://img.shields.io/badge/code%20style-blue-4495d1.svg"/></a>
 <a href="https://fabern.github.io/LWFBrook90.jl/dev"><img title="Dev" src="https://img.shields.io/badge/docs-dev-blue.svg"></a>
