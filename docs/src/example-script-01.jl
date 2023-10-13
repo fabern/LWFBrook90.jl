@@ -31,10 +31,11 @@ using LWFBrook90
 # When printed, the generated SPAC model gives a summary.
 
 ## Read in input data
+@warn pwd()
 #src NOTE: Literate sets `pwd()` to the Literate.markdown(... , outputdir).
-#src NOTE: So this script requires following relative path of "../../../examples/"
-#src input_path = "../../../examples/isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
-input_path = "../../../examples/DAV2020-full/"; input_prefix = "DAV2020-full";
+#src NOTE: So this script requires following relative path of "../../examples/"
+#src input_path = "../../examples/isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
+input_path = "../../examples/DAV2020-full/"; input_prefix = "DAV2020-full";
 ## input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
 model = loadSPAC(input_path, input_prefix; simulate_isotopes = false);
 model = loadSPAC(input_path, input_prefix; simulate_isotopes = true);
