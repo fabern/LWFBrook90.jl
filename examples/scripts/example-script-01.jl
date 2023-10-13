@@ -93,7 +93,6 @@ simulation_modified = setup(model_modified)
 ## Inputs can be checked with:
 ## `plot_inputs(simulation)`. Note: NOT YET IMPLEMENTED
 
-## simulate!(simulation)
 simulate!(simulation_modified)
 simulate!(simulation_modified) # Run it a second time to showcase shorter runtime
 ## The computed solution is stored within the object.
@@ -105,6 +104,7 @@ simulate!(simulation_modified) # Run it a second time to showcase shorter runtim
 # ## Postprocessing results
 # These simulations can then be post-processed with predefined functions.
 # Alternatively the followig variables contain the simuation results for user-defined post-processing:
+simulate!(simulation); #hide
 simulation.ODESolution;
 simulation.ODESolution_datetime;
 typeof(simulation.ODESolution);
