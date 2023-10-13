@@ -5,12 +5,12 @@ Package repository: [https://github.com/fabern/LWFBrook90.jl](https://github.com
 Pages = ["index.md",
          "model.md",
          "user-guide.md",
-         "example.md",
+         "generated/example-script-01.md",
+         "validation.md",
          "code-lst.md",
          "function-docs.md"]
 Depth = 2
 ```
-
 
 
 ## About LWFBrook90.jl
