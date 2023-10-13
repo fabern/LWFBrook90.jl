@@ -39,7 +39,7 @@ OUTPUT_scripts_for_examp = joinpath(@__DIR__, "../examples/scripts/")
 INPUT_example_script_01 = joinpath(@__DIR__, "src/example-script-01.jl")
 Literate.markdown(INPUT_example_script_01, OUTPUT_markdown_for_Docs;   name = "example-script-01", documenter = true, preprocess = update_date)
 Literate.script(  INPUT_example_script_01, OUTPUT_scripts_for_examp;   name = "example-script-01", documenter = true, preprocess = update_date, keep_comments = true)
-Literate.notebook(INPUT_example_script_01, OUTPUT_scripts_for_examp;   name = "example-script-01", documenter = true, preprocess = update_date)
+# Literate.notebook(INPUT_example_script_01, OUTPUT_scripts_for_examp;   name = "example-script-01", documenter = true, preprocess = update_date) # TODO: reactivate
 #### end code for Literate.jl
 
 
