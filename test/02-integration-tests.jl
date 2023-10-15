@@ -145,46 +145,100 @@ end
 
     if !is_a_CI_system && plot_flag
         # if some error appears, the following code can be used to plot the solutions
-        using Plots, Measures
-        # fname_illustrations = "out/$(today())/"
-        fname_illustrations = "out/$git_status_string/"
-        mkpath(dirname(fname_illustrations))
+        # using Plots, Measures
+        # # fname_illustrations = "out/$(today())/"
+        # fname_illustrations = "out/$git_status_string/"
+        # mkpath(dirname(fname_illustrations))
 
-        pl_θ = plot(sim.θψ.time,
-                Matrix(sim.θψδ[:,[:θ_100mm, :θ_500mm, :θ_1000mm]]),
-                line = :solid, labels = "LWFBrook90.jl:" .* string.(depth_to_read_out_mm) .* "mm",
-                ylabel = "θ (-)", legend_position = :bottomright)
-        plot!(Matrix(ref_NLAYER7.θ[:,Not(:time)]), line = :dash, color = :black,
-                labels = "LWFBrook90R_NLayer7:" .* string.(depth_to_read_out_mm) .* "mm")
-        # plot!(Matrix(ref_NLAYER14.θ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer14")
-        # plot!(Matrix(ref_NLAYER21.θ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer21")
-        # plot!(Matrix(ref_NLAYER70.θ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer70")
-        pl_ψ = plot(sim.θψ.time,
-                Matrix(sim.θψδ[:,[:ψ_100mm, :ψ_500mm, :ψ_1000mm]]),
-                line = :solid, labels = "LWFBrook90.jl:" .* string.(depth_to_read_out_mm) .* "mm",
-                ylabel = "ψ (kPa)", legend_position = :bottomright)
-        plot!(Matrix(ref_NLAYER7.ψ[:,Not(:time)]), line = :dash, color = :black,
-                labels = "LWFBrook90R_NLayer7:" .* string.(depth_to_read_out_mm) .* "mm")
-        # plot!(Matrix(ref_NLAYER14.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer14")
-        # plot!(Matrix(ref_NLAYER21.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer21")
-        # plot!(Matrix(ref_NLAYER70.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer70")
-        pl_a = plot(sim.above.time,
-                Matrix(#sim.above[:,Not(:time)]),
-                       # label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"],
-                        sim.above[:,[:GWAT,:INTS,:INTR,:SNOW]]),
-                        label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"],
-                        line = :solid)
-        plot!(Matrix(ref_NLAYER7.above[:,[:intr,:ints,:snow,:gwat]]),
-                line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
-        # plot!(Matrix(ref_NLAYER14.above[:,[:intr,:ints,:snow,:gwat]]),
-        #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
-        # plot!(Matrix(ref_NLAYER21.above[:,[:intr,:ints,:snow,:gwat]]),
-        #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
-        # plot!(Matrix(ref_NLAYER70.above[:,[:intr,:ints,:snow,:gwat]]),
-        #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
-        plot(pl_θ, pl_ψ, pl_a, layout = (3,1), size = (600,800),
-            leftmargin = 5mm)
-        savefig(fname_illustrations*"TESTSET_site-θ-ψ-aboveground-states_$(site).png")
+        # pl_θ = plot(sim.θψδ.time, Matrix(sim.θψδ[:, r"^θ"]),
+        #         line = :solid, labels = reshape("LWFBrook90.jl:" .* names(sim.θψδ[:, r"^θ"]), 1,:),
+        #         ylabel = "θ (-)", legend_position = :bottomright)
+        # plot!(Matrix(ref_NLAYER7.θ[:,Not(:time)]), line = :dash, color = :black,
+        #         labels = reshape("LWFBrook90R_NLayer7:" .* names(ref_NLAYER7.θ[:,Not(:time)]), 1,:))
+        # # plot!(Matrix(ref_NLAYER14.θ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer14")
+        # # plot!(Matrix(ref_NLAYER21.θ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer21")
+        # # plot!(Matrix(ref_NLAYER70.θ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer70")
+
+        # sim
+        # pl_ψ = plot(sim.θψδ.time,
+        #         Matrix(sim.θψδ[:,r"^ψ"]),
+        #         line = :solid, labels = reshape("LWFBrook90.jl:" .* names(sim.θψδ[:,r"^ψ"]), 1,:),
+        #         ylabel = "ψ (kPa)", legend_position = :bottomright)
+        # plot!(Matrix(ref_NLAYER7.ψ[:,Not(:time)]), line = :dash, color = :black,
+        #         labels = reshape("LWFBrook90R_NLayer7:" .* names(ref_NLAYER7.ψ[:,Not(:time)]), 1,:))
+        # # plot!(Matrix(ref_NLAYER14.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer14")
+        # # plot!(Matrix(ref_NLAYER21.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer21")
+        # # plot!(Matrix(ref_NLAYER70.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer70")
+        # pl_a = plot(sim.above.time,
+        #         Matrix(#sim.above[:,Not(:time)]),
+        #                # label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"],
+        #                 sim.above[:,[:GWAT,:INTS,:INTR,:SNOW]]),
+        #                 label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"],
+        #                 line = :solid)
+        # plot!(Matrix(ref_NLAYER7.above[:,[:intr,:ints,:snow,:gwat]]),
+        #         line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
+        # # plot!(Matrix(ref_NLAYER14.above[:,[:intr,:ints,:snow,:gwat]]),
+        # #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
+        # # plot!(Matrix(ref_NLAYER21.above[:,[:intr,:ints,:snow,:gwat]]),
+        # #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
+        # # plot!(Matrix(ref_NLAYER70.above[:,[:intr,:ints,:snow,:gwat]]),
+        # #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
+        # plot(pl_θ, pl_ψ, pl_a, layout = (3,1), size = (600,800),
+        #     leftmargin = 5mm)
+        # savefig(fname_illustrations*"TESTSET_site-θ-ψ-aboveground-states_$(site).png")
+
+
+        # Make publication figure with Makie # https://docs.makie.org/stable/explanations/figure_size/#vector_graphics
+        # size_inches = (3.60, 4*3) # often either 7.25 inches or 3.60 inches wide
+        size_inches = (7.25, 12) # often either 7.25 inches or 3.60 inches wide
+        size_pt = 72 .* size_inches
+        fig = Makie.Figure(resolution = size_pt, fontsize = 12)
+        ax1 = Makie.Axis(fig[1,1], xlabel = "Days", ylabel = "θ\n(-)")#,   title = "Title")
+        ax2 = Makie.Axis(fig[2,1], xlabel = "Days", ylabel = "ψ\n(kPa)",#, title = "Title")
+            yscale = Makie.pseudolog10, yticks = [-100, -30, -10, -3, -1, 0])
+        # ax3 = Makie.Axis(fig[3,1], xlabel = "Days", ylabel = " ")#, title = "Title")
+        # Makie.linkxaxes!(ax1, ax2, ax3); [Makie.hidexdecorations!(ax, grid = false) for ax in [ax1, ax2] ]
+        scalars_jl = [:INTS,:INTR,:SNOW]#, :GWAT]
+        scalars_R  = [:ints,:intr,:snow]#, :gwat]
+        scalars_label = ["INTS\n(mm)", "INTR\n(mm)", "SNOW\n(mm)"]#, "GWAT\n(mm)", "CC\n(MJ/m2)", "SNOWLQ\n(mm)"]
+        gl = fig[3,1] = GridLayout()
+        ax3_list = [Axis(gl[i, 1], ylabel = lbl) for (i, lbl) in enumerate(scalars_label)]
+        Makie.linkxaxes!(ax1, ax2, ax3); [Makie.hidexdecorations!(ax, grid = false) for ax in [ax1, ax2, contents(gl)[Not(end)]...] ]
+
+        Makie.series!(ax1, sim.θψδ.time, transpose(Matrix(sim.θψδ[:,r"^θ"])), color = Makie.wong_colors(), labels = "LWFBrook90.jl:" .* names(sim.θψδ[:,r"^θ"]))
+        Makie.series!(ax2, sim.θψδ.time, transpose(Matrix(sim.θψδ[:,r"^ψ"])), color = Makie.wong_colors(), labels = "LWFBrook90.jl:" .* names(sim.θψδ[:,r"^ψ"]))
+        # Makie.series!(ax3, sim.above.time, transpose(Matrix(sim.above[:,scalars_jl])),
+        #             color = Makie.wong_colors(), labels = scalars_label)
+        [Makie.lines!(ax3_list[i], sim.above.time, sim.above[:,col],
+            color = Makie.wong_colors()[4]) for (i, col) in enumerate(scalars_jl)]
+
+        # add LWFBrook90R solution
+        Makie.series!(ax1, ref_NLAYER7.θ.time, transpose(Matrix(ref_NLAYER7.θ[:,Not(:time)])),
+            linestyle = :dash, solid_color = :black, labels = "LWFBrook90R_NLayer7:" .* names(ref_NLAYER7.θ[:,Not(:time)]))
+        Makie.series!(ax2, ref_NLAYER7.ψ.time, transpose(Matrix(ref_NLAYER7.ψ[:,Not(:time)])),
+                    linestyle = :dash, solid_color = :black, labels = "LWFBrook90R_NLayer7:" .* names(ref_NLAYER7.ψ[:,Not(:time)]))
+        # Makie.series!(ax3, ref_NLAYER7.above.time, transpose(Matrix(ref_NLAYER7.above[:,scalars_R])),
+        #             linestyle = :dash, solid_color = :black, labels = ["LWFBrook90R_NLayer7_$i" for i in 1:4])
+        [Makie.lines!(ax3_list[i], ref_NLAYER7.above.time, ref_NLAYER7.above[:,col], linestyle = :dash, color = :black) for (i, col) in enumerate(scalars_R)]
+        # add automatic legends
+        # fig[1, 2] = Legend(fig[1, 1], ax1, tellwidth = false)
+        # fig[2, 2] = Legend(fig[2, 1], ax2, tellwidth = false)
+        # # fig[3, 2] = Legend(fig[3, 1], ax3, tellwidth = false)
+        # add manual legend
+        Legend(fig[0, 1],
+            [LineElement(color    = Makie.wong_colors()[1], linestyle = nothing),
+                LineElement(color = Makie.wong_colors()[2], linestyle = nothing),
+                LineElement(color = Makie.wong_colors()[3], linestyle = nothing),
+                LineElement(color = Makie.wong_colors()[4], linestyle = nothing),
+                LineElement(color = :black, linestyle = :dash)],
+            ["LWFBrook90.jl: ".*replace.(replace.(names(sim.θψδ[:,r"^θ"]), "θ_" => ""), "mm" => " mm")...,
+                "LWFBrook90.jl: aboveground",
+                "LWFBrook90R"],
+            patchsize = (15, 5), rowgap = 1,
+            tellwidth = false, tellheight = true)
+
+        save(fname_illustrations*"TESTSET_site-θ-ψ-aboveground-states_$(site).png", fig, pt_per_unit = 1)
+        save(fname_illustrations*"TESTSET_site-θ-ψ-aboveground-states_$(site).pdf", fig, pt_per_unit = 1)
     end
 end
 

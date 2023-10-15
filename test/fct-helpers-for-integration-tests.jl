@@ -340,28 +340,32 @@ function read_LWFBrook90R_layerCSV_extract_depths(;path, depth_to_read_out_mm)
     end
 
     ## Process into wide data frame
-    ref_θ = unstack(
-        referenceSolution_layer[:,[:yr, :mo, :da, :doy, :nl, :theta]],
-        [:yr, :mo, :da, :doy], # ID variable
-        :nl,   # variable that will be spread out into column names
-        :theta,# value that will be filled into the wide table
-        renamecols=x->Symbol(:nl_, x)
-        )[:,
-            [:doy; Symbol.("nl_" .* string.(idx_referenceSolution))]]
-            # Symbol.("nl_" .* string.(idx_referenceSolution))]
-            # [:yr; :mo; :da; :doy; Symbol.("nl_" .* string.(idx_referenceSolution))]])
+    ref_θ = @chain referenceSolution_layer[:,[:yr, :mo, :da, :doy, :theta, :lower, :nl]] begin
+        @rsubset(:nl ∈ idx_referenceSolution)
+        unstack([:yr, :mo, :da, :doy], # ID variable
+            :lower,   # variable that will be spread out into column names
+            :theta,# value that will be filled into the wide table
+            renamecols=x->Symbol(:lower_, x)
+        )
+        select(r"(doy)|(lower)")
+        # [:doy; Symbol.("nl_" .* string.(idx_referenceSolution))]]
+        # Symbol.("nl_" .* string.(idx_referenceSolution))]
+        # [:yr; :mo; :da; :doy; Symbol.("nl_" .* string.(idx_referenceSolution))]])
+    end
     rename!(ref_θ, :doy => :time)
 
-    ref_ψ = unstack(
-            referenceSolution_layer[:,[:yr, :mo, :da, :doy, :nl, :psimi]],
-            [:yr, :mo, :da, :doy], # ID variable
-            :nl,   # variable that will be spread out into column names
+    ref_ψ = @chain referenceSolution_layer[:,[:yr, :mo, :da, :doy, :psimi, :lower, :nl]] begin
+        @rsubset(:nl ∈ idx_referenceSolution)
+        unstack([:yr, :mo, :da, :doy], # ID variable
+            :lower,   # variable that will be spread out into column names
             :psimi,# value that will be filled into the wide table
-            renamecols=x->Symbol(:nl_, x)
-            )[:,
-                [:doy; Symbol.("nl_" .* string.(idx_referenceSolution))]]
-                # Symbol.("nl_" .* string.(idx_referenceSolution))]
-                # [:yr; :mo; :da; :doy; Symbol.("nl_" .* string.(idx_referenceSolution))]]
+            renamecols=x->Symbol(:lower_, x)
+        )
+        select(r"(doy)|(lower)")
+        # [:doy; Symbol.("nl_" .* string.(idx_referenceSolution))]]
+        # Symbol.("nl_" .* string.(idx_referenceSolution))]
+        # [:yr; :mo; :da; :doy; Symbol.("nl_" .* string.(idx_referenceSolution))]])
+    end
     rename!(ref_ψ, :doy => :time)
 
     return (θ = ref_θ, ψ = ref_ψ)
