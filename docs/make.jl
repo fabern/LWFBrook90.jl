@@ -56,6 +56,7 @@ makedocs(;
         canonical="https://fabern.github.io/LWFBrook90.jl",
         assets=String[],
     ),
+    workdir = joinpath(@__DIR__, ".."),
     pages=[
         "About"        => "index.md",
         "SVAT Model"   => "model.md",

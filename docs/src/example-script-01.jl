@@ -35,7 +35,10 @@ using LWFBrook90
 #src NOTE: Literate sets `pwd()` to the Literate.markdown(... , outputdir).
 #src NOTE: So this script requires following relative path of "../../examples/"
 #src input_path = "../../examples/isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
-input_path = "../../examples/DAV2020-full/"; input_prefix = "DAV2020-full";
+#src NOTE: however, it is not Literate that runs the @example blocks, but it is Documenter.jl
+#src NOTE: see documentation under https://documenter.juliadocs.org/stable/lib/public/#Documenter.makedocs
+#src NOTE: Hence, by setting `workdir = joinpath(@__DIR__, "..")`, we can provide the input path below relative to Pkg-root:
+input_path = "examples/DAV2020-full/"; input_prefix = "DAV2020-full";
 ## input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
 model = loadSPAC(input_path, input_prefix; simulate_isotopes = false);
 model = loadSPAC(input_path, input_prefix; simulate_isotopes = true);
