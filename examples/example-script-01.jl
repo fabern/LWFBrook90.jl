@@ -18,23 +18,21 @@
 ## Load packages:
 using LWFBrook90
 
-#jl ## `using LWFBrook90` brings the following exported functions into scope:
-#jl ## - `SPAC()`
-#jl ## - `DiscretizedSPAC()`
-#jl ## - `discretize()`
-#jl ## - `simulate!()`
-#jl ## - `get_soil_()`
-#jl ## - `get_aboveground()`
-#jl ## - `get_δ()`,
+## `using LWFBrook90` brings the following exported functions into scope:
+## - `SPAC()`
+## - `DiscretizedSPAC()`
+## - `discretize()`
+## - `simulate!()`
+## - `get_soil_()`
+## - `get_aboveground()`
+## - `get_δ()`,
 
 # Define simulation model by reading in system definition and input data from input files.
 # When printed, the generated SPAC model gives a summary.
 
 ## Read in input data
-#src NOTE: Literate sets `pwd()` to the Literate.markdown(... , outputdir).
-#src NOTE: So this script requires following relative path of "../../../examples/"
-#src input_path = "../../../examples/isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
-input_path = "../../../examples/DAV2020-full/"; input_prefix = "DAV2020-full";
+input_path = "../../../examples/DAV2020-full/"; input_prefix = "DAV2020-full"; # make sure to get the path correct relative to `pwd()``
+## input_path = "examples/DAV2020-full/"; input_prefix = "DAV2020-full";
 ## input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE";
 model = loadSPAC(input_path, input_prefix; simulate_isotopes = false);
 model = loadSPAC(input_path, input_prefix; simulate_isotopes = true);
@@ -88,14 +86,13 @@ model_modified =
 # system of ODES (`setup()`) and solved (`simulate()`):
 
 ## Setup and run simulation
-simulation          = setup(model)
-simulation_modified = setup(model_modified)
+simulation     = setup(model)
+simulation_mod = setup(model_modified)
 ## Inputs can be checked with:
 ## `plot_inputs(simulation)`. Note: NOT YET IMPLEMENTED
 
-## simulate!(simulation)
-simulate!(simulation_modified)
-simulate!(simulation_modified) # Run it a second time to showcase shorter runtime
+simulate!(simulation_mod)
+simulate!(simulation_mod) # Run it a second time to showcase shorter runtime
 ## The computed solution is stored within the object.
 ## When using VSCode a progress bar is shown in the status bar.
 
@@ -104,20 +101,20 @@ simulate!(simulation_modified) # Run it a second time to showcase shorter runtim
 
 # ## Postprocessing results
 # These simulations can then be post-processed with predefined functions.
-# Alternatively the followig variables contain the simuation results for user-defined post-processing:
-simulation.ODESolution;
-simulation.ODESolution_datetime;
-typeof(simulation.ODESolution);
-## HINT: To get these names, type `simulation.` and wait for the autocomplete!
+# Alternatively the following variables contain the simuation results for user-defined post-processing:
+simulation_mod.ODESolution;
+simulation_mod.ODESolution_datetime;
+typeof(simulation_mod.ODESolution);
+## HINT: To get these names, type `simulation_mod.` and wait for the autocomplete!
 
-# `simulation.ODESolution` is a ODESolution object: documentation how to access under:
+# `simulation_mod.ODESolution` is a ODESolution object: documentation how to access under:
 # `https://docs.sciml.ai/DiffEqDocs/stable/basics/solution/`
 # and more generally:
 # `https://docs.sciml.ai/Overview/stable/`
-# simulation.ODESolution.t
-# simulation.ODESolution.u
-# simulation.ODESolution.retcode
-# simulation.ODESolution.destats
+# simulation_mod.ODESolution.t
+# simulation_mod.ODESolution.u
+# simulation_mod.ODESolution.retcode
+# simulation_mod.ODESolution.destats
 
 # Note that it is possible to use R Code from within Julia, e.g ggplot:
 # `https://stackoverflow.com/a/70073193/3915004`
@@ -126,22 +123,22 @@ typeof(simulation.ODESolution);
 # Below an example script using the provided plot recipes that plot a) amounts, b) isotopes, or c) forcing and states as an additional internal check:
 
 using Plots, Measures; gr();
-pl1 = plotamounts(simulation_modified, :above_and_belowground, :showRWUcentroid)
+pl1 = plotamounts(simulation_mod, :above_and_belowground, :showRWUcentroid)
 pl1
 #-
-pl2 = plotisotopes(simulation_modified, :d18O, (d18O = :auto, d2H = :auto), :showRWUcentroid)
+pl2 = plotisotopes(simulation_mod, :d18O, (d18O = :auto, d2H = :auto), :showRWUcentroid)
 pl2
 #-
-pl3 = plotforcingandstates(simulation_modified)
+pl3 = plotforcingandstates(simulation_mod)
 pl3
 
 ## Use of additional arguments to `plotisotopes` is illustrated here.
 ## Note that typing `?plotisotopes` provides the documentation to the function.
-## plotisotopes(simulation_modified, :d2H)
-## plotisotopes(simulation_modified, :d18O)
-## plotisotopes(simulation_modified;
+## plotisotopes(simulation_mod, :d2H)
+## plotisotopes(simulation_mod, :d18O)
+## plotisotopes(simulation_mod;
 ##              xlim = (DateTime("2010-01-01"), DateTime("2010-03-31")))
-## plotisotopes(simulation_modified, :d2H, (d18O = :auto, d2H = :auto), :showRWUcentroid;
+## plotisotopes(simulation_mod, :d2H, (d18O = :auto, d2H = :auto), :showRWUcentroid;
 ##              xlim = (DateTime("2010-01-01"), DateTime("2010-08-30")))
 
 # Saving plots can be done with `savefig`
@@ -162,20 +159,20 @@ pl3
 using CSV, DataFrames
 
 ## How to get θ?
-get_soil_(:θ, simulation_modified;
+get_soil_(:θ, simulation_mod;
     depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
 depth_to_read_out_mm = [10, 150, 500, 1000, 1150]
-get_soil_(:θ, simulation_modified;
+get_soil_(:θ, simulation_mod;
     depths_to_read_out_mm = depth_to_read_out_mm, days_to_read_out_d = nothing)
-get_soil_(:θ, simulation_modified;
+get_soil_(:θ, simulation_mod;
     depths_to_read_out_mm = depth_to_read_out_mm)
 
 ## How to export θ as CSV?
 ## Only every day, provide days_to_read_out
-days_to_read_out = range(simulation_modified.ODESolution.prob.tspan...)
+days_to_read_out = range(simulation_mod.ODESolution.prob.tspan...)
 dates_to_read_out = LWFBrook90.RelativeDaysFloat2DateTime.(
-    days_to_read_out, simulation_modified.parametrizedSPAC.reference_date)
-df_out_daily = get_soil_(:θ, simulation_modified;
+    days_to_read_out, simulation_mod.parametrizedSPAC.reference_date)
+df_out_daily = get_soil_(:θ, simulation_mod;
     depths_to_read_out_mm = depth_to_read_out_mm, days_to_read_out_d = days_to_read_out)
 
 insertcols!(df_out_daily, 1, :dates => dates_to_read_out);
@@ -189,10 +186,10 @@ show(df_out_daily)
 
 
 ## # ### Plotting (using your own functions)
-## # Below an example script using the manually written code to plot the simulation.#
+## # Below an example script using the manually written code to plot the simulation_mod.#
 
 ## # Resulting plot of some aboveground quantities:
-## pl_ab_3 = plot(simulation_modified.ODESolution; vars = [2, 3, 4],
+## pl_ab_3 = plot(simulation_mod.ODESolution; vars = [2, 3, 4],
 ##     label=["INTS (mm)" "INTR (mm)" "SNOW (mm)"])
 ## plot!(pl_ab_3,
 ##         [ref_aboveground.intr,
@@ -200,7 +197,7 @@ show(df_out_daily)
 ##         ref_aboveground.snow], label = "LWFBrook90R", line = :dash, color = :black)#
 
 ## # Resulting plot of other aboveground quantities:
-## pl_ab_4 = plot(simulation_modified.ODESolution; vars = [2, 3],
+## pl_ab_4 = plot(simulation_mod.ODESolution; vars = [2, 3],
 ##     label=["INTS (mm)" "INTR (mm)"])
 ## plot!(pl_ab_4,
 ##         [ref_aboveground.intr,
@@ -213,12 +210,12 @@ show(df_out_daily)
 ## if true # simulate_isotopes
 ##     df_δsoil = get_soil_([:δ18O, :δ2H],
 ##         example_result; depths_to_read_out_mm = depth_to_read_out_mm)
-##     δ_results = get_δ(simulation_modified)
+##     δ_results = get_δ(simulation_mod)
 ## end
 ##
-## timepoints = simulation_modified.ODESolution_datetime
+## timepoints = simulation_mod.ODESolution_datetime
 ## df_θψ = get_soil_([:θ, :ψ],
-##     simulation_modified, depths_to_read_out_mm = depth_to_read_out_mm)
+##     simulation_mod, depths_to_read_out_mm = depth_to_read_out_mm)
 ##
 ## pl_θ = plot(timepoints, #df_θψ.time,
 ##     Matrix(select(df_θψ, r"θ_")),
@@ -235,13 +232,13 @@ show(df_out_daily)
 ##     legend = :outerright);
 #
 ## if simulate_isotopes
-##     pl_δ18O = plot(simulation_modified.ODESolution_datetime,
+##     pl_δ18O = plot(simulation_mod.ODESolution_datetime,
 ##         Matrix(select(df_δsoil, r"δ18O_")),
 ##         labels = permutedims(names(select(df_δsoil, r"δ18O_"))),
 ##         xlabel = "Date",
 ##         ylabel = "δ¹⁸O soil\n[‰]",
 ##         legend = :outerright);
-##     pl_δ2H = plot(simulation_modified.ODESolution_datetime,
+##     pl_δ2H = plot(simulation_mod.ODESolution_datetime,
 ##         Matrix(select(df_δsoil, r"δ2H_")),
 ##         labels = permutedims(names(select(df_δsoil, r"δ2H_"))),
 ##         xlabel = "Date",
@@ -249,10 +246,10 @@ show(df_out_daily)
 ##         legend = :outerright);
 ##     ## add precipitation to soil δ
 ##     plot!(pl_δ2H,
-##         simulation_modified.ODESolution_datetime,
+##         simulation_mod.ODESolution_datetime,
 ##         δ_results.PREC_d2H, labels = "PREC", color = PREC_color, linestyle = :dot);
 ##     plot!(pl_δ18O,
-##         simulation_modified.ODESolution_datetime,
+##         simulation_mod.ODESolution_datetime,
 ##         δ_results.PREC_d18O, labels = "PREC", color = PREC_color, linestyle = :dot);
 ## else
 ##     pl_δ18O = plot();
@@ -262,8 +259,8 @@ show(df_out_daily)
 ##
 ##
 ## pl_PREC = plot(
-##     simulation_modified.ODESolution_datetime,
-##     simulation_modified.ODESolution.prob.p.p_PREC.(simulation_modified.ODESolution.t),
+##     simulation_mod.ODESolution_datetime,
+##     simulation_mod.ODESolution.prob.p.p_PREC.(simulation_mod.ODESolution.t),
 ##     t = :bar, color=PREC_color,
 ##     legend = :outerright, labels = "PREC    ", # whitespace for hardcoded alignment of legend
 ##     ylabel = "PREC\n[mm]");
