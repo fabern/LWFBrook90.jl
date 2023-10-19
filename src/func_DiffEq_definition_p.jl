@@ -503,6 +503,7 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
         p_fu_δ18O_SLFL = [NaN],
         p_fu_δ2H_SLFL  = [NaN],
         p_fT_TADTM     = [NaN],
+        p_fT_TA        = [NaN],
         p_fu_RNET      = [NaN],
         aux_du_SMLT    = [NaN],
         aux_du_SLVP    = [NaN],

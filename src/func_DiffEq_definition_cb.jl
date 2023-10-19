@@ -106,7 +106,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     #  - weather data depending on DOY and u_SNOW
     #  - fraction of precipitation as snowfall depending on DOY
     #  - snowpack temperature, potential snow evaporation and soil evaporation resistance depending on u_SNOW
-    @unpack p_fT_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
+    @unpack p_fT_TADTM, p_fT_TA, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
         p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
         aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old,
         aux_du_TRANI = integrator.p;
@@ -133,7 +133,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY, p_fu_HEIGHT, p_fu_LAI, p_fu_SAI,
         p_fu_Z0GS, p_fu_Z0C, p_fu_DISPC, p_fu_Z0, p_fu_DISP, p_fu_ZA,
         p_fT_RXYLEM, p_fT_RROOTI, p_fT_ALPHA,
-        p_fu_SHEAT, p_fT_SOLRADC, p_fT_TA, p_fT_TADTM[1], p_fT_TANTM, p_fu_UADTM, p_fu_UANTM,
+        p_fu_SHEAT, p_fT_SOLRADC, p_fT_TA[1], p_fT_TADTM[1], p_fT_TANTM, p_fu_UADTM, p_fu_UANTM,
         p_fT_SNOFRC, p_fu_TSNOW, p_fu_PSNVP, p_fu_ALBEDO,p_fu_RSS, p_fu_SNOEN =
             MSBSETVARS(FLAG_MualVanGen, NLAYER, p_soil,
                        # for SUNDS:
@@ -175,7 +175,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
                     # for SWGRA:
                     p_fu_ZA, p_fu_HEIGHT, p_fu_Z0, p_fu_DISP, p_fu_Z0C, p_fu_DISPC, p_fu_Z0GS, p_LWIDTH, p_RHOTP, p_NN,
                     # for SRSC:
-                    p_fT_TA, p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_TL, p_T1, p_T2, p_TH,
+                    p_fT_TA[1], p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_TL, p_T1, p_T2, p_TH,
                     # for SWPE:
                     p_fu_RSS,
                     # for TBYLAYER:
@@ -199,7 +199,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     aux_du_RSNO[1], aux_du_SNVP[1], aux_du_SMLT[1], p_fu_STHR[1],
     # compute updated states:
     u_SNOW_MSBupdate, u_CC, u_SNOWLQ) =
-        MSBPREINT(p_PREC(integrator.t), p_DTP, p_fT_SNOFRC, p_NPINT, p_fu_PINT, p_fT_TA,
+        MSBPREINT(p_PREC(integrator.t), p_DTP, p_fT_SNOFRC, p_NPINT, p_fu_PINT, p_fT_TA[1],
                # for INTER (snow)
                u_INTS, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS,
                # for INTER (rain)
@@ -325,7 +325,7 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         ## C) state dependent parameters or intermediate results:
         # These were computed in the callback and are kept constant in between two
         # callbacks.
-        @unpack p_fT_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
+        @unpack p_fT_TADTM, p_fT_TA, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
             p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
             aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old = integrator.p
         @unpack aux_du_TRANI = integrator.p
@@ -712,7 +712,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         ## C) state dependent parameters or intermediate results:
         # These were computed in the callback and are kept constant in between two
         # callbacks.
-        @unpack p_fu_δ18O_SLFL, p_fu_δ2H_SLFL, p_fT_TADTM, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
+        @unpack p_fu_δ18O_SLFL, p_fu_δ2H_SLFL, p_fT_TADTM, p_fT_TA, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
             p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
             aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old = integrator.p
 
@@ -779,7 +779,8 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
 
         # Define (constant) soil transport properties
         N = NLAYER
-        Tsoil_K .= (p_fT_TADTM[1] + 273.15) .* ones(N) # °C, NOTE: at a later point solution from heat equation instead of approximation of p_fT_TADTM could be used
+        # Tsoil_K .= (p_fT_TADTM[1] + 273.15) .* ones(N) # °C, NOTE: at a later point solution from heat equation instead of approximation of p_fT_TADTM could be used
+        Tsoil_K .= (p_fT_TA[1] + 273.15) .* ones(N) # °C, NOTE: at a later point solution from heat equation instead of approximation of p_fT_TADTM could be used
         # τw = θᵏ⁺¹ .^ (7/3) ./ (p_THSAT .^ 2) # -, tortuosity in liquid phase (w = water) as function of θ, (Millington and Quirk 1961 as shown in Radcliffe et al. 2018, eq 6.6)
         τw = 1.0 .* ones(N) # TODO: outcomment and use above
         # τg = 1.0 .* ones(N) # -, tortuosity in vapor phase (g = gas), unused as no vapor transport is considered
