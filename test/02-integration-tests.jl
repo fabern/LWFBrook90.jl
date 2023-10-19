@@ -220,12 +220,22 @@ end
         # Makie.series!(ax3, ref_NLAYER7.above.time, transpose(Matrix(ref_NLAYER7.above[:,scalars_R])),
         #             linestyle = :dash, solid_color = :black, labels = ["LWFBrook90R_NLayer7_$i" for i in 1:4])
         [Makie.lines!(ax3_list[i], ref_NLAYER7.above.time, ref_NLAYER7.above[:,col], linestyle = :dash, color = :black) for (i, col) in enumerate(scalars_R)]
+        # add subplot labels
+        for (label, layout) in zip(["a", "b", "c"], [fig[1,1], fig[2,1], gl])
+            Label(layout[1, 1, TopLeft()], label,
+                fontsize = 26, font = :bold,
+                padding = (0, 5, 5, 0),
+                halign = :right)
+        end
+
         # add automatic legends
         # fig[1, 2] = Legend(fig[1, 1], ax1, tellwidth = false)
         # fig[2, 2] = Legend(fig[2, 1], ax2, tellwidth = false)
         # # fig[3, 2] = Legend(fig[3, 1], ax3, tellwidth = false)
         # add manual legend
-        Legend(fig[0, 1],
+
+        # Legend(fig[1, 1, BottomLeft()], ## tellwidth = false, tellheight = true)
+        axislegend(ax2,
             [LineElement(color    = Makie.wong_colors()[1], linestyle = nothing),
                 LineElement(color = Makie.wong_colors()[2], linestyle = nothing),
                 LineElement(color = Makie.wong_colors()[3], linestyle = nothing),
@@ -234,8 +244,8 @@ end
             ["LWFBrook90.jl: ".*replace.(replace.(names(sim.θψδ[:,r"^θ"]), "θ_" => ""), "mm" => " mm")...,
                 "LWFBrook90.jl: aboveground",
                 "LWFBrook90R"],
-            patchsize = (15, 5), rowgap = 1,
-            tellwidth = false, tellheight = true)
+            patchsize = (15, 5), rowgap = 0, labelsize = 10,
+            position = :lb)
 
         save(fname_illustrations*"TESTSET_site-θ-ψ-aboveground-states_$(site).png", fig, pt_per_unit = 1)
         save(fname_illustrations*"TESTSET_site-θ-ψ-aboveground-states_$(site).pdf", fig, pt_per_unit = 1)
@@ -247,7 +257,7 @@ end
 
 # prepare plotting functions for Hammel (with/without δ)
 function my_scatter!(pl, df; args...)
-    scatter!(pl, float.(df[:,:time]), Matrix(df[:,Not(:time)]); args...)
+    Plots.scatter!(pl, float.(df[:,:time]), Matrix(df[:,Not(:time)]); args...)
 end
 function plot_Hammel_Dense(sim, ref, hyd, depth_to_read_out_mm, title; subtitle = "", args...)
     #LWFBrook90.jl:
