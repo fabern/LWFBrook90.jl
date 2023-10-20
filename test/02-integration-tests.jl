@@ -144,46 +144,46 @@ end
     # finest LWFBrook90R simulation only.
 
     if !is_a_CI_system && plot_flag
+        # fname_illustrations = "out/$(today())/"
+        fname_illustrations = "out/$git_status_string/"
+        mkpath(dirname(fname_illustrations))
         # if some error appears, the following code can be used to plot the solutions
         # using Plots, Measures
-        # # fname_illustrations = "out/$(today())/"
-        # fname_illustrations = "out/$git_status_string/"
-        # mkpath(dirname(fname_illustrations))
 
-        # pl_θ = plot(sim.θψδ.time, Matrix(sim.θψδ[:, r"^θ"]),
+        # pl_θ = Plots.plot(sim.θψδ.time, Matrix(sim.θψδ[:, r"^θ"]),
         #         line = :solid, labels = reshape("LWFBrook90.jl:" .* names(sim.θψδ[:, r"^θ"]), 1,:),
         #         ylabel = "θ (-)", legend_position = :bottomright)
-        # plot!(Matrix(ref_NLAYER7.θ[:,Not(:time)]), line = :dash, color = :black,
+        # Plots.plot!(Matrix(ref_NLAYER7.θ[:,Not(:time)]), line = :dash, color = :black,
         #         labels = reshape("LWFBrook90R_NLayer7:" .* names(ref_NLAYER7.θ[:,Not(:time)]), 1,:))
-        # # plot!(Matrix(ref_NLAYER14.θ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer14")
-        # # plot!(Matrix(ref_NLAYER21.θ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer21")
-        # # plot!(Matrix(ref_NLAYER70.θ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer70")
+        # # Plots.plot!(Matrix(ref_NLAYER14.θ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer14")
+        # # Plots.plot!(Matrix(ref_NLAYER21.θ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer21")
+        # # Plots.plot!(Matrix(ref_NLAYER70.θ[:,Not(:time)]), line = :dash, color = :black, labels = "LWFBrook90R_NLayer70")
 
         # sim
-        # pl_ψ = plot(sim.θψδ.time,
+        # pl_ψ = Plots.plot(sim.θψδ.time,
         #         Matrix(sim.θψδ[:,r"^ψ"]),
         #         line = :solid, labels = reshape("LWFBrook90.jl:" .* names(sim.θψδ[:,r"^ψ"]), 1,:),
         #         ylabel = "ψ (kPa)", legend_position = :bottomright)
-        # plot!(Matrix(ref_NLAYER7.ψ[:,Not(:time)]), line = :dash, color = :black,
+        # Plots.plot!(Matrix(ref_NLAYER7.ψ[:,Not(:time)]), line = :dash, color = :black,
         #         labels = reshape("LWFBrook90R_NLayer7:" .* names(ref_NLAYER7.ψ[:,Not(:time)]), 1,:))
-        # # plot!(Matrix(ref_NLAYER14.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer14")
-        # # plot!(Matrix(ref_NLAYER21.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer21")
-        # # plot!(Matrix(ref_NLAYER70.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer70")
-        # pl_a = plot(sim.above.time,
+        # # Plots.plot!(Matrix(ref_NLAYER14.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer14")
+        # # Plots.plot!(Matrix(ref_NLAYER21.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer21")
+        # # Plots.plot!(Matrix(ref_NLAYER70.ψ[:,Not(:time)]), line = :dot, color = :black, labels = "LWFBrook90R_NLayer70")
+        # pl_a = Plots.plot(sim.above.time,
         #         Matrix(#sim.above[:,Not(:time)]),
         #                # label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"],
         #                 sim.above[:,[:GWAT,:INTS,:INTR,:SNOW]]),
         #                 label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"],
         #                 line = :solid)
-        # plot!(Matrix(ref_NLAYER7.above[:,[:intr,:ints,:snow,:gwat]]),
+        # Plots.plot!(Matrix(ref_NLAYER7.above[:,[:intr,:ints,:snow,:gwat]]),
         #         line = :dash, color = :black, labels = "LWFBrook90R_NLayer7")
-        # # plot!(Matrix(ref_NLAYER14.above[:,[:intr,:ints,:snow,:gwat]]),
+        # # Plots.plot!(Matrix(ref_NLAYER14.above[:,[:intr,:ints,:snow,:gwat]]),
         # #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
-        # # plot!(Matrix(ref_NLAYER21.above[:,[:intr,:ints,:snow,:gwat]]),
+        # # Plots.plot!(Matrix(ref_NLAYER21.above[:,[:intr,:ints,:snow,:gwat]]),
         # #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
-        # # plot!(Matrix(ref_NLAYER70.above[:,[:intr,:ints,:snow,:gwat]]),
+        # # Plots.plot!(Matrix(ref_NLAYER70.above[:,[:intr,:ints,:snow,:gwat]]),
         # #         line = :dot, color = :black, labels = "LWFBrook90R_NLayer7")
-        # plot(pl_θ, pl_ψ, pl_a, layout = (3,1), size = (600,800),
+        # Plots.plot(pl_θ, pl_ψ, pl_a, layout = (3,1), size = (600,800),
         #     leftmargin = 5mm)
         # savefig(fname_illustrations*"TESTSET_site-θ-ψ-aboveground-states_$(site).png")
 
@@ -193,17 +193,19 @@ end
         size_inches = (7.25, 12) # often either 7.25 inches or 3.60 inches wide
         size_pt = 72 .* size_inches
         fig = Makie.Figure(resolution = size_pt, fontsize = 12)
-        ax1 = Makie.Axis(fig[1,1], xlabel = "Days", ylabel = "θ\n(-)")#,   title = "Title")
-        ax2 = Makie.Axis(fig[2,1], xlabel = "Days", ylabel = "ψ\n(kPa)",#, title = "Title")
+        ax1 = Makie.Axis(fig[1,1], xlabel = "Time (days)", ylabel = "θ (-)")#,   title = "Title")
+        ax2 = Makie.Axis(fig[2,1], xlabel = "Time (days)", ylabel = "ψ (kPa)",#, title = "Title")
             yscale = Makie.pseudolog10, yticks = [-100, -30, -10, -3, -1, 0])
-        # ax3 = Makie.Axis(fig[3,1], xlabel = "Days", ylabel = " ")#, title = "Title")
+        # ax3 = Makie.Axis(fig[3,1], xlabel = "Time (days)", ylabel = " ")#, title = "Title")
         # Makie.linkxaxes!(ax1, ax2, ax3); [Makie.hidexdecorations!(ax, grid = false) for ax in [ax1, ax2] ]
         scalars_jl = [:INTS,:INTR,:SNOW]#, :GWAT]
         scalars_R  = [:ints,:intr,:snow]#, :gwat]
-        scalars_label = ["INTS\n(mm)", "INTR\n(mm)", "SNOW\n(mm)"]#, "GWAT\n(mm)", "CC\n(MJ/m2)", "SNOWLQ\n(mm)"]
+        scalars_label = ["INTS (mm)", "INTR (mm)", "SNOW (mm)"]#, "GWAT (mm)", "CC (MJ/m2)", "SNOWLQ (mm)"]
         gl = fig[3,1] = GridLayout()
         ax3_list = [Axis(gl[i, 1], ylabel = lbl) for (i, lbl) in enumerate(scalars_label)]
-        Makie.linkxaxes!(ax1, ax2, ax3); [Makie.hidexdecorations!(ax, grid = false) for ax in [ax1, ax2, contents(gl)[Not(end)]...] ]
+        Makie.linkxaxes!(ax1, ax2, ax3_list...);
+        # [Makie.hidexdecorations!(ax, grid = false) for ax in [ax1, ax2, contents(gl)[Not(end)]...] ]
+        [Makie.hidexdecorations!(ax, grid = false) for ax in [contents(gl)[Not(end)]...] ]
 
         Makie.series!(ax1, sim.θψδ.time, transpose(Matrix(sim.θψδ[:,r"^θ"])), color = Makie.wong_colors(), labels = "LWFBrook90.jl:" .* names(sim.θψδ[:,r"^θ"]))
         Makie.series!(ax2, sim.θψδ.time, transpose(Matrix(sim.θψδ[:,r"^ψ"])), color = Makie.wong_colors(), labels = "LWFBrook90.jl:" .* names(sim.θψδ[:,r"^ψ"]))
@@ -259,44 +261,99 @@ end
 function my_scatter!(pl, df; args...)
     Plots.scatter!(pl, float.(df[:,:time]), Matrix(df[:,Not(:time)]); args...)
 end
-function plot_Hammel_Dense(sim, ref, hyd, depth_to_read_out_mm, title; subtitle = "", args...)
-    #LWFBrook90.jl:
-    pl_θ = plot(sim.θψδ_dense.time, Matrix(sim.θψδ_dense[:,r"θ_"]); line = :solid, color = [1 2 3 4 5], labels = "LWFBrook90.jl: " .* permutedims(names(sim.θψδ_dense[:,r"θ_"])))
-    pl_ψ = plot(sim.θψδ_dense.time, Matrix(sim.θψδ_dense[:,r"ψ_"]); line = :solid, color = [1 2 3 4 5], labels = "LWFBrook90.jl: " .* permutedims(names(sim.θψδ_dense[:,r"ψ_"])))
-    #LWFBrook90R
-    my_scatter!(pl_θ, ref.θ;       line = :dot,   color = :black,      labels = ["LWFBrook90R" "" "" "" ""], markersize=2.5)
-    my_scatter!(pl_ψ, ref.ψ;       line = :dot,   color = :black,      labels = ["LWFBrook90R" "" "" "" ""], markersize=2.5)
-    #Hydrus
-    my_scatter!(pl_θ,hyd.θdense, line = :dash,  color = [1 2 3 4 5], markersize=2, markerstrokecolor=:auto, labels = "Hydrus: " .* string.(permutedims(depth_to_read_out_mm)) .* " mm")
-    my_scatter!(pl_ψ,hyd.ψdense, line = :dash,  color = [1 2 3 4 5], markersize=2, markerstrokecolor=:auto, labels = "Hydrus: " .* string.(permutedims(depth_to_read_out_mm)) .* " mm")
-    # my_plot!(   pl_θ,hyd.θdense, line = :dash,  color = [1 2 3 4 5],               labels = nothing)
-    # my_plot!(   pl_ψ,hyd.ψdense, line = :dash,  color = [1 2 3 4 5],               labels = nothing)
 
+function plot_Hammel_Dense(sim, ref, hyd, depth_to_read_out_mm, title; subtitle = "", fig = nothing, args...)
+    # create title
+    ODE_method = replace(String(Symbol(sim.ODEsolution.alg)), r"(.*?)(\(|{).*"=>s"\1")
+    final_title = title
+    final_subtitle = Printf.@sprintf("%d time steps with method: %s %s",
+            sim.ODEsolution.destats.naccept,
+            ODE_method,
+            ifelse(subtitle=="","","\n"*subtitle))
+
+    # Make publication figure with Makie # https://docs.makie.org/stable/explanations/figure_size/#vector_graphics
+    # size_inches = (3.60, 4*3) # often either 7.25 inches or 3.60 inches wide
+    if isnothing(fig)
+        size_inches = (7.25, 12); # often either 7.25 inches or 3.60 inches wide
+        size_pt = 72 .* size_inches;
+        fig = Makie.Figure(resolution = size_pt, fontsize = 12);
+    else
+        # fig comes from outside
+    end
+    is_loam_simulation = maximum(sim.θψδ_dense.time)>20.
+    @show is_loam_simulation
+    if is_loam_simulation
+        x_ticks = range(extrema(sim.θψδ_dense.time)..., step = 5);
+        y_ticks_ψ = [-100, -30, -10, -3, -1, 0]
+    else
+        x_ticks = range(extrema(sim.θψδ_dense.time)..., step = 2);
+        y_ticks_ψ = Makie.automatic; #[-100, -30, -10, -3, -1, 0]
+        # y_ticks_ψ = round.(collect(10 .^ [-1:0.5:5...]))#[-100, -30, -10, -3, -1, 0]
+        # y_ticks_ψ = round.(collect(10 .^ [-1:0.2:5...]))#
+    end
+    ax1 = Makie.Axis(fig[1,1], xlabel = "Time (days)", ylabel = "θ (-)",   xticks = x_ticks,
+        title = final_title, subtitle = final_subtitle);
+    ax2 = Makie.Axis(fig[2,1], xlabel = "Time (days)", ylabel = "ψ (kPa)", xticks = x_ticks,
+        yscale = Makie.pseudolog10, yticks = y_ticks_ψ);
     simulate_isotopes = !ismissing(sim.θψδ_dense.δ18O_100mm[1])
     if (simulate_isotopes)
-        #LWFBrook90.jl:
-        pl_δ18O = plot(sim.θψδ_dense.time, Matrix(sim.θψδ_dense[:,r"δ18O_"]); line = :solid, color = [1 2 3 4 5], labels = "LWFBrook90.jl: " .* permutedims(names(sim.θψδ_dense[:,r"δ18O_"])))
-        pl_δ2H  = plot(sim.θψδ_dense.time, Matrix(sim.θψδ_dense[:,r"δ18O_"]);  line = :solid, color = [1 2 3 4 5], labels = "LWFBrook90.jl: " .* permutedims(names(sim.θψδ_dense[:,r"δ18O_"])))
-        #Hydrus
-        my_scatter!(pl_δ18O,hyd.δ18Odense, line = :dash,  color = [1 2 3 4 5], markersize=2, markerstrokecolor=:auto, labels = "Hydrus: " .* string.(permutedims(depth_to_read_out_mm)) .* " mm")
-        my_scatter!(pl_δ2H,hyd.δ2Hdense, line = :dash,  color = [1 2 3 4 5], markersize=2, markerstrokecolor=:auto, labels = "Hydrus: " .* string.(permutedims(depth_to_read_out_mm)) .* " mm")
+        ax3 = Makie.Axis(fig[3,1], xlabel = "Time (days)", ylabel = "δ¹⁸O (‰)", xticks = x_ticks)
+        ax4 = Makie.Axis(fig[4,1], xlabel = "Time (days)", ylabel = "δ²H (‰)",  xticks = x_ticks)
+        Makie.linkxaxes!(ax1, ax2, ax3, ax4); [Makie.hidexdecorations!(ax, grid = false) for ax in [ax1, ax2, ax3] ] # Not ax4
     else
-        pl_δ18O = plot()
-        pl_δ2H = plot()
+        Makie.linkxaxes!(ax1, ax2); [Makie.hidexdecorations!(ax, grid = false) for ax in [ax1] ] # Not ax2
     end
 
-    ODE_method = replace(String(Symbol(sim.ODEsolution.alg)), r"(.*?)(\(|{).*"=>s"\1")
-    plot(plot_title = Printf.@sprintf("%s \n %d time steps with method: %s %s",
-            title,
-            sim.ODEsolution.destats.naccept,
-            ODE_method, ifelse(subtitle=="","","\n"*subtitle)),
-        filter(!isnothing,
-                [plot!(pl_θ,ylabel = "θ (-)", xlabel = "Time (days)"),
-                plot!(pl_ψ,ylabel = "ψ (kPa)", xlabel = "Time (days)", legend = false),
-                ifelse(simulate_isotopes, plot!(pl_δ18O,ylabel = "δ18O (‰)", xlabel = "Time (days)", legend = false), nothing),
-                ifelse(simulate_isotopes, plot!(pl_δ2H, ylabel = "δ2H (‰)", xlabel = "Time (days)", legend = false),  nothing)])... ,
-        size = (1200,1200), layout = ifelse(simulate_isotopes, (4,1), (2,1)), leftmargin = 8mm,
-        args...)
+    #LWFBrook90.jl:
+    Makie.series!(ax1, sim.θψδ_dense.time, transpose(Matrix(sim.θψδ_dense[:,r"^θ"])), color = Makie.wong_colors())
+    Makie.series!(ax2, sim.θψδ_dense.time, transpose(Matrix(sim.θψδ_dense[:,r"^ψ"])), color = Makie.wong_colors())
+    if (simulate_isotopes)
+        Makie.series!(ax3, sim.θψδ_dense.time, transpose(Matrix(sim.θψδ_dense[:,r"δ18O_"])), color = Makie.wong_colors())
+        Makie.series!(ax4, sim.θψδ_dense.time, transpose(Matrix(sim.θψδ_dense[:,r"δ2H_"])),  color = Makie.wong_colors())
+    end
+
+    #Hydrus-1D
+    Makie.series!(ax1, hyd.θdense.time, transpose(Matrix(disallowmissing(hyd.θdense[:,Not(:time)]))), color = Makie.wong_colors(), linewidth=0, marker = :circle, markersize = 8)
+    # [Makie.scatter!(ax1, hyd.θdense.time, c, color = Makie.wong_colors()) for c in eachcol(Matrix(hyd.θdense[:,Not(:time)]))]
+    Makie.series!(ax2, hyd.ψdense.time, transpose(Matrix(disallowmissing(hyd.ψdense[:,Not(:time)]))), color = Makie.wong_colors(), linewidth=0, marker = :circle, markersize = 8)
+    if (simulate_isotopes)
+        Makie.series!(ax3, hyd.δ18Odense.time, transpose(Matrix(disallowmissing(hyd.δ18Odense[:,Not(:time)]))), color = Makie.wong_colors(), linewidth=0, marker = :circle, markersize = 8)
+        Makie.series!(ax4, hyd.δ2Hdense.time, transpose(Matrix(disallowmissing(hyd.δ2Hdense[:,Not(:time)]))), color = Makie.wong_colors(), linewidth=0, marker = :circle, markersize = 8)
+
+    end
+
+    #LWFBrook90R
+    Makie.series!(ax1, ref.θ.time, transpose(Matrix(disallowmissing(ref.θ[:,Not(:time)]))), solid_color = :black, linewidth=0, marker = 'x', markersize = 8)
+    Makie.series!(ax2, ref.ψ.time, transpose(Matrix(disallowmissing(ref.ψ[:,Not(:time)]))), solid_color = :black, linewidth=0, marker = 'x', markersize = 8)
+
+    # add manual legend
+    # axislegend(ax2,
+    #     [LineElement(color    = Makie.wong_colors()[1], linestyle = nothing),
+    #         LineElement(color = Makie.wong_colors()[2], linestyle = nothing),
+    #         LineElement(color = Makie.wong_colors()[3], linestyle = nothing),
+    #         LineElement(color = Makie.wong_colors()[4], linestyle = nothing),
+    #         LineElement(color = Makie.wong_colors()[5], linestyle = nothing),
+    #         MarkerElement(color = :black, marker = :circle), # markersize = 15, strokecolor = :black,
+    #         MarkerElement(color = :black, marker = 'x'), # markersize = 15, strokecolor = :black, LineElement(color = :black, linestyle = :dash)
+    #         ],
+    #     ["LWFBrook90.jl: ".*replace.(replace.(names(sim.θψδ_dense[:,r"^θ"]), "θ_" => ""), "mm" => " mm")...,
+    #         "Hydrus-1D", "LWFBrook90R"],
+    #     patchsize = (15, 5), rowgap = 0, labelsize = 10,
+    #     position = :rt)
+    markers = [:hline, :circle, 'x']
+    markers_string = ["LWFBrook90.jl","Hydrus-1D","LWFBrook90R"]
+    # group_depth = [MarkerElement(marker = mar, color = :black, strokecolor = :transparent) for mar in markers]
+    group_depth = [
+        LineElement(color = :black, linestyle = nothing),
+        MarkerElement(marker = markers[2], color = :black, strokecolor = :transparent),
+        MarkerElement(marker = markers[3], color = :black, strokecolor = :transparent)]
+    depth_string = replace.(replace.(names(sim.θψδ_dense[:,r"^θ"]), "θ_" => ""), "mm" => " mm")
+    group_color = [PolyElement(color = color, strokecolor = :transparent) for color in Makie.wong_colors()[eachindex(depth_string)]]
+    axislegend(ax1, [group_depth..., group_color...], [markers_string..., depth_string...],
+        patchsize = (15, 5), rowgap = 0, labelsize = 10,
+        position = :rt)
+
+    return fig
 end
 print_timed_statistics = function(time, gctime, gcstats)
     # Printf.@sprintf("%.2f seconds (%.2f M allocations: %.3f MiB, %.2f%% gc time)",
@@ -324,6 +381,20 @@ end
         path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_sand-NLayer-400-RESET=FALSE",
         path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
         path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand") end;
+    if plot_flag # if we plot out, compute again as first 3 runs were affected by compilation
+        (sim4, ref4, hyd4), time4, bytes4, gctime4, gcstats4 = @timed prepare_θψδ_from_sim_and_reference(;
+            path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_sand-NLayer-27-RESET=FALSE",
+            path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-27-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
+            path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand");
+        (sim5, ref5, hyd5), time5, bytes5, gctime5, gcstats5 = @timed prepare_θψδ_from_sim_and_reference(;
+            path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_sand-NLayer-103-RESET=FALSE",
+            path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-103-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
+            path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand");
+        high_resolution_flag && begin (sim6, ref6, hyd6), time6, bytes6, gctime6, gcstats6 = @timed prepare_θψδ_from_sim_and_reference(;
+            path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_sand-NLayer-400-RESET=FALSE",
+            path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
+            path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand") end;
+    end
     (sim1, ref1, hyd1), time1, bytes1, gctime1, gcstats1 = @timed prepare_θψδ_from_sim_and_reference(;
         path_jl_prefix      = "test-assets/Hammel-2001/input-files/Hammel_loam-NLayer-27-RESET=FALSE",
         path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_loam-NLayer-27-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
@@ -341,6 +412,7 @@ end
     # Illustrate with a plot what will be compared in the tests below
     if !is_a_CI_system && plot_flag
         # if (true) # Do these manually outside of automatic testing in order not to require Plots pkg
+        using Makie
         depth_to_read_out_mm = [100, 500, 1000, 1500, 1900]
         # fname_illustrations = "out/$(today())/"
 
@@ -348,28 +420,63 @@ end
         mkpath(dirname(fname_illustrations))
 
         # Plot Loam simulations
-        pl1 = plot_Hammel_Dense(sim1, ref1, hyd1, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(700,900), dpi=300,
-            subtitle = print_timed_statistics(time1, gctime1, gcstats1)*"\n"*git_status_string, topmargin = 15mm)
-        pl2 = plot_Hammel_Dense(sim2, ref2, hyd2, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(700,900), dpi=300,
-            subtitle = print_timed_statistics(time2, gctime2, gcstats2)*"\n"*git_status_string, topmargin = 15mm)
-
+        pl1 = plot_Hammel_Dense(sim1, ref1, hyd1, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
+            subtitle = print_timed_statistics(time1, gctime1, gcstats1)*"\n"*git_status_string)
+        save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim1.png", pl1, pt_per_unit = 1)
+        # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim1.pdf", pl1, pt_per_unit = 1)
+        pl2 = plot_Hammel_Dense(sim2, ref2, hyd2, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
+            subtitle = print_timed_statistics(time2, gctime2, gcstats2)*"\n"*git_status_string)
+        save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim2.png", pl2, pt_per_unit = 1)
+        # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim2.pdf", pl2, pt_per_unit = 1)
+        if high_resolution_flag
+            pl3 = plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
+                subtitle = print_timed_statistics(time3, gctime3, gcstats3)*"\n"*git_status_string)
+            save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim3.png", pl3, pt_per_unit = 1)
+            # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim3.pdf", pl3, pt_per_unit = 1)
+        end
         # Plot Sand simulations
-        pl4 = plot_Hammel_Dense(sim4, ref4, hyd4, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(700,900), dpi=300,
-            subtitle = print_timed_statistics(time4, gctime4, gcstats4)*"\n"*git_status_string, topmargin = 15mm)
-        pl5 = plot_Hammel_Dense(sim5, ref5, hyd5, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(700,900), dpi=300,
-            subtitle = print_timed_statistics(time5, gctime5, gcstats5)*"\n"*git_status_string, topmargin = 15mm)
+        pl4 = plot_Hammel_Dense(sim4, ref4, hyd4, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
+            subtitle = print_timed_statistics(time4, gctime4, gcstats4)*"\n"*git_status_string)
+        save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim1.png", pl4, pt_per_unit = 1)
+        # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim1.pdf", pl4, pt_per_unit = 1)
+        pl5 = plot_Hammel_Dense(sim5, ref5, hyd5, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
+            subtitle = print_timed_statistics(time5, gctime5, gcstats5)*"\n"*git_status_string)
+        save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim2.png", pl5, pt_per_unit = 1)
+        # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim2.pdf", pl5, pt_per_unit = 1)
+        if high_resolution_flag
+            pl6 = plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
+                subtitle = print_timed_statistics(time6, gctime6, gcstats6)*"\n"*git_status_string)
+            save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim3.png", pl6, pt_per_unit = 1)
+            # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim3.pdf", pl6, pt_per_unit = 1)
+        end
 
-        high_resolution_flag && (pl3 = plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(700,900), dpi=300,
-            subtitle = print_timed_statistics(time3, gctime3, gcstats3)*"\n"*git_status_string, topmargin = 15mm))
-        high_resolution_flag && (pl6 = plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(700,900), dpi=300,
-            subtitle = print_timed_statistics(time6, gctime6, gcstats6)*"\n"*git_status_string, topmargin = 15mm))
-
-        savefig(pl1, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim1.png")
-        savefig(pl2, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim2.png")
-        high_resolution_flag && (savefig(pl3, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim3.png"))
-        savefig(pl4, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim1.png")
-        savefig(pl5, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim2.png")
-        high_resolution_flag && (savefig(pl6, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim3.png"))
+        # Also make a combined plot (for article):
+        if high_resolution_flag
+            size_inches = (7.25, 12); # often either 7.25 inches or 3.60 inches wide
+            size_pt = 72 .* size_inches;
+            fig_combined = Makie.Figure(resolution = size_pt, fontsize = 12);
+            fig_a = fig_combined[1,1]; fig_b = fig_combined[1,2]
+            plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Loam"; fig = fig_a)
+            plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Sand"; fig = fig_b)
+            # add maintitle
+                # remove subtitles
+                content(fig_a[1,1]).subtitle = ""
+                content(fig_b[1,1]).subtitle = ""
+                # add maintitle (super title)
+                Label(fig_combined[0,:], "Simulation from Hammel et al. (2001)";
+                    tellheight = true, tellwidth = false,
+                    valign = :bottom, padding = (0, 0, 0, 0),
+                    font = "TeX Gyre Heros Bold")
+            # add subplot labels
+            for (label, layout) in zip(["a", "b"], [fig_a, fig_b])
+                Label(layout[1, 1, TopLeft()], label,
+                    fontsize = 26, font = :bold,
+                    padding = (0, 5, 5, 0),
+                    halign = :right)
+            end
+            save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand3-Loam3.png", fig_combined, pt_per_unit = 1)
+            save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand3-Loam3.pdf", fig_combined, pt_per_unit = 1)
+        end
     end
 
     # Use sensible accuracy values to compare the two solutions (e.g. θ of 0.02, and ψ of 1 kPa)
@@ -437,6 +544,23 @@ end
         path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
         path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand_ISO2",
         simulate_isotopes   = true) end;
+    if plot_flag # if we plot out, compute again as first 3 runs were affected by compilation
+        (sim4, ref4, hyd4), time4, bytes4, gctime4, gcstats4 = @timed prepare_θψδ_from_sim_and_reference(;
+            path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_sand-NLayer-27-RESET=FALSE",
+            path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-27-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
+            path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand_ISO2",
+            simulate_isotopes   = true);
+        (sim5, ref5, hyd5), time5, bytes5, gctime5, gcstats5 = @timed prepare_θψδ_from_sim_and_reference(;
+            path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_sand-NLayer-103-RESET=FALSE",
+            path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-103-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
+            path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand_ISO2",
+            simulate_isotopes   = true);
+        high_resolution_flag && begin (sim6, ref6, hyd6), time6, bytes6, gctime6, gcstats6 = @timed prepare_θψδ_from_sim_and_reference(;
+            path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_sand-NLayer-400-RESET=FALSE",
+            path_R_layeroutput  = "test-assets/Hammel-2001/output_LWFBrook90R/Hammel_sand-NLayer-400-RESET=TRUE_OUTPUT-LWFBrook90R-0.4.5-layer_output.csv",
+            path_Hydrus         = "test-assets/Hammel-2001/output_Hydrus1D/Hammel_Test_Sand_ISO2",
+            simulate_isotopes   = true) end;
+    end
 
     (sim1, ref1, hyd1), time1, bytes1, gctime1, gcstats1 = @timed prepare_θψδ_from_sim_and_reference(;
         path_jl_prefix      = "test-assets/Hammel-2001/input-files-ISO/Hammel_loam-NLayer-27-RESET=FALSE",
@@ -458,7 +582,7 @@ end
     # Illustrate with a plot what will be compared in the tests below
     if !is_a_CI_system && plot_flag
         # if (true) # Do these manually outside of automatic testing in order not to require Plots pkg
-        using Plots, Measures
+        using Makie
         depth_to_read_out_mm = [100, 500, 1000, 1500, 1900]
         # fname_illustrations = "out/$(today())/"
 
@@ -467,33 +591,64 @@ end
 
         # Plot Loam simulations
         pl1 = plot_Hammel_Dense(sim1, ref1, hyd1, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
-            subtitle = print_timed_statistics(time1, gctime1, gcstats1)*"\n"*git_status_string,
-            topmargin = 17mm, layout = (2,2))
+            subtitle = print_timed_statistics(time1, gctime1, gcstats1)*"\n"*git_status_string)
+        save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim1.png", pl1, pt_per_unit = 1)
+        # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim1.pdf", pl1, pt_per_unit = 1)
+
         pl2 = plot_Hammel_Dense(sim2, ref2, hyd2, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
-            subtitle = print_timed_statistics(time2, gctime2, gcstats2)*"\n"*git_status_string,
-            topmargin = 17mm, layout = (2,2))
-        high_resolution_flag && (pl3 = plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
-            subtitle = print_timed_statistics(time3, gctime3, gcstats3)*"\n"*git_status_string,
-            topmargin = 17mm, layout = (2,2)))
+            subtitle = print_timed_statistics(time2, gctime2, gcstats2)*"\n"*git_status_string)
+        save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim2.png", pl2, pt_per_unit = 1)
+        # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim2.pdf", pl2, pt_per_unit = 1)
+        if high_resolution_flag
+            pl3 = plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
+                subtitle = print_timed_statistics(time3, gctime3, gcstats3)*"\n"*git_status_string)
+            save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim3.png", pl3, pt_per_unit = 1)
+            # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim3.pdf", pl3, pt_per_unit = 1)
+        end
         # Plot Sand simulations
         pl4 = plot_Hammel_Dense(sim4, ref4, hyd4, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
-            subtitle = print_timed_statistics(time4, gctime4, gcstats4)*"\n"*git_status_string,
-            topmargin = 17mm, layout = (2,2))
+            subtitle = print_timed_statistics(time4, gctime4, gcstats4)*"\n"*git_status_string)
+        save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand_sim1.png", pl4, pt_per_unit = 1)
+        # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand_sim1.pdf", pl4, pt_per_unit = 1)
         pl5 = plot_Hammel_Dense(sim5, ref5, hyd5, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
-            subtitle = print_timed_statistics(time5, gctime5, gcstats5)*"\n"*git_status_string,
-            topmargin = 17mm, layout = (2,2))
-        high_resolution_flag && (pl6 = plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
-            subtitle = print_timed_statistics(time6, gctime6, gcstats6)*"\n"*git_status_string,
-            topmargin = 17mm, layout = (2,2)))
+            subtitle = print_timed_statistics(time5, gctime5, gcstats5)*"\n"*git_status_string)
+        save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand_sim2.png", pl5, pt_per_unit = 1)
+        # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand_sim2.pdf", pl5, pt_per_unit = 1)
+        if high_resolution_flag
+            pl6 = plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
+                subtitle = print_timed_statistics(time6, gctime6, gcstats6)*"\n"*git_status_string)
+            save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand_sim3.png", pl6, pt_per_unit = 1)
+            # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand_sim3.pdf", pl6, pt_per_unit = 1)
+        end
 
-        savefig(pl1, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim1.png")
-        savefig(pl2, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim2.png")
-        high_resolution_flag && (savefig(pl3, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim3.png"))
-        savefig(pl4, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand_sim1.png")
-        savefig(pl5, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand_sim2.png")
-        high_resolution_flag && (savefig(pl6, fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand_sim3.png"))
+        # Also make a combined plot (for article):
+        if high_resolution_flag
+            size_inches = (7.25, 12); # often either 7.25 inches or 3.60 inches wide
+            size_pt = 72 .* size_inches;
+            fig_combined = Makie.Figure(resolution = size_pt, fontsize = 12);
+            fig_a = fig_combined[1,1]; fig_b = fig_combined[1,2]
+            plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Loam"; fig = fig_a)
+            plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Sand"; fig = fig_b)
+            # add maintitle
+                # remove subtitles
+                content(fig_a[1,1]).subtitle = ""
+                content(fig_b[1,1]).subtitle = ""
+                # add maintitle (super title)
+                Label(fig_combined[0,:], "Simulation from Hammel et al. (2001)";
+                    tellheight = true, tellwidth = false,
+                    valign = :bottom, padding = (0, 0, 0, 0),
+                    font = "TeX Gyre Heros Bold")
+            # add subplot labels
+            for (label, layout) in zip(["a", "b"], [fig_a, fig_b])
+                Label(layout[1, 1, TopLeft()], label,
+                    fontsize = 26, font = :bold,
+                    padding = (0, 5, 5, 0),
+                    halign = :right)
+            end
+            save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand3-Loam3.png", fig_combined, pt_per_unit = 1)
+            save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand3-Loam3.pdf", fig_combined, pt_per_unit = 1)
+        end
     end
-
 
     # Use sensible accuracy values to compare the two solutions (e.g. θ of 0.02, and ψ of 1 kPa)
     # (e.g. RMSE(reference, simulated) < [hardcoded_value])
