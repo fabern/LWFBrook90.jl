@@ -32,20 +32,20 @@ Monthly or yearly quantities can be derived in the post processing.
 ## Input data
 
 ### Overview of input data
-To run a simulation following input files are needed in a single folder
+To run a simulation following input files are expected in a single folder
 - `soil_horizons.csv` - containing the hydraulic parameters of the different soil horizons
 - `param.csv` - containing scalar model parameters
-- `meteoveg.csv` - containing daily values of meteorologic variables and stand properties
+- `meteoveg.csv` - containing daily values of meteorologic variables [and stand properties]
 - `meteoiso.csv` - containing isotopic signatures of aggregate precipitation samples
 - `initial_conditions.csv` - containing initial conditions of scalar state variables
 - `soil_discretization.csv` - containing the initial conditions of the soil water status in the form of the soil matric potential (kPa) and the initial isotopic signatures (vector state variables); continuously defined parameters of relative root density distributions; as well as the definition of the numerical discretization of the soil domain (nodes with upper and lower limits).
 - `meteo_storm_durations.csv` - containing parameters of sub-daily storm/precipitation event patterns for each month
 
 Of these only the CSV files for the parameters `soil_horizons.csv` and `param.csv` and the forcings `meteoveg.csv`, `meteoiso.csv` are absolutely needed. The remaing can be provided by the user as arguments to `loadSPAC()` in the Julia script:
-- `soil_discretizations.csv` not needed if `Δz_thickness_m`, `root_distribution`, and `IC_soil` provided.
+- `soil_discretizations.csv`: not needed if `Δz_thickness_m`, `root_distribution`, and `IC_soil` provided.
 - `initial_conditions.csv`: not needed if `IC_scalar` provided.
 - `meteo_storm_durations.csv`: not needed if `storm_durations_h` provided.
-- Similarly columns with vegetation parameters are not mandatory in `meteoveg.csv`, if the user provides `loadSPAC(canopy_evolution = ...)`. Further `meteo_storm_durations`
+- `meteoveg.csv`: columns with vegetation parameters are not needed if `loadSPAC(canopy_evolution = ...)` is provided.
 
 The structure of the input CSV's is illustrated by the example input data sets `isoBEA2010-18-*` or `DAV2020-bare-minimum` or `DAV2020-full` located in the folder `examples/`, as well as below in this documentation. Please follow these examples closely when generating your own input files, including the exact column names and header lines containing the units.
 
