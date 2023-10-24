@@ -22,7 +22,7 @@ export RelativeDaysFloat2DateTime
 export get_soil_
 export get_deltasoil, get_theta, get_psi
 # read out results for aboveground/scalar variables
-export get_aboveground, get_δ, get_delta # get_mm # # TODO(bernhard): make sure we have documentation for these exported variables
+export get_amounts, get_δ, get_delta # get_mm # # TODO(bernhard): make sure we have documentation for these exported variables
 
 @doc raw"""
     SPAC

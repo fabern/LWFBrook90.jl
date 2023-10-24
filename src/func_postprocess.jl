@@ -1128,44 +1128,20 @@ function get_δsoil(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing
 end
 
 ##########################
-# Functions to get values linked to aboveground:
+# Functions to get values either isotopes or amounts (or otherwise)
 """
-    get_aboveground(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
+    get_amounts(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
 
-Returns a DataFrame with state variables: GWAT, INTS, INTR, SNOW, SNOWLQ in mm and CC in MJm2.
+Returns a DataFrame with amounts of the inputs and state variables: PREC, GWAT, INTS, INTR, SNOW, SNOWLQ in mm and CC in MJm2.
 By default, the values are returned for each simulation timestep.
 The user can define timesteps as `days_to_read_out_d` by optionally providing a numeric vector, e.g. saveat = 1:1.0:100
 """
-function get_aboveground(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
-    solution = simulation.ODESolution
-    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
-    @assert (isnothing(days_to_read_out_d) || all(days_to_read_out_d .>= 0)) "`days_to_read_out_d` must be Vector{Float64} and all >= 0. Received $(days_to_read_out_d)"
-
-    # parse requested time points
-    timepoints = isnothing(days_to_read_out_d) ? solution.t : days_to_read_out_d;
+function get_amounts(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
     compartments_to_extract = [:GWAT, :INTS, :INTR, :SNOW, :CC, :SNOWLQ] # CC is in MJm2
-
-    # Setup DataFrame to fill
-    timepoints = (timepoints isa AbstractArray ? timepoints : [timepoints]) # transform to vector even if input as scalar
-    df = DataFrame()
-    df[:, :time] = timepoints
-
-    if isnothing(days_to_read_out_d)
-        u_aboveground = [solution[t_idx][compartment][1]    for t_idx = eachindex(solution), compartment in compartments_to_extract]  # CC is in MJm2, by using [1] we avoid specifiyng :mm or :MJm2
-        # u_aboveground = [solution[t_idx][compartment].mm  for t_idx = eachindex(solution), compartment in compartments_to_extract]
-        # [solution[t_idx][compartment].d18O                for t_idx = eachindex(solution), compartment in compartments_to_extract]
-        # [solution[t_idx][compartment].d2H                 for t_idx = eachindex(solution), compartment in compartments_to_extract]
-    else
-        u_aboveground = [solution(t_days)[compartment][1]    for t_days = days_to_read_out_d, compartment in compartments_to_extract] # CC is in MJm2, by using [1] we avoid specifiyng :mm or :MJm2
-        # u_aboveground = [solution(t_days)[compartment].mm  for t_days = days_to_read_out_d, compartment in compartments_to_extract]
-        # [solution[t_idx][compartment].d18O                 for t_days = days_to_read_out_d, compartment in compartments_to_extract]
-        # [solution[t_idx][compartment].d2H                  for t_days = days_to_read_out_d, compartment in compartments_to_extract]
-    end
-
-    df = [df DataFrame(u_aboveground, string.(compartments_to_extract))]
-
-    # returns DataFrame of dimenstion (t,7) where t is number of time steps and 7 = 1 (time) + 6 (number of aboveground compartments)
-    return df
+    units_to_extract = [:mm, :mm, :mm, :mm, :MJm2, :mm]
+    # compartments_to_extract = [:GWAT, :INTS, :INTR, :SNOW, :CC, :SNOWLQ, :RWU, :XYLEM, :SWATI] # CC is in MJm2
+    # units_to_extract = [:mm, :mm, :mm, :mm, :MJm2, :mm, :mmday, :mm, :mm]
+    return get_scalars(compartments_to_extract, units_to_extract, simulation, days_to_read_out_d)
 end
 
 """
@@ -1176,38 +1152,77 @@ By default, the values are returned for each simulation timestep.
 The user can define timesteps as `days_to_read_out_d` by optionally providing a numeric vector, e.g. saveat = 1:1.0:100
 """
 function get_δ(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
-    # function get_δ(simulation::DiscretizedSPAC; days_to_read_out_d = nothing, compartment::Symbol = :all)
-    solution = simulation.ODESolution
-    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
-    @assert solution.prob.p.simulate_isotopes "Provided solution did not simulate isotopes"
+    compartments_to_extract = [:PREC, :GWAT, :INTS, :INTR, :SNOW, :RWU, :XYLEM]
+    units_to_extract        = [:d18O, :d18O, :d18O, :d18O, :d18O, :d18O, :d18O]
+    dfd18O = get_scalars(compartments_to_extract, units_to_extract, simulation, days_to_read_out_d);
 
-    compartments_to_extract = [:GWAT, :INTS, :INTR, :SNOW, :RWU, :XYLEM]
+    units_to_extract        = [:d2H,  :d2H, :d2H, :d2H, :d2H, :d2H, :d2H]
+    dfd2H = get_scalars(compartments_to_extract, units_to_extract, simulation, days_to_read_out_d);
+
+    return hcat(dfd18O, dfd2H[:, Not(:time)])
+end
+# get_δ(simulation)[:,:PREC_d2H]
+# get_δ(simulation).PREC_d18O
+# get_δ(simulation)
+# get_amounts(simulation; days_to_read_out_d = days_to_read_out_d)
+
+# plot(dates_to_read_out,     Matrix(dat_aboveground[:, Not(:time)]), labels = reshape(names(dat_aboveground[:, Not(:time)]),1,:))
+#     u_aboveground = LWFBrook90.get_amounts(simulation; days_to_read_out_d = timesteps);
+
+function get_scalars(compartments_to_extract, units_to_extract, simulation::DiscretizedSPAC, days_to_read_out_d)
+    solution = simulation.ODESolution;
+    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
+    @assert (isnothing(days_to_read_out_d) || all(days_to_read_out_d .>= 0)) "`days_to_read_out_d` must be Vector{Float64} and all >= 0. Received $(days_to_read_out_d)"
+
+    # parse requested time points and compartments
+    timepoints = isnothing(days_to_read_out_d) ? solution.t : days_to_read_out_d;
+    df_time = DataFrame(:time => (timepoints isa AbstractArray ? timepoints : [timepoints])) # transform to vector even if input as scalar
+
+    # Extract scalar values from state variable vector u
+    is_prec = compartments_to_extract .== :PREC # Dont cycle over PREC
+    cycle_over = zip(compartments_to_extract[Not(is_prec)], units_to_extract[Not(is_prec)])
 
     if isnothing(days_to_read_out_d)
-        # row_PREC_d18O = reshape(solution.prob.p.p_δ18O_PREC.(solution.t), 1, :)
-        # row_PREC_d2H  = reshape(solution.prob.p.p_δ2H_PREC.(solution.t), 1, :)
-        PREC_d18O = solution.prob.p.p_δ18O_PREC.(solution.t)
-        PREC_d2H  = solution.prob.p.p_δ2H_PREC.( solution.t)
-
-        # u_aboveground = [solution[t_idx][compartment].mm  for t_idx = eachindex(solution), compartment in compartments_to_extract]
-        d18O_aboveground = [solution[t_idx][compartment].d18O  for t_idx = eachindex(solution), compartment in compartments_to_extract]
-        d2H_aboveground  = [solution[t_idx][compartment].d2H   for t_idx = eachindex(solution), compartment in compartments_to_extract]
+        # u_aboveground = collect(solution[t_idx][comp][uni] for t_idx = eachindex(solution), (comp,uni) in cycle_over)
+        df_states = DataFrame((
+            string(comp) * "_" * string(uni) => [
+                solution[t_idx][comp][uni] for t_idx = eachindex(solution)
+            ] for (comp, uni) in cycle_over
+        )...)
     else
-        # row_PREC_d18O = reshape(solution.prob.p.p_δ18O_PREC.(days_to_read_out_d), 1, :)
-        # row_PREC_d2H  = reshape(solution.prob.p.p_δ2H_PREC.(days_to_read_out_d), 1, :)
-        PREC_d18O = solution.prob.p.p_δ18O_PREC.(days_to_read_out_d)
-        PREC_d2H  = solution.prob.p.p_δ2H_PREC.( days_to_read_out_d)
-
-        # u_aboveground = [solution(t_days)[compartment].mm  for t_days = days_to_read_out_d, compartment in compartments_to_extract]
-        d18O_aboveground = [solution(t_days)[compartment].d18O  for t_days = days_to_read_out_d, compartment in compartments_to_extract]
-        d2H_aboveground  = [solution(t_days)[compartment].d2H   for t_days = days_to_read_out_d, compartment in compartments_to_extract]
+        # u_aboveground = collect(solution(t_days)[comp][uni]  for t_days = days_to_read_out_d, (comp,uni) in cycle_over)
+        df_states = DataFrame((
+            string(comp) * "_" * string(uni) => [
+                solution(t_days)[comp][uni] for t_days = days_to_read_out_d
+            ] for (comp, uni) in cycle_over
+        )...)
     end
 
-    return DataFrame([PREC_d18O d18O_aboveground PREC_d2H d2H_aboveground],
-                     ["PREC_d18O"; string.(compartments_to_extract).*"_d18O";
-                      "PREC_d2H" ; string.(compartments_to_extract).*"_d2H"])
+    # Extract precipitation from forcing
+    if any(is_prec)
+        df_PREC = DataFrame("PREC_" * string(units_to_extract[is_prec][1]) =>
+            if (units_to_extract[is_prec][1] .== :mm || units_to_extract[is_prec][1] .== :mmday)
+                if (isnothing(days_to_read_out_d)) solution.prob.p.p_PREC.(solution.t)
+                else solution.prob.p.p_PREC.(days_to_read_out_d) end
+            elseif (units_to_extract[is_prec][1] .== :d18O)
+                if (isnothing(days_to_read_out_d)) solution.prob.p.p_δ18O_PREC.(solution.t)
+                else solution.prob.p.p_δ18O_PREC.(days_to_read_out_d) end
+            elseif (units_to_extract[is_prec][1] .== :d2H)
+                if (isnothing(days_to_read_out_d)) solution.prob.p.p_δ2H_PREC.(solution.t)
+                else solution.prob.p.p_δ2H_PREC.(days_to_read_out_d) end
+            end
+        )
+    else
+        df_PREC = DataFrame()
+    end
 
+    # returns DataFrame of dimenstion (t, N_variables = 9)
+    #   where t is number of time steps
+    #   and 9 = 1 (time) + 1(PREC) + 6 (number of compartments)
+    return hcat(df_time, df_PREC, df_states)
 end
+
+
 
 ############################################################################################
 ############################################################################################

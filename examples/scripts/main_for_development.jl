@@ -185,9 +185,9 @@ function run_main_with_isotopes(;input_prefix, input_path)
     # # LWFBrook90.DateTime2RelativeDaysFloat.( dates_to_read_out, simulation.continuous_SPAC.reference_date)
     # # LWFBrook90.DateTime2RelativeDaysFloat.( DateTime("2020-10-10", "yyyy-mm-dd"), simulation.continuous_SPAC.reference_date)
     # # LWFBrook90.DateTime2RelativeDaysFloat.( DateTime("2020-10-10_10:12", "yyyy-mm-dd_HH:MM"), simulation.continuous_SPAC.reference_date)
-    # get_aboveground(simulation)
-    # get_aboveground(simulation; days_to_read_out_d = timesteps_to_read_out)
-    # dat_aboveground = get_aboveground(simulation; days_to_read_out_d = timesteps_to_read_out)
+    # get_amounts(simulation)
+    # get_amounts(simulation; days_to_read_out_d = timesteps_to_read_out)
+    # dat_aboveground = get_amounts(simulation; days_to_read_out_d = timesteps_to_read_out)
     # plot(timesteps_to_read_out, Matrix(dat_aboveground), labels = reshape(names(dat_aboveground),1,:))
     # plot(dates_to_read_out,     Matrix(dat_aboveground), labels = reshape(names(dat_aboveground),1,:))
 
@@ -919,7 +919,7 @@ using LWFBrook90
 input_path = "examples/DAV2020-full/"; input_prefix = "DAV2020-full";
 model = loadSPAC(input_path, input_prefix; simulate_isotopes = true);
 simulation          = setup(model)
-simulate!(simulation, saveat = range(simulation.ODEProblem.tspan..., step = 30), save_everystep = false)
+simulate!(simulation, saveat = range(simulation.ODEProblem.tspan..., step = 30), description = "Run01", save_everystep = false)
 simulate!(simulation)
 using Plots, Measures; gr();
 pl1 = plotamounts(simulation, :above_and_belowground, :showRWUcentroid)

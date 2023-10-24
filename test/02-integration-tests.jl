@@ -122,22 +122,22 @@ end
     # ψ:
     @test RMS_differences(sim.θψδ[:,Cols(:time, r"ψ_")], ref_NLAYER7.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.24,5)
     # "GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)", (not done for: "CC (MJ/m2)" "SNOWLQ (mm)"]):
-    @test RMS_differences(sim.above[:,[:time,:GWAT, :INTS, :INTR, :SNOW]],
+    @test RMS_differences(sim.above[:,[:time, :GWAT_mm, :INTS_mm, :INTR_mm, :SNOW_mm]],
                             ref_NLAYER7.above[Not(end),[:time, :gwat,:ints,:intr,:snow]]) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.51,1.8)
 
     # Note that below we compare a NLAYER7 LWFBrook90.jl solution, with finer resolved
     # LWFBrook90R solutions. It is therefore normal, that the uncertainty can increase...
     @test RMS_differences(sim.θψδ[:,Cols(:time, r"θ_")], ref_NLAYER14.θ) < 0.03
     @test RMS_differences(sim.θψδ[:,Cols(:time, r"ψ_")], ref_NLAYER14.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.65,5.0)
-    @test RMS_differences(sim.above[:,[:time,:GWAT,:INTS,:INTR,:SNOW]],
+    @test RMS_differences(sim.above[:,[:time, :GWAT_mm, :INTS_mm, :INTR_mm, :SNOW_mm]],
                             ref_NLAYER14.above[Not(end),[:time,:gwat,:ints,:intr,:snow]]) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.51,1.8)
     @test RMS_differences(sim.θψδ[:,Cols(:time, r"θ_")], ref_NLAYER21.θ) < 0.04
     @test RMS_differences(sim.θψδ[:,Cols(:time, r"ψ_")], ref_NLAYER21.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.6,5.0)
-    @test RMS_differences(sim.above[:,[:time,:GWAT,:INTS,:INTR,:SNOW]],
+    @test RMS_differences(sim.above[:,[:time, :GWAT_mm, :INTS_mm, :INTR_mm, :SNOW_mm]],
                             ref_NLAYER21.above[Not(end),[:time,:gwat,:ints,:intr,:snow]]) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.51,1.8)
     @test RMS_differences(sim.θψδ[:,Cols(:time, r"θ_")], ref_NLAYER70.θ) < 0.04
     @test RMS_differences(sim.θψδ[:,Cols(:time, r"ψ_")], ref_NLAYER70.ψ) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.7,5.0)
-    @test RMS_differences(sim.above[:,[:time,:GWAT,:INTS,:INTR,:SNOW]],
+    @test RMS_differences(sim.above[:,[:time, :GWAT_mm, :INTS_mm, :INTR_mm, :SNOW_mm]],
                             ref_NLAYER70.above[Not(end),[:time,:gwat,:ints,:intr,:snow]]) < ifelse(input_prefix=="BEA2016-reset-FALSE",0.51,1.8)
 
     # TODO(bernhard): we could run multiple LWFBrook90.jl simulations and compare with the
@@ -172,7 +172,7 @@ end
         # pl_a = Plots.plot(sim.above.time,
         #         Matrix(#sim.above[:,Not(:time)]),
         #                # label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"],
-        #                 sim.above[:,[:GWAT,:INTS,:INTR,:SNOW]]),
+        #                 sim.above[:,[ :GWAT_mm, :INTS_mm, :INTR_mm, :SNOW_mm]]),
         #                 label=["GWAT (mm)" "INTS (mm)" "INTR (mm)" "SNOW (mm)" "CC (MJ/m2)" "SNOWLQ (mm)"],
         #                 line = :solid)
         # Plots.plot!(Matrix(ref_NLAYER7.above[:,[:intr,:ints,:snow,:gwat]]),
@@ -198,7 +198,7 @@ end
             yscale = Makie.pseudolog10, yticks = [-100, -30, -10, -3, -1, 0])
         # ax3 = Makie.Axis(fig[3,1], xlabel = "Time (days)", ylabel = " ")#, title = "Title")
         # Makie.linkxaxes!(ax1, ax2, ax3); [Makie.hidexdecorations!(ax, grid = false) for ax in [ax1, ax2] ]
-        scalars_jl = [:INTS,:INTR,:SNOW]#, :GWAT]
+        scalars_jl = [:INTS_mm,:INTR_mm,:SNOW_mm]#, :GWAT]
         scalars_R  = [:ints,:intr,:snow]#, :gwat]
         scalars_label = ["INTS (mm)", "INTR (mm)", "SNOW (mm)"]#, "GWAT (mm)", "CC (MJ/m2)", "SNOWLQ (mm)"]
         gl = fig[3,1] = GridLayout()

@@ -237,7 +237,7 @@ function prepare_θψAboveground_from_sim_and_ref(
 
     # Postprocess simulation
     timesteps = ref_below_1.θ.time;
-    u_aboveground = LWFBrook90.get_aboveground(simulation; days_to_read_out_d = timesteps);
+    u_aboveground = LWFBrook90.get_amounts(simulation; days_to_read_out_d = timesteps);
     ## Extract certain depths of simulation
     depth_to_read_out_mm = [100, 500, 1000, 1500, 1900];
     u_belowground = get_soil_([:θ, :ψ], simulation; days_to_read_out_d = timesteps, depths_to_read_out_mm = depth_to_read_out_mm)

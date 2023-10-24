@@ -24,7 +24,7 @@ using LWFBrook90
 #jl ## - `discretize()`
 #jl ## - `simulate!()`
 #jl ## - `get_soil_()`
-#jl ## - `get_aboveground()`
+#jl ## - `get_amounts()`
 #jl ## - `get_δ()`,
 
 # Define simulation model by reading in system definition and input data from input files.

@@ -134,7 +134,7 @@ function test_states_comparison(t_out, u_ref_names, u_ref, u_δ, u_SWATI, u_aux_
         # Test scalar states
         compare_scalar = (A,B; nans = false) -> all(isapprox.(Matrix(A), Matrix(B); nans))
         @test compare_scalar(loaded["u_ref"], u_ref)
-        @test compare_scalar(loaded["u_δ"],   u_δ[:, Not(:time_days)]; nans=true)
+        @test compare_scalar(loaded["u_δ"],   u_δ[:, Not(:time)]; nans=true)
 
         # Test vector states
         compare_vector = (A,B) -> all(isapprox.(Matrix(A), Matrix(B)))
