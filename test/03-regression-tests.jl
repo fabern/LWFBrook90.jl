@@ -39,7 +39,6 @@ if basename(pwd()) != "test"; cd("test"); end
 function get_some_states_to_compare(example_result)
     ## helper quantities
     t_out = range(extrema(example_result.ODESolution.t)..., step = 30)
-    currSPAC = example_result.parametrizedSPAC;
     ## scalar quantities
     u_ref_names = ["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ" "RWU" "XYLEM" "SWATI"]
     u_ref = vcat(
@@ -74,7 +73,7 @@ function get_some_states_to_compare(example_result)
 end
 
 function plot_simulated_states_vs_reference(
-        u_ref, u_δ, u_SWATI, u_aux_PSIM, u_aux_θ, u_δsoil_d18O, u_δsoil_d2H,
+        u_ref, u_ref_names, u_δ, u_SWATI, u_aux_PSIM, u_aux_θ, u_δsoil_d18O, u_δsoil_d2H,
         loaded, d_out)
     function plot_comparison(A, B_ref; d_out=1:size(A,1), nams = "")
         labels = if (nams=="")
@@ -99,8 +98,8 @@ function plot_simulated_states_vs_reference(
             plot_comparison(u_SWATI',        loaded["u_SWATI"]',        d_out=d_out, nams = ["SWATI_$l" for _ in [1], l in (1:5)]),
             plot_comparison(u_aux_PSIM',     loaded["u_aux_PSIM"]',     d_out=d_out, nams = ["PSIM_$l"  for _ in [1], l in (1:5)]),
             plot_comparison(u_aux_θ',        loaded["u_aux_θ"]',        d_out=d_out, nams = ["θ_$l"     for _ in [1], l in (1:5)]),
-            plot_comparison(u_δsoil_d18O,    permutedims(loaded["u_δsoil"].d18O), d_out=d_out, nams = names(select(df_belowground, r"δ18O_"))),
-            plot_comparison(u_δsoil_d2H,     permutedims(loaded["u_δsoil"].d2H),  d_out=d_out, nams = names(select(df_belowground, r"δ2H_"))),
+            plot_comparison(u_δsoil_d18O,    permutedims(loaded["u_δsoil"].d18O), d_out=d_out, nams = names(u_δsoil_d18O)),
+            plot_comparison(u_δsoil_d2H,     permutedims(loaded["u_δsoil"].d2H),  d_out=d_out, nams = names(u_δsoil_d2H)),
             layout = (2,4), size = (1200,800))
 end
 function test_states_comparison(t_out, u_ref_names, u_ref, u_δ, u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_θ, p_fu_KK, u_δsoil_d18O, u_δsoil_d2H,
@@ -164,7 +163,8 @@ end
             loaded)
     elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
         # overwrite output
-        u_δsoil = (d18O = Matrix(permutedims(u_δsoil_d18O)), d2H = Matrix(permutedims(select(df_belowground, r"δ2H_"))))
+        u_δsoil = (d18O = Matrix(permutedims(u_δsoil_d18O)), d2H = Matrix(permutedims(u_δsoil_d2H)))
+        currSPAC = example_result.parametrizedSPAC;
         jldsave(fname, compress=false;
                 (currSPAC   = currSPAC,
                  u_ref      = u_ref,
@@ -178,8 +178,8 @@ end
             fname_illustrations = "out/$git_status_string/TESTSET_DAV2020-regressionTest"
             mkpath(dirname(fname_illustrations))
             pl_comparison = plot_simulated_states_vs_reference(
-                u_ref, u_δ, u_SWATI, u_aux_PSIM, u_aux_θ, u_δsoil_d18O, u_δsoil_d2H,
-                loaded, d_out)
+                u_ref, u_ref_names, u_δ, u_SWATI, u_aux_PSIM, u_aux_θ, u_δsoil_d18O, u_δsoil_d2H,
+                loaded, t_out)
 
             savefig(pl_comparison,fname_illustrations*"_regression_test_overwritten.png")
         # end
@@ -335,10 +335,9 @@ end
 
     fname2  = "../examples/INFEXP1_fluxes_reference.jld2"
     fname2b = "../examples/INFEXP1-modified_fluxes_reference.jld2"
+    loaded2 = load(fname2)
+    loaded2b = load(fname2b)
     if task == "test"
-        loaded2 = load(fname2)
-        loaded2b = load(fname2b)
-
         test_fluxes_comparison(simulated_fluxes2, loaded2)
         test_fluxes_comparison(simulated_fluxes2b, loaded2b)
     elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
@@ -431,8 +430,8 @@ end
     # test or overwrite
     # fname = input_path*input_prefix
     fname = "../examples/DAV2020-full-modified_fluxes_reference.jld2"
+    loaded = load(fname)
     if task == "test"
-        loaded = load(fname)
         test_fluxes_comparison(simulated_fluxes, loaded)
     elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
         # overwrite output
