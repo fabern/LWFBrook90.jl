@@ -117,9 +117,9 @@ if basename(pwd()) != "test"; cd("test"); end
         pl1 = plotamounts(example_result, :above_and_belowground, :showRWUcentroid)
         pl2 = plotisotopes(example_result, :d18O, (d18O = (-16, -6), d2H = (-125, -40)), :showRWUcentroid)
         pl3 = plotforcingandstates(example_result)
-        savefig(plot(pl1, size=(1000,1400), dpi=300),  fname_illustrations*"_amts.png")
-        savefig(plot(pl2, size=(1000,700), dpi=300), fname_illustrations*"_d18O-d2H.png")
-        savefig(plot(pl3, size=(1000,1400), dpi=300), fname_illustrations*"_forcing.png")
+        savefig(Plots.plot(pl1, size=(1000,1400), dpi=300),  fname_illustrations*"_amts.png")
+        savefig(Plots.plot(pl2, size=(1000,700), dpi=300), fname_illustrations*"_d18O-d2H.png")
+        savefig(Plots.plot(pl3, size=(1000,1400), dpi=300), fname_illustrations*"_forcing.png")
     end
 
 end
@@ -167,38 +167,38 @@ function get_daily_soilFluxes(simulation)
     return d_out, simulated_fluxes
 end
 function plot_simulated_fluxes_vs_reference(simulated_fluxes, reference, d_out; labels = ["current code" "reference simulation"], kwargs...)
-    plot(
-        plot(d_out, [simulated_fluxes.cum_d_prec      reference["cum_d_prec"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_prec", kwargs...),
-        plot(d_out, [simulated_fluxes.cum_d_rfal      reference["cum_d_rfal"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_rfal", kwargs...),
-        plot(d_out, [simulated_fluxes.cum_d_sfal      reference["cum_d_sfal"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_sfal", kwargs...),
-        plot(d_out, [simulated_fluxes.cum_d_rint      reference["cum_d_rint"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_rint", kwargs...),
-        plot(d_out, [simulated_fluxes.cum_d_sint      reference["cum_d_sint"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_sint", kwargs...),
-        plot(d_out, [simulated_fluxes.cum_d_rthr      reference["cum_d_rthr"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_rthr", kwargs...),
-        plot(d_out, [simulated_fluxes.cum_d_sthr      reference["cum_d_sthr"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_sthr", kwargs...),
-        plot(d_out, [simulated_fluxes.cum_d_rsno      reference["cum_d_rsno"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_rsno", kwargs...),
-        plot(d_out, [simulated_fluxes.cum_d_rnet      reference["cum_d_rnet"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_rnet", kwargs...),
-        plot(d_out, [simulated_fluxes.cum_d_smlt      reference["cum_d_smlt"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_smlt", kwargs...),
-        plot(d_out, [simulated_fluxes.cum_d_evap      reference["cum_d_evap"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_evap", kwargs...),
-        plot(d_out, [simulated_fluxes.cum_d_tran      reference["cum_d_tran"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_tran", kwargs...),
-        plot(d_out, [simulated_fluxes.cum_d_irvp      reference["cum_d_irvp"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_irvp", kwargs...),
-        plot(d_out, [simulated_fluxes.cum_d_isvp      reference["cum_d_isvp"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_isvp", kwargs...),
-        plot(d_out, [simulated_fluxes.cum_d_slvp      reference["cum_d_slvp"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_slvp", kwargs...),
-        plot(d_out, [simulated_fluxes.cum_d_snvp      reference["cum_d_snvp"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_snvp", kwargs...),
-        plot(d_out, [simulated_fluxes.cum_d_pint      reference["cum_d_pint"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_pint", kwargs...),
-        plot(d_out, [simulated_fluxes.cum_d_ptran     reference["cum_d_ptran"]],    linestyle = [:solid :dot], label = labels, title = "accum.cum_d_ptran", kwargs...),
-        # plot(d_out, [simulated_fluxes.cum_d_pslvp     reference["cum_d_pslvp"]],    linestyle = [:solid :dot], label = labels, title = "accum.cum_d_pslvp", kwargs...), # PSLVP was removed from output,
-        plot(d_out, [simulated_fluxes.flow            reference["flow"]],           linestyle = [:solid :dot], label = labels, title = "accum.flow", kwargs...),
-        plot(d_out, [simulated_fluxes.seep            reference["seep"]],           linestyle = [:solid :dot], label = labels, title = "accum.seep", kwargs...),
-        plot(d_out, [simulated_fluxes.srfl            reference["srfl"]],           linestyle = [:solid :dot], label = labels, title = "accum.srfl", kwargs...),
-        plot(d_out, [simulated_fluxes.slfl            reference["slfl"]],           linestyle = [:solid :dot], label = labels, title = "accum.slfl", kwargs...),
-        plot(d_out, [simulated_fluxes.byfl            reference["byfl"]],           linestyle = [:solid :dot], label = labels, title = "accum.byfl", kwargs...),
-        plot(d_out, [simulated_fluxes.dsfl            reference["dsfl"]],           linestyle = [:solid :dot], label = labels, title = "accum.dsfl", kwargs...),
-        plot(d_out, [simulated_fluxes.gwfl            reference["gwfl"]],           linestyle = [:solid :dot], label = labels, title = "accum.gwfl", kwargs...),
-        plot(d_out, [simulated_fluxes.vrfln           reference["vrfln"]],          linestyle = [:solid :dot], label = labels, title = "accum.vrfln", kwargs...),
-        plot(d_out, [simulated_fluxes.StorageSWAT     reference["StorageSWAT"]],    linestyle = [:solid :dot], label = labels, title = "accum.StorageSWAT", kwargs...),
-        plot(d_out, [simulated_fluxes.StorageWATER    reference["StorageWATER"]],   linestyle = [:solid :dot], label = labels, title = "accum.StorageWATER", kwargs...),
-        plot(d_out, [simulated_fluxes.BALERD_SWAT     reference["BALERD_SWAT"]],    linestyle = [:solid :dot], label = labels, title = "accum.BALERD_SWAT", kwargs...),
-        plot(d_out, [simulated_fluxes.BALERD_total    reference["BALERD_total"]],   linestyle = [:solid :dot], label = labels, title = "accum.BALERD_total", kwargs...)
+    Plots.plot(
+        Plots.plot(d_out, [simulated_fluxes.cum_d_prec      reference["cum_d_prec"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_prec", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.cum_d_rfal      reference["cum_d_rfal"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_rfal", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.cum_d_sfal      reference["cum_d_sfal"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_sfal", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.cum_d_rint      reference["cum_d_rint"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_rint", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.cum_d_sint      reference["cum_d_sint"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_sint", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.cum_d_rthr      reference["cum_d_rthr"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_rthr", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.cum_d_sthr      reference["cum_d_sthr"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_sthr", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.cum_d_rsno      reference["cum_d_rsno"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_rsno", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.cum_d_rnet      reference["cum_d_rnet"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_rnet", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.cum_d_smlt      reference["cum_d_smlt"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_smlt", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.cum_d_evap      reference["cum_d_evap"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_evap", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.cum_d_tran      reference["cum_d_tran"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_tran", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.cum_d_irvp      reference["cum_d_irvp"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_irvp", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.cum_d_isvp      reference["cum_d_isvp"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_isvp", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.cum_d_slvp      reference["cum_d_slvp"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_slvp", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.cum_d_snvp      reference["cum_d_snvp"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_snvp", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.cum_d_pint      reference["cum_d_pint"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_pint", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.cum_d_ptran     reference["cum_d_ptran"]],    linestyle = [:solid :dot], label = labels, title = "accum.cum_d_ptran", kwargs...),
+        # Plots.plot(d_out, [simulated_fluxes.cum_d_pslvp     reference["cum_d_pslvp"]],    linestyle = [:solid :dot], label = labels, title = "accum.cum_d_pslvp", kwargs...), # PSLVP was removed from output,
+        Plots.plot(d_out, [simulated_fluxes.flow            reference["flow"]],           linestyle = [:solid :dot], label = labels, title = "accum.flow", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.seep            reference["seep"]],           linestyle = [:solid :dot], label = labels, title = "accum.seep", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.srfl            reference["srfl"]],           linestyle = [:solid :dot], label = labels, title = "accum.srfl", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.slfl            reference["slfl"]],           linestyle = [:solid :dot], label = labels, title = "accum.slfl", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.byfl            reference["byfl"]],           linestyle = [:solid :dot], label = labels, title = "accum.byfl", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.dsfl            reference["dsfl"]],           linestyle = [:solid :dot], label = labels, title = "accum.dsfl", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.gwfl            reference["gwfl"]],           linestyle = [:solid :dot], label = labels, title = "accum.gwfl", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.vrfln           reference["vrfln"]],          linestyle = [:solid :dot], label = labels, title = "accum.vrfln", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.StorageSWAT     reference["StorageSWAT"]],    linestyle = [:solid :dot], label = labels, title = "accum.StorageSWAT", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.StorageWATER    reference["StorageWATER"]],   linestyle = [:solid :dot], label = labels, title = "accum.StorageWATER", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.BALERD_SWAT     reference["BALERD_SWAT"]],    linestyle = [:solid :dot], label = labels, title = "accum.BALERD_SWAT", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.BALERD_total    reference["BALERD_total"]],   linestyle = [:solid :dot], label = labels, title = "accum.BALERD_total", kwargs...)
     )
 end
 function test_fluxes_comparison(simulated_fluxes, reference)
@@ -277,24 +277,24 @@ end
         mkpath(dirname(fname_illustrations))
 
         pl_fluxes2 = plot_simulated_fluxes_vs_reference(simulated_fluxes2, loaded2, loaded2["d_out2"]);
-        plot!(legend = :topleft, size=(2000,1000), layout = (7,5))
-        savefig(plot(pl_fluxes2, size=(2000,1000), dpi=300),  fname_illustrations*"_fluxes_noBYFL_regressionTest.png")
+        Plots.plot!(legend = :topleft, size=(2000,1000), layout = (7,5))
+        savefig(Plots.plot(pl_fluxes2, size=(2000,1000), dpi=300),  fname_illustrations*"_fluxes_noBYFL_regressionTest.png")
 
         pl_fluxes2b = plot_simulated_fluxes_vs_reference(simulated_fluxes2b, loaded2b, loaded2b["d_out2b"]);
-        plot!(legend = :topleft, size=(2000,1000), layout = (7,5))
-        savefig(plot(pl_fluxes2b, size=(2000,1000), dpi=300),  fname_illustrations*"_fluxes_withBYFL_regressionTest.png")
+        Plots.plot!(legend = :topleft, size=(2000,1000), layout = (7,5))
+        savefig(Plots.plot(pl_fluxes2b, size=(2000,1000), dpi=300),  fname_illustrations*"_fluxes_withBYFL_regressionTest.png")
 
         pl_fluxes2vs2b = plot_simulated_fluxes_vs_reference(
             simulated_fluxes2,
             Dict(String(k) => v for (k,v) in pairs(simulated_fluxes2b)),
             d_out2b,
             labels = ["Without BYFL" "With BYFL"]);
-        plot!(legend = :topleft, size=(2000,1000), layout = (7,5))
-        savefig(plot(pl_fluxes2vs2b, size=(2000,1000), dpi=300),  fname_illustrations*"_fluxes_BYFL_comparison.png")
-        pl_comparison = plot(plotamounts(simulation2, title = "Without BYFL"),
+        Plots.plot!(legend = :topleft, size=(2000,1000), layout = (7,5))
+        savefig(Plots.plot(pl_fluxes2vs2b, size=(2000,1000), dpi=300),  fname_illustrations*"_fluxes_BYFL_comparison.png")
+        pl_comparison = Plots.plot(plotamounts(simulation2, title = "Without BYFL"),
             plotamounts(simulation2_withVariousFlows, title = "With BYFL"),
             layout = (1,2), size=(1460,1400))
-        savefig(plot(pl_comparison, size=(2000,1000), dpi=300),  fname_illustrations*"_fluxes_BYFL_comparison2.png")
+        savefig(Plots.plot(pl_comparison, size=(2000,1000), dpi=300),  fname_illustrations*"_fluxes_BYFL_comparison2.png")
     end
 end
 
@@ -371,8 +371,8 @@ end
         mkpath(dirname(fname_illustrations))
 
         pl_fluxes = plot_simulated_fluxes_vs_reference(simulated_fluxes, loaded, d_out);
-        plot!(legend = :topright, size=(2000,1000), layout = (7,5))
-        savefig(plot(pl_fluxes, size=(2000,1400), layout = (7,5), dpi=300),  fname_illustrations*"_fluxes.png")
+        Plots.plot!(legend = :topright, size=(2000,1000), layout = (7,5))
+        savefig(Plots.plot(pl_fluxes, size=(2000,1400), layout = (7,5), dpi=300),  fname_illustrations*"_fluxes.png")
     end
 
 end
