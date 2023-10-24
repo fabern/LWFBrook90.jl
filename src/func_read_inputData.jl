@@ -638,7 +638,7 @@ end
 
 Transforms simulation time `t` in days since reference date to DateTimes.
 """
-function RelativeDaysFloat2DateTime(t::Float64, reference::DateTime)
+function RelativeDaysFloat2DateTime(t::Real, reference::DateTime)
     # reference + Day(floor(t))
     t_sec = 60*60*24*t # t is in days, t_sec in seconds
     reference + Second(floor(t_sec))
