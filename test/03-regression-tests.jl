@@ -36,14 +36,12 @@ task = ["test", "overwrite"][1]
 # NOTE: locally one might need to do manually cd("test")
 if basename(pwd()) != "test"; cd("test"); end
 
-@testset "regression-delta-run_example" begin
-    @githash_time example_result = LWFBrook90.run_example();
-
-    # extract required data from solution object
+function get_some_states_to_compare(example_result)
     ## helper quantities
     t_out = range(extrema(example_result.ODESolution.t)..., step = 30)
-    currSPAC = example_result.parametrizedSPAC
+    currSPAC = example_result.parametrizedSPAC;
     ## scalar quantities
+    u_ref_names = ["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ" "RWU" "XYLEM" "SWATI"]
     u_ref = vcat(
         reduce(hcat, [example_result.ODESolution(t_days).GWAT.mm   for t_days = t_out]),
         reduce(hcat, [example_result.ODESolution(t_days).INTS.mm   for t_days = t_out]),
@@ -68,34 +66,105 @@ if basename(pwd()) != "test"; cd("test"); end
     u_aux_PSIM    = Matrix(permutedims(select(df_belowground, r"ψ_")));
     u_aux_θ       = Matrix(permutedims(select(df_belowground, r"θ_")));
     p_fu_KK       = Matrix(permutedims(select(df_belowground, r"K_")));
+    u_δsoil_d18O = select(df_belowground, r"δ18O_")
+    u_δsoil_d2H  = select(df_belowground, r"δ2H_" )
+
+
+    return t_out, u_ref_names, u_ref, u_δ, u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_θ, p_fu_KK, u_δsoil_d18O, u_δsoil_d2H
+end
+
+function plot_simulated_states_vs_reference(
+        u_ref, u_δ, u_SWATI, u_aux_PSIM, u_aux_θ, u_δsoil_d18O, u_δsoil_d2H,
+        loaded, d_out)
+    function plot_comparison(A, B_ref; d_out=1:size(A,1), nams = "")
+        labels = if (nams=="")
+            try names(A);
+            catch
+                fill("", size(A,2))
+            end
+        else
+            nams
+        end
+        pl = Plots.plot(d_out, Matrix(A), label = reshape(labels, 1, :), linestyle = :solid)
+        [Plots.plot!(pl, d_out, col, label = ifelse(it==1, "reference simulation",""), linestyle = :dash, linecolor = :black)
+            for (it, col) in pairs(eachcol(Matrix(B_ref)))]
+        return pl
+    end
+
+    Plots.plot(
+            plot_comparison(u_ref',          loaded["u_ref"]',          d_out=d_out, nams = u_ref_names),
+            plot_comparison(u_δ[:, r"d18O"], loaded["u_δ"][:, r"d18O"], d_out=d_out),
+            plot_comparison(u_δ[:, r"d2H"],  loaded["u_δ"][:, r"d2H"],  d_out=d_out),
+
+            plot_comparison(u_SWATI',        loaded["u_SWATI"]',        d_out=d_out, nams = ["SWATI_$l" for _ in [1], l in (1:5)]),
+            plot_comparison(u_aux_PSIM',     loaded["u_aux_PSIM"]',     d_out=d_out, nams = ["PSIM_$l"  for _ in [1], l in (1:5)]),
+            plot_comparison(u_aux_θ',        loaded["u_aux_θ"]',        d_out=d_out, nams = ["θ_$l"     for _ in [1], l in (1:5)]),
+            plot_comparison(u_δsoil_d18O,    permutedims(loaded["u_δsoil"].d18O), d_out=d_out, nams = names(select(df_belowground, r"δ18O_"))),
+            plot_comparison(u_δsoil_d2H,     permutedims(loaded["u_δsoil"].d2H),  d_out=d_out, nams = names(select(df_belowground, r"δ2H_"))),
+            layout = (2,4), size = (1200,800))
+end
+function test_states_comparison(t_out, u_ref_names, u_ref, u_δ, u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_θ, p_fu_KK, u_δsoil_d18O, u_δsoil_d2H,
+            loaded)
+    @testset "test_states_comparison" begin
+        # Test input example_result
+        # @test loaded["currSPAC"]   == currSPAC
+        @test loaded["currSPAC"].forcing                     == currSPAC.forcing
+        @test loaded["currSPAC"].pars.params                 == currSPAC.pars.params
+        @test loaded["currSPAC"].pars.root_distribution      == currSPAC.pars.root_distribution
+        @test loaded["currSPAC"].pars.IC_scalar              == currSPAC.pars.IC_scalar
+        @test loaded["currSPAC"].pars.IC_soil                == currSPAC.pars.IC_soil
+        @test loaded["currSPAC"].pars.canopy_evolution       == currSPAC.pars.canopy_evolution
+        @test loaded["currSPAC"].pars.params                 == currSPAC.pars.params
+
+        @test loaded["currSPAC"].reference_date == currSPAC.reference_date
+        @test loaded["currSPAC"].soil_discretization.Δz == currSPAC.soil_discretization.Δz
+        @test all(Matrix(loaded["currSPAC"].soil_discretization.df[:, Not(:shp)] .== currSPAC.soil_discretization.df[:, Not(:shp)]))
+
+        shpA = loaded["currSPAC"].pars.soil_horizons.shp; shpB = currSPAC.pars.soil_horizons.shp
+        @test length(shpA) == length(shpB)
+        [@test all([getfield(shpA[i_layer], field) == getfield(shpB[i_layer], field) for i_layer in eachindex(shpA)]) for field in fieldnames(typeof(shpA[1]))]
+
+        discrShpA = loaded["currSPAC"].soil_discretization.df[:, :shp]; discrShpB = currSPAC.soil_discretization.df[:, :shp]
+        @test length(discrShpA) == length(discrShpB)
+        [@test all([getfield(discrShpA[i_layer], field) == getfield(discrShpB[i_layer], field) for i_layer in eachindex(discrShpA)]) for field in fieldnames(typeof(discrShpA[1]))]
+
+        @test loaded["currSPAC"].solver_options == currSPAC.solver_options
+        @test loaded["currSPAC"].tspan == currSPAC.tspan
+
+        # Test scalar states
+        compare_scalar = (A,B; nans = false) -> all(isapprox.(Matrix(A), Matrix(B); nans))
+        @test compare_scalar(loaded["u_ref"], u_ref)
+        @test compare_scalar(loaded["u_δ"],   u_δ[:, Not(:time_days)]; nans=true)
+
+        # Test vector states
+        compare_vector = (A,B) -> all(isapprox.(Matrix(A), Matrix(B)))
+        @test compare_vector(loaded["u_SWATI"],       u_SWATI)
+        @test compare_vector(loaded["u_aux_PSIM"],    u_aux_PSIM)
+        @test compare_vector(loaded["u_aux_θ"],       u_aux_θ)
+        @test compare_vector(permutedims(loaded["u_δsoil"].d18O), u_δsoil_d18O)
+        @test compare_vector(permutedims(loaded["u_δsoil"].d2H),  u_δsoil_d2H)
+    end
+end
+
+@testset "regression-delta-run_example" begin
+    @githash_time example_result = LWFBrook90.run_example();
+
+    # extract required data from solution object
+    t_out, u_ref_names, u_ref, u_δ,
+        u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_θ, p_fu_KK, u_δsoil_d18O, u_δsoil_d2H =
+        get_some_states_to_compare(example_result);
 
     # test or overwrite
     # fname = input_path*input_prefix
     fname = "../examples/DAV2020-full_u_sol_reference.jld2"
+    loaded = load(fname)
+
     if task == "test"
-        loaded = load(fname)
-
-        # Test input example_result
-        # @test loaded["currSPAC"]   == currSPAC
-        @test loaded["currSPAC"].forcing == currSPAC.forcing
-        # @test loaded["currSPAC"].pars == currSPAC.pars
-        @test loaded["currSPAC"].reference_date == currSPAC.reference_date
-        # @test loaded["currSPAC"].soil_discretization == currSPAC.soil_discretization
-        @test loaded["currSPAC"].solver_options == currSPAC.solver_options
-        @test loaded["currSPAC"].tspan == currSPAC.tspan
-
-        # Test scalar results
-        @test all(loaded["u_ref"]      .≈ u_ref)
-        @test all(isapprox.(Matrix(loaded["u_δ"]), Matrix(u_δ), nans=true)) # NOTE: δ_RWU can be NaN if no water taken up, hence nans=true
-        # Test vector results
-        @test all(loaded["u_SWATI"]      .≈ u_SWATI)
-        @test all(loaded["u_aux_PSIM"]   .≈ u_aux_PSIM)
-        @test all(loaded["u_aux_θ"]      .≈ u_aux_θ)
-        @test all(loaded["u_δsoil"].d18O .≈ Matrix(permutedims(select(df_belowground, r"δ18O_"))))
-        @test all(loaded["u_δsoil"].d2H  .≈ Matrix(permutedims(select(df_belowground, r"δ2H_" ))))
+        test_states_comparison(t_out, u_ref_names, u_ref, u_δ, u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_θ, p_fu_KK, u_δsoil_d18O, u_δsoil_d2H,
+            loaded)
     elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
         # overwrite output
-        u_δsoil = (d18O = Matrix(permutedims(select(df_belowground, r"δ18O_"))), d2H = Matrix(permutedims(select(df_belowground, r"δ2H_"))))
+        u_δsoil = (d18O = Matrix(permutedims(u_δsoil_d18O)), d2H = Matrix(permutedims(select(df_belowground, r"δ2H_"))))
         jldsave(fname, compress=false;
                 (currSPAC   = currSPAC,
                  u_ref      = u_ref,
@@ -105,11 +174,18 @@ if basename(pwd()) != "test"; cd("test"); end
                  u_aux_θ    = u_aux_θ,
                  u_δsoil    = u_δsoil)...)
         error("Test overwrites reference solution instead of checking against it.")
+        # if plot_flag  # When overwriting save a plot comparing the values
+            fname_illustrations = "out/$git_status_string/TESTSET_DAV2020-regressionTest"
+            mkpath(dirname(fname_illustrations))
+            pl_comparison = plot_simulated_states_vs_reference(
+                u_ref, u_δ, u_SWATI, u_aux_PSIM, u_aux_θ, u_δsoil_d18O, u_δsoil_d2H,
+                loaded, d_out)
+
+            savefig(pl_comparison,fname_illustrations*"_regression_test_overwritten.png")
+        # end
     else
         # do nothing
     end
-
-
     if !is_a_CI_system && plot_flag
         fname_illustrations = "out/$git_status_string/TESTSET_DAV2020-regressionTest"
         mkpath(dirname(fname_illustrations))
@@ -202,6 +278,7 @@ function plot_simulated_fluxes_vs_reference(simulated_fluxes, reference, d_out; 
     )
 end
 function test_fluxes_comparison(simulated_fluxes, reference)
+    @testset "test_fluxes_comparison" begin
         @test isapprox(reference["cum_d_prec"],     simulated_fluxes.cum_d_prec,     atol = 1e-4, rtol = 1e-4)
         @test isapprox(reference["cum_d_rfal"],     simulated_fluxes.cum_d_rfal,     atol = 1e-4, rtol = 1e-4)
         @test isapprox(reference["cum_d_sfal"],     simulated_fluxes.cum_d_sfal,     atol = 1e-4, rtol = 1e-4)
@@ -233,6 +310,7 @@ function test_fluxes_comparison(simulated_fluxes, reference)
         @test isapprox(reference["StorageWATER"],   simulated_fluxes.StorageWATER,   atol = 1e-4, rtol = 1e-4)
         @test_skip isapprox(reference["BALERD_SWAT"],    simulated_fluxes.BALERD_SWAT,    atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
         @test_skip isapprox(reference["BALERD_total"],   simulated_fluxes.BALERD_total,   atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+    end
 end
 
 @testset "Oversaturation-infiltration-FLUXES" begin

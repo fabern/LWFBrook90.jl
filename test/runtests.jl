@@ -9,9 +9,13 @@ using Printf
 using Logging
 using Dates: today
 
-if haskey(ENV, "GITHUB_ACTIONS")
+# A flag that determines if tests are run on a CI system
+is_a_CI_system = haskey(ENV, "GITHUB_ACTIONS")
+if is_a_CI_system
     ENV["GKSwstype"] = "100" # following https://github.com/JuliaPlots/Plots.jl/issues/1182
 end
+@show is_a_CI_system
+
 
 # Note the git hash-string and repository status (can be optionally used in filenames for plots etc.)
 git_status_string = "$(today())-git+"*
@@ -34,11 +38,6 @@ end
 # https://discourse.julialang.org/t/benchmarking-tests-to-ensure-prs-dont-introduce-regressions/8630/6
 # or then https://github.com/maxbennedich/julia-regression-analysis or ...)
 
-# A flag that determines if tests are run on a CI system
-is_a_CI_system = issubset(["GITHUB_ACTION"], collect(keys(ENV))) # checks if ENV["GITHUB_ACTION"] exists
-@show is_a_CI_system
-
-
 Random.seed!(1234)
 
 # cd("test")
@@ -48,8 +47,8 @@ Random.seed!(1234)
 include("01-unit-tests.jl")
 
 plot_flag = false; high_resolution_flag = false;
-# plot_flag = true; high_resolution_flag = false; using Plots, Measures; using CairoMakie
-# plot_flag = true; high_resolution_flag = true; using Plots, Measures # run this line for plotting outside of default testing
+# plot_flag = true; high_resolution_flag = false; using Plots, Measures; using CairoMakie # run this line for plotting outside of default testing
+# plot_flag = true; high_resolution_flag = true;  using Plots, Measures; using CairoMakie # run this line for plotting outside of default testing
 
 include("02-integration-tests.jl")
 
