@@ -612,25 +612,25 @@ Simulates a SPAC model and stores the solution in s.ODESolution.
 `kwargs...` are passed through to solve(SciML::ODEProblem; ...) and are
 documented under `https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/#solver_options`
 """
-function simulate!(s::DiscretizedSPAC; assert_retcode = true, kwargs...)
+function simulate!(s::DiscretizedSPAC; assert_retcode = true, description = "", kwargs...)
     if (:saveat ∈ keys(kwargs))
-        @info """
+        @info description * """
           Start of simulation at $(now()).
                 Saving intermediate results (`saveat=`) between: $(extrema(values(kwargs)[:saveat])) days
         """
     elseif (:saveat ∈ keys(s.ODEProblem.kwargs))
-        @info """
+        @info description * """
           Start of simulation at $(now()).
                 Saving intermediate results (`saveat=`) between: $(extrema(values(s.ODEProblem.kwargs)[:saveat])) days
         """
     else
-         @info "  Start of simulation at $(now())."
+         @info description * "  Start of simulation at $(now())."
     end
 
-    @time s.ODESolution = solve(s.ODEProblem; kwargs...)
+    @time description*" runtime" s.ODESolution = solve(s.ODEProblem; kwargs...)
 
-    @info "  Time steps for solving: $(s.ODESolution.destats.naccept) ($(s.ODESolution.destats.naccept) accepted out of $(s.ODESolution.destats.nreject + s.ODESolution.destats.naccept) total)"
-    @info "  End of simulation at $(now())."
+    @info description * "  Time steps for solving: $(s.ODESolution.destats.naccept) ($(s.ODESolution.destats.naccept) accepted out of $(s.ODESolution.destats.nreject + s.ODESolution.destats.naccept) total)"
+    @info description * "  End of simulation at $(now())."
 
     if assert_retcode
         @assert (SciMLBase.successful_retcode(s.ODESolution)) "Problem with simulation: Return code of simulation was '$(s.ODESolution.retcode)'"
