@@ -165,7 +165,7 @@ end
         jldsave(fname, compress=false;
                 (currSPAC   = currSPAC,
                  u_ref      = u_ref,
-                 u_δ        = u_δ,
+                 u_δ        = u_δ[:, Not(:time)],
                  u_SWATI    = u_SWATI,
                  u_aux_PSIM = u_aux_PSIM,
                  u_aux_θ    = u_aux_θ,
