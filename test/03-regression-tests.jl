@@ -102,7 +102,7 @@ function plot_simulated_states_vs_reference(
             plot_comparison(u_δsoil_d2H,     permutedims(loaded["u_δsoil"].d2H),  d_out=d_out, nams = names(u_δsoil_d2H)),
             layout = (2,4), size = (1200,800))
 end
-function test_states_comparison(t_out, u_ref_names, u_ref, u_δ, u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_θ, p_fu_KK, u_δsoil_d18O, u_δsoil_d2H,
+function test_states_comparison(t_out, u_ref_names, u_ref, u_δ, u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_θ, p_fu_KK, u_δsoil_d18O, u_δsoil_d2H, currSPAC,
             loaded)
     @testset "test_states_comparison" begin
         # Test input example_result
@@ -158,13 +158,14 @@ end
     fname = "../examples/DAV2020-full_u_sol_reference.jld2"
     loaded = load(fname)
 
+    currSPAC = example_result.parametrizedSPAC;
     if task == "test"
         test_states_comparison(t_out, u_ref_names, u_ref, u_δ, u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_θ, p_fu_KK, u_δsoil_d18O, u_δsoil_d2H,
+            currSPAC,
             loaded)
     elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
         # overwrite output
         u_δsoil = (d18O = Matrix(permutedims(u_δsoil_d18O)), d2H = Matrix(permutedims(u_δsoil_d2H)))
-        currSPAC = example_result.parametrizedSPAC;
         jldsave(fname, compress=false;
                 (currSPAC   = currSPAC,
                  u_ref      = u_ref,
