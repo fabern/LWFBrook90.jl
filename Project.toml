@@ -49,6 +49,7 @@ SciMLBase = "1, 2"
 StatsBase = "0.33, 0.34"
 UnPack = "1"
 julia = "1.8"
+JLD2 = "0.4.35"
 
 [extras]
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"

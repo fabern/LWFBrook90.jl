@@ -1,8 +1,4 @@
 # Regression tests
-using JLD2: jldsave, load
-# using FileIO
-import FileIO
-
 # - _Unit testing_ asserts that individual pieces of a project work as expected. (developers
 #       perspective)
 # - _Integration testing_ asserts that they fit together as expected. Also known as

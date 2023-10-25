@@ -1,4 +1,6 @@
-# Comparison with LWFBrook90R
+# Validation
+
+## Comparison with LWFBrook90R
 Tests are run to assert agreement with results from LWFBrook90R. Visualizations are reported below. Note that minor discrepancies are still present linked to the adaptive time stepping and intermediate updates of state variables.
 ```@raw html
 <p align="center">
