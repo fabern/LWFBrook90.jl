@@ -370,11 +370,11 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
                     # plot(    -1:-1:-100,      θ.(-1:-1:-100), xlabel = "PSIM (kPa)", ylabel = "θ (-)", label = "function θ")
                     # plot!(ψ.(0.48:0.01:0.60), 0.48:0.01:0.60, xlabel = "PSIM (kPa)", ylabel = "θ (-)", label = "function ψ")
                     # plot!(ψ2.(0.48:0.01:0.60), 0.48:0.01:0.60, xlabel = "PSIM (kPa)", ylabel = "θ (-)", label = "function ψ2")
-                    ψ_fc = -33
+                    ψ_fc = -33 #kPa
                     @warn "When setting up soil hydr. parameters: $e"*
                         "\n\n"*"Ignoring hardcoded p_Kθfc ($(p_Kθfc[i]) mm/day) and"*
-                        " using ψ = $ψ_fc kPa for field capacity\n\n "*
-                        " Layer:$(i), $(p_Kθfc[i]), $(p_KSAT[i]), $(p_MvGl[i]), $(p_MvGn[i])"
+                        " using ψ = $ψ_fc kPa for field capacity => resulting in K at field capacity of: $(FK_MvG(θ(ψ_fc)/(p_THSAT[i] .- p_θr[i]), p_KSAT[i], p_MvGl[i], p_MvGn[i]))\n\n "*
+                        " Layer:$(i), Kθfc=$(p_Kθfc[i]), Ksat=$(p_KSAT[i]), l=$(p_MvGl[i]), n=$(p_MvGn[i])"
                     θ(ψ_fc)/(p_THSAT[i] .- p_θr[i])
                     # find_zero((θ_toFind) -> LWFBrook90.KPT.FPSIM_MvG((θ_toFind - p_θr[i])./(p_THSAT .- p_θr), p_MvGα[i], p_MvGn[i]), (0.0, 1.0), Bisection())
                 else

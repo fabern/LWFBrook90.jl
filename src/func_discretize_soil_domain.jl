@@ -221,8 +221,8 @@ function refine_soil_discretization(
         end
     end
     if length(added_interfaces) != 0
-        @warn "Adding interfaces to soil discretization at depths $added_interfaces, to allow for either requested IDEPTH/QDEPTH:  $(IDEPTH_m)m/$(QDEPTH_m)m, "*
-              "or to accomodate physically defined soil horizons: $(unique(vcat(input_soil_horizons[!,"Upper_m"], input_soil_horizons[!,"Lower_m"])))"*
+        @warn "Adding interfaces to soil discretization at depths $added_interfaces (m), to allow for either requested IDEPTH/QDEPTH:  $(IDEPTH_m)m/$(QDEPTH_m)m, "*
+              "or to accomodate physically defined soil horizons: $(unique(vcat(input_soil_horizons[!,"Upper_m"], input_soil_horizons[!,"Lower_m"]))) (m)"*
               ifelse(length(soil_output_depths_m)==0,".",", or `soil_output_depths_m`=$soil_output_depths_m.")
     end
 
