@@ -123,7 +123,7 @@ end
         p_MvGl   = [1,1],
         p_θr     = [1])
 
-    @test_logs (:warn, r"\[a,b\] is not a bracketing interval") min_level = Logging.Warn match_mode=:any LWFBrook90.KPT.KPT_SOILPAR_Mvg1d(;
+    @test_throws r"Computed invalid p_WETF in KPT_SOILPAR_Mvg1d" LWFBrook90.KPT.KPT_SOILPAR_Mvg1d(;
         p_THICK  = [40., 40., 120.],
         p_STONEF = [0.010, 0.175, 0.175],
         p_THSAT  = [0.714, 0.668, 0.656],

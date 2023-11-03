@@ -362,24 +362,24 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
                 # In LWFBrook90R: this was done using FWETK()
                 # In LWFBrook90R: if p_WETF[i] == -99999. error("Computed invalid p_WETF by FWETK()") end
             catch e
-                if e isa ArgumentError
-                    function θ(PSIM_toFind) p_θr[i] + (p_THSAT[i] - p_θr[i])*(1+(-p_MvGα[i]*PSIM_toFind/9.81)^p_MvGn[i])^(-(1-1/p_MvGn[i])) end
-                    # function ψ(TH_toFind) 9.81 .* (-1 ./ p_MvGα[i]) .* (max.((TH_toFind - p_θr[i])/(p_THSAT[i] .- p_θr[i]),  1.e-6) .^ (-1 ./ (1 .- 1 ./ p_MvGn[i])) .-1) .^ (1 ./ p_MvGn[i]) end
-                    # function θ2(PSIM_toFind) p_θr[i] + (p_THSAT[i] - p_θr[i]) * LWFBrook90.KPT.FWETNES(u_aux_PSIM, p_soil) end
-                    # function ψ2(TH_toFind) LWFBrook90.KPT.FPSIM_MvG((TH_toFind - p_θr[i])/(p_THSAT[i] .- p_θr[i]), p_MvGα[i], p_MvGn[i]) end
-                    # plot(    -1:-1:-100,      θ.(-1:-1:-100), xlabel = "PSIM (kPa)", ylabel = "θ (-)", label = "function θ")
-                    # plot!(ψ.(0.48:0.01:0.60), 0.48:0.01:0.60, xlabel = "PSIM (kPa)", ylabel = "θ (-)", label = "function ψ")
-                    # plot!(ψ2.(0.48:0.01:0.60), 0.48:0.01:0.60, xlabel = "PSIM (kPa)", ylabel = "θ (-)", label = "function ψ2")
-                    ψ_fc = -33 #kPa
-                    @warn "When setting up soil hydr. parameters: $e"*
-                        "\n\n"*"Ignoring hardcoded p_Kθfc ($(p_Kθfc[i]) mm/day) and"*
-                        " using ψ = $ψ_fc kPa for field capacity => resulting in K at field capacity of: $(FK_MvG(θ(ψ_fc)/(p_THSAT[i] .- p_θr[i]), p_KSAT[i], p_MvGl[i], p_MvGn[i]))\n\n "*
-                        " Layer:$(i), Kθfc=$(p_Kθfc[i]), Ksat=$(p_KSAT[i]), l=$(p_MvGl[i]), n=$(p_MvGn[i])"
-                    θ(ψ_fc)/(p_THSAT[i] .- p_θr[i])
-                    # find_zero((θ_toFind) -> LWFBrook90.KPT.FPSIM_MvG((θ_toFind - p_θr[i])./(p_THSAT .- p_θr), p_MvGα[i], p_MvGn[i]), (0.0, 1.0), Bisection())
-                else
+                # if e isa ArgumentError
+                #     function θ(PSIM_toFind) p_θr[i] + (p_THSAT[i] - p_θr[i])*(1+(-p_MvGα[i]*PSIM_toFind/9.81)^p_MvGn[i])^(-(1-1/p_MvGn[i])) end
+                #     # function ψ(TH_toFind) 9.81 .* (-1 ./ p_MvGα[i]) .* (max.((TH_toFind - p_θr[i])/(p_THSAT[i] .- p_θr[i]),  1.e-6) .^ (-1 ./ (1 .- 1 ./ p_MvGn[i])) .-1) .^ (1 ./ p_MvGn[i]) end
+                #     # function θ2(PSIM_toFind) p_θr[i] + (p_THSAT[i] - p_θr[i]) * LWFBrook90.KPT.FWETNES(u_aux_PSIM, p_soil) end
+                #     # function ψ2(TH_toFind) LWFBrook90.KPT.FPSIM_MvG((TH_toFind - p_θr[i])/(p_THSAT[i] .- p_θr[i]), p_MvGα[i], p_MvGn[i]) end
+                #     # plot(    -1:-1:-100,      θ.(-1:-1:-100), xlabel = "PSIM (kPa)", ylabel = "θ (-)", label = "function θ")
+                #     # plot!(ψ.(0.48:0.01:0.60), 0.48:0.01:0.60, xlabel = "PSIM (kPa)", ylabel = "θ (-)", label = "function ψ")
+                #     # plot!(ψ2.(0.48:0.01:0.60), 0.48:0.01:0.60, xlabel = "PSIM (kPa)", ylabel = "θ (-)", label = "function ψ2")
+                #     ψ_fc = -33 #kPa
+                #     @warn "When setting up soil hydr. parameters: $e"*
+                #         "\n\n"*"Ignoring hardcoded p_Kθfc ($(p_Kθfc[i]) mm/day) and"*
+                #         " using ψ = $ψ_fc kPa for field capacity => resulting in K at field capacity of: $(FK_MvG(θ(ψ_fc)/(p_THSAT[i] .- p_θr[i]), p_KSAT[i], p_MvGl[i], p_MvGn[i]))\n\n "*
+                #         " Layer:$(i), Kθfc=$(p_Kθfc[i]), Ksat=$(p_KSAT[i]), l=$(p_MvGl[i]), n=$(p_MvGn[i])"
+                #     θ(ψ_fc)/(p_THSAT[i] .- p_θr[i])
+                #     # find_zero((θ_toFind) -> LWFBrook90.KPT.FPSIM_MvG((θ_toFind - p_θr[i])./(p_THSAT .- p_θr), p_MvGα[i], p_MvGn[i]), (0.0, 1.0), Bisection())
+                # else
                     error("When setting up soil hydr. parameters: Computed invalid p_WETF in KPT_SOILPAR_Mvg1d\nReceived error: $(e)")
-                end
+                # end
             end
         end
 
