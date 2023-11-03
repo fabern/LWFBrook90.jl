@@ -378,7 +378,7 @@ struct KPT_SOILPAR_Mvg1d{T<:AbstractVector} <: AbstractKptSoilpar
                 #     θ(ψ_fc)/(p_THSAT[i] .- p_θr[i])
                 #     # find_zero((θ_toFind) -> LWFBrook90.KPT.FPSIM_MvG((θ_toFind - p_θr[i])./(p_THSAT .- p_θr), p_MvGα[i], p_MvGn[i]), (0.0, 1.0), Bisection())
                 # else
-                    error("When setting up soil hydr. parameters: Computed invalid p_WETF in KPT_SOILPAR_Mvg1d\nReceived error: $(e)")
+                    error("Computed invalid p_WETF in KPT_SOILPAR_Mvg1d when setting up soil hydr. parameters (Layer:$(i), Kθfc=$(p_Kθfc[i]), Ksat=$(p_KSAT[i]), l=$(p_MvGl[i]), n=$(p_MvGn[i])).\nReceived error: $(e)")
                 # end
             end
         end
