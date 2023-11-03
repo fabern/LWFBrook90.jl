@@ -336,12 +336,14 @@ function AVAILEN(SLRAD, p_fu_ALBEDO, p_C1, p_C2, p_C3, p_fT_TA, p_fT_VAPPRES, RA
     # LAI     ! leaf area index, m2/m2
     # SAI     ! stem area index, m2/m2
 
-    # SOLNET  !
-    # EFFEM   !
-    # NOVERN  !
-    # CLDCOR  !
-    # LNGNET  !
-    # RN      !
+    # SOLNET  ! net solar radiation, W/m2
+    # EFFEM   ! effective emissivity from clear sky
+    # NOVERN  ! sunshine duration fraction of daylength
+    # CLDCOR  ! cloud cover correction to net longwave under clear sky
+    # RN      ! net radiation, W/m2
+    # AAR     ! available energy rate, W/m2
+    # ASUBSR  ! availble energy rate at ground, W/m2
+    # LNGNETR ! net longwave radiation, W/m2
 
     SOLNET = (1 - p_fu_ALBEDO) * SLRAD                           # net solar radiation, W/m2
     EFFEM = 1.24 * (p_fT_VAPPRES * 10 / (p_fT_TA + 273.15)) ^ (1 / 7) # effective emissivity from clear sky
@@ -355,13 +357,13 @@ function AVAILEN(SLRAD, p_fu_ALBEDO, p_C1, p_C2, p_C3, p_fT_TA, p_fT_VAPPRES, RA
     CLDCOR = p_C3 + (1 - p_C3) * NOVERN # cloud cover correction to net longwave under clear sky
 
     # emissivity of the surface taken as 1.0 to also account for reflected
-    LNGNET = (EFFEM - 1) * CLDCOR * p_SIGMA * (p_fT_TA + 273.15) ^ 4   # net longwave radiation, W/m2
-    RN = SOLNET + LNGNET                                               # net radiation, W/m2
+    LNGNETR = (EFFEM - 1) * CLDCOR * p_SIGMA * (p_fT_TA + 273.15) ^ 4   # net longwave radiation, W/m2
+    RN = SOLNET + LNGNETR                                               # net radiation, W/m2
 
-    AA = RN - p_fu_SHEAT                                               # available energy, W/m2
-    ASUBS = RN * exp(-p_CR * (p_fu_LAI + p_fu_SAI)) - p_fu_SHEAT       # availble energy at ground, W/m2
+    AAR = RN - p_fu_SHEAT                                               # available energy, W/m2
+    ASUBSR = RN * exp(-p_CR * (p_fu_LAI + p_fu_SAI)) - p_fu_SHEAT       # availble energy at ground, W/m2
 
-    return (AA, ASUBS)
+    return (AAR, ASUBSR)
 end
 
 
