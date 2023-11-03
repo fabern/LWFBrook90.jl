@@ -112,6 +112,13 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         aux_du_TRANI = integrator.p;
     @unpack p_fu_δ18O_SLFL, p_fu_δ2H_SLFL = integrator.p;
 
+            # Pre-allocated caches to save memory allocations
+            @unpack du_GWFL, du_SEEP, du_NTFLI, aux_du_VRFLI, aux_du_DSFLI, aux_du_INFLI, u_aux_WETNES = integrator.p;
+            @unpack u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
+                aux_du_VRFLI_1st_approx, aux_du_BYFLI, p_fu_BYFRAC,
+                p_fu_SRFL, p_fu_SLFL, DPSIDW = integrator.p;
+            @unpack cache1, cache2 = integrator.p # cache vectors of length N
+
     # integrator.p.aux_du_TRANI
     # Parse states
     u_INTS     = integrator.u.INTS.mm
@@ -1233,7 +1240,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # a) Approximate solution (Forward Euler integration over dt)
         # if δ¹⁸O_RWU is NaN, it means aux_du_TRANI is zero
         du_δ¹⁸O_Xylem = ifelse(isnan(δ¹⁸O_RWU), 0.0, sum(aux_du_TRANI) / p_VXYLEM * (δ¹⁸O_RWU - u_δ¹⁸O_Xylem))
-        du_δ²H_Xylem  = ifelse(isnan(δ²H_RWU), 0.0, sum(aux_du_TRANI) / p_VXYLEM * (δ²H_RWU  - u_δ²H_Xylem))
+        du_δ²H_Xylem  = ifelse(isnan(δ²H_RWU),  0.0, sum(aux_du_TRANI) / p_VXYLEM * (δ²H_RWU  - u_δ²H_Xylem))
         integrator.u.XYLEM.d18O += Δt * du_δ¹⁸O_Xylem
         integrator.u.XYLEM.d2H  += Δt * du_δ²H_Xylem
         # b) Precise solution (Analytical integration over dt)
