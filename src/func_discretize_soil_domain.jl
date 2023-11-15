@@ -417,8 +417,10 @@ end
 Define the relative root density in each discretized soil layer based on the beta model from
 (Gale and Grigal, 1987).
 
-This function returns the instantaneous root fraction (dY/dd) (units of -/cm). Unless cropped
-    by the total effective rooting depth the area under the curve sums up to 1.0 (when plotted vs cm).
+This function returns the instantaneous root fraction (dY/dd) (units of -/cm). The values are
+    normalized so that the area under the curve sums up to 1.0 (when plotted vs cm).
+    Normalization extends the possible range of β to values larger than 1, and thereby allows
+    to describe profiles that are denser at the bottom.
     The method reduces the amount of roots in a discretization layer in case the effective maximal rooting
     depth comes to lie within that layer - it does not need to modify the discretization in that case.
 """
@@ -498,18 +500,24 @@ function Rootden_beta_(
     # 3) Normalize the increase in root density over the cell by the cell height
     #    note that this uses Δz_m also for the one cell which contains the total rooting depth
     rootden_increase_per_cmDepth = rootden_increase_per_cell ./ (Δz_m .* 100)
+
+    # 4) Normalize all values so that it sums up to 1.0
+    @assert abs(β - 1.0) > 0.000001 "Root distribution parameter β is too close to 1.0."*
+        "Note that it can be below (or above) 1.0, but not exactly 1. Set it at least 0.000001 away from 1.0"
+    normalizeAUC = (x) -> sum(x) == 0 ? x : x ./ sum(x)
+    return normalizeAUC(rootden_increase_per_cmDepth)
 end
 
 # Rootden_beta_(0.97, Δz_m = fill(0.10, 10))
-# Rootden_beta_(0.97, Δz_m = fill(0.10, 10), z_rootMax_m = 0.2)
+# Rootden_beta_(0.97, Δz_m = fill(0.10, 10), z_rootMax_m = -0.2)
 
-# Plot Rootden_beta_
+# # Plot Rootden_beta_
 # Δz_m = fill(0.10, 10) # (m)
 # Δz_m = diff(collect(0:0.01:1)) # (m)
 # z_rootMax_m = -0.225
 # plot(Rootden_beta_(0.97, Δz_m = Δz_m),
 #     cumsum(Δz_m * 100),
-#     ylabel = "Depth (cm)", xlabel = "Instantaneous root fraction (dY/dd) (Area of 1.0, unless cropped)",
+#     ylabel = "Depth (cm)", xlabel = "Instantaneous root fraction (dY/dd) (Area of 1.0)",
 #     yflip = true, seriestype = :path, legend = :bottomright,
 #     label = "No max Root")
 # # plot!(Rootden_beta_(0.97, Δz_m = Δz_m, z_rootMax_m = z_rootMax_m),
@@ -524,6 +532,14 @@ end
 #     cumsum(Δz_m * 100), seriestype = [:path], label = "maxRoot: $(-0.9)m")
 # plot!(Rootden_beta_(0.97, Δz_m = Δz_m, z_rootMax_m = -0.5),
 #     cumsum(Δz_m * 100), seriestype = [:path], label = "maxRoot: $(-0.5)m",)
+# plot!(Rootden_beta_(0.999, Δz_m = Δz_m, z_rootMax_m = -0.9),
+#     cumsum(Δz_m * 100), seriestype = [:path], label = "β = 0.999")
+# plot!(Rootden_beta_(1.0, Δz_m = Δz_m, z_rootMax_m = -0.9),
+#     cumsum(Δz_m * 100), seriestype = [:path], label = "β = 1.0")
+# plot!(Rootden_beta_(1.001, Δz_m = Δz_m, z_rootMax_m = -0.9),
+#     cumsum(Δz_m * 100), seriestype = [:path], label = "β = 1.001")
+# plot!(Rootden_beta_(1.02, Δz_m = Δz_m, z_rootMax_m = -0.9),
+#     cumsum(Δz_m * 100), seriestype = [:path], label = "β = 1.02")
 
 
 """
