@@ -1288,6 +1288,100 @@ function get_water_partitioning(simulation::DiscretizedSPAC;)
     return (df_partitioning_daily, df_partitioning_monthly, df_partitioning_yearly)
 end
 
+function get_water_partitioning_colorpalette()
+        color_palette_Meusburger2022 = reverse([
+            "Td"            => :red2,
+            "Ta"            => :darkolivegreen2,
+            "Einterception" => :forestgreen,
+            "Esoil"         => :khaki3,
+            "Esnow"         => :white,
+            "R"             => :lightskyblue,
+            "D"             => :steelblue4,
+            # "ETa"   => :black,
+            # "P2"    => :darkblue,
+            "P"     => :darkblue,
+            # "Swat" => :brown
+        ])
+        color_palette_Schmidt_Walter2020 = reverse([
+            "Td"            => colorant"#d01c8b", #:palevioletred4,
+            "Ta"            => colorant"#abdda4", #:darkseagreen,
+            "Einterception" => colorant"#fdae61", #:lightyellow,
+            "Esoil"         => colorant"#FFD700", #:navajowhite, #:orange2,
+            "Esnow"         => :white,
+            "R"             => colorant"#91bfdb", #:slategray2,
+            "D"             => colorant"#2b83ba", #:skyblue4,
+            "Precip"        => :black,
+            # "ETa"  => :black,
+            # "P2"   => :darkblue,
+            # "Swat" => :brown
+        ])
+        return color_palette = color_palette_Schmidt_Walter2020
+end
+function plot_monthly_water_partitioning(df_partitioning_monthly, fig = Figure())
+    color_palette = get_water_partitioning_colorpalette()
+    # Preprocess
+    df_partitioning_monthly_forMakie = @chain df_partitioning_monthly begin
+        stack(Not([:year, :month, :nrow, :date]))
+        # only keep variables we need
+        @subset(:variable .∈ ([first(pair) for pair in color_palette],))
+        # make categorical
+        @transform :variable = categorical(:variable, levels = [first(pair) for pair in color_palette])
+        @transform :variable_code = levelcode.(:variable)
+        # Remove fluxes that were not computed (e.g. removes runoff)
+        @subset(:value .!= 0.0)
+        end
+    # Plot
+    aog_monthly = AlgebraOfGraphics.mapping(
+            :date => "",
+            :value => "Water flux per month (mm)",
+            stack = :variable,
+            color = :variable => "") *
+        (# bar plot of fluxes
+        AlgebraOfGraphics.data(@subset(df_partitioning_monthly_forMakie, :variable .!= "Precip")) * AlgebraOfGraphics.visual(BarPlot, gap = -31*0.8) +
+        # line plot of precip input
+        AlgebraOfGraphics.data(@subset(df_partitioning_monthly_forMakie, :variable .== "Precip")) * AlgebraOfGraphics.visual(Lines)
+        )
+    xticks = sort(unique(Dates.floor.(df_partitioning_monthly_forMakie.date, Dates.Month(6))))
+
+    aog_draw = AlgebraOfGraphics.draw!(fig, aog_monthly, palettes = (; color = color_palette),
+        # axis = (; xticks = AlgebraOfGraphics.datetimeticks((x -> Dates.format(x, "mm\nY")), (Date.(xticks)))))
+        axis = (; ygridvisible = true,
+                xticks = AlgebraOfGraphics.datetimeticks((x -> Dates.format(x, "u\nY")), (Date.(xticks)))))
+    return fig, aog_draw
+end
+function plot_yearly_water_partitioning(df_partitioning_yearly, fig = Figure())
+    color_palette = get_water_partitioning_colorpalette()
+    # Preprocess
+    df_partitioning_yearly_forMakie = @chain df_partitioning_yearly begin
+        stack(Not([:year, :nrow, :date]))
+        # only keep variables we need
+        @subset(:variable .∈ ([first(pair) for pair in color_palette],))
+        # make categorical
+        @transform :variable = categorical(:variable, levels = [first(pair) for pair in color_palette])
+        @transform :variable_code = levelcode.(:variable)
+        # Remove fluxes that were not computed (e.g. removes runoff)
+        @subset(:value .!= 0.0)
+        end
+    # Plot
+    aog_yearly = AlgebraOfGraphics.mapping(
+        :date => "",
+        :value => "Water flux per year (mm)",
+        stack = :variable,
+        color = :variable => "") *
+    (# bar plot of fluxes
+    AlgebraOfGraphics.data(@subset(df_partitioning_yearly_forMakie, :variable .!= "Precip")) * AlgebraOfGraphics.visual(BarPlot, gap = -366*0.8) +
+    # line plot of precip input
+    AlgebraOfGraphics.data(@subset(df_partitioning_yearly_forMakie, :variable .== "Precip")) * AlgebraOfGraphics.visual(Lines)
+    )
+
+    xticks = sort(unique(df_partitioning_yearly_forMakie.year))
+    aog_draw = AlgebraOfGraphics.draw!(fig, aog_yearly,
+        palettes = (; color = color_palette),
+        axis = (; ygridvisible = true,
+                #   xticks = AlgebraOfGraphics.datetimeticks((x -> Dates.format(x, "Y-mm")), (Date.(xticks)))))
+                  xticks = AlgebraOfGraphics.datetimeticks((x -> Dates.format(x, "Y")), (Date.(xticks)))))
+    return fig, aog_draw
+end
 
 ############################################################################################
 ############################################################################################
