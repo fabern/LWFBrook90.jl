@@ -801,4 +801,49 @@ end
     # get_soil_([:θ, :ψ, :K], simulation; depths_to_read_out_mm = [100, 200, 500, 1200])
     # get_soil_([:θ, :ψ, :W, :SWATI, :K], simulation; depths_to_read_out_mm = [100, 500])
     # get_soil_([:θ, :ψ, :δ18O, :δ2H, :W, :SWATI, :K], simulation; depths_to_read_out_mm = [100, 200, 500, 1200])
+
+    # Check water partitioning output
+    @test_throws r"daily resolution" get_water_partitioning(simulation)
+    simulate!(simulation; save_everystep = false, saveat = range(parametrizedSPAC.tspan...), tspan = parametrizedSPAC.tspan);
+    df_partitioning_daily, df_partitioning_monthly, df_partitioning_yearly = get_water_partitioning(simulation)
+
+    reference_daily_check = [
+    0.0419232  0.0092856  0.0        0.0      0.0326376  0.0  -2.08167e-17  -0.223151  -0.0   83.8668;    # DateTime(2021-01-10)
+    0.0485448  0.0        0.0166119  0.0      0.0319328  0.0   3.46945e-17  -0.217801  -0.0   83.8769;    # DateTime(2021-01-20)
+    0.437416   0.0        0.215244   0.0      0.222172   0.0   0.0          -2.10676   -0.0  104.066;     # DateTime(2021-04-10)
+    1.62382    0.0038898  0.0        0.2079   1.41203    0.9   1.18509      -0.071398  -0.0   55.9741;    # DateTime(2021-06-29)
+    1.85095    0.180715   0.0        0.0      1.67024    0.0  -2.22045e-16  -1.0321    -0.0   91.48;      # DateTime(2021-09-07)
+    1.26533    0.0277206  0.0        1.08752  0.150094   7.7  -2.77556e-17  -0.262046  -0.0   76.4632;    # DateTime(2021-09-17)
+    ]
+    computed_daily_check = Matrix(df_partitioning_daily[[10, 20, 100, 180, 250, 260],
+        ["ETa", "Esoil", "Esnow", "Einterception", "Ta", "Precip", "Td", "D", "R", "Swat",]])
+    @test isapprox(reference_daily_check, computed_daily_check, atol = 1e-5, rtol = 1e-5)
+
+    reference_monthly_check = [
+    12.6084    0.190331  1.02305    10.6697    0.725283  158.1   1.01915e-17    -6.53731   0.0   84.8226
+    13.0302    0.0       3.56712     4.97      4.49312    24.5  -1.56125e-16   -44.2379    0.0  103.0
+    18.3249    0.0       5.6995      6.73528   5.8901     50.4  -2.68882e-16   -50.7475    0.0  101.607
+    22.7934    1.79797   3.98622     4.99301  12.0162     30.2  -9.71445e-17   -90.2158    0.0  104.712
+    44.5537    5.51835   0.0        15.3928   23.6426     91.3  -8.04912e-16   -45.9208    0.0  101.613
+    67.0981    2.13576   0.0        10.5567   54.4056     45.7   1.9749         -8.95216   0.0   72.0244
+    65.2563    6.20792   0.0        22.5187   36.5297    159.4   5.55112e-17   -41.8129    0.0   92.1359
+    58.3262    6.58114   0.0        17.0969   34.6482    181.3   4.85723e-16  -129.34      0.0  106.741
+    47.1773    4.38339   0.0         8.77759  34.0164     56.2   1.19349e-15   -18.2377    0.0   88.4071
+    22.4298    3.01918   0.0         2.39139  17.0192     12.1   1.09635e-15   -14.1241    0.0   86.5785
+    10.8751    0.823499  0.894483    5.50742   3.64969    83.7   1.38778e-17   -50.928     0.0  100.428
+    9.9458    0.0       2.21222     6.58132   1.15226    63.7  -1.26201e-16   -12.7609    0.0   89.5052
+    0.170659  0.0       0.0488657   0.0       0.121793    0.0   0.0            -0.813725  0.0  113.958
+    ]
+    computed_monthly_check = Matrix(df_partitioning_monthly[:,
+        ["ETa", "Esoil", "Esnow", "Einterception", "Ta", "Precip", "Td", "D", "R", "Swat",]])
+    @test isapprox(reference_monthly_check, computed_monthly_check, atol = 1e-5, rtol = 1e-5)
+
+
+    reference_yearly_check = [
+        392.419     30.6575  17.3826     116.191  228.188     956.6  1.9749  -513.815     0.0   94.2582
+        0.170659   0.0      0.0488657    0.0      0.121793    0.0  0.0       -0.813725  0.0  113.958
+    ]
+    computed_yearly_check = Matrix(df_partitioning_yearly[:,
+        ["ETa", "Esoil", "Esnow", "Einterception", "Ta", "Precip", "Td", "D", "R", "Swat",]])
+    @test isapprox(reference_yearly_check, computed_yearly_check, atol = 1e-5, rtol = 1e-5)
 end

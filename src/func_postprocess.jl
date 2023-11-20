@@ -1223,6 +1223,71 @@ function get_scalars(compartments_to_extract, units_to_extract, simulation::Disc
 end
 
 
+"""
+    get_water_partitioning(simulation)
+
+Returns three 2D DataFrame of water fluxes with different fluxes as columns and time steps as rows.
+The three DataFrames are in daily, monthly and yearly resolution and span the entire simulation.
+
+Examples
+    df_part_daily, df_part_monthly, df_part_yearly = get_water_partitioning(simulation)
+"""
+function get_water_partitioning(simulation::DiscretizedSPAC;)
+    solution          = simulation.ODESolution
+    simulate_isotopes = simulation.parametrizedSPAC.solver_options.simulate_isotopes
+
+    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
+    @assert all(diff(simulation.ODESolution_datetime) .== Millisecond(Day(1))) """
+    Solution is not computed with daily output resolution.
+    Make sure you provide simulate!(save_everystep = false, saveat = ...) with `saveat` in daily resolution."""
+
+    ks = keys(simulation.ODESolution.u[1].accum)
+    df_partitioning_raw =
+        DataFrame((:date => simulation.ODESolution_datetime ),
+                (k => [ut.accum[k] for ut in simulation.ODESolution.u] for k in ks)...)
+    # Compute ETa, Es, Esn, Ei, Ta, P, Td, D, R, Swat
+    df_partitioning_daily = @chain df_partitioning_raw begin
+        @rtransform begin
+            :ETa           = :cum_d_evap # is actual evapotranspiration, i.e. sum of IRVP + ISVP + SNVP + SLVP + sum(aux_du_TRANI)
+            :Esoil         = :cum_d_slvp
+            :Esnow         = :cum_d_snvp
+            :Einterception = :cum_d_irvp + :cum_d_isvp
+            :Ta            = :cum_d_tran
+            :Precip             = :cum_d_prec
+            :Td            = :cum_d_ptran - :cum_d_tran
+            :D             = - :vrfln
+            # :R1             = -(:flow - :vrfln)    # flow = srfl+byfl+dsfli+gwfl, gwfl, vrfln
+            :R            = -(:srfl + :byfl + :dsfl) # This is more correctly not accounting for gwfl, thereby excluding state variable GWAT from the balance
+            :Swat          = :StorageSWAT
+        end
+        @transform :year = year.(:date)
+        @transform :month = month.(:date)
+        @select(:date, :year, :month, :ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Td,:D,:R,:Swat)
+    end
+
+    # Aggregate to monghly and yearly
+    df_partitioning_monthly = @chain df_partitioning_daily begin
+        groupby([:year, :month])
+        combine(
+            nrow,
+            [:ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Td,:D,:R] .=> sum,
+            [:Swat] .=> mean, renamecols=false)
+        @rtransform :date = Date(:year, :month)
+        select(Between(:year, :nrow), :date, All()) # Bring date to beginning
+    end
+    df_partitioning_yearly = @chain df_partitioning_daily begin
+        groupby([:year])
+        combine(
+            nrow,
+            [:ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Td,:D,:R] .=> sum,
+            [:Swat] .=> mean, renamecols=false)
+        @rtransform :date = Date(:year)
+        select(Between(:year, :nrow), :date, All()) # Bring date to beginning
+    end
+    # and also define color palette
+    return (df_partitioning_daily, df_partitioning_monthly, df_partitioning_yearly)
+end
+
 
 ############################################################################################
 ############################################################################################
