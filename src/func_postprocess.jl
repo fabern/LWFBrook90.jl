@@ -1325,8 +1325,8 @@ function plot_monthly_water_partitioning(df_partitioning_monthly, fig = Figure()
         # only keep variables we need
         @subset(:variable .∈ ([first(pair) for pair in color_palette],))
         # make categorical
-        @transform :variable = categorical(:variable, levels = [first(pair) for pair in color_palette])
-        @transform :variable_code = levelcode.(:variable)
+        @transform :variable = CategoricalArrays.categorical(:variable, levels = [first(pair) for pair in color_palette])
+        @transform :variable_code = CategoricalArrays.levelcode.(:variable)
         # Remove fluxes that were not computed (e.g. removes runoff)
         @subset(:value .!= 0.0)
         end
@@ -1357,8 +1357,8 @@ function plot_yearly_water_partitioning(df_partitioning_yearly, fig = Figure())
         # only keep variables we need
         @subset(:variable .∈ ([first(pair) for pair in color_palette],))
         # make categorical
-        @transform :variable = categorical(:variable, levels = [first(pair) for pair in color_palette])
-        @transform :variable_code = levelcode.(:variable)
+        @transform :variable = CategoricalArrays.categorical(:variable, levels = [first(pair) for pair in color_palette])
+        @transform :variable_code = CategoricalArrays.levelcode.(:variable)
         # Remove fluxes that were not computed (e.g. removes runoff)
         @subset(:value .!= 0.0)
         end
