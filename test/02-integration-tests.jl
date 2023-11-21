@@ -52,7 +52,7 @@ end
                     root_distribution = (beta = 0.90, z_rootMax_m = nothing),
                     IC_soil           = (PSIM_init_kPa = -12., delta18O_init_permil = -22., delta2H_init_permil = -88.));
     @test nrow(model.soil_discretization.df) == 2
-    @test model.soil_discretization.df.Rootden_ ≈ [0.019896924495853598, 0.00010254427616865014]
+    @test model.soil_discretization.df.Rootden_ ≈ [0.994872650001979, 0.005127349998021041]
     @test model.soil_discretization.df.uAux_PSIM_init_kPa == [-12., -12.]
     @test model.soil_discretization.df.u_delta18O_init_permil == [-22., -22.]
     @test model.soil_discretization.df.u_delta2H_init_permil  == [-88., -88.]
