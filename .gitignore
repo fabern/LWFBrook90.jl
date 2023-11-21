@@ -20,10 +20,9 @@ deps/src/
 Manifest.toml
 
 # Settings from VisualStudioCode (taken from https://stackoverflow.com/a/57749909)
-.vscode/*      # Maybe .vscode/**/* instead - see comments
-!.vscode/settings.json
+.vscode/launch.json
+.vscode/settings.json
 !.vscode/tasks.json
-!.vscode/launch.json
 !.vscode/extensions.json
 # VisualStudioCode Patch
 # Ignore all local history of files
@@ -41,7 +40,6 @@ test/out/*
 test/test-assets/*/*.png
 test/test-assets/*/*.jld2
 examples/*/*.png
-.vscode/launch.json
 test/test-assets-external/DAV-2020-IntegrationTests-LWFBrook90/DAV-IntegrationTests-LWFBrook90/*
 examples/DAV2020-bare-minimum/DAV2020-minimal_meteoiso-forLWFsynthetic.csv
 examples/DAV2020-bare-minimum/DAV2020-minimal_meteoveg-LWF.csv

@@ -589,22 +589,12 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     solu = simulation.ODESolution
 
     # 1a) extract data from solution object `solu`
-        # # Two ways to extract data from soil object: using `[]` or `()`
-        # u_SWATI = reduce(hcat, [solu[t_idx].SWATI.mm  for t_idx = eachindex(solu)])
-        # u_SWATI = reduce(hcat, [solu(t_days).SWATI.mm for t_days = days_to_read_out_d])
+    df, RWUcentroidLabel = get_data_for_isotopePlot(simulation)
 
-        # days_to_read_out_d decides which points to use:
-        # days_to_read_out_d = nothing # read out all simulation steps
-        days_to_read_out_d = :daily  # read out only daily values
-        if isnothing(days_to_read_out_d)
-            days_to_read_out_d = solu.t # warning this can
-            error("Too many output times requested. This easily freezes the program...")
-        elseif days_to_read_out_d == :daily
-            days_to_read_out_d = unique(round.(solu.t))
-        end
-        t_ref = solu.prob.p.REFERENCE_DATE
-        x = RelativeDaysFloat2DateTime.(days_to_read_out_d, t_ref);
-        y_center = cumsum(solu.prob.p.p_soil.p_THICK) - solu.prob.p.p_soil.p_THICK/2
+    days_to_read_out_d = df.days_to_read_out_d
+    t_ref = solu.prob.p.REFERENCE_DATE
+    x = RelativeDaysFloat2DateTime.(days_to_read_out_d, t_ref);
+    y_center = cumsum(solu.prob.p.p_soil.p_THICK) - solu.prob.p.p_soil.p_THICK/2
 
     simulate_isotopes = solu.prob.p.simulate_isotopes
     @assert simulate_isotopes "Provided DiscretizedSPAC() did not simulate isotopes"
@@ -617,37 +607,35 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     color_scheme = :heat
 
     # Results
+    maxdepth = maximum(cumsum(solu.prob.p.p_soil.p_THICK))
     t_ref = solu.prob.p.REFERENCE_DATE
     t1 = range(extrema(solu.t)..., step = 1) # Plot forcing as daily, even if solution output (ODESolution.t) is not dense
     x1 = RelativeDaysFloat2DateTime.(t1, t_ref);
-    row_PREC_amt_dense  = reshape(solu.prob.p.p_PREC.(t1), 1, :)
-    row_PREC_d18O_dense = reshape(solu.prob.p.p_δ18O_PREC.(t1), 1, :)
-    row_PREC_d2H_dense  = reshape(solu.prob.p.p_δ2H_PREC.(t1), 1, :)
 
-    # rows_SWAT_amt = solu[solu.prob.p.row_idx_SWATI, 1, :]./solu.prob.p.p_soil.p_THICK;
-    rows_SWAT_amt  = reduce(hcat, [solu(t).SWATI.mm   for t in days_to_read_out_d]) ./ solu.prob.p.p_soil.p_THICK
-    rows_SWAT_d18O = reduce(hcat, [solu(t).SWATI.d18O for t in days_to_read_out_d])
-    rows_SWAT_d2H  = reduce(hcat, [solu(t).SWATI.d2H  for t in days_to_read_out_d])
-    row_NaN       = fill(NaN, 1,length(x))
-    row_PREC_d18O = reshape(solu.prob.p.p_δ18O_PREC.(days_to_read_out_d), 1, :)
-    row_INTS_d18O = reduce(hcat, [solu(t).INTS.d18O for t in days_to_read_out_d])
-    row_INTR_d18O = reduce(hcat, [solu(t).INTR.d18O for t in days_to_read_out_d])
-    row_SNOW_d18O = reduce(hcat, [solu(t).SNOW.d18O for t in days_to_read_out_d])
-    row_GWAT_d18O = reduce(hcat, [solu(t).GWAT.d18O for t in days_to_read_out_d])
-    row_RWU_d18O  = reduce(hcat, [solu(t).RWU.d18O for t in days_to_read_out_d])
-    row_XYL_d18O  = reduce(hcat, [solu(t).XYLEM.d18O for t in days_to_read_out_d])
-    row_PREC_d2H  = reshape(solu.prob.p.p_δ2H_PREC.(days_to_read_out_d), 1, :)
-    row_INTS_d2H  = reduce(hcat, [solu(t).INTS.d2H for t in days_to_read_out_d])
-    row_INTR_d2H  = reduce(hcat, [solu(t).INTR.d2H for t in days_to_read_out_d])
-    row_SNOW_d2H  = reduce(hcat, [solu(t).SNOW.d2H for t in days_to_read_out_d])
-    row_GWAT_d2H  = reduce(hcat, [solu(t).GWAT.d2H for t in days_to_read_out_d])
-    row_RWU_d2H   = reduce(hcat, [solu(t).RWU.d2H for t in days_to_read_out_d])
-    row_XYL_d2H   = reduce(hcat, [solu(t).XYLEM.d2H for t in days_to_read_out_d])
+    # Make rows for plotting as heatmap
+    row_PREC_amt_dense  = reshape(df.col_PREC_amt_dense, 1, :)
+    row_PREC_d18O_dense = reshape(df.col_PREC_d18O_dense, 1, :)
+    row_PREC_d2H_dense  = reshape(df.col_PREC_d2H_dense, 1, :)
 
-    rows_RWU_mmDay  = reduce(hcat, [solu(t).TRANI.mmday   for t in days_to_read_out_d])
-    if (RWUcentroid == :showRWUcentroid)
-        row_RWU_centroid_mm, RWUcentroidLabel = get_RWU_centroid(rows_RWU_mmDay, y_center)
-    end
+    rows_SWAT_d18O = Matrix(permutedims(df[:, r"d18O_[0-9]"] ))
+    rows_SWAT_d2H  = Matrix(permutedims(df[:, r"d2H_[0-9]"] ))
+    row_NaN             = fill(NaN, 1,size(df,1))
+    row_PREC_d18O = reshape(df.col_PREC_d18O, 1, :)
+    row_PREC_d2H  = reshape(df.col_PREC_d2H, 1, :)
+    row_INTS_d18O = reduce(hcat, df.col_INTS_d18O)
+    row_INTR_d18O = reduce(hcat, df.col_INTR_d18O)
+    row_SNOW_d18O = reduce(hcat, df.col_SNOW_d18O)
+    row_GWAT_d18O = reduce(hcat, df.col_GWAT_d18O)
+    row_RWU_d18O = reduce(hcat, df.col_RWU_d18O)
+    row_XYL_d18O = reduce(hcat, df.col_XYL_d18O)
+    row_INTS_d2H = reduce(hcat, df.col_INTS_d2H)
+    row_INTR_d2H = reduce(hcat, df.col_INTR_d2H)
+    row_SNOW_d2H = reduce(hcat, df.col_SNOW_d2H)
+    row_GWAT_d2H = reduce(hcat, df.col_GWAT_d2H)
+    row_RWU_d2H = reduce(hcat, df.col_RWU_d2H)
+    row_XYL_d2H = reduce(hcat, df.col_XYL_d2H)
+
+    row_RWU_centroid_mm = permutedims(df.col_RWU_centroid_mm)
 
     # 1b) define some plot arguments based on the extracted data
     # color scheme:
@@ -736,10 +724,10 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     # 3b) Heatmap (containing SWATI and other compartments)
     # y_labels   = ["INTS"; ""; "INTR"; ""; "SNOW"; ""; round.(y_center); "";             "GWAT"]
     # y_soil_ticks = optimize_ticks(extrema(y_center)...; k_min = 4)[1]
-    # y_soil_ticks = optimize_ticks(0., round(maximum(cumsum(solu.prob.p.p_soil.p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
-    y_extended = [-500; -350; -300; -250; -200; -150; -100; -50;         y_center;             (maximum(cumsum(solu.prob.p.p_soil.p_THICK)) .+ [50; 100; 150; 250; 300;400])]
-    y_soil_ticks = tick_function(0., round(maximum(cumsum(solu.prob.p.p_soil.p_THICK))))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
-    y_ticks    = [-500;       -300;       -200;       -100;          y_soil_ticks;             (maximum(cumsum(solu.prob.p.p_soil.p_THICK)) .+ [    100;      250;     400])]
+    # y_soil_ticks = optimize_ticks(0., round(maxdepth))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
+    y_extended = [-500; -350; -300; -250; -200; -150; -100; -50;         y_center;             (maxdepth .+ [50; 100; 150; 250; 300;400])]
+    y_soil_ticks = tick_function(0., round(maxdepth))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
+    y_ticks    = [-500;       -300;       -200;       -100;          y_soil_ticks;             (maxdepth .+ [    100;      250;     400])]
     y_labels   = ["PREC";   "INTS";     "INTR";     "SNOW";     round.(y_soil_ticks; digits=0);                                                "GWAT";    "RWU";     "XYLEM"]
     z2_extended = [row_PREC_d18O; row_NaN; row_INTS_d18O; row_NaN; row_INTR_d18O; row_NaN; row_SNOW_d18O; row_NaN; rows_SWAT_d18O; row_NaN; row_GWAT_d18O; row_NaN; row_RWU_d18O; row_NaN; row_XYL_d18O]
     z3_extended = [row_PREC_d2H;  row_NaN; row_INTS_d2H;  row_NaN; row_INTR_d2H;  row_NaN; row_SNOW_d2H;  row_NaN; rows_SWAT_d2H;  row_NaN; row_GWAT_d2H;  row_NaN; row_RWU_d2H;  row_NaN; row_XYL_d2H ]
@@ -818,6 +806,85 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     # pl_final_δ2H = plot(ts_PREC_δ2H,  pl_δ2H, pl_colorbar_δ2H,
     #     clims = clims_d2H,
     #     layout = l, link = :x);
+end
+function get_data_for_isotopePlot(simulation)
+    # 1) prepare data to plot
+    solu = simulation.ODESolution
+
+    # 1a) extract data from solution object `solu`
+    # # Two ways to extract data from soil object: using `[]` or `()`
+    # u_SWATI = reduce(hcat, [solu[t_idx].SWATI.mm  for t_idx = eachindex(solu)])
+    # u_SWATI = reduce(hcat, [solu(t_days).SWATI.mm for t_days = days_to_read_out_d])
+
+    # days_to_read_out_d decides which points to use:
+    # days_to_read_out_d = nothing # read out all simulation steps
+    days_to_read_out_d = :daily  # read out only daily values
+    if isnothing(days_to_read_out_d)
+        days_to_read_out_d = solu.t # warning this can
+        error("Too many output times requested. This easily freezes the program...")
+    elseif days_to_read_out_d == :daily
+        days_to_read_out_d = unique(round.(solu.t))
+    end
+    t_ref = solu.prob.p.REFERENCE_DATE
+    x = RelativeDaysFloat2DateTime.(days_to_read_out_d, t_ref);
+    y_center = cumsum(solu.prob.p.p_soil.p_THICK) - solu.prob.p.p_soil.p_THICK/2
+
+    simulate_isotopes = solu.prob.p.simulate_isotopes
+    @assert simulate_isotopes "Provided DiscretizedSPAC() did not simulate isotopes"
+
+    # # Some hardcoded options:
+    # xlimits = RelativeDaysFloat2DateTime.(solu.prob.tspan, t_ref)
+    # tick_function = (x1, x2) -> PlotUtils.optimize_ticks(x1, x2; k_min = 4)
+    # # color_scheme = :default # https://docs.juliaplots.org/latest/generated/colorschemes
+    # # color_scheme = :blues
+    # color_scheme = :heat
+
+    # Results
+    t_ref = solu.prob.p.REFERENCE_DATE
+    t1 = range(extrema(solu.t)..., step = 1) # Plot forcing as daily, even if solution output (ODESolution.t) is not dense
+    # x1 = RelativeDaysFloat2DateTime.(t1, t_ref);
+    # maxdepth = maximum(cumsum(solu.prob.p.p_soil.p_THICK))
+    # Scalar quantities (use DataFrame for Storage, reshape to Matrix/Rows for plotting)
+    df_scalar = DataFrame(
+        days_to_read_out_d = days_to_read_out_d,
+        col_PREC_amt_dense  = solu.prob.p.p_PREC.(t1),
+        col_PREC_d18O_dense = solu.prob.p.p_δ18O_PREC.(t1),
+        col_PREC_d2H_dense  = solu.prob.p.p_δ2H_PREC.(t1),
+        col_PREC_d18O = solu.prob.p.p_δ18O_PREC.(days_to_read_out_d),
+        col_PREC_d2H  = solu.prob.p.p_δ2H_PREC.(days_to_read_out_d),
+        col_INTS_d18O = [solu(t).INTS.d18O for t in days_to_read_out_d],
+        col_INTR_d18O = [solu(t).INTR.d18O for t in days_to_read_out_d],
+        col_SNOW_d18O = [solu(t).SNOW.d18O for t in days_to_read_out_d],
+        col_GWAT_d18O = [solu(t).GWAT.d18O for t in days_to_read_out_d],
+        col_RWU_d18O  = [solu(t).RWU.d18O for t in days_to_read_out_d],
+        col_XYL_d18O  = [solu(t).XYLEM.d18O for t in days_to_read_out_d],
+        col_INTS_d2H  = [solu(t).INTS.d2H for t in days_to_read_out_d],
+        col_INTR_d2H  = [solu(t).INTR.d2H for t in days_to_read_out_d],
+        col_SNOW_d2H  = [solu(t).SNOW.d2H for t in days_to_read_out_d],
+        col_GWAT_d2H  = [solu(t).GWAT.d2H for t in days_to_read_out_d],
+        col_RWU_d2H   = [solu(t).RWU.d2H for t in days_to_read_out_d],
+        col_XYL_d2H   = [solu(t).XYLEM.d2H for t in days_to_read_out_d])
+
+    # Vector quantities
+    cols_SWAT_d18O = reduce(vcat, [solu(t).SWATI.d18O' for t in days_to_read_out_d])
+    cols_SWAT_d2H  = reduce(vcat, [solu(t).SWATI.d2H' for t in days_to_read_out_d])
+
+    # Compute RWU centroid
+    cols_RWU_mmDay  = reduce(vcat, [solu(t).TRANI.mmday'   for t in days_to_read_out_d])
+    rows_RWU_mmDay  = permutedims(cols_RWU_mmDay)
+    row_RWU_centroid_mm, RWUcentroidLabel = LWFBrook90.get_RWU_centroid(rows_RWU_mmDay, y_center)
+    col_RWU_centroid_mm = reshape(row_RWU_centroid_mm, :)
+    # if (RWUcentroid == :showRWUcentroid)
+    # end
+
+    # Finalize DataFrame for storage
+    df_scalar.col_RWU_centroid_mm = col_RWU_centroid_mm
+    # df_amt  = DataFrame(cols_SWAT_amt,  ["amt_$depth"  for depth in (round.(Int, y_center))])
+    df_d18O = DataFrame(cols_SWAT_d18O, ["d18O_$depth" for depth in (round.(Int, y_center))])
+    df_d2H  = DataFrame(cols_SWAT_d2H,  ["d2H_$depth"  for depth in (round.(Int, y_center))])
+    df = hcat(df_scalar, df_d18O, df_d2H)
+
+    return (df = df, RWUcentroidLabel = RWUcentroidLabel)
 end
 
 
@@ -1223,6 +1290,165 @@ function get_scalars(compartments_to_extract, units_to_extract, simulation::Disc
 end
 
 
+"""
+    get_water_partitioning(simulation)
+
+Returns three 2D DataFrame of water fluxes with different fluxes as columns and time steps as rows.
+The three DataFrames are in daily, monthly and yearly resolution and span the entire simulation.
+
+Examples
+    df_part_daily, df_part_monthly, df_part_yearly = get_water_partitioning(simulation)
+"""
+function get_water_partitioning(simulation::DiscretizedSPAC;)
+    solution          = simulation.ODESolution
+    simulate_isotopes = simulation.parametrizedSPAC.solver_options.simulate_isotopes
+
+    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
+    @assert all(diff(simulation.ODESolution_datetime) .== Millisecond(Day(1))) """
+    Solution is not computed with daily output resolution.
+    Make sure you provide simulate!(save_everystep = false, saveat = ...) with `saveat` in daily resolution."""
+
+    ks = keys(simulation.ODESolution.u[1].accum)
+    df_partitioning_raw =
+        DataFrame((:date => simulation.ODESolution_datetime ),
+                (k => [ut.accum[k] for ut in simulation.ODESolution.u] for k in ks)...)
+    # Compute ETa, Es, Esn, Ei, Ta, P, Td, D, R, Swat
+    df_partitioning_daily = @chain df_partitioning_raw begin
+        @rtransform begin
+            :ETa           = :cum_d_evap # is actual evapotranspiration, i.e. sum of IRVP + ISVP + SNVP + SLVP + sum(aux_du_TRANI)
+            :Esoil         = :cum_d_slvp
+            :Esnow         = :cum_d_snvp
+            :Einterception = :cum_d_irvp + :cum_d_isvp
+            :Ta            = :cum_d_tran
+            :Precip             = :cum_d_prec
+            :Td            = :cum_d_ptran - :cum_d_tran
+            :D             = - :vrfln
+            # :R1             = -(:flow - :vrfln)    # flow = srfl+byfl+dsfli+gwfl, gwfl, vrfln
+            :R            = -(:srfl + :byfl + :dsfl) # This is more correctly not accounting for gwfl, thereby excluding state variable GWAT from the balance
+            :Swat          = :StorageSWAT
+        end
+        @transform :year = year.(:date)
+        @transform :month = month.(:date)
+        @select(:date, :year, :month, :ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Td,:D,:R,:Swat)
+    end
+
+    # Aggregate to monghly and yearly
+    df_partitioning_monthly = @chain df_partitioning_daily begin
+        groupby([:year, :month])
+        combine(
+            nrow,
+            [:ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Td,:D,:R] .=> sum,
+            [:Swat] .=> mean, renamecols=false)
+        @rtransform :date = Date(:year, :month)
+        select(Between(:year, :nrow), :date, All()) # Bring date to beginning
+    end
+    df_partitioning_yearly = @chain df_partitioning_daily begin
+        groupby([:year])
+        combine(
+            nrow,
+            [:ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Td,:D,:R] .=> sum,
+            [:Swat] .=> mean, renamecols=false)
+        @rtransform :date = Date(:year)
+        select(Between(:year, :nrow), :date, All()) # Bring date to beginning
+    end
+    # and also define color palette
+    return (df_partitioning_daily, df_partitioning_monthly, df_partitioning_yearly)
+end
+
+function get_water_partitioning_colorpalette()
+        color_palette_Meusburger2022 = reverse([
+            "Td"            => :red2,
+            "Ta"            => :darkolivegreen2,
+            "Einterception" => :forestgreen,
+            "Esoil"         => :khaki3,
+            "Esnow"         => :white,
+            "R"             => :lightskyblue,
+            "D"             => :steelblue4,
+            # "ETa"   => :black,
+            # "P2"    => :darkblue,
+            "P"     => :darkblue,
+            # "Swat" => :brown
+        ])
+        color_palette_Schmidt_Walter2020 = reverse([
+            "Td"            => colorant"#d01c8b", #:palevioletred4,
+            "Ta"            => colorant"#abdda4", #:darkseagreen,
+            "Einterception" => colorant"#fdae61", #:lightyellow,
+            "Esoil"         => colorant"#FFD700", #:navajowhite, #:orange2,
+            "Esnow"         => :white,
+            "R"             => colorant"#91bfdb", #:slategray2,
+            "D"             => colorant"#2b83ba", #:skyblue4,
+            "Precip"        => :black,
+            # "ETa"  => :black,
+            # "P2"   => :darkblue,
+            # "Swat" => :brown
+        ])
+        return color_palette = color_palette_Schmidt_Walter2020
+end
+function plot_monthly_water_partitioning(df_partitioning_monthly, fig = Figure())
+    color_palette = get_water_partitioning_colorpalette()
+    # Preprocess
+    df_partitioning_monthly_forMakie = @chain df_partitioning_monthly begin
+        stack(Not([:year, :month, :nrow, :date]))
+        # only keep variables we need
+        @subset(:variable .∈ ([first(pair) for pair in color_palette],))
+        # make categorical
+        @transform :variable = CategoricalArrays.categorical(:variable, levels = [first(pair) for pair in color_palette])
+        @transform :variable_code = CategoricalArrays.levelcode.(:variable)
+        # Remove fluxes that were not computed (e.g. removes runoff)
+        @subset(:value .!= 0.0)
+        end
+    # Plot
+    aog_monthly = AlgebraOfGraphics.mapping(
+            :date => "",
+            :value => "Water flux per month (mm)",
+            stack = :variable,
+            color = :variable => "") *
+        (# bar plot of fluxes
+        AlgebraOfGraphics.data(@subset(df_partitioning_monthly_forMakie, :variable .!= "Precip")) * AlgebraOfGraphics.visual(BarPlot, gap = -31*0.8) +
+        # line plot of precip input
+        AlgebraOfGraphics.data(@subset(df_partitioning_monthly_forMakie, :variable .== "Precip")) * AlgebraOfGraphics.visual(Lines)
+        )
+    xticks = sort(unique(Dates.floor.(df_partitioning_monthly_forMakie.date, Dates.Month(6))))
+
+    aog_draw = AlgebraOfGraphics.draw!(fig, aog_monthly, palettes = (; color = color_palette),
+        # axis = (; xticks = AlgebraOfGraphics.datetimeticks((x -> Dates.format(x, "mm\nY")), (Date.(xticks)))))
+        axis = (; ygridvisible = true,
+                xticks = AlgebraOfGraphics.datetimeticks((x -> Dates.format(x, "u\nY")), (Date.(xticks)))))
+    return fig, aog_draw
+end
+function plot_yearly_water_partitioning(df_partitioning_yearly, fig = Figure())
+    color_palette = get_water_partitioning_colorpalette()
+    # Preprocess
+    df_partitioning_yearly_forMakie = @chain df_partitioning_yearly begin
+        stack(Not([:year, :nrow, :date]))
+        # only keep variables we need
+        @subset(:variable .∈ ([first(pair) for pair in color_palette],))
+        # make categorical
+        @transform :variable = CategoricalArrays.categorical(:variable, levels = [first(pair) for pair in color_palette])
+        @transform :variable_code = CategoricalArrays.levelcode.(:variable)
+        # Remove fluxes that were not computed (e.g. removes runoff)
+        @subset(:value .!= 0.0)
+        end
+    # Plot
+    aog_yearly = AlgebraOfGraphics.mapping(
+        :date => "",
+        :value => "Water flux per year (mm)",
+        stack = :variable,
+        color = :variable => "") *
+    (# bar plot of fluxes
+    AlgebraOfGraphics.data(@subset(df_partitioning_yearly_forMakie, :variable .!= "Precip")) * AlgebraOfGraphics.visual(BarPlot, gap = -366*0.8) +
+    # line plot of precip input
+    AlgebraOfGraphics.data(@subset(df_partitioning_yearly_forMakie, :variable .== "Precip")) * AlgebraOfGraphics.visual(Lines)
+    )
+
+    xticks = sort(unique(df_partitioning_yearly_forMakie.year))
+    aog_draw = AlgebraOfGraphics.draw!(fig, aog_yearly,
+        palettes = (; color = color_palette),
+        axis = (; ygridvisible = true,
+                #   xticks = AlgebraOfGraphics.datetimeticks((x -> Dates.format(x, "Y-mm")), (Date.(xticks)))))
+                  xticks = AlgebraOfGraphics.datetimeticks((x -> Dates.format(x, "Y")), (Date.(xticks)))))
+    return fig, aog_draw
+end
 
 ############################################################################################
 ############################################################################################

@@ -9,9 +9,10 @@ using LinearAlgebra
 using StatsBase: mean, weights
 using ComponentArrays
 using UnPack: @unpack
-using Dates: now, Day, dayofyear
+using Dates: now, Date, Day, dayofyear, month, year, floor, Month
 using Printf: @sprintf
 using Interpolations: interpolate, extrapolate, NoInterp, Gridded, Constant, Next, Previous, Flat, Throw, scale, BSpline, linear_interpolation
+using CategoricalArrays
 
 # NOTE TO DEVELOPERS: EXPORTED ELEMENTS CONSTITUTE THE API AND SHOULD BE STABLE AND DOCUMENTED.
 export SPAC, DiscretizedSPAC, loadSPAC, setup, simulate!, remakeSPAC
@@ -23,6 +24,8 @@ export get_soil_
 export get_deltasoil, get_theta, get_psi
 # read out results for aboveground/scalar variables
 export get_amounts, get_δ, get_delta # get_mm # # TODO(bernhard): make sure we have documentation for these exported variables
+# read out results for water partitioning
+export get_water_partitioning
 
 @doc raw"""
     SPAC
