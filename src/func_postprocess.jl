@@ -882,7 +882,7 @@ function get_data_for_isotopePlot(simulation)
     # df_amt  = DataFrame(cols_SWAT_amt,  ["amt_$depth"  for depth in (round.(Int, y_center))])
     df_d18O = DataFrame(cols_SWAT_d18O, ["d18O_$depth" for depth in (round.(Int, y_center))])
     df_d2H  = DataFrame(cols_SWAT_d2H,  ["d2H_$depth"  for depth in (round.(Int, y_center))])
-    df = hcat(df_scalar, df_amt, df_d18O, df_d2H)
+    df = hcat(df_scalar, df_d18O, df_d2H)
 
     return (df = df, RWUcentroidLabel = RWUcentroidLabel)
 end
