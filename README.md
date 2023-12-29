@@ -60,6 +60,11 @@ To run this example simulation simply call `LWFBrook90.run_example()`. Note, tha
 
 Further documentation for LWFBrook90.jl is available [here](https://fabern.github.io/LWFBrook90.jl/stable) and for BROOK90 [here](http://www.ecoshift.net/brook/b90doc.html).
 
+If you're new to scientific computing in Julia. There are many useful tutorials around. For a quick start you can check out:
+- Getting Started With Julia, targeted at epidemiologists, by C.Arnold-Leps: https://juliaepibook.callumarnold.com/install-julia and https://juliaepibook.callumarnold.com/julia-basics
+- Noteworthy Differences from other Languages: https://docs.julialang.org/en/v1/manual/noteworthy-differences/
+- Getting Started with Julia (for Experienced Programmers), by C.Rackauckas, 35min: https://www.youtube.com/watch?v=-lJK92bEKow
+
 ### Example data set:
 Following plots illustrate results of the provided data set. The scalar state variables and depth-depenedent (vector) state variables can be plotted:
 
@@ -93,8 +98,4 @@ Any help in form of discussions, pull requests, example data sets, or otherwise 
 
 For implementation details: see documentation section [Implementation](https://fabern.github.io/LWFBrook90.jl/stable/model/#Implementation).
 
-If you're new to scientific computing in Julia. There are many useful tutorials around. For a quick start you can check out:
-- Getting Started with Julia (for Experienced Programmers), by C.Rackauckas, 35min: https://www.youtube.com/watch?v=-lJK92bEKow
-- Noteworthy Differences from other Languages: https://docs.julialang.org/en/v1/manual/noteworthy-differences/
-
-For more in depth treatments of topics related to scientific computing and machine learning in Julia be sure to check out the course MIT 18.337J by C. Rackauckas at https://github.com/mitmath/18337. This course lists further introduction material under lecture 1.1.
+If you're new to scientific computing in Julia. For more in depth treatments of topics related to scientific computing and machine learning in Julia be sure to check out the course MIT 18.337J by C. Rackauckas at https://github.com/mitmath/18337. This course lists further introduction material under lecture 1.1.

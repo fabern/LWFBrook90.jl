@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1.9'
+          - '1'
           - 'nightly'
         os:
           - ubuntu-latest
@@ -32,7 +32,7 @@ jobs:
         include:
           - version: 'nightly'
             allow_failure: true
-          - version: '1.9'
+          - version: '1'
             allow_failure: false
     steps:
       - uses: actions/checkout@v4
