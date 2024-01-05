@@ -17,6 +17,7 @@ using CategoricalArrays
 # NOTE TO DEVELOPERS: EXPORTED ELEMENTS CONSTITUTE THE API AND SHOULD BE STABLE AND DOCUMENTED.
 export SPAC, DiscretizedSPAC, loadSPAC, setup, simulate!, remakeSPAC
 export run_simulation
+export prepare_for_LWFBrook90R
 export Rootden_beta_
 export RelativeDaysFloat2DateTime
 # read out results for soil domain variables
@@ -121,6 +122,7 @@ include("module_SNO.jl");        # to bring into scope: using .SNO
 include("module_EVP.jl");        # to bring into scope: using .SNO
 include("module_ISO.jl");        using .ISO
 
+include("generate_LWFBrook90R_Input.jl")
 include("func_discretize_soil_domain.jl")
 include("func_DiffEq_definition_u0.jl")
 include("func_DiffEq_definition_p.jl")
@@ -582,6 +584,14 @@ function setup(parametrizedSPAC::SPAC;
         ODEProblem          = ode_LWFBrook90,
         ODESolution         = nothing,
         ODESolution_datetime= nothing)
+end
+"""
+    is_setup(parametrizedSPAC::SPAC)
+
+Internal function that determines whether a SPAC has been discretized with setup().
+"""
+function is_setup(parametrizedSPAC::SPAC)
+    "shp" ∈ names(parametrizedSPAC.soil_discretization.df)
 end
 
 function Base.show(io::IO, mime::MIME"text/plain", discSPAC::DiscretizedSPAC)

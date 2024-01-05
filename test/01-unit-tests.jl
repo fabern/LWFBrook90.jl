@@ -758,6 +758,102 @@ end
     # - maxrootdepth, betaroot       # beta, z_rootMax_m                     all in parametrizedSPAC.pars.root_distribution
 end
 
+@testset "prepare SPAC for LWFBrook90" begin
+    Δz = [fill(0.05, 4);  fill(0.10, 14)]
+    input_path   = "../examples/DAV2020-full/";
+    model        = loadSPAC(input_path, "DAV2020-full"; simulate_isotopes = false);
+    mod_model    = loadSPAC(input_path, "DAV2020-full"; simulate_isotopes = false,
+            Δz_thickness_m    = Δz,
+            root_distribution = (beta = 0.98, z_rootMax_m = -sum(Δz)), # use whole domain as root zone (beta parameter regulates distribution)
+            IC_soil           = (PSIM_init_kPa = -6.0,
+                                delta18O_init_permil = -9.0,
+                                delta2H_init_permil = -11.0),
+            canopy_evolution  = (DENSEF_rel = 100, HEIGHT_rel = 100, SAI_rel    = 100,
+                                LAI_rel = (DOY_Bstart = 110,    Bduration  = 20,
+                                            DOY_Cstart = 270,    Cduration  = 60,
+                                            LAI_perc_BtoC = 100, LAI_perc_CtoB = 0)),
+            storm_durations_h = [4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0],
+            IC_scalar         = (amount = (u_GWAT_init_mm = 0.0,         u_INTS_init_mm = 0.0,
+                                        u_INTR_init_mm = 0.0,         u_SNOW_init_mm = 0.0,
+                                        u_CC_init_MJ_per_m2 = 0.0001, u_SNOWLQ_init_mm =  0.),
+                                d18O    = (u_GWAT_init_permil = -11.111, u_INTS_init_permil = -12.222,
+                                        u_INTR_init_permil = -13.333, u_SNOW_init_permil = -14.444),
+                                d2H     = (u_GWAT_init_permil = -95.111, u_INTS_init_permil = -95.222,
+                                        u_INTR_init_permil = -95.333, u_SNOW_init_permil = -95.444)));
+
+    base_simulation = LWFBrook90.setup(model; requested_tspan = (0,300));
+    mod_simulation  = LWFBrook90.setup(mod_model)
+
+
+    # NOTE: in a next iteration, we could support LAI as vector (among other stuff) by
+    #   generating input data for r_lwfbrook90() instead of (effectively skipping preprocessing
+    #   with the R-pkg and directly going for the Fortran Code.)
+    @test_throws r"LAI as vector is not supported"      args, derived_args = prepare_for_LWFBrook90R(base_simulation, return_value = "inputs");
+    @test_throws r"Please provide a `discretized` SPAC" args, derived_args = prepare_for_LWFBrook90R(mod_model, return_value = "inputs");
+
+    args, derived_args = prepare_for_LWFBrook90R(mod_simulation, return_value = "inputs");
+
+    # b1)
+    @test isequal(Matrix(args.meteo[365:366,:]),
+        #generated with: print(IOContext(stdout, :compact=>false), Matrix(args.meteo[365:366,:]))
+        Any[Date("2021-12-31") -1.8 6.6 NaN 0.0 100 6.13 1.1 0.52; Date("2022-01-01") -1.8 6.6 NaN 0.0 100 6.13 1.1 0.52])
+    @test isequal(Matrix(args.soil),
+        Any[ # # generated with: print(IOContext(stdout, :compact=>false), Matrix(args.soil))
+        "NA" -0.0 -0.05 "NA" missing 0.375 missing missing missing missing 0.3786 0.0 20.387 1.2347 0.19008666072730207 2854.91 -3.339 0.14862236000551818
+        "NA" -0.05 -0.1 "NA" missing 0.375 missing missing missing missing 0.3786 0.0 20.387 1.2347 0.19008666072730207 2854.91 -3.339 0.1343428420784842
+        "NA" -0.1 -0.15000000000000002 "NA" missing 0.375 missing missing missing missing 0.3786 0.0 20.387 1.2347 0.19008666072730207 2854.91 -3.339 0.12143528885596006
+        "NA" -0.15000000000000002 -0.2 "NA" missing 0.375 missing missing missing missing 0.3786 0.0 20.387 1.2347 0.19008666072730207 2854.91 -3.339 0.10976788306231737
+        "NA" -0.2 -0.3 "NA" missing 0.375 missing missing missing missing 0.3786 0.0 20.387 1.2347 0.19008666072730207 2854.91 -3.339 0.09445491232028565
+        "NA" -0.3 -0.39999999999999997 "NA" missing 0.375 missing missing missing missing 0.3786 0.0 20.387 1.2347 0.19008666072730207 2854.91 -3.339 0.07717654033385292
+        "NA" -0.39999999999999997 -0.49999999999999994 "NA" missing 0.75 missing missing missing missing 0.3786 0.0 20.387 1.2347 0.19008666072730207 2854.91 -3.339 0.06305885243645104
+        "NA" -0.49999999999999994 -0.6 "NA" missing 0.75 missing missing missing missing 0.3786 0.0 20.387 1.2347 0.19008666072730207 2854.91 -3.339 0.05152367355935886
+        "NA" -0.6 -0.7 "NA" missing 0.75 missing missing missing missing 0.3786 0.0 20.387 1.2347 0.19008666072730207 2854.91 -3.339 0.04209859257630285
+        "NA" -0.7 -0.7999999999999999 "NA" missing 0.75 missing missing missing missing 0.3786 0.0 20.387 1.2347 0.19008666072730207 2854.91 -3.339 0.03439761520233502
+        "NA" -0.7999999999999999 -0.8999999999999999 "NA" missing 0.75 missing missing missing missing 0.3786 0.0 20.387 1.2347 0.19008666072730207 2854.91 -3.339 0.028105356003609673
+        "NA" -0.8999999999999999 -0.9999999999999999 "NA" missing 0.75 missing missing missing missing 0.3786 0.0 20.387 1.2347 0.19008666072730207 2854.91 -3.339 0.02296412211844314
+        "NA" -0.9999999999999999 -1.0999999999999999 "NA" missing 0.75 missing missing missing missing 0.3786 0.0 20.387 1.2347 0.19008666072730207 2854.91 -3.339 0.018763359717024704
+        "NA" -1.0999999999999999 -1.2 "NA" missing 0.75 missing missing missing missing 0.3786 0.0 20.387 1.2347 0.19008666072730207 2854.91 -3.339 0.015331030990630084
+        "NA" -1.2 -1.3 "NA" missing 0.75 missing missing missing missing 0.3786 0.0 20.387 1.2347 0.19008666072730207 2854.91 -3.339 0.012526568523994051
+        "NA" -1.3 -1.4000000000000001 "NA" missing 0.75 missing missing missing missing 0.3786 0.0 20.387 1.2347 0.19008666072730207 2854.91 -3.339 0.010235118504569107
+        "NA" -1.4000000000000001 -1.5000000000000002 "NA" missing 0.75 missing missing missing missing 0.3786 0.0 20.387 1.2347 0.19008666072730207 2854.91 -3.339 0.008362837005354907
+        "NA" -1.5000000000000002 -1.6000000000000003 "NA" missing 0.75 missing missing missing missing 0.3786 0.0 20.387 1.2347 0.19008666072730207 2854.91 -3.339 0.006833046705508307])
+    @test isequal(args.opts,
+        (startdate = DateTime("2021-01-01T00:00:00"), enddate = DateTime("2021-12-31T00:00:00"),
+        fornetrad = "globrad", prec_interval = 1, correct_prec = false, budburst_method = "fixed",
+        leaffall_method = "fixed", standprop_input = "parameters", standprop_interp = "constant",
+        use_growthperiod = false, lai_method = "b90", imodel = "MvG", root_method = "soilvar"))
+    @test isequal(args.parms,
+        (maxlai = 3.0, sai = 1.0, sai_ini = 1.0, height = 25.0, height_ini = 25.0, densef = 1.0,
+        densef_ini = 1.0, age_ini = 100.0, winlaifrac = 0.0, budburst_species = missing,
+        budburstdoy = 110, leaffalldoy = 270, emergedur = 20, leaffalldur = 60,
+        shp_optdoy = missing, shp_budburst = missing, shp_leaffall = missing, alb = 0.2,
+        albsn = 0.5, ksnvp = 0.3, fxylem = 0.5, mxkpl = 15.64, lwidth = 0.1, psicr = -1.03942,
+        nooutf = 1, lpc = 4.0, cs = 0.35, czs = 0.13, czr = 0.05, hs = 1.0, hr = 10.0,
+        rhotp = 2.0, nn = 2.5, maxrlen = 3000.0, initrlen = 12.0, initrdep = 0.25,
+        rrad = 0.35, rgrorate = 0.03, rgroper = 30.0, maxrootdepth = missing, betaroot = missing,
+        radex = 0.5, glmax = 0.00868, glmin = 0.0003, rm = 1000.0, r5 = 287.0,
+        cvpd = 2.0, tl = 0.0, t1 = 10.0, t2 = 30.0, th = 40.0, frintlai = 0.06, frintsai = 0.06,
+        fsintlai = 0.04, fsintsai = 0.04, cintrl = 0.15, cintrs = 0.15, cintsl = 0.6, cintss = 0.6,
+        infexp = 0.45, bypar = 0, qfpar = 1.0, qffc = 0.0, imperv = 0.0,
+        drain = 0.51, gsc = 0.0, gsp = 0.0, ilayer = 6, qlayer = 0, z0s = 0.001, rstemp = -0.5,
+        melfac = 1.5, ccfac = 0.3, laimlt = 0.2, saimlt = 0.5, grdmlt = 0.35, maxlqf = 0.05,
+        snoden = 0.3, obsheight = 0.024999999999999998, correct_prec_statexp = "mg",
+        rssa = 795.29579, rssb = 1.0, dtimax = 0.5, dswmax = 0.05, dpsimax = 0.0005,
+        wndrat = 0.3, fetch = 5000.0, z0w = 0.005, zw = 2.0, zminh = 2.0, coords_x = 0,
+        coords_y = 47.0, c1 = 0.25, c2 = 0.5, c3 = 0.2,
+        pdur = [4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0],
+        eslope = 0.0, aspect = 0.0, dslope = 0.0,
+        slopelen = 200.0, intrainini = 0.0, intsnowini = 0.0, gwatini = 0.0, snowini = 0.0,
+        psiini = -6.0, standprop_table = missing, lai_doy = missing, lai_frac = missing,
+        rootden_table = missing, soil_nodes = missing, soil_materials = missing))
+    # # b2)
+    # derived_args.meteo
+    # derived_args.soil
+    # derived_args.df_opts
+    # derived_args.df_parms_a
+    # derived_args.df_parms_b
+end
+
 @testset "simulate-and-postprocess" begin
     Δz_m = fill(0.05, 22)
     parametrizedSPAC = loadSPAC(
