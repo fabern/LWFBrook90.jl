@@ -21,7 +21,8 @@ Pages   = ["LWFBrook90.jl"]
 Modules = [LWFBrook90]
 Pages   = ["func_read_inputData.jl",
            "func_discretize_soil_domain.jl",
-           "func_postprocess.jl"]
+           "func_postprocess.jl",
+           "generate_LWFBrook90R_Input.jl"]
 ```
 
 ## Functions defining the DiffEq.jl system of ODE (p, u0, f, callbacks, ...)
