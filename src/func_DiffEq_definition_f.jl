@@ -46,7 +46,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         @unpack u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
             aux_du_VRFLI_1st_approx, aux_du_BYFLI, p_fu_BYFRAC,
             p_fu_SRFL, p_fu_SLFL, DPSIDW = p;
-        @unpack cache1, cache2 = p # cache vectors of length N
+        @unpack cache1, cache2, cache3, cache4 = p # cache vectors of length N
 
         ##################
         # Parse states
@@ -63,7 +63,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         u_aux_θ_tminus1[:] = u_aux_θ #TODO(bernhard): this does not seem to be correctly updated
         # @time (u_aux_WETNES[:], u_aux_PSIM[:], u_aux_PSITI[:], u_aux_θ[:], p_fu_KK[:]) =
         #     LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil) # 0.000007 seconds (7 allocations: 1008 bytes)
-        LWFBrook90.KPT.derive_auxiliary_SOILVAR!(u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK, u_SWATI,  p_soil) # 4 allocations 896 bytes
+        LWFBrook90.KPT.derive_auxiliary_SOILVAR!(u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK, u_SWATI,  p_soil)
 
         ##################
         # Update soil limited boundary flows during iteration loop
@@ -111,7 +111,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
                     # for FDPSIDW:
                     u_aux_WETNES,
                     # for ITER:
-                    p_DSWMAX, u_aux_θ) # 0.000011 seconds (152 allocations: 448 bytes)
+                    p_DSWMAX, u_aux_θ, cache3, cache4) # 0.000011 seconds (152 allocations: 448 bytes)
 
         # groundwater flow and seepage loss
         du_GWFL[1], du_SEEP[1] = LWFBrook90.WAT.GWATER(u_GWAT, p_GSC, p_GSP, aux_du_VRFLI[p_soil.NLAYER]) # [1] so that this doesn't allocate

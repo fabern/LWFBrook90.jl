@@ -445,14 +445,20 @@ end
 function derive_auxiliary_SOILVAR!(u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK,
                                    u_SWATI,  p::KPT_SOILPAR_Mvg1d)
 
-    u_aux_WETNES .= (p.p_THSAT .* u_SWATI ./ p.p_SWATMAX .- p.p_θr) ./ (p.p_THSAT .- p.p_θr)
-    u_aux_WETNES .= min.(1, u_aux_WETNES)
+    # u_aux_WETNES .= (p.p_THSAT .* u_SWATI ./ p.p_SWATMAX .- p.p_θr) ./ (p.p_THSAT .- p.p_θr)
+    # u_aux_WETNES .= min.(1, u_aux_WETNES)
+    for i in eachindex(u_aux_WETNES)
+        u_aux_WETNES[i] = min(1, (p.p_THSAT[i] * u_SWATI[i] / p.p_SWATMAX[i] - p.p_θr[i]) ./ (p.p_THSAT[i] .- p.p_θr[i]))
+    end
 
-    u_aux_PSIM   .= FPSIM(u_aux_WETNES, p)
-    u_aux_θ      .= FTheta(u_aux_WETNES, p)
-    p_fu_KK      .= FK_MvG(u_aux_WETNES, p.p_KSAT, p.p_MvGl, p.p_MvGn)
+    FPSIM!(u_aux_PSIM, u_aux_WETNES, p)
+    FTheta!(u_aux_θ, u_aux_WETNES, p) # in-place overwrite u_aux_θ
+    FK_MvG!(p_fu_KK, u_aux_WETNES, p.p_KSAT, p.p_MvGl, p.p_MvGn) # in-place overwrite p_fu_KK
 
-    u_aux_PSITI  .= u_aux_PSIM .+ p.p_PSIG
+    # u_aux_PSITI  .= u_aux_PSIM .+ p.p_PSIG
+    for i in eachindex(u_aux_WETNES)
+        u_aux_PSITI[i]  = u_aux_PSIM[i] + p.p_PSIG[i]
+    end
 
     return nothing
 end
@@ -493,6 +499,14 @@ function FK_MvG(WETNES, KSAT, MvGl, MvGn)
     # return: hydraulic conductivity, mm/d
     return KSAT .* AWET .^ MvGl .* (1 .- (1 .- AWET .^ (MvGn ./ (MvGn .- 1)) ).^(1 .- 1 ./ MvGn) ) .^ 2
 end
+function FK_MvG!(result, WETNES, KSAT, MvGl, MvGn)
+    eps = 1.e-6
+    AWET = result # temporary use result as cache for AWET, is overwritten 2 lines down
+    AWET .= max.(WETNES, eps)
+    result .= KSAT .* AWET .^ MvGl .* (1 .- (1 .- AWET .^ (MvGn ./ (MvGn .- 1)) ).^(1 .- 1 ./ MvGn) ) .^ 2
+    # return: hydraulic conductivity, mm/d
+    return nothing
+end
 
 """
     FPSIM(u_aux_WETNES, p_soil)
@@ -519,6 +533,26 @@ function FPSIM(u_aux_WETNES, p::KPT_SOILPAR_Ch1d)
         end
     end
     return ψM
+end
+function FPSIM!(result, u_aux_WETNES, p::KPT_SOILPAR_Ch1d)
+    # FPSIM obtains Ψi from Wi for one layer using equation (7) in the clearly
+    # unsaturated region and equation (4) in the near-saturation region.
+    NLAYER = length(p.p_SWATMAX)
+    for i in 1:NLAYER
+        if u_aux_WETNES[i] <= 0.
+            result[i] = -10000000000
+        elseif u_aux_WETNES[i] < p.p_WETINF[i]
+            # in clearly unsaturated range (eq. 7)
+            result[i] = p.p_PSIF[i] * (u_aux_WETNES[i] / p.p_WETF[i]) ^ (-p.p_BEXP[i])
+        elseif u_aux_WETNES[i] < 1.0
+            # in near-saturated range (eq. 4)
+            result[i] = p.p_CHM[i]* (u_aux_WETNES[i] - p.p_CHN[i]) * (u_aux_WETNES[i] - 1)
+        else
+            # saturated
+            result[i] = 0.0
+        end
+    end
+    return nothing
 end
 function FPSIM_CH(u_aux_WETNES,p_PSIF, p_BEXP, p_WETINF, p_WETF, p_CHM, p_CHN)
     # needed only for construction of KPT_SOILPAR_Ch1d
@@ -553,6 +587,19 @@ function FPSIM_MvG(u_aux_WETNES, p_MvGα, p_MvGn, p_MvGm)
     # ψM = 9.81 .* (-1 ./ p_MvGα) .* (AWET .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
     # ψM = 9.81 .* (-1 ./ p_MvGα) .* (max.(u_aux_WETNES, eps) .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
     ψM = 9.81 .* (-1 ./ p_MvGα) .* (max.(u_aux_WETNES, eps) .^ (-1 ./ (p_MvGm)) .-1) .^ (1 ./ p_MvGn)
+
+    # 9.81 conversion from m to kPa #TODO define and use const
+end
+function FPSIM!(result, u_aux_WETNES, p::KPT_SOILPAR_Mvg1d)
+    FPSIM_MvG!(result, u_aux_WETNES, p.p_MvGα, p.p_MvGn, p.p_MvGm)
+end
+function FPSIM_MvG!(result, u_aux_WETNES, p_MvGα, p_MvGn, p_MvGm)
+    eps = 1.e-6
+    # MvGm = 1-1/MvGn
+    # AWET = max.(u_aux_WETNES, eps)
+    # ψM = 9.81 .* (-1 ./ p_MvGα) .* (AWET .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
+    # ψM = 9.81 .* (-1 ./ p_MvGα) .* (max.(u_aux_WETNES, eps) .^ (-1 ./ (1 .- 1 ./ p_MvGn)) .-1) .^ (1 ./ p_MvGn)
+    result .= 9.81 .* (-1 ./ p_MvGα) .* (max.(u_aux_WETNES, eps) .^ (-1 ./ (p_MvGm)) .-1) .^ (1 ./ p_MvGn)
 
     # 9.81 conversion from m to kPa #TODO define and use const
 end
@@ -635,15 +682,22 @@ function FTheta_MvG(u_aux_WETNES, p_THSAT, p_θr)
     return u_aux_WETNES .* (p_THSAT .- p_θr) .+ p_θr
 end
 function FTheta(u_aux_WETNES, p::KPT_SOILPAR_Ch1d)
-    # Computes θ(Se) = Se*(θs-θr) + θr
-
-    # variant 1:
-    # p_θr = 0
-    # return u_aux_WETNES*(p_THSAT-p_θr)+p_θr
-    # variant 2:
+    # Computes θ(Se) = Se*(θs-θr) + θr where θr = 0
     return u_aux_WETNES .* p.p_THSAT
 end
-
+function FTheta!(result, u_aux_WETNES, p::KPT_SOILPAR_Mvg1d)
+    FTheta_MvG!(result, u_aux_WETNES, p.p_THSAT, p.p_θr)
+    return nothing
+end
+function FTheta_MvG!(result, u_aux_WETNES, p_THSAT, p_θr)
+    # Computes θ(Se) = Se*(θs-θr) + θr
+    result .= u_aux_WETNES .* (p_THSAT .- p_θr) .+ p_θr
+    return nothing
+end
+function FTheta!(result, u_aux_WETNES, p::KPT_SOILPAR_Ch1d)
+    # Computes θ(Se) = Se*(θs-θr) + θr where θr = 0
+    result .= u_aux_WETNES .* p.p_THSAT
+end
 """
     FWETNES(u_aux_PSIM, p_soil)
 

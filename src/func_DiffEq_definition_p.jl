@@ -563,8 +563,12 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
         p_fu_SRFL = fill(NaN, 1),
         p_fu_SLFL = fill(NaN, 1),
         DPSIDW    = fill(NaN, NLAYER),
-        cache1 = fill(NaN, NLAYER),
-        cache2 = fill(NaN, NLAYER),
+        cache1 = fill(NaN, NLAYER), # caches for no specific purpose, use with care!
+        cache2 = fill(NaN, NLAYER), # caches for no specific purpose, use with care!
+        cache3 = fill(NaN, NLAYER), # caches for no specific purpose, use with care!
+        cache4 = fill(NaN, NLAYER), # caches for no specific purpose, use with care!
+
+
 
 
         #     # chaches for advection dispersion equation

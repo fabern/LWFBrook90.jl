@@ -456,7 +456,7 @@ function INFLOW!(VRFLI_posterior, INFLI, BYFLI, # these are modified in-place
     return nothing
 end
 
-function ITER(NLAYER, FLAG_MualVanGen, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMAX, p_soil)
+function ITER(NLAYER, FLAG_MualVanGen, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMAX, p_soil, cache3, cache4)
     # ITER() is a step size limiter
 
     # DTI       ! time step for iteration interval, d
@@ -477,8 +477,10 @@ function ITER(NLAYER, FLAG_MualVanGen, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSIT
     # else # elseis isa(p_soil, KPT_SOILPAR_Ch1d)
     #     FLAG_MualVanGen = 0
     # end
-    A = zeros(NLAYER)
-    temp = zeros(NLAYER)
+    A = cache3 # zeros(NLAYER)
+    temp = cache4 # zeros(NLAYER)
+    A .= 0
+    temp .= 0
     # first approximation to new total potential
     if (FLAG_MualVanGen == 0)
         for i = 1:NLAYER

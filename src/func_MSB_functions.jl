@@ -589,7 +589,7 @@ function MSBITERATE!(
                     # for FDPSIDW:
                     u_aux_WETNES,
                     # for ITER:
-                    p_DSWMAX, u_aux_θ)
+                    p_DSWMAX, u_aux_θ, cache3, cache4)
 
     ##########################
     ## On soil surface, partition incoming rain (RNET) and melt water (SMLT)
@@ -672,7 +672,7 @@ function MSBITERATE!(
 
         DTINEW=LWFBrook90.WAT.ITER(NLAYER, FLAG_MualVanGen, DTI, LWFBrook90.CONSTANTS.p_DTIMIN, DPSIDW,
                                         du_NTFLI, u_aux_PSITI, u_aux_θ, p_DSWMAX, p_DPSIMAX,
-                        p_soil) # 2 allocations 448 bytes
+                        p_soil, cache3, cache4)
 
         # recompute step with updated DTI if needed
         if (DTINEW < DTI)
