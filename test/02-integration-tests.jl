@@ -262,7 +262,7 @@ function my_scatter!(pl, df; args...)
     Plots.scatter!(pl, float.(df[:,:time]), Matrix(df[:,Not(:time)]); args...)
 end
 
-function plot_Hammel_Dense(sim, ref, hyd, depth_to_read_out_mm, title; subtitle = "", fig = nothing, args...)
+function plot_Hammel_Dense(sim, ref, hyd, depth_to_read_out_mm, title; subtitle = "", fig = nothing, add_legend = true, markersize = 8, args...)
     # create title
     ODE_method = replace(String(Symbol(sim.ODEsolution.alg)), r"(.*?)(\(|{).*"=>s"\1")
     final_title = title
@@ -313,18 +313,18 @@ function plot_Hammel_Dense(sim, ref, hyd, depth_to_read_out_mm, title; subtitle 
     end
 
     #Hydrus-1D
-    Makie.series!(ax1, hyd.θdense.time, transpose(Matrix(disallowmissing(hyd.θdense[:,Not(:time)]))), color = Makie.wong_colors(), linewidth=0, marker = :circle, markersize = 8)
+    Makie.series!(ax1, hyd.θdense.time, transpose(Matrix(disallowmissing(hyd.θdense[:,Not(:time)]))), color = Makie.wong_colors(), linewidth=0, marker = :circle, markersize = markersize)
     # [Makie.scatter!(ax1, hyd.θdense.time, c, color = Makie.wong_colors()) for c in eachcol(Matrix(hyd.θdense[:,Not(:time)]))]
-    Makie.series!(ax2, hyd.ψdense.time, transpose(Matrix(disallowmissing(hyd.ψdense[:,Not(:time)]))), color = Makie.wong_colors(), linewidth=0, marker = :circle, markersize = 8)
+    Makie.series!(ax2, hyd.ψdense.time, transpose(Matrix(disallowmissing(hyd.ψdense[:,Not(:time)]))), color = Makie.wong_colors(), linewidth=0, marker = :circle, markersize = markersize)
     if (simulate_isotopes)
-        Makie.series!(ax3, hyd.δ18Odense.time, transpose(Matrix(disallowmissing(hyd.δ18Odense[:,Not(:time)]))), color = Makie.wong_colors(), linewidth=0, marker = :circle, markersize = 8)
-        Makie.series!(ax4, hyd.δ2Hdense.time, transpose(Matrix(disallowmissing(hyd.δ2Hdense[:,Not(:time)]))), color = Makie.wong_colors(), linewidth=0, marker = :circle, markersize = 8)
+        Makie.series!(ax3, hyd.δ18Odense.time, transpose(Matrix(disallowmissing(hyd.δ18Odense[:,Not(:time)]))), color = Makie.wong_colors(), linewidth=0, marker = :circle, markersize = markersize)
+        Makie.series!(ax4, hyd.δ2Hdense.time, transpose(Matrix(disallowmissing(hyd.δ2Hdense[:,Not(:time)]))), color = Makie.wong_colors(), linewidth=0, marker = :circle, markersize = markersize)
 
     end
 
     #LWFBrook90R
-    Makie.series!(ax1, ref.θ.time, transpose(Matrix(disallowmissing(ref.θ[:,Not(:time)]))), solid_color = :black, linewidth=0, marker = 'x', markersize = 8)
-    Makie.series!(ax2, ref.ψ.time, transpose(Matrix(disallowmissing(ref.ψ[:,Not(:time)]))), solid_color = :black, linewidth=0, marker = 'x', markersize = 8)
+    Makie.series!(ax1, ref.θ.time, transpose(Matrix(disallowmissing(ref.θ[:,Not(:time)]))), solid_color = :black, linewidth=0, marker = 'x', markersize = markersize)
+    Makie.series!(ax2, ref.ψ.time, transpose(Matrix(disallowmissing(ref.ψ[:,Not(:time)]))), solid_color = :black, linewidth=0, marker = 'x', markersize = markersize)
 
     # add manual legend
     # axislegend(ax2,
@@ -349,11 +349,13 @@ function plot_Hammel_Dense(sim, ref, hyd, depth_to_read_out_mm, title; subtitle 
         MarkerElement(marker = markers[3], color = :black, strokecolor = :transparent)]
     depth_string = replace.(replace.(names(sim.θψδ_dense[:,r"^θ"]), "θ_" => ""), "mm" => " mm")
     group_color = [PolyElement(color = color, strokecolor = :transparent) for color in Makie.wong_colors()[eachindex(depth_string)]]
-    axislegend(ax1, [group_depth..., group_color...], [markers_string..., depth_string...],
-        patchsize = (15, 5), rowgap = 0, labelsize = 10,
-        position = :rt)
+    if add_legend
+        axislegend(ax1, [group_depth..., group_color...], [markers_string..., depth_string...],
+            patchsize = (15, 5), rowgap = 0, labelsize = 10,
+            position = :rt)
+    end
 
-    return fig
+    return fig, [group_depth..., group_color...], [markers_string..., depth_string...]
 end
 print_timed_statistics = function(time, gctime, gcstats)
     # Printf.@sprintf("%.2f seconds (%.2f M allocations: %.3f MiB, %.2f%% gc time)",
@@ -420,31 +422,31 @@ end
         mkpath(dirname(fname_illustrations))
 
         # Plot Loam simulations
-        pl1 = plot_Hammel_Dense(sim1, ref1, hyd1, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
+        pl1,_,_ = plot_Hammel_Dense(sim1, ref1, hyd1, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
             subtitle = print_timed_statistics(time1, gctime1, gcstats1)*"\n"*git_status_string)
         save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim1.png", pl1, pt_per_unit = 1)
         # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim1.pdf", pl1, pt_per_unit = 1)
-        pl2 = plot_Hammel_Dense(sim2, ref2, hyd2, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
+        pl2,_,_ = plot_Hammel_Dense(sim2, ref2, hyd2, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
             subtitle = print_timed_statistics(time2, gctime2, gcstats2)*"\n"*git_status_string)
         save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim2.png", pl2, pt_per_unit = 1)
         # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim2.pdf", pl2, pt_per_unit = 1)
         if high_resolution_flag
-            pl3 = plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
+            pl3,_,_ = plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
                 subtitle = print_timed_statistics(time3, gctime3, gcstats3)*"\n"*git_status_string)
             save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim3.png", pl3, pt_per_unit = 1)
             # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Loam_sim3.pdf", pl3, pt_per_unit = 1)
         end
         # Plot Sand simulations
-        pl4 = plot_Hammel_Dense(sim4, ref4, hyd4, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
+        pl4,_,_ = plot_Hammel_Dense(sim4, ref4, hyd4, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
             subtitle = print_timed_statistics(time4, gctime4, gcstats4)*"\n"*git_status_string)
         save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim1.png", pl4, pt_per_unit = 1)
         # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim1.pdf", pl4, pt_per_unit = 1)
-        pl5 = plot_Hammel_Dense(sim5, ref5, hyd5, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
+        pl5,_,_ = plot_Hammel_Dense(sim5, ref5, hyd5, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
             subtitle = print_timed_statistics(time5, gctime5, gcstats5)*"\n"*git_status_string)
         save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim2.png", pl5, pt_per_unit = 1)
         # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim2.pdf", pl5, pt_per_unit = 1)
         if high_resolution_flag
-            pl6 = plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
+            pl6,_,_ = plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
                 subtitle = print_timed_statistics(time6, gctime6, gcstats6)*"\n"*git_status_string)
             save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim3.png", pl6, pt_per_unit = 1)
             # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand_sim3.pdf", pl6, pt_per_unit = 1)
@@ -456,8 +458,8 @@ end
             size_pt = 72 .* size_inches;
             fig_combined = Makie.Figure(resolution = size_pt, fontsize = 12);
             fig_a = fig_combined[1,1]; fig_b = fig_combined[1,2]
-            plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Loam"; fig = fig_a)
-            plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Sand"; fig = fig_b)
+            _, legend1, legend2 = plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Loam"; fig = fig_a)
+            _, legend1, legend2 = plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Sand"; fig = fig_b)
             # add maintitle
                 # remove subtitles
                 content(fig_a[1,1]).subtitle = ""
@@ -474,6 +476,7 @@ end
                     padding = (0, 5, 5, 0),
                     halign = :right)
             end
+            # add legend
             save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand3-Loam3.png", fig_combined, pt_per_unit = 1)
             save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ_Sand3-Loam3.pdf", fig_combined, pt_per_unit = 1)
         end
@@ -582,7 +585,7 @@ end
     # Illustrate with a plot what will be compared in the tests below
     if !is_a_CI_system && plot_flag
         # if (true) # Do these manually outside of automatic testing in order not to require Plots pkg
-        using Makie
+        using CairoMakie
         depth_to_read_out_mm = [100, 500, 1000, 1500, 1900]
         # fname_illustrations = "out/$(today())/"
 
@@ -590,63 +593,87 @@ end
         mkpath(dirname(fname_illustrations))
 
         # Plot Loam simulations
-        pl1 = plot_Hammel_Dense(sim1, ref1, hyd1, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
-            subtitle = print_timed_statistics(time1, gctime1, gcstats1)*"\n"*git_status_string)
+        pl1,_,_ = plot_Hammel_Dense(sim1, ref1, hyd1, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
+            subtitle = print_timed_statistics(time1, gctime1, gcstats1)*"\n"*git_status_string);
         save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim1.png", pl1, pt_per_unit = 1)
         # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim1.pdf", pl1, pt_per_unit = 1)
 
-        pl2 = plot_Hammel_Dense(sim2, ref2, hyd2, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
-            subtitle = print_timed_statistics(time2, gctime2, gcstats2)*"\n"*git_status_string)
+        pl2,_,_ = plot_Hammel_Dense(sim2, ref2, hyd2, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
+            subtitle = print_timed_statistics(time2, gctime2, gcstats2)*"\n"*git_status_string);
         save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim2.png", pl2, pt_per_unit = 1)
         # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim2.pdf", pl2, pt_per_unit = 1)
         if high_resolution_flag
-            pl3 = plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
-                subtitle = print_timed_statistics(time3, gctime3, gcstats3)*"\n"*git_status_string)
+            pl3,_,_ = plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Loam"; size=(900,900), dpi=300,
+                subtitle = print_timed_statistics(time3, gctime3, gcstats3)*"\n"*git_status_string);
             save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim3.png", pl3, pt_per_unit = 1)
             # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Loam_sim3.pdf", pl3, pt_per_unit = 1)
         end
         # Plot Sand simulations
-        pl4 = plot_Hammel_Dense(sim4, ref4, hyd4, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
-            subtitle = print_timed_statistics(time4, gctime4, gcstats4)*"\n"*git_status_string)
+        pl4,_,_ = plot_Hammel_Dense(sim4, ref4, hyd4, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
+            subtitle = print_timed_statistics(time4, gctime4, gcstats4)*"\n"*git_status_string);
         save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand_sim1.png", pl4, pt_per_unit = 1)
         # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand_sim1.pdf", pl4, pt_per_unit = 1)
-        pl5 = plot_Hammel_Dense(sim5, ref5, hyd5, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
-            subtitle = print_timed_statistics(time5, gctime5, gcstats5)*"\n"*git_status_string)
+        pl5,_,_ = plot_Hammel_Dense(sim5, ref5, hyd5, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
+            subtitle = print_timed_statistics(time5, gctime5, gcstats5)*"\n"*git_status_string);
         save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand_sim2.png", pl5, pt_per_unit = 1)
         # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand_sim2.pdf", pl5, pt_per_unit = 1)
         if high_resolution_flag
-            pl6 = plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
-                subtitle = print_timed_statistics(time6, gctime6, gcstats6)*"\n"*git_status_string)
+            pl6,_,_ = plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Simulation from Hammel et al. (2001) - Sand"; size=(900,900), dpi=300,
+                subtitle = print_timed_statistics(time6, gctime6, gcstats6)*"\n"*git_status_string);
             save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand_sim3.png", pl6, pt_per_unit = 1)
             # save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand_sim3.pdf", pl6, pt_per_unit = 1)
         end
 
         # Also make a combined plot (for article):
         if high_resolution_flag
-            size_inches = (7.25, 12); # often either 7.25 inches or 3.60 inches wide
+            size_inches = (7.25, 6); # often either 7.25 inches or 3.60 inches wide
             size_pt = 72 .* size_inches;
-            fig_combined = Makie.Figure(resolution = size_pt, fontsize = 12);
+            fig_combined = Makie.Figure(resolution = size_pt, fontsize = 10);
             fig_a = fig_combined[1,1]; fig_b = fig_combined[1,2]
-            plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Loam"; fig = fig_a)
-            plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Sand"; fig = fig_b)
+            _, legend_elem, legend_labels = plot_Hammel_Dense(sim3, ref3, hyd3, depth_to_read_out_mm, "Loam"; fig = fig_a, add_legend=false, markersize = 5)
+            _, legend_elem, legend_labels = plot_Hammel_Dense(sim6, ref6, hyd6, depth_to_read_out_mm, "Sand"; fig = fig_b, add_legend=false, markersize = 5)
+
+            # add legend
+            axislegend(content(fig_a[4,1]), [legend_elem[1:3], legend_elem[4:end]], [legend_labels[1:3], legend_labels[4:end]], ["",""],
+                patchsize = (8, 8), labelsize = 10,
+                titleposition = :top, orientation = :horizontal, nbanks = 5,
+                framevisible = false, titlevisible = false, titlegap = 0, groupgap = 5, rowgap = 0,
+                tellheight = false, tellwidth = false, titlesize = 0, gridsvalign = :top,
+                margin=(5, 5, 5, 5), padding=(2, 2, 2, 2), # margin=(10, 10, 10, 10), padding=(5, 5, 5, 5),
+                labelhalign=:left, labelvalign=:center,
+                position = :rc)
+            fig_combined
+            # remove ylabels of right plot
+            [ax.ylabel = "" for ax in contents(content(fig_combined[1,2])[:,:]) if ax isa Axis]
+            contents(content(fig_combined[1,2])[:,:])[1].yticks = 0.0:0.05:1.0
             # add maintitle
                 # remove subtitles
                 content(fig_a[1,1]).subtitle = ""
                 content(fig_b[1,1]).subtitle = ""
                 # add maintitle (super title)
-                Label(fig_combined[0,:], "Simulation from Hammel et al. (2001)";
-                    tellheight = true, tellwidth = false,
-                    valign = :bottom, padding = (0, 0, 0, 0),
-                    font = "TeX Gyre Heros Bold")
+                # Label(fig_combined[0,:], "Simulation from Hammel et al. (2001)";
+                #     tellheight = true, tellwidth = false,
+                #     valign = :bottom, padding = (0, 0, 0, 0),
+                #     font = "TeX Gyre Heros Bold")
             # add subplot labels
             for (label, layout) in zip(["a", "b"], [fig_a, fig_b])
                 Label(layout[1, 1, TopLeft()], label,
-                    fontsize = 26, font = :bold,
+                    fontsize = 10, font = :bold,
                     padding = (0, 5, 5, 0),
                     halign = :right)
             end
-            save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand3-Loam3.png", fig_combined, pt_per_unit = 1)
+            rowgap!(fig_combined.layout, 4)
+            colgap!(fig_combined.layout, 4)
+            rowgap!(content(fig_combined[1,1]), 4)
+            colgap!(content(fig_combined[1,1]), 4)
+            rowgap!(content(fig_combined[1,2]), 4)
+            colgap!(content(fig_combined[1,2]), 4)
+            save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand3-Loam3.png", fig_combined, px_per_unit = 600/72)
             save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand3-Loam3.pdf", fig_combined, pt_per_unit = 1)
+            # Pkg.add("AlgebraOfGraphics")
+            # using AlgebraOfGraphics
+            # AlgebraOfGraphics.set_aog_theme!()
+            # update_theme!(Axis = (; xtickalign = 1.0, ytickalign = 1.0, xminortickalign = 1.0, yminortickalign = 1.0))
         end
     end
 

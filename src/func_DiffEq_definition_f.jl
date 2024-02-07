@@ -151,7 +151,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         du.CC.MJm2   = 0
         du.SNOWLQ.mm = 0
 
-        du.XYLEM.mm = 0
+        du.XYLEM.mm = 0 # keeping a constant volume of xylem storage (no capacitance)
         du.RWU.mmday   = 0  # TODO(bernhard): these are rather accumulated quantities than proper state variables
         du.TRANI.mmday .= 0 # TODO(bernhard): these are rather accumulated quantities than proper state variables
         # du.XYLEM.d18O = 0 #TODO(bernhard): remove from here
