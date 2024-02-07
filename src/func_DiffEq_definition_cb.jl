@@ -725,9 +725,9 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         δ¹⁸Oᵏ   = integrator.uprev.SWATI.d18O # of time step before
         δ²Hᵏ    = integrator.uprev.SWATI.d2H  # of time step before
         # ## unused: Note: transform the deltas into isotope-amount fraction x, a.k.a. isotopic abundance, a.k.a. atom fraction
-        # Convert to concentrations:
-        C_¹⁸Oᵏ   .= LWFBrook90.ISO.δ_to_C(δ¹⁸Oᵏ, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O) # kg/m3
-        C_²Hᵏ    .= LWFBrook90.ISO.δ_to_C(δ²Hᵏ,  LWFBrook90.ISO.R_VSMOW²H,  LWFBrook90.ISO.Mi_²H)  # kg/m3
+        # # Convert to concentrations:
+        # C_¹⁸Oᵏ   .= LWFBrook90.ISO.δ_to_C(δ¹⁸Oᵏ, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O) # kg/m3
+        # C_²Hᵏ    .= LWFBrook90.ISO.δ_to_C(δ²Hᵏ,  LWFBrook90.ISO.R_VSMOW²H,  LWFBrook90.ISO.Mi_²H)  # kg/m3
 
         q .= aux_du_VRFLI ./ 1000 # VRFLI is in mm/day, q is now in m/day
         # Compute quantities needed for advection diffusion equation

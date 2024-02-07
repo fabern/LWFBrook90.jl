@@ -134,6 +134,12 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     t_ref = solu.prob.p.REFERENCE_DATE
     t1 = range(extrema(solu.t)..., step = 1) # Plot forcing as daily, even if solution output (ODESolution.t) is not dense
     x1 = RelativeDaysFloat2DateTime.(t1, t_ref);
+
+    #t1_forcing = simulation.parametrizedSPAC.forcing.meteo["p_days"]
+    #x1_input = RelativeDaysFloat2DateTime.(t1_forcing, t_ref);
+    #row_PREC_amt_dense_input = reshape(simulation.parametrizedSPAC.forcing.meteo["p_PREC"](t1_forcing),1,:)
+    # bar(reshape(x1_input,1,:), reshape(row_PREC_amt_dense_input,1,:))
+
     row_PREC_amt_dense = reshape(solu.prob.p.p_PREC.(t1), 1, :)
     rows_SWAT_amt  = reduce(hcat, [solu(t).SWATI.mm    for t in days_to_read_out_d])
     rows_RWU_mmDay = reduce(hcat, [solu(t).TRANI.mmday for t in days_to_read_out_d])
@@ -284,6 +290,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
         subplot := 1
         # and other arguments:
         reshape(x1,1,:), reshape(row_PREC_amt_dense,1,:)
+        # reshape(x1_input,1,:), reshape(row_PREC_amt_dense_input,1,:)
     end
     if (compartments == :aboveground || compartments == :above_and_belowground)
         # plot(x, [col_INTS_amt col_INTR_amt col_SNOW_amt col_GWAT_amt col_XYL_amt],
@@ -915,8 +922,9 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
     # 1a) extract data from solution object `solu`
     # 1a) i) forcing (wind, vappres, globrad, tmax, tmin, prec, lai, )
     t_ref = solu.prob.p.REFERENCE_DATE
-    # t1 = range(simulation.ODEProblem.tspan..., step = 1)       # Plot forcing as daily, even if solution output (ODESolution.t) is not dense
-    t1 = range(extrema(simulation.ODESolution.t)..., step = 1) # Plot forcing as daily, even if solution output (ODESolution.t) is not dense
+    # t1 = range(simulation.ODEProblem.tspan..., step = 1)           # Plot forcing as daily, even if solution output (ODESolution.t) is not dense
+    # t1 = range(extrema(simulation.ODESolution.t)..., step = 1)     # Plot forcing as daily, even if solution output (ODESolution.t) is not dense
+    t1 = simulation.parametrizedSPAC.forcing.meteo["p_days"]         # forcing period can be longer than simulation output (e.g. when using a spinup period)
     x1 = RelativeDaysFloat2DateTime.(t1, t_ref);
     y11 = simulation.ODESolution.prob.p.p_WIND.(t1);      lbl11 = "p_WIND [m/s]";
     y12 = simulation.ODESolution.prob.p.p_VAPPRES.(t1);   lbl12 = "p_VAPPRES [kPa]";
