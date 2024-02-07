@@ -786,8 +786,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         N = NLAYER
         # Tsoil_K .= (p_fT_TADTM[1] + 273.15) .* ones(N) # °C, NOTE: at a later point solution from heat equation instead of approximation of p_fT_TADTM could be used
         Tsoil_K .= (p_fT_TA[1] + 273.15) .* ones(N) # °C, NOTE: at a later point solution from heat equation instead of approximation of p_fT_TADTM could be used
-        # τw = θᵏ⁺¹ .^ (7/3) ./ (p_THSAT .^ 2) # -, tortuosity in liquid phase (w = water) as function of θ, (Millington and Quirk 1961 as shown in Radcliffe et al. 2018, eq 6.6)
-        τw = 1.0 .* ones(N) # TODO: outcomment and use above
+        τw = θᵏ⁺¹ .^ (7/3) ./ (p_THSAT .^ 2) # -, tortuosity in liquid phase (w = water) as function of θ, (Millington and Quirk 1961 as shown in Radcliffe et al. 2018, eq 6.6)
         # τg = 1.0 .* ones(N) # -, tortuosity in vapor phase (g = gas), unused as no vapor transport is considered
         # p_Λ = p_soil.p_DISPER #(instead of p_DISPERSIVITY .* ones(N))         # m, dispersivity length (if we want to have different dispersivities per soil layer)
         D⁰_¹⁸O .= 0.96691 .* 10^-9 .* exp.(-535400 ./ Tsoil_K.^2 .+ 1393.3 ./ Tsoil_K .+ 2.1876)  .* 3600 .* 24 # m²/day molecular diffusion constant of ¹⁸O in liquid water (eq. A3, Zhou et al. 2021)
