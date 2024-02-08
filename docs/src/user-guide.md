@@ -51,7 +51,7 @@ The structure of the input CSV's is illustrated by the example input data sets `
 
 For convenience, input CSV files can be generated from a script that sets up a simulation with the R package [LWFBrook90R (v0.4.3)](https://github.com/pschmidtwalter/LWFBrook90R#usage). Instead of running the simulation with `run_LWFB90()`, the same arguments can be used to generate the input files for LWFBrook90.jl using the R function provided in the file `generate_LWFBrook90jl_Input.R`. Note that the input file `meteoiso.csv` needs to be generated separately and the files containing the initial conditions (`initial_conditions.csv` and `soil_discretization.csv`) also need to be extended manually with the isotope values (see structure of these input files below).
 
-To load input data and prepare a simulation follow the instructions in section [Example Script 01](@ref) or alternatively use the sample script `main_with_isotopes.jl`. NOTE: these will be replaced with Jupyter-notebooks generated with Literate.jl (TODO).
+To load input data and prepare a simulation follow the instructions in section [Example Script 01](@ref) or alternatively use the sample script `main_with_isotopes.jl`. NOTE: these will be replaced with Jupyter-notebooks generated with Literate.jl.
 
 In case you're unfamiliar with Julia, there are various ways to run a script such as `main.jl`: One possibility is to open the Julia REPL and run the script using `include(“main.jl”)`. Alternatively, the editor VS Code in combination with the Julia extension ([julia-vscode.org](https://www.julia-vscode.org)), provides a complete IDE for programming in Julia.
 
@@ -153,23 +153,27 @@ Roadmap to include calibration data intends include of:
 
 as well as
 
-- isotopic composition of soil water (δ_soil)
-- isotopic composition of xylem water (δ_xylem)
+- Isotopic composition of soil water (δ_soil)
+- Isotopic composition of xylem water (δ_xylem)
 
 Below the example structure of data sets for
-`psi.csv` contains the soil matric potential (ψ):
+`psi.csv` contains the soil matric potential (ψ) of different sensor series or as site average:
 
-| dates      | depth_m | psi_kPa |
-| ---------- | ------- | ------- |
-| YYYY-MM-DD | m       | kPa     |
-| 2019-12-23 | 0.00    | -0.1    |
-| 2019-12-23 | 0.20    | -0.93   |
-| 2019-12-23 | 0.40    | -0.1    |
-| 2019-12-23 | 0.80    | -0.27   |
-| 2019-12-23 | 1.60    | -0.1    |
-| 2019-12-24 | 0.00    | -0.1    |
-| ...        | ...     | ...     |
-|            |         |         |
+| dates      | depth_cm | depth_nominal_cm | psi_kPa | series  |
+| ---------- | -------- | ---------------- | ------- | ------- |
+| YYYY-MM-DD | cm       | cm               | kPa     | SITEAVG |
+| 2022-08-30 | 15       | 15               | -5.77   | SITEAVG |
+| 2022-08-30 | 200      | 150              | -2.87   | SITEAVG |
+| 2022-08-30 | 300      | 150              | -0.10   | SITEAVG |
+| 2022-08-30 | 50       | 50               | -1.98   | SITEAVG |
+| 2022-08-31 | 80       | 80               | -0.13   | SITEAVG |
+| 2022-08-31 | 15       | 15               | -7.53   | SITEAVG |
+| 2022-08-31 | 200      | 150              | -2.95   | SITEAVG |
+| 2022-08-31 | 300      | 150              | -0.10   | SITEAVG |
+| 2021-06-17 | 50       | 50               | -3.00   | SITEAVG |
+| 2021-06-17 | 80       | 80               | -0.17   | SITEAVG |
+| ...        | ...      | ...              | ...     | ...     |
+|            |          |                  |         |         |
 
 `theta.csv` contains the soil moisture (volumetric water content, θ):
 
@@ -186,8 +190,28 @@ Below the example structure of data sets for
 
 `delta_soil.csv` contains the isotopic signature of soil water:
 
-TODO...
+| dates      | depth_m | delta18O_permil | delta2h_permil |
+| ---------- | ------- | -----------     | -------        |
+| YYYY-MM-DD | cm      | permil          | permil         |
+| 2020-07-07 | 0       | -5.89           | -35.96         |
+| 2020-07-07 | 15      | -8.75           | -57.99         |
+| 2020-07-07 | 50      | -8.81           | -59.12         |
+| 2020-07-07 | 80      | -9.72           | -65.41         |
+| 2020-07-21 | 0       | -5.83           | -29.54         |
+| 2020-07-21 | 15      | -8.73           | -53.58         |
+| 2020-07-21 | 50      | -9.31           | -58.47         |
+| 2020-07-21 | 80      | -10.14          | -64.71         |
+| ...        | ...     | ...             | ...            |
 
 `delta_xylem.csv` contains the isotopic signature of xylem water:
 
-TODO...
+| dates      | species | treeID | delta18O_permil | delta2H_permil |
+| ---------- | ------- | ------ | --------------- | -------------- |
+| YYYY-MM-DD | -       | -      | permil          |permil          |
+| 2021-08-03 | Beech   | 271    | -8.416          | -72.562        |
+| 2021-08-03 | Beech   | 3518   | -8.946          | -76.543        |
+| 2021-08-03 | Beech   | 3519   | -8.484          | -72.523        |
+| 2021-08-17 | Beech   | 271    | -8.378          | -76.044        |
+| 2021-08-17 | Beech   | 3518   | -8.769          | -76.036        |
+| 2021-08-17 | Beech   | 3519   | -8.135          | -70.475        |
+| ...        | ...     | ...    | ...             |...             |

@@ -480,7 +480,7 @@ end
         fname_illustrations = "out/$git_status_string/TESTSET_DAV2020modified-regressionTest-FLUXES"
         mkpath(dirname(fname_illustrations))
 
-        pl_fluxes = plot_simulated_fluxes_vs_reference(simulated_fluxes, loaded, d_out);
+        pl_fluxes = plot_simulated_fluxes_vs_reference(df_simulatedFluxes, loadeddf);
         Plots.plot!(legend = :topright, size=(2000,1000), layout = (7,5))
         savefig(Plots.plot(pl_fluxes, size=(2000,1400), layout = (7,5), dpi=300),  fname_illustrations*"_fluxes.png")
     end
