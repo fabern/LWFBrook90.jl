@@ -199,20 +199,18 @@ end
             loaded_u_mm, loaded_u_δ, loaded_u_belowground, loaded["currSPAC"])
     elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
         # overwrite output
+        fname_illustrations = "out/$git_status_string/TESTSET_DAV2020-regressionTest"
+        mkpath(dirname(fname_illustrations))
+        pl_comparison = plot_simulated_states_vs_reference(
+            u_mm, u_δ, u_belowground,
+            loaded_u_mm, loaded_u_δ, loaded_u_belowground)
+
+        savefig(pl_comparison,fname_illustrations*"_regression_test_overwritten.png")
         jldsave(fname; currSPAC = currSPAC)
         write(replace(fname, ".jld2"=>"u_mm.csv"), u_mm)
         write(replace(fname, ".jld2"=>"u_δ.csv"), u_δ)
         write(replace(fname, ".jld2"=>"u_belowground.csv"), u_belowground)
         error("Test overwrites reference solution instead of checking against it.")
-        # # if plot_flag  # When overwriting save a plot comparing the values
-        #     fname_illustrations = "out/$git_status_string/TESTSET_DAV2020-regressionTest"
-        #     mkpath(dirname(fname_illustrations))
-        #     pl_comparison = plot_simulated_states_vs_reference(
-        #         u_mm, u_δ, u_belowground,
-        #         loaded_u_mm, loaded_u_δ, loaded_u_belowground)
-
-        #     savefig(pl_comparison,fname_illustrations*"_regression_test_overwritten.png")
-        # # end
     else
         # do nothing
     end
@@ -273,7 +271,11 @@ function get_daily_soilFluxes(simulation)
 
     return hcat(DataFrame(time = d_out), DataFrame(simulated_fluxes))
 end
-function plot_simulated_fluxes_vs_reference(simulated_fluxes, reference, d_out; labels = ["current code" "reference simulation"], kwargs...)
+function plot_simulated_fluxes_vs_reference(simulated_fluxes_arg, reference_arg; labels = ["current code" "reference simulation"], kwargs...)
+    d_out = simulated_fluxes_arg.time
+    simulated_fluxes = NamedTuple([k=>v for (k,v) in pairs(eachcol(simulated_fluxes_arg))])
+    reference = Dict([String(k)=>v for (k,v) in pairs(eachcol(reference_arg))])
+
     Plots.plot(
         Plots.plot(d_out, [simulated_fluxes.cum_d_prec      reference["cum_d_prec"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_prec", kwargs...),
         Plots.plot(d_out, [simulated_fluxes.cum_d_rfal      reference["cum_d_rfal"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_rfal", kwargs...),
@@ -387,19 +389,16 @@ end
         fname_illustrations = "out/$git_status_string/TESTSET_Oversaturation-infiltration-FLUXES"
         mkpath(dirname(fname_illustrations))
 
-        pl_fluxes2 = plot_simulated_fluxes_vs_reference(simulated_fluxes2, loaded2, loaded2["d_out2"]);
+        pl_fluxes2 = plot_simulated_fluxes_vs_reference(df_simulatedFluxes2, loadeddf2);
         Plots.plot!(legend = :topleft, size=(2000,1000), layout = (7,5))
         savefig(Plots.plot(pl_fluxes2, size=(2000,1000), dpi=300),  fname_illustrations*"_fluxes_noBYFL_regressionTest.png")
 
-        pl_fluxes2b = plot_simulated_fluxes_vs_reference(simulated_fluxes2b, loaded2b, loaded2b["d_out2b"]);
+        pl_fluxes2b = plot_simulated_fluxes_vs_reference(df_simulatedFluxes2b, loadeddf2b);
         Plots.plot!(legend = :topleft, size=(2000,1000), layout = (7,5))
         savefig(Plots.plot(pl_fluxes2b, size=(2000,1000), dpi=300),  fname_illustrations*"_fluxes_withBYFL_regressionTest.png")
 
         pl_fluxes2vs2b = plot_simulated_fluxes_vs_reference(
-            simulated_fluxes2,
-            Dict(String(k) => v for (k,v) in pairs(simulated_fluxes2b)),
-            d_out2b,
-            labels = ["Without BYFL" "With BYFL"]);
+            df_simulatedFluxes2,df_simulatedFluxes2b,labels = ["Without BYFL" "With BYFL"]);
         Plots.plot!(legend = :topleft, size=(2000,1000), layout = (7,5))
         savefig(Plots.plot(pl_fluxes2vs2b, size=(2000,1000), dpi=300),  fname_illustrations*"_fluxes_BYFL_comparison.png")
         pl_comparison = Plots.plot(plotamounts(simulation2, title = "Without BYFL"),
