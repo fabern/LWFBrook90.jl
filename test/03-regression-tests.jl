@@ -36,8 +36,8 @@ function get_some_states_to_compare(example_result)
     ## helper quantities
     t_out = range(extrema(example_result.ODESolution.t)..., step = 30)
     ## scalar quantities
-    u_ref_names = ["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ" "RWU" "XYLEM" "SWATI"]
-    u_ref = vcat(
+    df_aboveground_names = ["GWAT" "INTS" "INTR" "SNOW" "CC" "SNOWLQ" "RWU" "XYLEM"]
+    mat_aboveground = vcat(
         reduce(hcat, [example_result.ODESolution(t_days).GWAT.mm   for t_days = t_out]),
         reduce(hcat, [example_result.ODESolution(t_days).INTS.mm   for t_days = t_out]),
         reduce(hcat, [example_result.ODESolution(t_days).INTR.mm   for t_days = t_out]),
@@ -46,31 +46,47 @@ function get_some_states_to_compare(example_result)
         reduce(hcat, [example_result.ODESolution(t_days).SNOWLQ.mm for t_days = t_out]),
         reduce(hcat, [example_result.ODESolution(t_days).RWU.mmday for t_days = t_out]),
         reduce(hcat, [example_result.ODESolution(t_days).XYLEM.mm  for t_days = t_out]),
-        reduce(hcat, [example_result.ODESolution(t_days).SWATI.mm  for t_days = t_out]),
         # reduce(hcat, [example_result.ODESolution[t_idx].TRANI.mmday for t_idx = eachindex(example_result.ODESolution)]),
         # reduce(hcat, [example_result.ODESolution[t_idx].aux.θ       for t_idx = eachindex(example_result.ODESolution)]),
         # reduce(hcat, [example_result.ODESolution[t_idx].accum       for t_idx = eachindex(example_result.ODESolution)])
     )
+    u_mm = hcat(DataFrame(time = t_out), DataFrame(permutedims(mat_aboveground), df_aboveground_names[:]))
     u_δ     = get_δ(example_result; days_to_read_out_d = t_out)
     ## vector quantities
-    df_belowground = get_soil_([:SWATI, :W, :ψ, :θ, :K, :δ18O, :δ2H], example_result;
+    u_belowground = get_soil_([:SWATI, :W, :ψ, :θ, :K, :δ18O, :δ2H], example_result;
         days_to_read_out_d = t_out)
+    u_belowground = u_belowground[:,Not(r"(K_Lay)|(W_Lay)")]
 
-    u_SWATI       = Matrix(permutedims(select(df_belowground, r"SWATI_")));
-    u_aux_WETNES  = Matrix(permutedims(select(df_belowground, r"W_")));
-    u_aux_PSIM    = Matrix(permutedims(select(df_belowground, r"ψ_")));
-    u_aux_θ       = Matrix(permutedims(select(df_belowground, r"θ_")));
-    p_fu_KK       = Matrix(permutedims(select(df_belowground, r"K_")));
-    u_δsoil_d18O = select(df_belowground, r"δ18O_")
-    u_δsoil_d2H  = select(df_belowground, r"δ2H_" )
-
-
-    return t_out, u_ref_names, u_ref, u_δ, u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_θ, p_fu_KK, u_δsoil_d18O, u_δsoil_d2H
+    return u_mm, u_δ, u_belowground
+    # return t_out, u_ref_names, mat_aboveground, u_δ, u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_θ, p_fu_KK, u_δsoil_d18O, u_δsoil_d2H
 end
 
 function plot_simulated_states_vs_reference(
-        u_ref, u_ref_names, u_δ, u_SWATI, u_aux_PSIM, u_aux_θ, u_δsoil_d18O, u_δsoil_d2H,
-        loaded, d_out)
+    u_mm, u_δ, u_belowground,
+    loaded_u_mm, loaded_u_δ, loaded_u_belowground)
+    # t_out = u_mm.time
+    u_ref_names = names(u_mm[:,Not(:time)])
+    u_δ = u_δ
+    u_ref         = permutedims(Matrix(u_mm[:,Not(:time)]))
+    u_SWATI       = Matrix(permutedims(select(u_belowground, r"SWATI_")));
+    # u_aux_WETNES  = Matrix(permutedims(select(u_belowground, r"W_")));
+    u_aux_PSIM    = Matrix(permutedims(select(u_belowground, r"ψ_")));
+    u_aux_θ       = Matrix(permutedims(select(u_belowground, r"θ_")));
+    # p_fu_KK       = Matrix(permutedims(select(u_belowground, r"K_")));
+    u_δsoil_d18O  = select(u_belowground, r"δ18O_") # loaded["u_δsoil"].d18O
+    u_δsoil_d2H   = select(u_belowground, r"δ2H_" ) # loaded["u_δsoil"].d2H
+
+    loaded_u_ref         = permutedims(Matrix(loaded_u_mm[:,Not(:time)]))
+    loaded_u_SWATI       = Matrix(permutedims(select(loaded_u_belowground, r"SWATI_")));
+    # loaded_u_aux_WETNES  = Matrix(permutedims(select(loaded_u_belowground, r"W_")));
+    loaded_u_aux_PSIM    = Matrix(permutedims(select(loaded_u_belowground, r"ψ_")));
+    loaded_u_aux_θ       = Matrix(permutedims(select(loaded_u_belowground, r"θ_")));
+    # loaded_p_fu_KK       = Matrix(permutedims(select(loaded_u_belowground, r"K_")));
+    loaded_u_δsoil_d18O  = select(loaded_u_belowground, r"δ18O_") # loaded["u_δsoil"].d18O
+    loaded_u_δsoil_d2H   = select(loaded_u_belowground, r"δ2H_" ) # loaded["u_δsoil"].d2H
+
+    d_out = u_belowground.time
+
     function plot_comparison(A, B_ref; d_out=1:size(A,1), nams = "")
         labels = if (nams=="")
             try names(A);
@@ -87,57 +103,79 @@ function plot_simulated_states_vs_reference(
     end
 
     Plots.plot(
-            plot_comparison(u_ref',          loaded["u_ref"]',          d_out=d_out, nams = u_ref_names),
-            plot_comparison(u_δ[:, r"d18O"], loaded["u_δ"][:, r"d18O"], d_out=d_out),
-            plot_comparison(u_δ[:, r"d2H"],  loaded["u_δ"][:, r"d2H"],  d_out=d_out),
+            plot_comparison(u_ref',          loaded_u_ref',          d_out=d_out, nams = u_ref_names),
+            plot_comparison(u_δ[:, r"d18O"], loaded_u_δ[:, r"d18O"], d_out=d_out),
+            plot_comparison(u_δ[:, r"d2H"],  loaded_u_δ[:, r"d2H"],  d_out=d_out),
 
-            plot_comparison(u_SWATI',        loaded["u_SWATI"]',        d_out=d_out, nams = ["SWATI_$l" for _ in [1], l in (1:5)]),
-            plot_comparison(u_aux_PSIM',     loaded["u_aux_PSIM"]',     d_out=d_out, nams = ["PSIM_$l"  for _ in [1], l in (1:5)]),
-            plot_comparison(u_aux_θ',        loaded["u_aux_θ"]',        d_out=d_out, nams = ["θ_$l"     for _ in [1], l in (1:5)]),
-            plot_comparison(u_δsoil_d18O,    permutedims(loaded["u_δsoil"].d18O), d_out=d_out, nams = names(u_δsoil_d18O)),
-            plot_comparison(u_δsoil_d2H,     permutedims(loaded["u_δsoil"].d2H),  d_out=d_out, nams = names(u_δsoil_d2H)),
+            plot_comparison(u_SWATI',        loaded_u_SWATI',        d_out=d_out, nams = ["SWATI_$l" for _ in [1], l in (1:5)]),
+            plot_comparison(u_aux_PSIM',     loaded_u_aux_PSIM',     d_out=d_out, nams = ["PSIM_$l"  for _ in [1], l in (1:5)]),
+            plot_comparison(u_aux_θ',        loaded_u_aux_θ',        d_out=d_out, nams = ["θ_$l"     for _ in [1], l in (1:5)]),
+            plot_comparison(u_δsoil_d18O,    loaded_u_δsoil_d18O, d_out=d_out, nams = names(u_δsoil_d18O)),
+            plot_comparison(u_δsoil_d2H,     loaded_u_δsoil_d2H,  d_out=d_out, nams = names(u_δsoil_d2H)),
             layout = (2,4), size = (1200,800))
 end
-function test_states_comparison(t_out, u_ref_names, u_ref, u_δ, u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_θ, p_fu_KK, u_δsoil_d18O, u_δsoil_d2H, currSPAC,
-            loaded)
+function test_states_comparison(u_mm, u_δ, u_belowground, currSPAC,
+    loaded_u_mm, loaded_u_δ, loaded_u_belowground, loaded_currSPAC)
+
+    # t_out = u_mm.time
+    # u_ref_names = names(u_mm)
+    u_δ = u_δ
+    u_ref         = permutedims(Matrix(u_mm[:,Not(:time)]))
+    u_SWATI       = Matrix(permutedims(select(u_belowground, r"SWATI_")));
+    # u_aux_WETNES  = Matrix(permutedims(select(u_belowground, r"W_")));
+    u_aux_PSIM    = Matrix(permutedims(select(u_belowground, r"ψ_")));
+    u_aux_θ       = Matrix(permutedims(select(u_belowground, r"θ_")));
+    # p_fu_KK       = Matrix(permutedims(select(u_belowground, r"K_")));
+    u_δsoil_d18O  = select(u_belowground, r"δ18O_") # loaded["u_δsoil"].d18O
+    u_δsoil_d2H   = select(u_belowground, r"δ2H_" ) # loaded["u_δsoil"].d2H
+
+    loaded_u_ref         = permutedims(Matrix(loaded_u_mm[:,Not(:time)]))
+    loaded_u_SWATI       = Matrix(permutedims(select(loaded_u_belowground, r"SWATI_")));
+    # loaded_u_aux_WETNES  = Matrix(permutedims(select(loaded_u_belowground, r"W_")));
+    loaded_u_aux_PSIM    = Matrix(permutedims(select(loaded_u_belowground, r"ψ_")));
+    loaded_u_aux_θ       = Matrix(permutedims(select(loaded_u_belowground, r"θ_")));
+    # loaded_p_fu_KK       = Matrix(permutedims(select(loaded_u_belowground, r"K_")));
+    loaded_u_δsoil_d18O  = select(loaded_u_belowground, r"δ18O_") # loaded["u_δsoil"].d18O
+    loaded_u_δsoil_d2H   = select(loaded_u_belowground, r"δ2H_" ) # loaded["u_δsoil"].d2H
+
     @testset "test_states_comparison" begin
         # Test input example_result
-        # @test loaded["currSPAC"]   == currSPAC
-        @test loaded["currSPAC"].forcing                     == currSPAC.forcing
-        @test loaded["currSPAC"].pars.params                 == currSPAC.pars.params
-        @test loaded["currSPAC"].pars.root_distribution      == currSPAC.pars.root_distribution
-        @test loaded["currSPAC"].pars.IC_scalar              == currSPAC.pars.IC_scalar
-        @test loaded["currSPAC"].pars.IC_soil                == currSPAC.pars.IC_soil
-        @test loaded["currSPAC"].pars.canopy_evolution       == currSPAC.pars.canopy_evolution
-        @test loaded["currSPAC"].pars.params                 == currSPAC.pars.params
+        # @test loaded_currSPAC   == currSPAC
+        @test loaded_currSPAC.forcing                     == currSPAC.forcing
+        @test loaded_currSPAC.pars.params                 == currSPAC.pars.params
+        @test loaded_currSPAC.pars.root_distribution      == currSPAC.pars.root_distribution
+        @test loaded_currSPAC.pars.IC_scalar              == currSPAC.pars.IC_scalar
+        @test loaded_currSPAC.pars.IC_soil                == currSPAC.pars.IC_soil
+        @test loaded_currSPAC.pars.canopy_evolution       == currSPAC.pars.canopy_evolution
+        @test loaded_currSPAC.pars.params                 == currSPAC.pars.params
 
-        @test loaded["currSPAC"].reference_date == currSPAC.reference_date
-        @test loaded["currSPAC"].soil_discretization.Δz == currSPAC.soil_discretization.Δz
-        @test all(Matrix(loaded["currSPAC"].soil_discretization.df[:, Not(:shp)] .== currSPAC.soil_discretization.df[:, Not(:shp)]))
+        @test loaded_currSPAC.reference_date == currSPAC.reference_date
+        @test loaded_currSPAC.soil_discretization.Δz == currSPAC.soil_discretization.Δz
+        @test all(Matrix(loaded_currSPAC.soil_discretization.df[:, Not(:shp)] .== currSPAC.soil_discretization.df[:, Not(:shp)]))
 
-        shpA = loaded["currSPAC"].pars.soil_horizons.shp; shpB = currSPAC.pars.soil_horizons.shp
+        shpA = loaded_currSPAC.pars.soil_horizons.shp; shpB = currSPAC.pars.soil_horizons.shp
         @test length(shpA) == length(shpB)
         [@test all([getfield(shpA[i_layer], field) == getfield(shpB[i_layer], field) for i_layer in eachindex(shpA)]) for field in fieldnames(typeof(shpA[1]))]
 
-        discrShpA = loaded["currSPAC"].soil_discretization.df[:, :shp]; discrShpB = currSPAC.soil_discretization.df[:, :shp]
+        discrShpA = loaded_currSPAC.soil_discretization.df[:, :shp]; discrShpB = currSPAC.soil_discretization.df[:, :shp]
         @test length(discrShpA) == length(discrShpB)
         [@test all([getfield(discrShpA[i_layer], field) == getfield(discrShpB[i_layer], field) for i_layer in eachindex(discrShpA)]) for field in fieldnames(typeof(discrShpA[1]))]
 
-        @test loaded["currSPAC"].solver_options == currSPAC.solver_options
-        @test loaded["currSPAC"].tspan == currSPAC.tspan
+        @test loaded_currSPAC.solver_options == currSPAC.solver_options
+        @test loaded_currSPAC.tspan == currSPAC.tspan
 
         # Test scalar states
         compare_scalar = (A,B; nans = false) -> all(isapprox.(Matrix(A), Matrix(B); nans))
-        @test compare_scalar(loaded["u_ref"], u_ref)
-        @test compare_scalar(loaded["u_δ"],   u_δ[:, Not(:time)]; nans=true)
+        @test compare_scalar(loaded_u_ref, u_ref)
+        @test compare_scalar(loaded_u_δ[:, Not(:time)],   u_δ[:, Not(:time)]; nans=true)
 
         # Test vector states
         compare_vector = (A,B) -> all(isapprox.(Matrix(A), Matrix(B)))
-        @test compare_vector(loaded["u_SWATI"],       u_SWATI)
-        @test compare_vector(loaded["u_aux_PSIM"],    u_aux_PSIM)
-        @test compare_vector(loaded["u_aux_θ"],       u_aux_θ)
-        @test compare_vector(permutedims(loaded["u_δsoil"].d18O), u_δsoil_d18O)
-        @test compare_vector(permutedims(loaded["u_δsoil"].d2H),  u_δsoil_d2H)
+        @test compare_vector(loaded_u_SWATI,       u_SWATI)
+        @test compare_vector(loaded_u_aux_PSIM,    u_aux_PSIM)
+        @test compare_vector(loaded_u_aux_θ,       u_aux_θ)
+        @test compare_vector(loaded_u_δsoil_d18O, u_δsoil_d18O)
+        @test compare_vector(loaded_u_δsoil_d2H,  u_δsoil_d2H)
     end
 end
 
@@ -145,41 +183,36 @@ end
     @githash_time example_result = LWFBrook90.run_example();
 
     # extract required data from solution object
-    t_out, u_ref_names, u_ref, u_δ,
-        u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_θ, p_fu_KK, u_δsoil_d18O, u_δsoil_d2H =
-        get_some_states_to_compare(example_result);
+    u_mm, u_δ, u_belowground = get_some_states_to_compare(example_result);
 
     # test or overwrite
     # fname = input_path*input_prefix
     fname = "../examples/DAV2020-full_u_sol_reference.jld2"
     loaded = load(fname)
+    loaded_u_mm          = read(replace(fname, ".jld2"=>"u_mm.csv"), DataFrame)
+    loaded_u_δ           = read(replace(fname, ".jld2"=>"u_δ.csv"), DataFrame)
+    loaded_u_belowground = read(replace(fname, ".jld2"=>"u_belowground.csv"), DataFrame)
 
     currSPAC = example_result.parametrizedSPAC;
     if task == "test"
-        test_states_comparison(t_out, u_ref_names, u_ref, u_δ, u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_θ, p_fu_KK, u_δsoil_d18O, u_δsoil_d2H,
-            currSPAC,
-            loaded)
+        test_states_comparison(u_mm, u_δ, u_belowground, currSPAC,
+            loaded_u_mm, loaded_u_δ, loaded_u_belowground, loaded["currSPAC"])
     elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
         # overwrite output
-        u_δsoil = (d18O = Matrix(permutedims(u_δsoil_d18O)), d2H = Matrix(permutedims(u_δsoil_d2H)))
-        jldsave(fname, compress=false;
-                (currSPAC   = currSPAC,
-                 u_ref      = u_ref,
-                 u_δ        = u_δ[:, Not(:time)],
-                 u_SWATI    = u_SWATI,
-                 u_aux_PSIM = u_aux_PSIM,
-                 u_aux_θ    = u_aux_θ,
-                 u_δsoil    = u_δsoil)...)
+        jldsave(fname; currSPAC = currSPAC)
+        write(replace(fname, ".jld2"=>"u_mm.csv"), u_mm)
+        write(replace(fname, ".jld2"=>"u_δ.csv"), u_δ)
+        write(replace(fname, ".jld2"=>"u_belowground.csv"), u_belowground)
         error("Test overwrites reference solution instead of checking against it.")
-        # if plot_flag  # When overwriting save a plot comparing the values
-            fname_illustrations = "out/$git_status_string/TESTSET_DAV2020-regressionTest"
-            mkpath(dirname(fname_illustrations))
-            pl_comparison = plot_simulated_states_vs_reference(
-                u_ref, u_ref_names, u_δ, u_SWATI, u_aux_PSIM, u_aux_θ, u_δsoil_d18O, u_δsoil_d2H,
-                loaded, t_out)
+        # # if plot_flag  # When overwriting save a plot comparing the values
+        #     fname_illustrations = "out/$git_status_string/TESTSET_DAV2020-regressionTest"
+        #     mkpath(dirname(fname_illustrations))
+        #     pl_comparison = plot_simulated_states_vs_reference(
+        #         u_mm, u_δ, u_belowground,
+        #         loaded_u_mm, loaded_u_δ, loaded_u_belowground)
 
-            savefig(pl_comparison,fname_illustrations*"_regression_test_overwritten.png")
-        # end
+        #     savefig(pl_comparison,fname_illustrations*"_regression_test_overwritten.png")
+        # # end
     else
         # do nothing
     end
@@ -237,7 +270,8 @@ function get_daily_soilFluxes(simulation)
         BALERD_SWAT     = [simulation.ODESolution(t_days).accum.BALERD_SWAT     for t_days = t_out],
         BALERD_total    = [simulation.ODESolution(t_days).accum.BALERD_total    for t_days = t_out],
         )
-    return d_out, simulated_fluxes
+
+    return hcat(DataFrame(time = d_out), DataFrame(simulated_fluxes))
 end
 function plot_simulated_fluxes_vs_reference(simulated_fluxes, reference, d_out; labels = ["current code" "reference simulation"], kwargs...)
     Plots.plot(
@@ -274,7 +308,10 @@ function plot_simulated_fluxes_vs_reference(simulated_fluxes, reference, d_out; 
         Plots.plot(d_out, [simulated_fluxes.BALERD_total    reference["BALERD_total"]],   linestyle = [:solid :dot], label = labels, title = "accum.BALERD_total", kwargs...)
     )
 end
-function test_fluxes_comparison(simulated_fluxes, reference)
+function test_fluxes_comparison(simulated_fluxes_arg, reference_arg)
+    simulated_fluxes = NamedTuple([k=>v for (k,v) in pairs(eachcol(simulated_fluxes_arg))])
+    reference = Dict([String(k)=>v for (k,v) in pairs(eachcol(reference_arg))])
+
     @testset "test_fluxes_comparison" begin
         @test isapprox(reference["cum_d_prec"],     simulated_fluxes.cum_d_prec,     atol = 1e-4, rtol = 1e-4)
         @test isapprox(reference["cum_d_rfal"],     simulated_fluxes.cum_d_rfal,     atol = 1e-4, rtol = 1e-4)
@@ -327,20 +364,20 @@ end
         GSC = 0.05, GSP = 0.2));
     simulate!(simulation2_withVariousFlows);
 
-    d_out2,  simulated_fluxes2  = get_daily_soilFluxes(simulation2);
-    d_out2b, simulated_fluxes2b = get_daily_soilFluxes(simulation2_withVariousFlows);
+    df_simulatedFluxes2 = get_daily_soilFluxes(simulation2);
+    df_simulatedFluxes2b = get_daily_soilFluxes(simulation2_withVariousFlows);
 
-    fname2  = "../examples/INFEXP1_fluxes_reference.jld2"
-    fname2b = "../examples/INFEXP1-modified_fluxes_reference.jld2"
-    loaded2 = load(fname2)
-    loaded2b = load(fname2b)
+    fname2  = "../examples/INFEXP1_fluxes_referencedf.csv"
+    fname2b = "../examples/INFEXP1-modified_fluxes_referencedf.csv"
+    loadeddf2  = read(fname2, DataFrame)
+    loadeddf2b = read(fname2b, DataFrame)
     if task == "test"
-        test_fluxes_comparison(simulated_fluxes2, loaded2)
-        test_fluxes_comparison(simulated_fluxes2b, loaded2b)
+        test_fluxes_comparison(df_simulatedFluxes2,  loadeddf2)
+        test_fluxes_comparison(df_simulatedFluxes2b, loadeddf2b)
     elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
         # overwrite output
-        jldsave(fname2, compress=false; (simulated_fluxes2   = simulated_fluxes2)..., d_out2 = d_out2)
-        jldsave(fname2b, compress=false; (simulated_fluxes2b   = simulated_fluxes2b)..., d_out2b = d_out2b)
+        write(fname2,  df_simulatedFluxes2)
+        write(fname2b, df_simulatedFluxes2b)
         error("Test overwrites reference solution instead of checking against it.")
     else
         # do nothing
@@ -422,17 +459,17 @@ end
     simulate!(example_result3)
 
     # extract required data from solution object
-    d_out, simulated_fluxes = get_daily_soilFluxes(example_result3);
+    df_simulatedFluxes = get_daily_soilFluxes(example_result3);
 
     # test or overwrite
     # fname = input_path*input_prefix
-    fname = "../examples/DAV2020-full-modified_fluxes_reference.jld2"
-    loaded = load(fname)
+    fname = "../examples/DAV2020-full-modified_fluxes_referencedf.csv"
+    loadeddf = read(fname, DataFrame)
     if task == "test"
-        test_fluxes_comparison(simulated_fluxes, loaded)
+        test_fluxes_comparison(df_simulatedFluxes, loadeddf)
     elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
         # overwrite output
-        jldsave(fname, compress=false; (simulated_fluxes   = simulated_fluxes)...)
+        write(fname, df_simulatedFluxes)
         error("Test overwrites reference solution instead of checking against it.")
     else
         # do nothing

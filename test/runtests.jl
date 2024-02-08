@@ -3,7 +3,7 @@ using SciMLBase
 using DataFrames
 using DataFramesMeta
 using Test: @testset, @test, @test_throws, @test_broken, @test_skip, @test_logs
-using CSV: File
+using CSV: File, read, write
 using Random
 using Printf
 using Logging
