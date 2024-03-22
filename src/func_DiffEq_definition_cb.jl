@@ -796,19 +796,19 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         D_¹⁸O_ᵏ⁺¹ .= D⁰_¹⁸O .* τw .* θᵏ⁺¹ .+ p_DISPERSIVITY .* abs.(q) # m²/day
         D_²H_ᵏ⁺¹  .= D⁰_²H  .* τw .* θᵏ⁺¹ .+ p_DISPERSIVITY .* abs.(q) # m²/day
 
-        # Define concentrations of source/sink terms in transport equation (TRANI, DSFLI, INFLI, SLVP)
-        ### Define δ signature of in- and outflows (TRANI, DSFLI, INFLI)
-        # TODO(bernhard) for debugging: use p_δ18O_PREC instead of p_fu_δ18O_SLFL
-        δ18O_INFLI = p_δ18O_PREC(integrator.t)#TODO(bernhard): debug remove workaround and set again = p_fu_δ18O_SLFL
-        δ2H_INFLI  = p_δ2H_PREC(integrator.t) #TODO(bernhard): debug remove workaround and set again = p_fu_δ2H_SLFL
+        # # Define concentrations of source/sink terms in transport equation (TRANI, DSFLI, INFLI, SLVP)
+        # ### Define δ signature of in- and outflows (TRANI, DSFLI, INFLI)
+        # # TODO(bernhard) for debugging: use p_δ18O_PREC instead of p_fu_δ18O_SLFL
+        # δ18O_INFLI = p_δ18O_PREC(integrator.t)#TODO(bernhard): debug remove workaround and set again = p_fu_δ18O_SLFL
+        # δ2H_INFLI  = p_δ2H_PREC(integrator.t) #TODO(bernhard): debug remove workaround and set again = p_fu_δ2H_SLFL
 
-        C_¹⁸O_INFLI = LWFBrook90.ISO.δ_to_C.(δ18O_INFLI, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O)
-        # C_¹⁸O_TRANI = C_¹⁸Oᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
-        # C_¹⁸O_DSFL  = C_¹⁸Oᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
-        C_²H_INFLI  = LWFBrook90.ISO.δ_to_C.(δ2H_INFLI,  LWFBrook90.ISO.R_VSMOW²H,  LWFBrook90.ISO.Mi_²H)
-        # C_²H_TRANI  = C_²Hᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
-        # C_²H_DSFL   = C_²Hᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
-        # TODO(bernhard): for TRANI and DSFL we are instead using Cᵏ⁺¹ (i.e. use the concentrations in the LHS in the implicit scheme...)
+        # C_¹⁸O_INFLI = LWFBrook90.ISO.δ_to_C.(δ18O_INFLI, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O)
+        # # C_¹⁸O_TRANI = C_¹⁸Oᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
+        # # C_¹⁸O_DSFL  = C_¹⁸Oᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
+        # C_²H_INFLI  = LWFBrook90.ISO.δ_to_C.(δ2H_INFLI,  LWFBrook90.ISO.R_VSMOW²H,  LWFBrook90.ISO.Mi_²H)
+        # # C_²H_TRANI  = C_²Hᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
+        # # C_²H_DSFL   = C_²Hᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
+        # # TODO(bernhard): for TRANI and DSFL we are instead using Cᵏ⁺¹ (i.e. use the concentrations in the LHS in the implicit scheme...)
 
         ### Compute δ signature of evaporating flux (SLVP)
         δ¹⁸O_SLVP = u_δ18O_SWATI[1] # TODO(bernhard): disabling evaporation fractionation (TODO: should yield solution similar to Stumpp 2012 model)
@@ -823,12 +823,12 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # Cᵢ_SLVP = ( (Cᵢ - ε¹⁸O_eq)/α¹⁸O_eq - h*δ¹⁸O_a - ε¹⁸O_dif ) /
         #             (1 - h + ε¹⁸O_dif/1000) # [‰]
 
-        C_¹⁸O_SLVP .= 0
-        C_²H_SLVP  .= 0
-        C_¹⁸O_SLVP[1]  = LWFBrook90.ISO.δ_to_C(δ¹⁸O_SLVP, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O)
-        C_²H_SLVP[1]   = LWFBrook90.ISO.δ_to_C(δ²H_SLVP,  LWFBrook90.ISO.R_VSMOW²H,  LWFBrook90.ISO.Mi_²H)
-        # E¹⁸O = C_¹⁸O_SLVP * aux_du_SLVP[1] * 0.001 # kg/m3 * mm/day * 0.001 m/mm # (kg/m²/day¹)
-        # E²H  = C_²H_SLVP  * aux_du_SLVP[1] * 0.001 # kg/m3 * mm/day * 0.001 m/mm # (kg/m²/day¹)
+        # C_¹⁸O_SLVP .= 0
+        # C_²H_SLVP  .= 0
+        # C_¹⁸O_SLVP[1]  = LWFBrook90.ISO.δ_to_C(δ¹⁸O_SLVP, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O)
+        # C_²H_SLVP[1]   = LWFBrook90.ISO.δ_to_C(δ²H_SLVP,  LWFBrook90.ISO.R_VSMOW²H,  LWFBrook90.ISO.Mi_²H)
+        # # E¹⁸O = C_¹⁸O_SLVP * aux_du_SLVP[1] * 0.001 # kg/m3 * mm/day * 0.001 m/mm # (kg/m²/day¹)
+        # # E²H  = C_²H_SLVP  * aux_du_SLVP[1] * 0.001 # kg/m3 * mm/day * 0.001 m/mm # (kg/m²/day¹)
 
         ### Prepare terms to evaluate linear system to be solved
         Δt = integrator.t - integrator.tprev # days
@@ -856,13 +856,13 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
 
         # # Setup linear system (implicit solver) (From Braud et al. 2005)
 
-        # Define boundary conditions
-        ### TOP: surface isotopic flux E = 0 (as evaporation in LWFBrook is implemented as sink term (see above E¹⁸O))
-        BCFlux_top¹⁸O    = 0 # kg/m²/day¹
-        BCFlux_top²H     = 0 # kg/m²/day¹
-        ### BOTTOM:
-        BCFlux_bottom¹⁸O = q[N] * C_¹⁸Oᵏ[N]  # kg/m²/day¹
-        BCFlux_bottom²H  = q[N] * C_²Hᵏ[N]   # kg/m²/day¹
+        # # Define boundary conditions
+        # ### TOP: surface isotopic flux E = 0 (as evaporation in LWFBrook is implemented as sink term (see above E¹⁸O))
+        # BCFlux_top¹⁸O    = 0 # kg/m²/day¹
+        # BCFlux_top²H     = 0 # kg/m²/day¹
+        # ### BOTTOM:
+        # BCFlux_bottom¹⁸O = q[N] * C_¹⁸Oᵏ[N]  # kg/m²/day¹
+        # BCFlux_bottom²H  = q[N] * C_²Hᵏ[N]   # kg/m²/day¹
 
         # # Make matrix for implicit time stepping (solving Ax = b) (see Braud et al. 2005)
         # # TODO(bernharf): preallocate this matrix A (and vectors...)
@@ -1132,8 +1132,6 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
                                 aux_du_TRANI.*Cᵢ²H_TRANI
                             )
 
-    #TODO(bernhard): Diffusion slows the code down considerably and makes it unstable (for NLAYER=81 only, NLAYER=41 seems okay...)
-
         # # NOTE: below max(0.001,u_SWATIᵏ⁺¹) makes the code more robust
         # du_Cᵢ¹⁸_SWATI = -C_¹⁸Oᵏ./max.(0.001,u_SWATIᵏ⁺¹) .* dVdt .+ 1 ./ max.(0.001,u_SWATIᵏ⁺¹) .* (
         #                         -diff¹⁸O_upp*1000 .+ diff¹⁸O_low*1000 .+ qCᵢ¹⁸O_upp .- qCᵢ¹⁸O_low .+
@@ -1187,8 +1185,8 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
             du_δ2H_GWAT   = LWFBrook90.ISO.dxdt_to_dδdt.(du_Cᵢ²H_GWAT, Cᵢ²H_GWAT, LWFBrook90.ISO.R_VSMOW²H)
         end
         # go back from atom fraction to delta values
-        du_δ18O_SWATI .= LWFBrook90.ISO.dxdt_to_dδdt.(du_Cᵢ¹⁸_SWATI, C_¹⁸Oᵏ, LWFBrook90.ISO.R_VSMOW¹⁸O)
-        du_δ2H_SWATI  .= LWFBrook90.ISO.dxdt_to_dδdt.(du_Cᵢ²H_SWATI, C_²Hᵏ, LWFBrook90.ISO.R_VSMOW²H)
+        du_δ18O_SWATI .= LWFBrook90.ISO.dxdt_to_dδdt(du_Cᵢ¹⁸_SWATI, C_¹⁸Oᵏ, LWFBrook90.ISO.R_VSMOW¹⁸O)
+        du_δ2H_SWATI  .= LWFBrook90.ISO.dxdt_to_dδdt(du_Cᵢ²H_SWATI, C_²Hᵏ, LWFBrook90.ISO.R_VSMOW²H)
 
         # 5) Apply changes explicitly
         # Since we update this in the callback we can't overwrite `du` and let DiffEq.jl do
