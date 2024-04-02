@@ -398,13 +398,13 @@ end
 
 function overwrite_rootden!(soil_discretization_DF, _to_use_root_distribution, _to_use_Δz_thickness_m)
     # remove empty arguments (i.e. nothing)
-    _to_use_root_distribution = NamedTuple([k => v; for (k,v) in pairs(_to_use_root_distribution) if !isnothing(v)]) # Remove those that are nothing
+    _to_use_root_distribution = NamedTuple([k => v for (k,v) in pairs(_to_use_root_distribution) if !isnothing(v)])
 
     # only possible combinations of arguments
-    @assert ((sort(keys(_to_use_root_distribution)) == (:beta, :z_rootMax_m)) |
-             (sort(keys(_to_use_root_distribution)) == (:beta,)) |
-             (sort(keys(_to_use_root_distribution)) == (:root_k, :root_θ_cm, :z_rootMax_m)) |
-             (sort(keys(_to_use_root_distribution)) == (:root_k, :root_θ_cm))
+    @assert ((sort(collect(keys(_to_use_root_distribution))) == (:beta, :z_rootMax_m)) |
+             (sort(collect(keys(_to_use_root_distribution))) == (:beta,)) |
+             (sort(collect(keys(_to_use_root_distribution))) == (:root_k, :root_θ_cm, :z_rootMax_m)) |
+             (sort(collect(keys(_to_use_root_distribution))) == (:root_k, :root_θ_cm))
     ) || @error("Need to provide complete set of root parameters, i.e. either beta, (beta, z_rootMax_m), (root_k, root_θ_cm, z_rootMax_m), or (root_k, root_θ_cm)")
 
     # _to_use_root_distribution = (; root_k = 1.0, root_θ_cm = 20); _to_use_Δz_thickness_m = [0.02, 0.02, 0.06, fill(0.1,10)...]
