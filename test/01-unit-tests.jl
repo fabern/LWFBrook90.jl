@@ -786,7 +786,7 @@ end
     @test remSPAC_12.parametrizedSPAC.pars.root_distribution.beta        .≈ to_change.beta
     @test remSPAC_12.parametrizedSPAC.pars.root_distribution.z_rootMax_m .≈ to_change.z_rootMax_m
     # test ODEProblem:
-    @test all(remSPAC_12.ODEProblem.p.p_fT_RELDEN.itp.coefs[1,:] .≈
+    @test all(remSPAC_12.ODEProblem.p.p_RELDEN.itp.coefs[1,:] .≈
                 LWFBrook90.Rootden_(
                     beta = to_change.beta,
                     Δz_m = remSPAC_12.parametrizedSPAC.soil_discretization.Δz,

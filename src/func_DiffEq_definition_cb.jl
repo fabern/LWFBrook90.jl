@@ -94,7 +94,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
 
     ## B) time dependent parameters
     @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
-        p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_fT_RELDEN,
+        p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_RELDEN,
         p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p;
 
     ## C) state dependent parameters:
@@ -152,7 +152,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
                        # for ROUGH:
                        p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC,
                        # for PLNTRES:
-                       p_fT_RELDEN.(integrator.t, 1:NLAYER), p_RTRAD, p_FXYLEM,
+                       p_RELDEN.(integrator.t, 1:NLAYER), p_RTRAD, p_FXYLEM,
                        # for WEATHER:
                        p_TMAX(integrator.t), p_TMIN(integrator.t), p_VAPPRES(integrator.t), p_WIND(integrator.t), p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_GLOBRAD(integrator.t),
                        # for SNOFRAC:
@@ -325,7 +325,7 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
 
         ## B) time dependent parameters
         # @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
-        #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_fT_RELDEN,
+        #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_RELDEN,
         #     p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p
         @unpack p_δ18O_PREC, p_δ2H_PREC = integrator.p
 
@@ -557,10 +557,10 @@ end
         #         ### Compute parameters
         #         ## B) time dependent parameters
         #         # p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
-        #         #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_fT_RELDEN,
+        #         #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_RELDEN,
         #         #     p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p[2]
         #         @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
-        #             p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_fT_RELDEN,
+        #             p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_RELDEN,
         #             p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE                = integrator.p
 
         #         ## C) state dependent parameters or intermediate results:
@@ -710,7 +710,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
 
         ## B) time dependent parameters
         # @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
-        #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_fT_RELDEN,
+        #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_RELDEN,
         #     p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p
         @unpack p_δ18O_PREC, p_δ2H_PREC = integrator.p
 
