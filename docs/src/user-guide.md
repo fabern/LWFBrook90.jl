@@ -38,7 +38,7 @@ To run a simulation following input files are expected in a single folder
 - `meteoveg.csv` - containing daily values of meteorologic variables [and stand properties]
 - `meteoiso.csv` - containing isotopic signatures of aggregate precipitation samples
 - `initial_conditions.csv` - containing initial conditions of scalar state variables
-- `soil_discretization.csv` - containing the initial conditions of the soil water status in the form of the soil matric potential (kPa) and the initial isotopic signatures (vector state variables); continuously defined parameters of relative root density distributions; as well as the definition of the numerical discretization of the soil domain (nodes with upper and lower limits).
+- `soil_discretization.csv` - containing the initial conditions of the soil water status in the form of the soil matric potential (kPa) and the initial isotopic signatures (vector state variables); parameters of relative root density distributions defined for the soil domain; as well as the definition of the numerical discretization of the soil domain (nodes with upper and lower limits).
 - `meteo_storm_durations.csv` - containing parameters of sub-daily storm/precipitation event patterns for each month
 
 Of these only the CSV files for the parameters `soil_horizons.csv` and `param.csv` and the forcings `meteoveg.csv`, `meteoiso.csv` are absolutely needed. The remaing can be provided by the user as arguments to `loadSPAC()` in the Julia script:

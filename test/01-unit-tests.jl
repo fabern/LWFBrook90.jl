@@ -252,7 +252,7 @@ end
                       simulate_isotopes = false);
     # TODO: Note just because of this test we need the fct discretize_soil()
     #       and we set ε to 0.005m i.e. 5mm. Probably 10mm would be close enough.
-    f1 = (Δz_m) -> LWFBrook90.Rootden_beta_(0.97, Δz_m = Δz_m)  # function for root density as f(Δz)
+    f1 = (Δz_m) -> LWFBrook90.Rootden_(beta = 0.97, Δz_m = Δz_m)  # function for root density as f(Δz)
     f2 = (Δz_m) -> fill(-6.3, length(Δz_m))                     # function for initial conditions as f(Δz)
     f3 = (Δz_m) -> ifelse.(cumsum(Δz_m) .<= 0.2, -13., -10.)    # function for initial conditions as f(Δz)
     f4 = (Δz_m) -> ifelse.(cumsum(Δz_m) .<= 0.2, -95., -70.)    # function for initial conditions as f(Δz)

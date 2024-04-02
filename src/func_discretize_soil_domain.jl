@@ -397,8 +397,10 @@ function overwrite_IC!(soil_discretization_DF, _to_use_IC_soil, simulate_isotope
 end
 
 function overwrite_rootden!(soil_discretization_DF, _to_use_root_distribution, _to_use_Δz_thickness_m)
-    # only possible combinations of arguments
+    # remove empty arguments (i.e. nothing)
+    _to_use_root_distribution = NamedTuple([k => v; for (k,v) in pairs(_to_use_root_distribution) if !isnothing(v)]) # Remove those that are nothing
 
+    # only possible combinations of arguments
     @assert ((sort(keys(_to_use_root_distribution)) == (:beta, :z_rootMax_m)) |
              (sort(keys(_to_use_root_distribution)) == (:beta,)) |
              (sort(keys(_to_use_root_distribution)) == (:root_k, :root_θ_cm, :z_rootMax_m)) |
@@ -410,7 +412,6 @@ function overwrite_rootden!(soil_discretization_DF, _to_use_root_distribution, _
     # _to_use_root_distribution = (; beta = 0.97); _to_use_Δz_thickness_m = [0.02, 0.02, 0.06, fill(0.1,10)...]
 
     soil_discretization_DF.Rootden_ = LWFBrook90.Rootden_(; _to_use_root_distribution..., Δz_m = _to_use_Δz_thickness_m)
-                # TODO: overwrite NT: `_to_use_root_distribution` in the parametrizedSPAC
     return nothing
 end
 
@@ -423,7 +424,7 @@ end
 
 Define the relative root density in each discretized soil layer either as either
 - exponential distribution with mean b = -1cm/ln(β), with input argument `beta` (Gale and Grigal, 1987),
-- gamma distribution with shape `root_k`>0 and scale `root_θ`, resulting in a distribution with mean $k*θ$
+- gamma distribution with shape `root_k`>0 and scale `root_θ`, resulting in a distribution with mean k*θ
 
 This function returns the instantaneous root fraction (dY/dd) (units of -/cm). The values are
     normalized so that the area under the curve sums up to 1.0 (when plotted vs cm).
