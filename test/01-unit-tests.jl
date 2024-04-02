@@ -420,6 +420,53 @@ end
         @test simulation.parametrizedSPAC.soil_discretization.df.Rootden_[1:10:100] ≈ [0.05204344024903263, 0.032385085823067206, 0.01939014716267554, 0.011609597363562048, 0.006951094791249151, 0.0041618772196682025, 0.0, 0.0, 0.0, 0.0]
     end
 end
+
+@testset "root-model gamma (Δz_m = $(first(Δz_m)))" for Δz_m in Δz_m_data # source: https://stackoverflow.com/a/63871951
+    # Check equivalence of beta model and gamma model (with k=1.0)
+    @test LWFBrook90.Rootden_(; beta = 0.97, Δz_m = Δz_m) ≈
+        LWFBrook90.Rootden_(; root_k = 1.0, root_θ_cm = -1/log(0.97), Δz_m = Δz_m)
+    @test LWFBrook90.Rootden_(; beta = 0.90, Δz_m = Δz_m) ≈
+        LWFBrook90.Rootden_(; root_k = 1.0, root_θ_cm = -1/log(0.90), Δz_m = Δz_m)
+
+    # check
+    parametrizedSPAC = loadSPAC("test-assets/Hammel-2001/input-files-ISO",
+                      "Hammel_loam-NLayer-27-RESET=FALSE";
+                      simulate_isotopes = false,
+                      Δz_thickness_m = Δz_m,
+                      root_distribution = (root_k = 1.0, root_θ_cm = -1/log(0.95),),
+                      IC_soil = (PSIM_init_kPa = -7.0, delta18O_init_permil = -9.0, delta2H_init_permil = -11.0))
+    # parametrizedSPAC.pars.root_distribution
+    simulation = setup(parametrizedSPAC, ε = 0.005)
+    # plot(simulation.parametrizedSPAC.soil_discretization.df.Rootden_, simulation.parametrizedSPAC.soil_discretization.df.Lower_m)
+    if ([0.5, 0.5, 0.5, 0.5] == Δz_m)
+        # @test simulation.parametrizedSPAC.soil_discretization.df.Rootden_ ≈ [0.018461100494465737, 0.018461100494465737, 0.0014204889211275828, 0.00010929948491700703, 8.410046164697427e-6]
+        @test simulation.parametrizedSPAC.soil_discretization.df.Rootden_ ≈ [0.7201999283091463, 0.25792436725268547, 0.020201681877684945, 0.0015544179126264956, 0.00011960464785673769]
+    elseif ([fill(0.02, 100);] == Δz_m)
+        @test simulation.parametrizedSPAC.soil_discretization.df.Rootden_[1:10:100] ≈ [0.09207591746299604, 0.03520806629944542, 0.01262159612357775, 0.004524664528628884, 0.0016220285371347674, 0.0005814743963076271, 0.00020845038531732468, 7.472652865688285e-5, 2.6788408553974765e-5, 9.603267350270948e-6]
+    elseif ([fill(0.01, 200);] == Δz_m)
+        @test simulation.parametrizedSPAC.soil_discretization.df.Rootden_[1:10:200] ≈ [0.04823125873564055, 0.030012878588235002, 0.017969819063652963, 0.010759194464839009, 0.006441927162548269, 0.0038570197521006896, 0.002309340200954726, 0.0013826872835797437, 0.0008278659520944154, 0.0004956739262566578, 0.0002967782894672004, 0.00017769212466797057, 0.00010639083885043477, 6.370012521630651e-5, 3.8139618001095856e-5, 2.2835598145652136e-5, 1.367251613943244e-5, 8.186240464953907e-6, 4.901404559846817e-6, 2.93465196418323e-6]
+    end
+
+    # checks with k>1.0
+    parametrizedSPAC = loadSPAC("test-assets/Hammel-2001/input-files-ISO",
+                      "Hammel_loam-NLayer-27-RESET=FALSE";
+                      simulate_isotopes = false,
+                      Δz_thickness_m = Δz_m,
+                      root_distribution = (root_k = 3.0, root_θ_cm = -1/log(0.95),),
+                      IC_soil = (PSIM_init_kPa = -7.0, delta18O_init_permil = -9.0, delta2H_init_permil = -11.0))
+    # parametrizedSPAC.pars.root_distribution
+    simulation = setup(parametrizedSPAC, ε = 0.005)
+    # plot(simulation.parametrizedSPAC.soil_discretization.df.Rootden_, simulation.parametrizedSPAC.soil_discretization.df.Lower_m)
+    if ([0.5, 0.5, 0.5, 0.5] == Δz_m)
+        # @test simulation.parametrizedSPAC.soil_discretization.df.Rootden_ ≈ [0.018461100494465737, 0.018461100494465737, 0.0014204889211275828, 0.00010929948491700703, 8.410046164697427e-6]
+        @test simulation.parametrizedSPAC.soil_discretization.df.Rootden_ ≈ [0.00027502637688857145, 0.47609855754620745, 0.412005500758867, 0.09645815471805702, 0.015162760599979806]
+    elseif ([fill(0.02, 100);] == Δz_m)
+        @test simulation.parametrizedSPAC.soil_discretization.df.Rootden_[1:10:100] ≈ [1.105600935589554e-5, 0.01841592534143428, 0.027821629343506862, 0.02282995046421708, 0.014674812772489988, 0.008262099744807986, 0.0042796350631698135, 0.0020932916762929975, 0.0009819246729527453, 0.0004461401605346446]
+    elseif ([fill(0.01, 200);] == Δz_m)
+        @test simulation.parametrizedSPAC.soil_discretization.df.Rootden_[1:10:200] ≈ [5.528233262478093e-6, 0.003749688650354093, 0.009456878548333922, 0.012958944185572032, 0.013911350780858728, 0.013080734304564738, 0.011316177973638309, 0.009244379118960236, 0.007242414922077211, 0.005495855155572414, 0.004067005209129574, 0.0029491416245713367, 0.002103011304925199, 0.0014787113599272316, 0.0010273776115250128, 0.0007064829092284812, 0.0004814797904216458, 0.0003255617365651601, 0.00021860495106492463, 0.00014587690668812743]
+    end
+end
+
 @testset "bare-minimum provided to loadSPAC" begin
     Δz_m = fill(0.1, 11)
     parametrizedSPAC = loadSPAC(
@@ -740,10 +787,26 @@ end
     @test remSPAC_12.parametrizedSPAC.pars.root_distribution.z_rootMax_m .≈ to_change.z_rootMax_m
     # test ODEProblem:
     @test all(remSPAC_12.ODEProblem.p.p_fT_RELDEN.itp.coefs[1,:] .≈
-                LWFBrook90.Rootden_beta_(
-                    to_change.beta,
+                LWFBrook90.Rootden_(
+                    beta = to_change.beta,
                     Δz_m = remSPAC_12.parametrizedSPAC.soil_discretization.Δz,
                     z_rootMax_m = to_change.z_rootMax_m))
+
+    to_change = (root_θ_cm = 20, root_k = 3.0, z_rootMax_m = -0.93)
+    remSPAC_12  = remakeSPAC(discrSPAC, root_distribution = to_change)
+
+    # test parametrizedSPAC:
+    @test remSPAC_12.parametrizedSPAC.pars.root_distribution.root_θ_cm   .≈ to_change.root_θ_cm
+    @test remSPAC_12.parametrizedSPAC.pars.root_distribution.root_k      .≈ to_change.root_k
+    @test remSPAC_12.parametrizedSPAC.pars.root_distribution.z_rootMax_m .≈ to_change.z_rootMax_m
+    # test ODEProblem:
+    must = LWFBrook90.Rootden_(
+                    root_k = to_change.root_k, root_θ_cm = to_change.root_θ_cm,
+                    Δz_m = remSPAC_12.parametrizedSPAC.soil_discretization.Δz,
+                    z_rootMax_m = to_change.z_rootMax_m)
+    must = [0.0019726404225474856, 0.023343292699885786, 0.07757036883704736, 0.13045558629384227, 0.15554436815528225, 0.1563597889663928, 0.1419548680219542, 0.12044192366907798, 0.09737691045459235, 0.07593633493301175, 0.019043917546365884, 0.0]
+    findmax(must)[2] == 6
+    @test all(remSPAC_12.ODEProblem.p.p_RELDEN.itp.coefs[1,:] .≈ must)
 
     # code to easily modify:
     # - θs, Ks, α                    # p_THSAT, p_KSAT, p_MvGα,              all in parametrizedSPAC.pars.soil_horizons.shp[1] and proportionally all other layers

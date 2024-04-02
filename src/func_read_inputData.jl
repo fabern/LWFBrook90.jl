@@ -29,7 +29,7 @@ the corresponding input files for LWFBrook90.jl.
 
 Soil discretization can be provided as vector with the thickness of each cell, e.g: `Δz_thickness_m = fill(0.04, 20)`.
 
-Root distribution can be provided as arguments to function `Rootden_beta_()` as  `(beta = 0.98, )` or `(beta = 0.98, z_rootMax_m=-0.5)`.
+Root distribution can be provided as arguments to function `Rootden_()` as  `(beta = 0.98, )` or `(beta = 0.98, z_rootMax_m=-0.5)` or for the gamma distribution `(root_k = 1.0, root_θ_cm = 20.0, z_rootMax_m=-0.5)`.
 
 Meteo storm durations can be provided as vector for each month, e.g.: `[4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]`
 
