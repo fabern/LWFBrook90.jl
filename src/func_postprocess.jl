@@ -1078,6 +1078,7 @@ Supports a number of variables:
     - `:SWATI` = soil water volumes contained in discretized layers (mm)
     - `:K` = soil hydraulic conductivities (mm/day)
     - `:δ18O`, `:δ2H`, `:d18O`, `:d2H` = isotopic signatures (delta)
+    - `TRANI`, `RWU` = root water uptake flux from each cell (mm/day)
 The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
 that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `days_to_read_out_d = 1:1.0:100`
 
@@ -1110,9 +1111,11 @@ function get_soil_(
     timepoints = (timepoints isa AbstractArray ? timepoints : [timepoints]) # transform to vector even if input as scalar
     symbols    = (symbols    isa AbstractArray ? symbols    : [symbols]   ) # transform to vector even if input as scalar
 
+    # 1a) get states
     # get auxiliary variables with requested time resolution (i.e. days_to_read_out_d)
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
         LWFBrook90.get_auxiliary_variables(simulation; days_to_read_out_d = days_to_read_out_d)
+    # 1b) get isotope values
     if simulate_isotopes
         u_SWATI_d18O = reduce(hcat, [solution(t_days).SWATI.d18O for t_days = timepoints])
         u_SWATI_d2H  = reduce(hcat, [solution(t_days).SWATI.d2H  for t_days = timepoints])
@@ -1122,6 +1125,9 @@ function get_soil_(
         # old variant: # remove requested symbols from
         # old variant: symbols[symbols .!= (:δ18O) .&& symbols .!= (:delta18O) .&& symbols .!= (:delta2H) .&& symbols .!= (:delta2H)]
     end
+    # 2) get fluxes
+    u_TRANI = reduce(hcat, [solution(t_days).TRANI.mmday for t_days = timepoints])
+    # TODO: possibly add BYFLI, INFLI, DSFLI
 
     # Setup DataFrame to fill
     df = DataFrame()
@@ -1134,21 +1140,24 @@ function get_soil_(
         depths_to_read_out_mm = lower_boundaries
     end
     idxs = LWFBrook90.get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = true)
+
     for symbol in sort(symbols)
-        variable_to_return = (
-            symbol in [:θ, :theta              ] ? u_aux_θ :      # also accept non-unicode
-            symbol in [:ψ, :psi                ] ? u_aux_PSIM :   # also accept non-unicode
+        variable_to_return, unit_to_return = (
+            symbol in [:θ, :theta              ] ? (u_aux_θ,      "m3m3"   ) :   # also accept non-unicode
+            symbol in [:ψ, :psi                ] ? (u_aux_PSIM,   "kPa"    ) :   # also accept non-unicode
             # symbol == :ψtot ? u_aux_PSITI :
-            symbol in [:δ18O, :delta18O, :d18O ] ? u_SWATI_d18O : # also accept non-unicode
-            symbol in [:δ2H,  :delta2H,  :d2H  ] ? u_SWATI_d2H  : # also accept non-unicode
-            symbol in [:W                      ] ? u_aux_WETNES :
-            symbol in [:SWATI                  ] ? u_SWATI :
-            symbol in [:K                      ] ? p_fu_KK :
+            symbol in [:δ18O, :delta18O, :d18O ] ? (u_SWATI_d18O, "permil" ) : # also accept non-unicode
+            symbol in [:δ2H,  :delta2H,  :d2H  ] ? (u_SWATI_d2H,  "permil" ) : # also accept non-unicode
+            symbol in [:W                      ] ? (u_aux_WETNES, "_"      ) :
+            symbol in [:SWATI                  ] ? (u_SWATI,      "mm"     ) :
+            symbol in [:K                      ] ? (p_fu_KK,      "mmday"  ) :
+            symbol in [:TRANI, :RWU            ] ? (u_TRANI,      "mmday"  ) :
+            # TODO: possibly add BYFLI, INFLI, DSFLI
             error("Unknown symobl $(symbol) requested in `get_soil_()`"))
 
         # Add columns
         # append requested layers with the depths as column titles
-        [df[:, Symbol("$(string(symbol))_$(Int(k))mm")] = variable_to_return[v,:] for
+        [df[:, Symbol("$(string(symbol))_$(unit_to_return)_$(Int(k))mm")] = variable_to_return[v,:] for
             (k,v) in sort(collect(idxs)) if v != 0]; # Note we sort the idxs by depth
     end
 
@@ -1207,7 +1216,7 @@ get_delta = get_δ
 # plot(dates_to_read_out,     Matrix(dat_aboveground[:, Not(:time)]), labels = reshape(names(dat_aboveground[:, Not(:time)]),1,:))
 #     u_aboveground = LWFBrook90.get_amounts(simulation; days_to_read_out_d = timesteps);
 
-function get_scalars(compartments_to_extract, units_to_extract, simulation::DiscretizedSPAC, days_to_read_out_d)
+function get_scalars(compartments_to_extract, units_to_extract, simulation::DiscretizedSPAC, days_to_read_out_d = nothing)
     solution = simulation.ODESolution;
     @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
     @assert (isnothing(days_to_read_out_d) || all(days_to_read_out_d .>= 0)) "`days_to_read_out_d` must be Vector{Float64} and all >= 0. Received $(days_to_read_out_d)"
@@ -1231,7 +1240,7 @@ function get_scalars(compartments_to_extract, units_to_extract, simulation::Disc
         # u_aboveground = collect(solution(t_days)[comp][uni]  for t_days = days_to_read_out_d, (comp,uni) in cycle_over)
         df_states = DataFrame((
             string(comp) * "_" * string(uni) => [
-                solution(t_days)[comp][uni] for t_days = days_to_read_out_d
+                solution(t_days)[comp][uni] for t_days = timepoints
             ] for (comp, uni) in cycle_over
         )...)
     end
