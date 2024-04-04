@@ -353,7 +353,7 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
     #         p_LAI          = vegetation_fT["p_LAI"],
     #         p_SAI          = vegetation_fT["p_SAI"],
     #         p_AGE          = vegetation_fT["p_AGE"],
-    #         p_fT_RELDEN       = vegetation_fT["p_RELDEN"],
+    #         p_RELDEN       = vegetation_fT["p_RELDEN"],
 
     #         p_d18OPREC     = parametrizedSPAC.forcing.meteo_iso["p_d18OPREC"],
     #         p_d2HPREC      = parametrizedSPAC.forcing.meteo_iso["p_d2HPREC"],
@@ -491,7 +491,7 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
         p_LAI          = vegetation_fT["p_LAI"],
         p_SAI          = vegetation_fT["p_SAI"],
         p_AGE          = vegetation_fT["p_AGE"],
-        p_fT_RELDEN    = vegetation_fT["p_RELDEN"],
+        p_RELDEN       = vegetation_fT["p_RELDEN"],
 
         p_δ18O_PREC     = parametrizedSPAC.forcing.meteo_iso["p_d18OPREC"],
         p_δ2H_PREC      = parametrizedSPAC.forcing.meteo_iso["p_d2HPREC"],

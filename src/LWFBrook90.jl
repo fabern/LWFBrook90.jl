@@ -13,12 +13,13 @@ using Dates: now, Date, Day, dayofyear, month, year, floor, Month
 using Printf: @sprintf
 using Interpolations: interpolate, extrapolate, NoInterp, Gridded, Constant, Next, Previous, Flat, Throw, scale, BSpline, linear_interpolation
 using CategoricalArrays
+using Distributions: Gamma, cdf, truncated
 
 # NOTE TO DEVELOPERS: EXPORTED ELEMENTS CONSTITUTE THE API AND SHOULD BE STABLE AND DOCUMENTED.
 export SPAC, DiscretizedSPAC, loadSPAC, setup, simulate!, remakeSPAC
 export run_simulation
 export prepare_for_LWFBrook90R
-export Rootden_beta_
+export Rootden_
 export RelativeDaysFloat2DateTime
 # read out results for soil domain variables
 export get_soil_
@@ -50,7 +51,8 @@ An instance of a soil-plant-atmopsheric continuum model with the following field
 -   `pars`: `NamedTuple`: (:params, )
     - `pars.params`: `NamedTuple`: (), containing scalar parameter values for the model
     - `pars.root_distribution`: either:
-        - `NamedTuple`: (beta = 0.97, z\_rootMax\_m = nothing) parametrization of root distribution with depth (f(z\_m) with z\_m in meters and negative downward). Alternatively path to soil\_discretization.csv"
+        - `NamedTuple`: (beta, theta, z\_rootMax\_m = nothing) parametrization of root distribution with depth (f(z\_m) with z\_m in meters and negative downward)."
+        - `NamedTuple`: (alpha = 0.97, z\_rootMax\_m = nothing) parametrization of root distribution with depth (f(z\_m) with z\_m in meters and negative downward)."
         - or String: `"soil_discretization.csv"` meaning that it must be defined in `soil_discretizations.csv`
     - `pars.IC_scalar`: `NamedTuple`: (), containing initial conditions of the scalar state variables
     - `pars.IC_soil`: initial conditions of the state variables (scalar or related to the soil). Either:
@@ -303,12 +305,12 @@ function remake_LAI(spac, changesNT)
     return spac
 end
 function remake_root_distribution(spac, changesNT)
-    allowed_names = [:beta, :z_rootMax_m]
+    allowed_names = [:beta, :z_rootMax_m, :root_k, :root_θ_cm]
     for (key, val) in zip(keys(changesNT), changesNT)
         @assert key ∈ allowed_names "Unclear how to remake '$key' provided to params."
     end
-    # create new root_distribution reusing the old one and only overwriting whats defined by changesNT
-    new_root_distribution = (;spac.pars.root_distribution..., changesNT...) # https://stackoverflow.com/a/60883705
+    # create new root_distribution without reusing old params
+    new_root_distribution = changesNT
     spac.pars = (;spac.pars..., root_distribution = new_root_distribution)
     return spac
 end

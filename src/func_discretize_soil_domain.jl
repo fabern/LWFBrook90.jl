@@ -397,42 +397,49 @@ function overwrite_IC!(soil_discretization_DF, _to_use_IC_soil, simulate_isotope
 end
 
 function overwrite_rootden!(soil_discretization_DF, _to_use_root_distribution, _to_use_Δz_thickness_m)
-    @assert (keys(_to_use_root_distribution) == (:beta, :z_rootMax_m)) | (keys(_to_use_root_distribution) == (:beta,))
-    if (keys(_to_use_root_distribution) == (:beta,)) || (isnothing(_to_use_root_distribution.z_rootMax_m))
-        soil_discretization_DF.Rootden_ = LWFBrook90.Rootden_beta_(_to_use_root_distribution.beta; Δz_m = _to_use_Δz_thickness_m)
-    else
-        soil_discretization_DF.Rootden_ = LWFBrook90.Rootden_beta_(_to_use_root_distribution.beta; Δz_m = _to_use_Δz_thickness_m, z_rootMax_m = _to_use_root_distribution.z_rootMax_m)
-    end
+    # remove empty arguments (i.e. nothing)
+    _to_use_root_distribution = NamedTuple([k => v for (k,v) in pairs(_to_use_root_distribution) if !isnothing(v)])
+
+    # only possible combinations of arguments
+    @assert ((sort(collect(keys(_to_use_root_distribution))) == [:beta, :z_rootMax_m]) |
+             (sort(collect(keys(_to_use_root_distribution))) == [:beta]) |
+             (sort(collect(keys(_to_use_root_distribution))) == [:root_k, :root_θ_cm, :z_rootMax_m]) |
+             (sort(collect(keys(_to_use_root_distribution))) == [:root_k, :root_θ_cm])
+    ) "Need to provide complete set of root parameters, i.e. either beta, (beta, z_rootMax_m), (root_k, root_θ_cm, z_rootMax_m), or (root_k, root_θ_cm)"
+
+    # _to_use_root_distribution = (; root_k = 1.0, root_θ_cm = 20); _to_use_Δz_thickness_m = [0.02, 0.02, 0.06, fill(0.1,10)...]
+    # _to_use_root_distribution = (; root_k = 1.0); _to_use_Δz_thickness_m = [0.02, 0.02, 0.06, fill(0.1,10)...]
+    # _to_use_root_distribution = (; beta = 0.97); _to_use_Δz_thickness_m = [0.02, 0.02, 0.06, fill(0.1,10)...]
+
+    soil_discretization_DF.Rootden_ = LWFBrook90.Rootden_(; _to_use_root_distribution..., Δz_m = _to_use_Δz_thickness_m)
     return nothing
 end
 
-
 """
-    Rootden_beta_(
-        β;
+    Rootden_(
+        [[beta],[root_k, root_θ_cm]];
         Δz_m,
         z_rootMax_m = maximum(cumsum(Δz_m)),
         z_Upper_m = 0)
 
-Define the relative root density in each discretized soil layer based on the beta model from
-(Gale and Grigal, 1987).
+Define the relative root density in each discretized soil layer either as either
+- exponential distribution with mean b = -1cm/ln(β), with input argument `beta` (Gale and Grigal, 1987),
+- gamma distribution with shape `root_k`>0 and scale `root_θ`, resulting in a distribution with mean k*θ
 
 This function returns the instantaneous root fraction (dY/dd) (units of -/cm). The values are
     normalized so that the area under the curve sums up to 1.0 (when plotted vs cm).
-    Normalization extends the possible range of β to values larger than 1, and thereby allows
-    to describe profiles that are denser at the bottom.
     The method reduces the amount of roots in a discretization layer in case the effective maximal rooting
     depth comes to lie within that layer - it does not need to modify the discretization in that case.
+
+    (Normalization extends the possible range of β to values larger than 1, and thereby allows
+    to describe profiles that are denser at the bottom. Although it is recommended to use the gamma distribution for these cases.)
 """
-function Rootden_beta_(
-    β;
+function Rootden_(;
+    beta  = nothing,                       # beta distribution Gale&Grigal 1987
+    root_k = nothing, root_θ_cm = nothing, # exponential or gamma distributions
     Δz_m,
     z_rootMax_m = -sum(Δz_m), # total_effective_rooting_depth_m
-    z_Upper_m = 0) # # Upper interface of topmost discretization cell
-    # e.g. Δz_m = fill(0.10, 10)
-    #      z_rootMax_m = -0.22
-    #      β = 0.97
-
+    z_Upper_m = 0)
 
     # Notation:
     # z: absolute vertical position (positive upward, i.e. soil values are negative)
@@ -441,31 +448,48 @@ function Rootden_beta_(
     @assert minimum(Δz_m) > 0 "Discretization cell height Δz_m must be positive"
     @assert z_rootMax_m < 0 "z_rootMax_m must be negative"
 
+    if !isnothing(beta)
+        # Case 1: using β for root parametrization
+        @assert isnothing(root_k) && isnothing(root_θ_cm) "beta provided: $beta. You cannot also provided root_k $root_k or root_θ_cm $root_θ_cm."
+        # (Gale and Grigal, 1987)
+        Y_fct(β, d_cm) = 1 .- β .^ d_cm
+        # dYdd_fct(β, d_cm) = -β .^ d_cm .* log(β) # unused
+        Y_fct_eval = (d_cm) -> 1 .- beta .^ d_cm
+
+        @assert abs(beta - 1.0) > 0.000001 "Root distribution parameter β is too close to 1.0."*
+            "Note that it can be below (or above) 1.0, but not exactly 1. Set it at least 0.000001 away from 1.0"
+
+        # # (Gale and Grigal, 1987) figures 1 and 2
+        # d_midpoints_m = -z_Upper_m + Δz_m[1]/2 .+
+        #     cumsum(Δz_m) .- Δz_m[1] # d is soil depth d in centimeters
+        # # TODO: by using d_midpoint of we make a small error.
+        # #       Better would be to use integral between cell boundaries.
+        # d_cm = d_midpoints_m*100
+        # pl_1 = plot(
+        #     Y_fct(0.92, d_cm), d_cm,
+        #     xflip = true,
+        #     yflip = true, ylabel = "Depth_cm", xlabel = "Cumulative Root Fraction (Y)");
+        # plot!(Y_fct(0.95, d_cm), d_cm);
+        # plot!(Y_fct(0.97, d_cm), d_cm);
+        # pl_2 = plot(
+        #     dYdd_fct(0.92, d_cm), d_cm,
+        #     yflip = true, ylabel = "Depth_cm", xlabel = "Instantaneous Root Fraction (dY/dd)");
+        # plot!(dYdd_fct(0.95, d_cm), d_cm);
+        # plot!(dYdd_fct(0.97, d_cm), d_cm);
+        # plot(pl_1, pl_2; layout=(1,2))
+    elseif !isnothing(root_θ_cm)
+        # Case 2: Gamma distribution: using θ (and k) for root parametrization
+        @assert isnothing(beta) "root_θ_cm provided: $root_θ_cm. You cannot also provided beta $beta."
+
+        # Gamma distribution: https://en.wikipedia.org/wiki/Gamma_distribution
+        # Y_fct(root_k, root_θ_cm, d_cm, z_rootMax_m) = cdf.(truncated.(Gamma.(root_k, root_θ_cm), 0, -100*z_rootMax_m), d_cm)
+        Y_fct_eval = (d_cm) -> cdf.(truncated.(Gamma.(root_k, root_θ_cm), 0, -100*z_rootMax_m), d_cm)
+    else
+        error("No known parameters provided as arguments to `Rootden_()`. Please provide either arguments `beta` or then both: `root_k` and `root_θ_cm`")
+    end
+
+
     z_interfaces_m = z_Upper_m .+ [0; cumsum(-Δz_m)]
-
-    # (Gale and Grigal, 1987)
-    Y_fct(β, d_cm) = 1 .- β .^ d_cm
-    dYdd_fct(β, d_cm) = -β .^ d_cm .* log(β) # unused
-
-    # # (Gale and Grigal, 1987) figures 1 and 2
-    # d_midpoints_m = -z_Upper_m + Δz_m[1]/2 .+
-    #     cumsum(Δz_m) .- Δz_m[1] # d is soil depth d in centimeters
-    # # TODO: by using d_midpoint of we make a small error.
-    # #       Better would be to use integral between cell boundaries.
-    # d_cm = d_midpoints_m*100
-    # pl_1 = plot(
-    #     Y_fct(0.92, d_cm), d_cm,
-    #     xflip = true,
-    #     yflip = true, ylabel = "Depth_cm", xlabel = "Cumulative Root Fraction (Y)");
-    # plot!(Y_fct(0.95, d_cm), d_cm);
-    # plot!(Y_fct(0.97, d_cm), d_cm);
-    # pl_2 = plot(
-    #     dYdd_fct(0.92, d_cm), d_cm,
-    #     yflip = true, ylabel = "Depth_cm", xlabel = "Instantaneous Root Fraction (dY/dd)");
-    # plot!(dYdd_fct(0.95, d_cm), d_cm);
-    # plot!(dYdd_fct(0.97, d_cm), d_cm);
-    # plot(pl_1, pl_2; layout=(1,2))
-
     # 0) Preparatory steps
     # Depth of cell interfaces at which we evaluate the cumulative root fraction
     d_interfaces_cm = -z_interfaces_m * 100
@@ -473,7 +497,7 @@ function Rootden_beta_(
     d_root_depth_cm = -z_rootMax_m * 100
 
     # 1) Compute cumulative density inside of a cell (i.e. increase in cumulative denisity from upper to lower interface)
-    rootden_increase_per_cell = diff(Y_fct(β, d_interfaces_cm))
+    rootden_increase_per_cell = diff(Y_fct_eval(d_interfaces_cm))
 
     # 2) Correct for total effective rooting depth
     #   a) total rooting depth is below lowest discretization cell                    (nothing needs changing)
@@ -492,8 +516,8 @@ function Rootden_beta_(
         # First computation above was:
         # Y_fct(β, d_lower_interfaces_cm[idx]) - Y_fct(β, d_upper_interfaces_cm[idx])
         # Corrected computation is:
-        rootden_increase_per_cell[idx] =
-            Y_fct(β, d_root_depth_cm) - Y_fct(β, d_upper_interfaces_cm[idx])
+        #rootden_increase_per_cell[idx] = Y_fct(β, d_root_depth_cm) - Y_fct(β, d_upper_interfaces_cm[idx])
+        rootden_increase_per_cell[idx] = Y_fct_eval(d_root_depth_cm) - Y_fct_eval(d_upper_interfaces_cm[idx])
         # (note if d_lower_interfaces_cm[idx] == d_root_depth_cm, this keeps the value before)
     end
 
@@ -502,44 +526,52 @@ function Rootden_beta_(
     rootden_increase_per_cmDepth = rootden_increase_per_cell ./ (Δz_m .* 100)
 
     # 4) Normalize all values so that it sums up to 1.0
-    @assert abs(β - 1.0) > 0.000001 "Root distribution parameter β is too close to 1.0."*
-        "Note that it can be below (or above) 1.0, but not exactly 1. Set it at least 0.000001 away from 1.0"
     normalizeAUC = (x) -> sum(x) == 0 ? x : x ./ sum(x)
     return normalizeAUC(rootden_increase_per_cmDepth)
 end
-
-# Rootden_beta_(0.97, Δz_m = fill(0.10, 10))
-# Rootden_beta_(0.97, Δz_m = fill(0.10, 10), z_rootMax_m = -0.2)
-
-# # Plot Rootden_beta_
+function Rootden_beta_(
+    β;
+    Δz_m,
+    z_rootMax_m = -sum(Δz_m), # total_effective_rooting_depth_m
+    z_Upper_m = 0) # # Upper interface of topmost discretization cell
+    # e.g. Δz_m = fill(0.10, 10)
+    #      z_rootMax_m = -0.22
+    #      β = 0.97
+    Rootden_(root_β = β, Δz_m = Δz_m, z_rootMax_m = z_rootMax_m, z_Upper_m = z_Upper_m)
+end
 # Δz_m = fill(0.10, 10) # (m)
 # Δz_m = diff(collect(0:0.01:1)) # (m)
 # z_rootMax_m = -0.225
-# plot(Rootden_beta_(0.97, Δz_m = Δz_m),
-#     cumsum(Δz_m * 100),
-#     ylabel = "Depth (cm)", xlabel = "Instantaneous root fraction (dY/dd) (Area of 1.0)",
-#     yflip = true, seriestype = :path, legend = :bottomright,
-#     label = "No max Root")
-# # plot!(Rootden_beta_(0.97, Δz_m = Δz_m, z_rootMax_m = z_rootMax_m),
-# #     cumsum(Δz_m * 100), seriestype = [:scatter], label = "maxRoot: $(z_rootMax_m)m")
-# # plot!(Rootden_beta_(0.97, Δz_m = Δz_m, z_rootMax_m = -1.2),
-# #     cumsum(Δz_m * 100), seriestype = [:scatter], label = "maxRoot: $(-1.2)m")
-# # plot!(Rootden_beta_(0.97, Δz_m = Δz_m, z_rootMax_m = -0.5),
-# #     cumsum(Δz_m * 100), seriestype = [:scatter], label = "maxRoot: $(-0.5)m",)
-# plot!(Rootden_beta_(0.97, Δz_m = Δz_m, z_rootMax_m = z_rootMax_m),
-#     cumsum(Δz_m * 100), seriestype = [:path], label = "maxRoot: $(z_rootMax_m)m")
-# plot!(Rootden_beta_(0.97, Δz_m = Δz_m, z_rootMax_m = -0.9),
-#     cumsum(Δz_m * 100), seriestype = [:path], label = "maxRoot: $(-0.9)m")
-# plot!(Rootden_beta_(0.97, Δz_m = Δz_m, z_rootMax_m = -0.5),
-#     cumsum(Δz_m * 100), seriestype = [:path], label = "maxRoot: $(-0.5)m",)
-# plot!(Rootden_beta_(0.999, Δz_m = Δz_m, z_rootMax_m = -0.9),
-#     cumsum(Δz_m * 100), seriestype = [:path], label = "β = 0.999")
-# plot!(Rootden_beta_(1.0, Δz_m = Δz_m, z_rootMax_m = -0.9),
-#     cumsum(Δz_m * 100), seriestype = [:path], label = "β = 1.0")
-# plot!(Rootden_beta_(1.001, Δz_m = Δz_m, z_rootMax_m = -0.9),
-#     cumsum(Δz_m * 100), seriestype = [:path], label = "β = 1.001")
-# plot!(Rootden_beta_(1.02, Δz_m = Δz_m, z_rootMax_m = -0.9),
-#     cumsum(Δz_m * 100), seriestype = [:path], label = "β = 1.02")
+# f = Figure(); ax = Axis(f[1, 1], ylabel = "Depth (cm)", xlabel = "Instantaneous root fraction (dY/dd) (Area of 1.0)", yreversed = true)
+# Makie.lines!(ax,
+#     LWFBrook90.Rootden_(root_β = 0.97, Δz_m = Δz_m), cumsum(Δz_m * 100), label = "No max Root")
+# # Makie.lines!(ax, LWFBrook90.Rootden_(root_β = 0.97, Δz_m = Δz_m, z_rootMax_m = z_rootMax_m),
+# #     cumsum(Δz_m * 100), label = "maxRoot: $(z_rootMax_m)m")
+# # Makie.lines!(ax, LWFBrook90.Rootden_(root_β = 0.97, Δz_m = Δz_m, z_rootMax_m = -1.2),
+# #     cumsum(Δz_m * 100), label = "maxRoot: $(-1.2)m")
+# # Makie.lines!(ax, LWFBrook90.Rootden_(root_β = 0.97, Δz_m = Δz_m, z_rootMax_m = -0.5),
+# #     cumsum(Δz_m * 100), label = "maxRoot: $(-0.5)m",)
+# Makie.lines!(ax, LWFBrook90.Rootden_(root_β = 0.97, Δz_m = Δz_m, z_rootMax_m = z_rootMax_m),
+#     cumsum(Δz_m * 100), label = "maxRoot: $(z_rootMax_m)m")
+# Makie.lines!(ax, LWFBrook90.Rootden_(root_β = 0.97, Δz_m = Δz_m, z_rootMax_m = -0.9),
+#     cumsum(Δz_m * 100), label = "maxRoot: $(-0.9)m")
+# Makie.lines!(ax, LWFBrook90.Rootden_(root_β = 0.97, Δz_m = Δz_m, z_rootMax_m = -0.5),
+#     cumsum(Δz_m * 100), label = "maxRoot: $(-0.5)m",)
+# Makie.lines!(ax, LWFBrook90.Rootden_(root_β = 0.999, Δz_m = Δz_m, z_rootMax_m = -0.9),
+#     cumsum(Δz_m * 100), label = "β = 0.999")
+# # Makie.lines!(ax, LWFBrook90.Rootden_(root_β = 1.0, Δz_m = Δz_m, z_rootMax_m = -0.9),
+# #     cumsum(Δz_m * 100), label = "β = 1.0")
+# # Makie.lines!(ax, LWFBrook90.Rootden_(root_β = 1.001, Δz_m = Δz_m, z_rootMax_m = -0.9),
+# #     cumsum(Δz_m * 100), label = "β = 1.001")
+# # Makie.lines!(ax, LWFBrook90.Rootden_(root_k = 1.0, root_θ_cm = -1/log(0.97),
+# #     Δz_m = Δz_m, z_rootMax_m = -0.9), cumsum(Δz_m * 100), label = "β = 0.97, k=1.0")
+# Makie.lines!(ax, LWFBrook90.Rootden_(root_k = 3.0, root_θ_cm = -1/log(0.97),
+#     Δz_m = Δz_m, z_rootMax_m = -0.9), cumsum(Δz_m * 100), label = "β = 0.97, k=3.0")
+# Makie.lines!(ax, LWFBrook90.Rootden_(root_k = 5.0, root_θ_cm = -1/log(0.97),
+#     Δz_m = Δz_m, z_rootMax_m = -0.9), cumsum(Δz_m * 100), label = "β = 0.97, k=5.0")
+# axislegend(ax)
+# f
+
 
 
 """
@@ -629,17 +661,17 @@ function HammelKennel_transient_root_density(;
 
     # 2) In all cases provide relative density as interpolated function in depth and time (even when constant through time)
     if NLAYER > 1
-        p_fT_RELDEN =  extrapolate(interpolate((timepoints, 1:NLAYER), p_RELDEN_2Darray,
+        p_RELDEN =  extrapolate(interpolate((timepoints, 1:NLAYER), p_RELDEN_2Darray,
                                             (Gridded(Constant{Next}()), NoInterp()), # 1st dimension: ..., 2nd dimension NoInterp()
                                             ), Flat()) # extrapolate flat, alternative: Throw()
         extrapolate(interpolate((timepoints, 1:NLAYER), p_RELDEN_2Darray,
                                             (Gridded(Constant{Next}()), NoInterp()), # 1st dimension: ..., 2nd dimension NoInterp()
                                             ), Flat()) # extrapolate flat, alternative: Throw()
     else
-        p_fT_RELDEN_1arg = extrapolate(scale(interpolate(p_RELDEN_2Darray[:,1], (BSpline(Constant{Next}()))), timepoints) ,Flat())
-        function p_fT_RELDEN(t, ignored)
-            p_fT_RELDEN_1arg(t)
+        p_RELDEN_1arg = extrapolate(scale(interpolate(p_RELDEN_2Darray[:,1], (BSpline(Constant{Next}()))), timepoints) ,Flat())
+        function p_RELDEN(t, ignored)
+            p_RELDEN_1arg(t)
         end
     end
-    return p_fT_RELDEN
+    return p_RELDEN
 end
