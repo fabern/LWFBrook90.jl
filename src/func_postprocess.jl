@@ -167,8 +167,8 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
             tran  = [solu(t).accum.cum_d_tran for t in days],
             slvp  = [solu(t).accum.cum_d_slvp for t in days],
             prec  = [solu(t).accum.cum_d_prec for t in days],
-            evap  = [solu(t).accum.cum_d_evap for t in days], # evap is sum of irvp, isvp, snvp, slvp, sum(trani)
-            flow  = [solu(t).accum.flow for t in days],       # flow is sum of byfli, dsfli, gwfl
+            evap  = [solu(t).accum.evap for t in days], # evap is sum of irvp, isvp, snvp, slvp, sum(trani)
+            flow  = [solu(t).accum.flow for t in days], # flow is sum of byfli, dsfli, gwfl
             seep  = [solu(t).accum.seep for t in days],
             gwat  = [solu(t).GWAT.mm for t in days], # storage
             snow  = [solu(t).SNOW.mm for t in days], # storage
@@ -1324,7 +1324,7 @@ function get_water_partitioning(simulation::DiscretizedSPAC;)
     # Compute ETa, Es, Esn, Ei, Ta, P, Td, D, R, Swat
     df_partitioning_daily = @chain df_partitioning_raw begin
         @rtransform begin
-            :ETa           = :cum_d_evap # is actual evapotranspiration, i.e. sum of IRVP + ISVP + SNVP + SLVP + sum(aux_du_TRANI)
+            :ETa           = :evap # is actual evapotranspiration, i.e. sum of IRVP + ISVP + SNVP + SLVP + sum(aux_du_TRANI)
             :Esoil         = :cum_d_slvp
             :Esnow         = :cum_d_snvp
             :Einterception = :cum_d_irvp + :cum_d_isvp

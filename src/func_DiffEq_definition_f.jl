@@ -194,7 +194,6 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
             du.accum.cum_d_rnet     = 0 # was computed in callback
             du.accum.cum_d_smlt     = 0 # was computed in callback
 
-            du.accum.cum_d_evap     = 0 # was computed in callback
             du.accum.cum_d_tran     = 0 # was computed in callback
             du.accum.cum_d_irvp     = 0 # was computed in callback
             du.accum.cum_d_isvp     = 0 # was computed in callback
@@ -204,6 +203,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
             du.accum.cum_d_ptran    = 0 # was computed in callback
             du.accum.cum_d_pslvp    = 0 # was computed in callback
 
+            du.accum.evap           = 0 # was computed in callback
             du.accum.flow           = p_fu_SRFL[1] +
                                         sum(aux_du_BYFLI) +
                                         sum(aux_du_DSFLI) +
