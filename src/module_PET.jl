@@ -257,7 +257,7 @@ function CANOPY_snowCover(p_fT_HEIGHT,
     return (p_fu_HEIGHTeff, p_fu_LAIeff)
 end
 
-"""
+@doc raw"""
 
     ROUGH()
 
@@ -556,7 +556,7 @@ end
 
 
 
-"""
+@doc raw"""
     SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, p_fu_RSS, DELTA)
 
 Compute Shuttleworth and Wallace (1985) transpiration and ground evaporation.
@@ -674,7 +674,7 @@ function SWPE(AA, ASUBS, VPD, RAA, RAC, RAS, RSC, p_fu_RSS, DELTA)
     return (PRATE, ERATE)
 end
 
-"""
+@doc raw"""
     SWGE()
 
 Compute ground evaporation rate (mm/d) using Shuttleworth-Wallace with known transpiration.
@@ -909,7 +909,7 @@ function FRSS(p_RSSA, p_RSSB, u_aux_PSIM, p_soil)
     return FRSS
 end
 
-"""
+@doc raw"""
 SRSC()
 
 Compute canopy surface resistance.
