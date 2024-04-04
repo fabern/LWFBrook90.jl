@@ -1024,7 +1024,8 @@ end
 # Functions to get values linked to soil domain:
 function get_soil_idx(simulation::DiscretizedSPAC, depths_to_read_out_mm; only_valid_idxs = false)
     @assert all(depths_to_read_out_mm .> 0) # depths and lower_boundaries must all be positive numbers
-    lower_boundaries = cumsum(simulation.ODESolution.prob.p.p_soil.p_THICK)
+    lower_boundaries = round.(Int, cumsum(simulation.ODESolution.prob.p.p_soil.p_THICK))      # NOTE: this rounds hardcoded to mm
+    # center = round.(Int, lower_boundaries - 0.5*simulation.ODESolution.prob.p.p_soil.p_THICK) # NOTE: this rounds hardcoded to mm
 
     idx_to_read_out = fill(0, length(depths_to_read_out_mm))
     for (it, curr_depth_mm) in enumerate(depths_to_read_out_mm)
@@ -1038,7 +1039,7 @@ function get_soil_idx(simulation::DiscretizedSPAC, depths_to_read_out_mm; only_v
     end
     all_idxs = Dict((d => i) for (d,i) in zip(depths_to_read_out_mm, idx_to_read_out))
     if only_valid_idxs
-        return valid_idxs = collect(values(all_idxs))[values(all_idxs) .!= 0]
+        return filter((k, v)::Pair -> v != 0, all_idxs)
     else # default
         return all_idxs
     end

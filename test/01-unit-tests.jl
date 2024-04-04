@@ -942,7 +942,7 @@ end
     @test_logs (:warn, r"below simulation domain") LWFBrook90.get_soil_idx(simulation, depths_to_test_mm)
     idx_to_read_out = LWFBrook90.get_soil_idx(simulation, depths_to_test_mm)
     @test idx_to_read_out == Dict(
-        150  => 3, 100  => 2, 200  => 4, 300  => 6, 400  => 8, 1000 => 21,
+        150  => 3, 100  => 2, 200  => 4, 300  => 6, 400  => 8, 1000 => 20,
         1200 => 0) # 1200 is below the simulation domain!
     valid_idx_to_read_out = LWFBrook90.get_soil_idx(simulation, depths_to_test_mm; only_valid_idxs = true)
 
