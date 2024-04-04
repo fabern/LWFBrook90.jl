@@ -1176,6 +1176,7 @@ The user can define timesteps as `days_to_read_out_d` or specific depths as `dep
 that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `saveat = 1:1.0:100`
 """
  # TODO get rid of get_θ, get_ψ, ... etc. and replace them with get_soil_(:ψ)
+ # TODO(bernhard): get rid of all uses of get_auxiliary_variables(solution::ODESolution; days_to_read_out_d = nothing)
 function get_δsoil(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
     solution = simulation.ODESolution
     @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
@@ -1328,11 +1329,11 @@ function get_water_partitioning(simulation::DiscretizedSPAC;)
             :Esnow         = :cum_d_snvp
             :Einterception = :cum_d_irvp + :cum_d_isvp
             :Ta            = :cum_d_tran
-            :Precip             = :cum_d_prec
+            :Precip        = :cum_d_prec
             :Td            = :cum_d_ptran - :cum_d_tran
             :D             = - :vrfln
-            # :R1             = -(:flow - :vrfln)    # flow = srfl+byfl+dsfli+gwfl, gwfl, vrfln
-            :R            = -(:srfl + :byfl + :dsfl) # This is more correctly not accounting for gwfl, thereby excluding state variable GWAT from the balance
+            # :R1          = -(:flow - :vrfln)    # flow = srfl+byfl+dsfli+gwfl, gwfl, vrfln
+            :R             = -(:srfl + :byfl + :dsfl) # This is more correctly not accounting for gwfl, thereby excluding state variable GWAT from the balance
             :Swat          = :StorageSWAT
         end
         @transform :year = year.(:date)

@@ -300,11 +300,15 @@ method that Choudhury and Monteith (1988) developed from curves of Shaw and Pere
 A drag coefficient per unit leaf area and stem area, cd (CDRAG), is calculated from z0c and
 dc as
 
-(23) cd = { -1 + exp [ 0.909 - 3.03 ( z0c / h ) ] } 4 / (Lpc + Spc) .
+```math
+(23)\qquad c_d = 4 \frac{(-1 + \exp(0.909 - 3.03 \frac{z_{0c}}{h} )}{(L_{pc} + S_{pc})} .
+```
 
 This assumes that a unit of Spc produces the same drag as a unit of Lpc. Then
 
-(24) d = 1.1 h ln { 1 + [ cd ( Lp + Sp ) ] 0.25 }.
+```math
+(24)\qquad d = 1.1 h \ln(1 + (c_d(L_p+S_p))^{0.25}).
+```
 
 Shuttleworth and Gurney (1990) also used this approach, but assumed a constant cd of 0.07,
 which is not appropriate when z0c / h is not 0.13.
@@ -314,7 +318,9 @@ canopy value of 0.3 (h - d), depending on a fixed value of cd Lp. However, that 
 leads to a step change at the transition. The step change is avoided by choosing the minimum
 of the two z0 values, as
 
-(25) z0 = min { 0.3 ( h - d ), z0g + 0.3 h [ cd ( Lp+ Sp) ] 0.5 }
+```math
+(25)\qquad z_0 = \min(0.3(h-3), z_{0g} + 0.3 h (c_d(L_p+S_p))^{0.5})
+```
 
 where z0g is the roughness parameter of the ground surface. When a snowpack is present, the
 value of z0g is replaced by the parameter Z0S before ROUGH is entered.
@@ -573,10 +579,17 @@ resistances rac, ras, and raa are assumed also to apply to sensible heat transfe
 
 Shuttleworth and Wallace (1985) start with
 
-(2) Lv ρw E = Lv ρw Ec + Lv ρw Es
+```math
+(2)\qquad L_v ρ_w E = L_v ρ_w E_c + L_v ρ_w E_s
+```
 
 where Ec is transpiration and Es is soil evaporation, then write an equation similar to (1)
 for each term
+
+```math
+(3)\qquad L_v ρ_w E_c = \frac{Δ(A-A_s) + c_p ρ D_0/r_a^c}{Δ + γ + γ \frac{r_s^c}{r_a^c}}\\
+(4)\qquad L_v ρ_w E_s = \frac{Δ(A-A_s) + c_p ρ D_0/r_a^s}{Δ + γ + γ \frac{r_s^s}{r_a^s}}
+```
 
 where D0 is the vapor pressure deficit at the effective source height, A is Rn - S or the
 available energy above the canopy, and As is Rns - S or the available energy at the ground.
@@ -590,6 +603,11 @@ Algebraic manipulation of (2), (3), and (4) to eliminate D0 leads to:
 (6) Lv ρw E = Cc Mc + Cs Ms
 
 where
+
+```math
+(7)\qquad M_C = \frac{ΔA + \frac{c_p ρ D_a - Δ r_a^cA_s}{r_a^a + r_a^c}}{Δ + γ + \frac{γ r_s^c}{r_a^a + r_a^c}}\\
+(8)\qquad M_S = \frac{ΔA + \frac{c_p ρ D_a - Δ r_a^s(A-A_s)}{r_a^a + r_a^s}}{Δ + γ + \frac{γ r_s^s}{r_a^a + r_a^s}}
+```
 
 
 (9) Cc = 1 / { 1 + Rc Ra / [ Rs ( Rc + Ra ) ] }
@@ -668,9 +686,13 @@ soil evaporation. When transpiration is reduced by low availability of soil wate
 zero, BROOK90 uses the new value of transpiration, Ec (ARATE), in subroutine SWGE to get a
 new value of soil evaporation, Es (ERATE). With Ec known, substituting (5) into (4) and (4)
 into (2) and solving for Lv ρw E gives
-(14) ...
+```math
+(14)\qquad L_v ρ_w E = \frac{R_s}{R_s + R_a}L_v ρ_w E_c + \frac{c_p ρ D_a + Δr_a^s A_s + Δr_a^a A}{R_s + R_a}
+```
 then
-(15) Lv ρw Es = Lv ρw E - Lv ρw Ec
+```math
+(15)\qquad L_v ρ_w E_s = L_v ρ_w E - L_v ρ_w E_c
+```
 "
 """
 function SWGE(AA, ASUBS, VPD, RAA, RAS, p_fu_RSS, DELTA, ARATE) # RAC, RSC not needed because we have known transpiration rate
@@ -715,7 +737,7 @@ given here.
 The friction velocity, u*, is first obtained from the classic logarithmic wind profile as
 
 ```math
-(16) u^* = \frac{ k u_a }{ \log((z_a-d)/z_{0}) }
+(16)\qquad u^* = \frac{ k u_a }{ \log((z_a-d)/z_{0}) }
 ```
 
 where ua is the wind speed at the reference height, za, z0 is the surface roughness
@@ -735,7 +757,7 @@ in subroutine ROUGH. The ground to source height resistance, ras, is obtained by
 the exponential eddy diffusivity from 0 to ``D_c`` to give
 
 ```math
-(17) r_a^s = \frac{h \exp(n)}{ n K_h} \left(
+(17)\qquad r_a^s = \frac{h \exp(n)}{ n K_h} \left(
         \exp\left( \frac{-n z_{0g} }{h} \right)  -
         \exp\left( \frac{-n D_c }{h}    \right)
     \right)
@@ -745,7 +767,7 @@ and the source height to reference height resistance, raa, is obtained by integr
 ``D_c`` to ``z_a`` as
 
 ```math
-(18) r_a^a = \frac{ \log( \frac{z_a-d}{h-d} ) }{k u^*} +
+(18)\qquad r_a^a = \frac{ \log( \frac{z_a-d}{h-d} ) }{k u^*} +
         \frac{h}{n K_h} \left(
             -1 + \exp\left( n \frac{h-D_c}{h} \right)
         \right),
@@ -755,7 +777,7 @@ where n is the extinction coefficient for eddy diffusivity, ``z_{0g}`` is the ro
 of the underlying ground surface, and the eddy diffusivity at the canopy height, h, is
 
 ```math
-(19) K_h = k u^* (h-d).
+(19)\qquad K_h = k u^* (h-d).
 ```
 
 The exponential wind profile and the derived K(z) are known to be incorrect in canopies of
@@ -766,12 +788,12 @@ The leaf to zero plane resistance, rac, is assumed by Shuttleworth and Gurney (1
 sum of the individual leaf laminar boundary layer conductances, so
 
 ```math
-(20) r_a^c = \frac{r_b}{ρtp L_p}
-           = \frac{1}{ρtp L_p}
+(20)\qquad r_a^c = \frac{r_b}{ρt_p L_p}
+           = \frac{1}{ρ t_p L_p}
               \frac{
                     \frac{n}{ab} \left( \frac{w}{u_h} \right)^{1/2}
                 }{
-                    \left( 1 - \exp( -n / 2 ) \right)
+                    \left( 1 - \exp( -\frac{n}{2}) \right)
                 },
 ```
 
@@ -784,7 +806,7 @@ leaves and needles, not to cylindrical needles; but ``r_a^c`` is small when w is
 inaccuracy is negligible. The canopy-top wind speed, uh, is
 
 ```math
-(21) u_h = (u^* / k) \log\left( \frac{h-d}{z_0} \right).
+(21)\qquad u_h = (u^* / k) \log\left( \frac{h-d}{z_0} \right).
 ```
 
 In the Shuttleworth and Gurney equation, rac goes to infinity as Lp goes to zero, but this
@@ -836,7 +858,7 @@ function SWGRA(UA, p_fu_ZA, p_fu_HEIGHT, p_fu_Z0, p_fu_DISP, p_fu_Z0C, p_fu_DISP
     RAC = RB / (p_RHOTP * p_fu_LAI + p_PI * p_fu_SAI)
 
     # note LAI is prevented from being less than 1E-5
-    return (RAA, RAC, RAS)
+    return (RAA, RAC, RAS) # all three in s/m
 end
 
 """
@@ -922,7 +944,9 @@ assumptions about how gp was obtained.
 Stomates open and close in response to several external and internal variables. Jarvis
 (1976) proposed that the effects could be considered as multiplicative such that
 
-(26) gl = glmin + fT fD fR fW fC ( glmax - glmin )
+```math
+(26)\qquad g_l = g_{lmin} + (g_{lmax} - g_{lmin}) f_T f_D f_R f_W f_C
+```
 
 where gl is the leaf conductance, glmin is its minimum value (closed stomates), glmax is its
 maximum value, and fT, fD, fR, fW, and fC are reduction factors, varying between 0 and 1,
@@ -946,8 +970,17 @@ reduced both by low and high temperatures. BROOK90 uses a slightly simpler respo
 consisting of an optimum temperature range with fT = 1 and inverted half parabolas to reduce
 fT to 0 at each end of the range, so
 
-  (27)  fT = 0      Ta < TL fT = 1 - [ (T1 - Ta) / (T1 - TL) ]2         TL < Ta < T1 fT = 1
-T1 < Ta < T2 fT = 1 - [ (Ta - T2) / (TH - T2) ]2     T2 < Ta < TH fT = 0      Ta > TH TL,
+```math
+(27)\\
+\begin{aligned}
+f_T &= 0                                 &\text{if }      &T_a <T_L \\
+f_T &= 1-(\frac{T_1-T_a}{T_1-T_L})^2     &\text{if }T_L < &T_a < T_1\\
+f_T &= 1                                 &\text{if }T_1 < &T_a < T_2 \\
+f_T &= 1-(\frac{T_a-T_2}{T_H-T_2})^2     &\text{if }T_2 < &T_a < T_H\\
+f_T &= 0                                 &\text{if }T_H < &T_a \\
+\end{aligned}
+```
+
 T1, T2, and TH are all parameters. If T1 = T2, there is no optimum range. If TL = T1 and T2
 = TH, fT is a square wave function. The use of mean daily temperature, Ta, here instead of
 some other temperature like minimum daily temperature is arbitrary. The actual temperature
@@ -961,7 +994,9 @@ The error induced by using Da is certainly not larger than the uncertainty in th
 of the vapor deficit response for most species. Jarvis (1976) assumed a linear conductivity
 response, but Lohammar et al. (1980) suggest a linear resistance response such that
 
-(28) fD = cD / ( cD + Da )
+```math
+(28)\qquad f_D = c_D / ( c_D + D_a )
+```
 
 where cD (CVPD) is a constant, which is the Da at which fD = 0.5. This has the advantage of
 approaching 0 as an asymptote when Da is large.
@@ -970,12 +1005,16 @@ For fR also, several functional forms have been used. BROOK90 uses the form give
 (1988) in which fR = 1 when solar radiation incident on the leaf, RL, is equal to its
 nominal maximum value, Rm (1000 W/m2), so
 
-(29) fR = (Rm + R0) RL / [ Rm (R + R0) ]
+```math
+(29)\qquad f_R = \frac{(R_m+R_0)R_L}{R_m(R+R_0)}
+```
 
 and R0 is a second parameter. A more convenient parameter than R0 is R.5, defined as the
 radiation level at which fR = 0.5. Then from (29)
 
-(30) R0 = Rm / [ ( Rm / R.5 ) - 2 ]
+```math
+(30)\qquad R_0 = \frac{R_m}{\frac{R_m}{R_{.5}} - 2}
+```
 
 For most plants, the value of R.5 is relatively low, around 50 to 100 W/m2. In these
 expressions, the solar radiation at the leaf is used, whereas the stomatal opening is
@@ -987,11 +1026,15 @@ to quote my ancient Ph.D. work here!).
 The canopy conductance, gsc, which is the reciprocal of rsc, is the integral of gl over each
 increment of total leaf area in the canopy , dL' , so
 
-
+```math
+(31)\qquad g_{sc} = \frac{1}{r_{sc}} = \int_0^{L_p} g_l dL'
+```
 
 With (26), where fT, fD, and glmax are all assumed constant through the canopy, (31) becomes
 
-
+```math
+(32)\qquad \frac{1}{r_c} = g_c = L_p g_{lmin} + f_T f_D(g_{lmax} - g_{lmin}) \int_0^{L_p} fR dL'
+```
 
 where fR is the only variable that depends on location in the canopy.
 
@@ -1000,7 +1043,9 @@ canopy. A Beer's Law or exponential extinction is commonly used, such that the a
 radiation flux density on the leaf surface, RL, at any level in the canopy depends on the
 projected leaf area, L', and projected stem area, S', above that level, as follows:
 
-(33) RL = CR R exp [ -CR ( L' + S' ) ]
+```math
+(33)\qquad R_L = C_R R exp(-C_R (L' + S'))
+```
 
 where CR is the extinction coefficient and R is the solar radiation at the top of the
 canopy. The first CR accounts for leaf inclination assuming random azimuthal distribution
@@ -1011,7 +1056,9 @@ proportionally to L' (and the other half is below the leaves in a "stem space"),
 S' = L' + (L'/Lp)(Sp/2) = fs L' where fs = (Lp + Sp/2) / Lp. The integral in (32) using (29)
 and (33) is then
 
-
+```math
+(34)\qquad \int_0^{L_p} f_R dL' = \frac{R_m+R_0}{f_S R_m C_R} \ln(\frac{R_0 + C_R R}{R_0 + C_R R exp(-C_R f_SL_p)})
+```
 
 which corresponds to Shuttleworth and Gurney (1990) and Saugier and Katerji (1991) when Sp =
 0. The combination of (32) and (34) provides the value of rsc (RSC)
@@ -1023,8 +1070,8 @@ function SRSC(RAD, p_fT_TA, VPD, p_fu_LAI, p_fu_SAI, p_GLMIN, p_GLMAX, p_R5, p_C
     # VPD     - vapor pressure deficit, kPa
     # LAI     - projected leaf area index
     # SAI     - projected stem area index
-    # GLMIN   - minimum leaf conductance, closed stomates, all sides, s/m
-    # GLMAX   - maximum leaf conductance, open stomates, all sides, s/m
+    # GLMIN   - minimum leaf conductance, closed stomates, all sides, m/s
+    # GLMAX   - maximum leaf conductance, open stomates, all sides, m/s
     # R5      - solar radiation at which conductance is halved, W/m2
     # CVPD    - vpd at which leaf conductance is halved, kPa
     # RM      - maximum solar radiation, at which FR = 1, W/m2
@@ -1084,7 +1131,7 @@ L_v ρ_w E = \frac{r_a \cdot Δ \cdot(Rn - S) + c_p ρ D_a}{r_a \cdot (Δ + γ) 
 where E is the evaporation rate in volume of water per unit land area per unit time, Lv is
 the latent heat of vaporization for water, ρw is the density of water, Δ is the rate of
 change of vapor pressure with temperature, Rn is the net radiation above the surface, S is
-the subsurface heat flux, cp is the heat capacity of air, ρr is the density of air, Da is
+the subsurface heat flux, cp is the heat capacity of air, ρ is the density of air, Da is
 the vapor pressure deficit in the air, γ is the psychrometer constant, rc is the "canopy
 resistance", and ra is the aerodynamic resistance between the canopy and a reference height
 za at which Da is measured. The vapor pressure deficit, Da, is ea* - ea. The equation

@@ -135,8 +135,8 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
     ### Vegetation conductivity
     p_MXKPL  = parametrizedSPAC.pars.params[:MXKPL]  # (Canopy parameter), maximum plant conductivity, mm d-1 MPa-1.
     p_FXYLEM = parametrizedSPAC.pars.params[:FXYLEM] # (Canopy parameter), fraction of plant resistance that is in the xylem (above ground) and not in the roots, (0-1)
-    p_GLMAX  = parametrizedSPAC.pars.params[:GLMAX]  # (Canopy parameter), maximum leaf conductance, cm/s
-    p_GLMIN  = parametrizedSPAC.pars.params[:GLMIN]  # (Canopy parameter), minimum leaf conductance, cm/s
+    p_GLMAX  = parametrizedSPAC.pars.params[:GLMAX]  # (Canopy parameter), maximum leaf conductance, m/s
+    p_GLMIN  = parametrizedSPAC.pars.params[:GLMIN]  # (Canopy parameter), minimum leaf conductance, m/s
     ### Stomatal regulation
     p_TH     = parametrizedSPAC.pars.params[:TH]     # (Canopy parameter), temperature controlling closing of stomates,°C
     p_T1     = parametrizedSPAC.pars.params[:T1]     # (Canopy parameter), temperature controlling closing of stomates,°C
