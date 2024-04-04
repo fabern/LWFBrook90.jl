@@ -23,7 +23,6 @@ export Rootden_
 export RelativeDaysFloat2DateTime
 # read out results for soil domain variables
 export get_soil_
-export get_deltasoil, get_theta, get_psi
 # read out results for aboveground/scalar variables
 export get_amounts, get_δ, get_delta # get_mm # # TODO(bernhard): make sure we have documentation for these exported variables
     #TODO: rename above to: export get_scalarState_amounts, get_scalarState_signatures and update documentation in examples/example-script-01.jl

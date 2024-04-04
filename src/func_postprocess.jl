@@ -1162,43 +1162,6 @@ function get_soil_(
     end
 end
 
-
-"""
-    get_δsoil(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
-
-Returns tuple of two 2D matrices of isotopic signatures of soil water (δ in permil) for d18O and d2H.
-The 2D matrix with soil layers as rows and time steps as columns can be accessed with `.d18O` and `.d2H`, respectively.
-The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
-that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `saveat = 1:1.0:100`
-"""
- # TODO get rid of get_θ, get_ψ, ... etc. and replace them with get_soil_(:ψ)
- # TODO(bernhard): get rid of all uses of get_auxiliary_variables(solution::ODESolution; days_to_read_out_d = nothing)
-function get_δsoil(simulation::DiscretizedSPAC; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
-    solution = simulation.ODESolution
-    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
-    @assert solution.prob.p.simulate_isotopes "Provided solution did not simulate isotopes"
-
-    # get auxiliary variables with requested time resolution (i.e. days_to_read_out_d)
-    if isnothing(days_to_read_out_d)
-        # vector quantities δ-values:
-        rows_SWAT_d18O = reduce(hcat, [solution[t_idx].SWATI.d18O for t_idx = eachindex(solution)])
-        rows_SWAT_d2H  = reduce(hcat, [solution[t_idx].SWATI.d2H  for t_idx = eachindex(solution)])
-    else
-        # vector quantities δ-values:
-        rows_SWAT_d18O = reduce(hcat, [solution(t_days).SWATI.d18O for t_days = days_to_read_out_d])
-        rows_SWAT_d2H  = reduce(hcat, [solution(t_days).SWATI.d2H  for t_days = days_to_read_out_d])
-    end
-    # return requested soil layers
-    if isnothing(depths_to_read_out_mm)
-        return (d18O = rows_SWAT_d18O[:, :],
-                d2H  = rows_SWAT_d2H[ :, :])
-    else
-        idx_soil_layers = get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = true)
-        return (d18O = rows_SWAT_d18O[idx_soil_layers, :],
-                d2H  = rows_SWAT_d2H[ idx_soil_layers, :])
-    end
-end
-
 ##########################
 # Functions to get values either isotopes or amounts (or otherwise)
 """
@@ -1233,6 +1196,7 @@ function get_δ(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
 
     return hcat(dfd18O, dfd2H[:, Not(:time)])
 end
+get_delta = get_δ
 # get_δ(simulation)[:,:PREC_d2H]
 # get_δ(simulation).PREC_d18O
 # get_δ(simulation)
