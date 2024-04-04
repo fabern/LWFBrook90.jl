@@ -1071,18 +1071,19 @@ end
     get_soil_(symbols, simulation; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing))
 
 Returns a 2D DataFrame of soil variables with soil layers as columns and time steps as rows.
-Supports a number of varaibles:
+Supports a number of variables:
     - `:θ` (= `:theta`) = volumetric soil moisture values (m3/m3)
     - `:ψ` (= `:psi`) = soil matric potential (kPa)
     - `:W` = soil wetness (-)
     - `:SWATI` = soil water volumes contained in discretized layers (mm)
     - `:K` = soil hydraulic conductivities (mm/day)
+    - `:δ18O`, `:δ2H`, `:d18O`, `:d2H` = isotopic signatures (delta)
 The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
 that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `days_to_read_out_d = 1:1.0:100`
 
 Function to read out soil variables from a simulated simulation.
 - `symbols`: can be a single symbol (:θ) or a vector of symbols [:θ] or [:θ, :ψ, :δ18O, :δ2H, :W, :SWATI, :K]
-    - Please note that also non-Unicode symbols are accepted: e.g. [:theta, :psi, :delta18O, :delta2H]
+    - Please note that also non-Unicode symbols are accepted: e.g. [:theta, :psi, :delta18O, :delta2H, :d18O, :d2H]
 - `simulation`: is a `DiscretizedSPAC` that has been simulated.
 - `depths_to_read_out_mm`: either `nothing` or vector of Integers.
 - `days_to_read_out_d`: either  `nothing` or vector of Floats representing days.
@@ -1127,28 +1128,28 @@ function get_soil_(
     df[:, :time] = timepoints
 
     # Fill DataFrame with requested soil layers and requested variables
-    idxs = (isnothing(depths_to_read_out_mm) ? nothing : LWFBrook90.get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = false))
+    if isnothing(depths_to_read_out_mm)
+        lower_boundaries = round.(Int, cumsum(simulation.ODESolution.prob.p.p_soil.p_THICK))      # NOTE: this rounds hardcoded to mm
+        # center = round.(Int, lower_boundaries - 0.5*simulation.ODESolution.prob.p.p_soil.p_THICK) # NOTE: this rounds hardcoded to mm
+        depths_to_read_out_mm = lower_boundaries
+    end
+    idxs = LWFBrook90.get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = true)
     for symbol in sort(symbols)
         variable_to_return = (
-            symbol == :θ      ? u_aux_θ :      symbol == :theta    ? u_aux_θ :      # also accept non-unicode
-            symbol == :ψ      ? u_aux_PSIM :   symbol == :psi      ? u_aux_PSIM :   # also accept non-unicode
+            symbol in [:θ, :theta              ] ? u_aux_θ :      # also accept non-unicode
+            symbol in [:ψ, :psi                ] ? u_aux_PSIM :   # also accept non-unicode
             # symbol == :ψtot ? u_aux_PSITI :
-            symbol == :δ18O   ? u_SWATI_d18O : symbol == :delta18O ? u_SWATI_d18O : # also accept non-unicode
-            symbol == :δ2H    ? u_SWATI_d2H :  symbol == :delta2H  ? u_SWATI_d2H :  # also accept non-unicode
-            symbol == :W      ? u_aux_WETNES :
-            symbol == :SWATI  ? u_SWATI :
-            symbol == :K      ? p_fu_KK :
+            symbol in [:δ18O, :delta18O, :d18O ] ? u_SWATI_d18O : # also accept non-unicode
+            symbol in [:δ2H,  :delta2H,  :d2H  ] ? u_SWATI_d2H  : # also accept non-unicode
+            symbol in [:W                      ] ? u_aux_WETNES :
+            symbol in [:SWATI                  ] ? u_SWATI :
+            symbol in [:K                      ] ? p_fu_KK :
             error("Unknown symobl $(symbol) requested in `get_soil_()`"))
 
         # Add columns
-        if isnothing(depths_to_read_out_mm)
-            # append all layers with generic column titles
-            df = [df DataFrame(permutedims(variable_to_return[:, :]), string(symbol) .* "_Lay" .* string.(1:size(variable_to_return, 1)))]
-        else
-            # append requested layers with the depths as column titles
-            [df[:, Symbol("$(string(symbol))_$(Int(k))mm")] = variable_to_return[v,:] for
-                (k,v) in sort(collect(idxs)) if v != 0]; # Note we sort the idxs by depth
-        end
+        # append requested layers with the depths as column titles
+        [df[:, Symbol("$(string(symbol))_$(Int(k))mm")] = variable_to_return[v,:] for
+            (k,v) in sort(collect(idxs)) if v != 0]; # Note we sort the idxs by depth
     end
 
     # Return as DataFrame or Matrix (latter is to support legacy code)

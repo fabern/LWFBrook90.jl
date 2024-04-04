@@ -55,7 +55,7 @@ function get_some_states_to_compare(example_result)
     ## vector quantities
     u_belowground = get_soil_([:SWATI, :W, :ψ, :θ, :K, :δ18O, :δ2H], example_result;
         days_to_read_out_d = t_out)
-    u_belowground = u_belowground[:,Not(r"(K_Lay)|(W_Lay)")]
+    u_belowground = u_belowground[:,Not(r"(K_)|(W_)")]
 
     return u_mm, u_δ, u_belowground
     # return t_out, u_ref_names, mat_aboveground, u_δ, u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_θ, p_fu_KK, u_δsoil_d18O, u_δsoil_d2H
