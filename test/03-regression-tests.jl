@@ -287,7 +287,6 @@ function plot_simulated_fluxes_vs_reference(simulated_fluxes_arg, reference_arg;
         Plots.plot(d_out, [simulated_fluxes.cum_d_rsno      reference["cum_d_rsno"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_rsno", kwargs...),
         Plots.plot(d_out, [simulated_fluxes.cum_d_rnet      reference["cum_d_rnet"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_rnet", kwargs...),
         Plots.plot(d_out, [simulated_fluxes.cum_d_smlt      reference["cum_d_smlt"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_smlt", kwargs...),
-        Plots.plot(d_out, [simulated_fluxes.cum_d_evap      reference["cum_d_evap"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_evap", kwargs...),
         Plots.plot(d_out, [simulated_fluxes.cum_d_tran      reference["cum_d_tran"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_tran", kwargs...),
         Plots.plot(d_out, [simulated_fluxes.cum_d_irvp      reference["cum_d_irvp"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_irvp", kwargs...),
         Plots.plot(d_out, [simulated_fluxes.cum_d_isvp      reference["cum_d_isvp"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_isvp", kwargs...),

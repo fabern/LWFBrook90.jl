@@ -951,7 +951,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
     #     # plot!(twinx(), simulation.ODESolution_datetime, simulation.ODESolution.prob.p.p_HEIGHT.(t2))               #;labels = "p_HEIGHT [-]")
 
     # 1a) ii) states (scalar and vector)
-    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) = LWFBrook90.get_auxiliary_variables(simulation.ODESolution)
+    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) = LWFBrook90.get_auxiliary_variables(simulation)
 
     x3 = simulation.ODESolution_datetime;
     y31 = hcat(reduce(hcat, [simulation.ODESolution(t).INTR.mm   for t in simulation.ODESolution.t])',
@@ -1048,10 +1048,6 @@ function get_auxiliary_variables(simulation::DiscretizedSPAC; days_to_read_out_d
     solution = simulation.ODESolution
     @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
 
-    get_auxiliary_variables(solution; days_to_read_out_d = days_to_read_out_d)
-end
-# TODO(bernhard): get rid of all uses of get_auxiliary_variables(solution::ODESolution; days_to_read_out_d = nothing)
-function get_auxiliary_variables(solution::ODESolution; days_to_read_out_d = nothing)
     p_soil = solution.prob.p.p_soil
     NLAYER = p_soil.NLAYER
     if isnothing(days_to_read_out_d)
