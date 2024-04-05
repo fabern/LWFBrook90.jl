@@ -1,3 +1,7 @@
+#######
+####### Public facing API: getting simulation results ======================================
+#######
+
 @doc raw"""
     get_states(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
 
@@ -24,7 +28,7 @@ Returns:
        2 │ 2021-01-02T00:00:00         0.0      1.0  0.0        0.0           0.0     0.0          0.0          -15.04   -12.5973     -15.04     -15.04     -15.04    -10.1111            -10.1111           -10.1111           -10. ⋯ -6.43
 """
 function get_states(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) # returns scalar states GWAT, INTS, INTR, SNOW, CC (amount only), SNOWLQ (amount only), XYLEM (signature only)
-    # TODO: replace undocumented get_scalars() with get_states(), get_fluxes(), and get_forcing()
+    # TODO: replace undocumented intern___get_scalars() with get_states(), get_fluxes(), and get_forcing()
     timepoints =
         isnothing(days_to_read_out_d)           ? unique(round.(simulation.ODESolution.t)) : # case nothing: return daily by default
         days_to_read_out_d == :integrator_step  ? simulation.ODESolution.t :                 # if requested return for each integration step stored in ODESolution
@@ -35,15 +39,15 @@ function get_states(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
     simulate_isotopes = simulation.parametrizedSPAC.solver_options.simulate_isotopes
 
     states = hcat(
-        LWFBrook90.get_scalars(
+        LWFBrook90.intern___get_scalars(
             [:PREC, :GWAT, :INTS, :INTR, :SNOW, :CC, :SNOWLQ],
             [:mmday, :mm, :mm, :mm, :mm, :MJm2, :mm],
             simulation, timepoints),
-        !simulate_isotopes ? DataFrame() : LWFBrook90.get_scalars(
+        !simulate_isotopes ? DataFrame() : LWFBrook90.intern___get_scalars(
             [:PREC, :GWAT, :INTS, :INTR, :SNOW, :XYLEM], # , :RWU
             [:d18O, :d18O, :d18O, :d18O, :d18O, :d18O],  # , :d18O
             simulation, timepoints)[:,Not(:time)],
-        !simulate_isotopes ? DataFrame() : LWFBrook90.get_scalars(
+        !simulate_isotopes ? DataFrame() : LWFBrook90.intern___get_scalars(
             [:PREC, :GWAT, :INTS, :INTR, :SNOW, :XYLEM], # , :RWU
             [:d2H,  :d2H,  :d2H,  :d2H,  :d2H,  :d2H],   # , :d2H
             simulation, timepoints)[:,Not(:time)]) # alternatively innerjoin on = [:time])
@@ -155,7 +159,7 @@ function get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
 
     # 3) scalar fluxes, signatures
     simulate_isotopes = simulation.parametrizedSPAC.solver_options.simulate_isotopes
-    df_scalar_signatures = !simulate_isotopes ? DataFrame() : LWFBrook90.get_scalars(
+    df_scalar_signatures = !simulate_isotopes ? DataFrame() : LWFBrook90.intern___get_scalars(
         [:RWU, :PREC, :RWU, :PREC, :RWU],
         [:mmday,:d18O, :d18O, :d2H, :d2H],
         simulation, timepoints)[:,Not(:time)]
@@ -265,7 +269,7 @@ function get_forcing(simulation::DiscretizedSPAC) # returns forcing [..., ..., .
         :sai_m2m2                => p_fT.p_SAI.(timepoints))
 
         # # ii) states (scalar and vector)
-        # (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) = LWFBrook90.get_auxiliary_variables(simulation)
+        # (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) = LWFBrook90.intern___get_SWATI_derivatives(simulation)
         # timepoints_states = simulation.ODESolution.t
         # # x3 = simulation.ODESolution_datetime;
         # x3 = RelativeDaysFloat2DateTime.(timepoints_states, t_ref);
@@ -284,55 +288,6 @@ function get_forcing(simulation::DiscretizedSPAC) # returns forcing [..., ..., .
         # y41 = hcat(  reduce(hcat, [simulation.ODESolution(t).RWU.mmday   for t in simulation.ODESolution.t])',
         #                                     sum(reduce(hcat, [simulation.ODESolution(t).TRANI.mmday   for t in simulation.ODESolution.t]); dims=1)')
         # lbl41 = ["RWU (mm/day)" "sum(TRANI)"]
-end
-
-
-
-##########################
-# Functions to get values linked to soil domain:
-function get_soil_idx(simulation::DiscretizedSPAC, depths_to_read_out_mm; only_valid_idxs = false)
-    @assert all(depths_to_read_out_mm .> 0) # depths and lower_boundaries must all be positive numbers
-    lower_boundaries = round.(Int, cumsum(simulation.ODESolution.prob.p.p_soil.p_THICK))      # NOTE: this rounds hardcoded to mm
-    # center = round.(Int, lower_boundaries - 0.5*simulation.ODESolution.prob.p.p_soil.p_THICK) # NOTE: this rounds hardcoded to mm
-
-    idx_to_read_out = fill(0, length(depths_to_read_out_mm))
-    for (it, curr_depth_mm) in enumerate(depths_to_read_out_mm)
-        if (curr_depth_mm > maximum(lower_boundaries))
-            # Only read out values that are within the simulation domain
-            idx_to_read_out[it] = 0 # 0 means this depth has not been simulated
-            @warn "Requested read-out depth of $curr_depth_mm is below simulation domain and is silently omitted for the output."
-        else
-            idx_to_read_out[it] = findfirst(curr_depth_mm .<= lower_boundaries)
-        end
-    end
-    all_idxs = Dict((d => i) for (d,i) in zip(depths_to_read_out_mm, idx_to_read_out))
-    if only_valid_idxs
-        return filter((k, v)::Pair -> v != 0, all_idxs)
-    else # default
-        return all_idxs
-    end
-end
-
-function get_auxiliary_variables(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
-    solution = simulation.ODESolution
-    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
-
-    p_soil = solution.prob.p.p_soil
-    NLAYER = p_soil.NLAYER
-    if isnothing(days_to_read_out_d)
-        u_SWATI = reduce(hcat, [solution[t_idx].SWATI.mm  for t_idx = eachindex(solution)])
-    else
-        u_SWATI = reduce(hcat, [solution(t_days).SWATI.mm for t_days = days_to_read_out_d])
-    end
-
-    u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK =
-        (fill(NaN, size(u_SWATI)) for i in 1:5)
-    for t in 1:size(u_SWATI,2)
-        (u_aux_WETNES[:, t], u_aux_PSIM[:, t], u_aux_PSITI[:, t], u_aux_θ[:, t], p_fu_KK[:, t]) =
-            KPT.derive_auxiliary_SOILVAR(u_SWATI[:,t], p_soil)
-    end
-    # returns arrays of dimenstion (t,z) where t is number of timesteps and z number of computational layers
-    return (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
 end
 
 """
@@ -382,7 +337,7 @@ function get_soil_(
     # 1a) get states
     # get auxiliary variables with requested time resolution (i.e. days_to_read_out_d)
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-        LWFBrook90.get_auxiliary_variables(simulation; days_to_read_out_d = days_to_read_out_d)
+        LWFBrook90.intern___get_SWATI_derivatives(simulation; days_to_read_out_d = days_to_read_out_d)
     # 1b) get isotope values
     if simulate_isotopes
         u_SWATI_d18O = reduce(hcat, [solution(t_days).SWATI.d18O for t_days = timepoints])
@@ -407,7 +362,7 @@ function get_soil_(
         # center = round.(Int, lower_boundaries - 0.5*simulation.ODESolution.prob.p.p_soil.p_THICK) # NOTE: this rounds hardcoded to mm
         depths_to_read_out_mm = lower_boundaries
     end
-    idxs = LWFBrook90.get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = true)
+    idxs = LWFBrook90.intern___get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = true)
 
     for symbol in sort(symbols)
         variable_to_return, unit_to_return = (
@@ -440,50 +395,6 @@ function get_soil_(
         return df
     end
 end
-
-##########################
-# Functions to get values either isotopes or amounts (or otherwise)
-
-function get_scalars(compartments_to_extract, units_to_extract, simulation::DiscretizedSPAC, days_to_read_out_d = nothing)
-    solution = simulation.ODESolution;
-    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
-    @assert (isnothing(days_to_read_out_d) || all(days_to_read_out_d .>= 0)) "`days_to_read_out_d` must be Vector{Float64} and all >= 0. Received $(days_to_read_out_d)"
-
-    # parse requested time points and compartments
-    timepoints = isnothing(days_to_read_out_d) ? solution.t : days_to_read_out_d;
-    df_time = DataFrame(:time => (timepoints isa AbstractArray ? timepoints : [timepoints])) # transform to vector even if input as scalar
-
-    # Extract scalar values from state variable vector u
-    # Treat precipitation separately
-    is_prec = compartments_to_extract .== :PREC
-    cycle_over1 = zip(compartments_to_extract[Not(is_prec)], units_to_extract[Not(is_prec)])
-    cycle_over2 = zip(compartments_to_extract[is_prec], units_to_extract[is_prec])
-
-    # u_aboveground = collect(solution(t_days)[comp][uni]  for t_days = days_to_read_out_d, (comp,uni) in cycle_over1)
-    df_states = DataFrame((
-        string(comp) * "_" * string(uni) => [
-            solution(t_days)[comp][uni] for t_days = timepoints
-        ] for (comp, uni) in cycle_over1)...)
-
-    # Extract precipitation from forcing
-    df_PREC = DataFrame((string(comp) * "_" * string(uni) =>
-        # comp == :PREC ?
-        uni ∈ [:mmday,  :mm] ? solution.prob.p.p_PREC.(timepoints) :
-            uni ∈ [:d18O, :δ18O] ? solution.prob.p.p_δ18O_PREC.(timepoints) :
-            uni ∈ [:d2H , :δ2H ] ? solution.prob.p.p_δ2H_PREC.(timepoints) :
-            error("Unknown compartments or units to extract provided.")
-        for (comp, uni) in cycle_over2)...)
-
-    # TODO: if we cycle only once over states and fluxes we would get the same order as provided in
-    #       compartments_to_extract, units_to_extract. This would be better behavior.
-    #       But only modify this if get_scalars() becomes part of the public API
-
-    # returns DataFrame of dimenstion (t, N_variables = 9)
-    #   where t is number of time steps
-    #   and 9 = 1 (time) + 1(PREC) + 6 (number of compartments)
-    return hcat(df_time, df_PREC, df_states)
-end
-
 
 """
     get_water_partitioning(simulation)
@@ -549,8 +460,93 @@ function get_water_partitioning(simulation::DiscretizedSPAC;)
     # and also define color palette
     return (df_partitioning_daily, df_partitioning_monthly, df_partitioning_yearly)
 end
+#######
+####### Internal API =======================================================================
+#######
 
-function get_water_partitioning_colorpalette()
+function intern___get_soil_idx(simulation::DiscretizedSPAC, depths_to_read_out_mm; only_valid_idxs = false)
+    @assert all(depths_to_read_out_mm .> 0) # depths and lower_boundaries must all be positive numbers
+    lower_boundaries = round.(Int, cumsum(simulation.ODESolution.prob.p.p_soil.p_THICK))      # NOTE: this rounds hardcoded to mm
+    # center = round.(Int, lower_boundaries - 0.5*simulation.ODESolution.prob.p.p_soil.p_THICK) # NOTE: this rounds hardcoded to mm
+
+    idx_to_read_out = fill(0, length(depths_to_read_out_mm))
+    for (it, curr_depth_mm) in enumerate(depths_to_read_out_mm)
+        if (curr_depth_mm > maximum(lower_boundaries))
+            # Only read out values that are within the simulation domain
+            idx_to_read_out[it] = 0 # 0 means this depth has not been simulated
+            @warn "Requested read-out depth of $curr_depth_mm is below simulation domain and is silently omitted for the output."
+        else
+            idx_to_read_out[it] = findfirst(curr_depth_mm .<= lower_boundaries)
+        end
+    end
+    all_idxs = Dict((d => i) for (d,i) in zip(depths_to_read_out_mm, idx_to_read_out))
+    if only_valid_idxs
+        return filter((k, v)::Pair -> v != 0, all_idxs)
+    else # default
+        return all_idxs
+    end
+end
+function intern___get_SWATI_derivatives(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
+    solution = simulation.ODESolution
+    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
+
+    p_soil = solution.prob.p.p_soil
+    NLAYER = p_soil.NLAYER
+    if isnothing(days_to_read_out_d)
+        u_SWATI = reduce(hcat, [solution[t_idx].SWATI.mm  for t_idx = eachindex(solution)])
+    else
+        u_SWATI = reduce(hcat, [solution(t_days).SWATI.mm for t_days = days_to_read_out_d])
+    end
+
+    u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK =
+        (fill(NaN, size(u_SWATI)) for i in 1:5)
+    for t in 1:size(u_SWATI,2)
+        (u_aux_WETNES[:, t], u_aux_PSIM[:, t], u_aux_PSITI[:, t], u_aux_θ[:, t], p_fu_KK[:, t]) =
+            KPT.derive_auxiliary_SOILVAR(u_SWATI[:,t], p_soil)
+    end
+    # returns arrays of dimenstion (t,z) where t is number of timesteps and z number of computational layers
+    return (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
+end
+function intern___get_scalars(compartments_to_extract, units_to_extract, simulation::DiscretizedSPAC, days_to_read_out_d = nothing)
+    solution = simulation.ODESolution;
+    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
+    @assert (isnothing(days_to_read_out_d) || all(days_to_read_out_d .>= 0)) "`days_to_read_out_d` must be Vector{Float64} and all >= 0. Received $(days_to_read_out_d)"
+
+    # parse requested time points and compartments
+    timepoints = isnothing(days_to_read_out_d) ? solution.t : days_to_read_out_d;
+    df_time = DataFrame(:time => (timepoints isa AbstractArray ? timepoints : [timepoints])) # transform to vector even if input as scalar
+
+    # Extract scalar values from state variable vector u
+    # Treat precipitation separately
+    is_prec = compartments_to_extract .== :PREC
+    cycle_over1 = zip(compartments_to_extract[Not(is_prec)], units_to_extract[Not(is_prec)])
+    cycle_over2 = zip(compartments_to_extract[is_prec], units_to_extract[is_prec])
+
+    # u_aboveground = collect(solution(t_days)[comp][uni]  for t_days = days_to_read_out_d, (comp,uni) in cycle_over1)
+    df_states = DataFrame((
+        string(comp) * "_" * string(uni) => [
+            solution(t_days)[comp][uni] for t_days = timepoints
+        ] for (comp, uni) in cycle_over1)...)
+
+    # Extract precipitation from forcing
+    df_PREC = DataFrame((string(comp) * "_" * string(uni) =>
+        # comp == :PREC ?
+        uni ∈ [:mmday,  :mm] ? solution.prob.p.p_PREC.(timepoints) :
+            uni ∈ [:d18O, :δ18O] ? solution.prob.p.p_δ18O_PREC.(timepoints) :
+            uni ∈ [:d2H , :δ2H ] ? solution.prob.p.p_δ2H_PREC.(timepoints) :
+            error("Unknown compartments or units to extract provided.")
+        for (comp, uni) in cycle_over2)...)
+
+    # TODO: if we cycle only once over states and fluxes we would get the same order as provided in
+    #       compartments_to_extract, units_to_extract. This would be better behavior.
+    #       But only modify this if intern___get_scalars() becomes part of the public API
+
+    # returns DataFrame of dimenstion (t, N_variables = 9)
+    #   where t is number of time steps
+    #   and 9 = 1 (time) + 1(PREC) + 6 (number of compartments)
+    return hcat(df_time, df_PREC, df_states)
+end
+function intern___get_water_partitioning_colorpalette()
         color_palette_Meusburger2022 = reverse([
             "Td"            => :red2,
             "Ta"            => :darkolivegreen2,
@@ -579,8 +575,109 @@ function get_water_partitioning_colorpalette()
         ])
         return color_palette = color_palette_Schmidt_Walter2020
 end
+function intern___get_RWU_centroid(rows_RWU_mmDay, y_center)
+    # old solution, that gives bad values when some RWU is negative:
+    RWU_percent = rows_RWU_mmDay ./ sum(rows_RWU_mmDay; dims = 1)
+    RWUcentroidLabel = "mean RWU depth"
+    if (any(RWU_percent .< 0))
+        @warn "Some root water outfluxes detected. Centroid of RWU is  based only on uptakes."
+        rows_RWU_mmDay_onlyUptake = ifelse.(rows_RWU_mmDay.>0,rows_RWU_mmDay, 0)
+        RWU_percent_onlyUptake = rows_RWU_mmDay_onlyUptake ./ sum(rows_RWU_mmDay_onlyUptake; dims = 1)
+        RWU_percent = RWU_percent_onlyUptake
+        # RWU_percent = min.(0,rows_RWU_mmDay) ./ sum(min.(0,rows_RWU_mmDay); dims = 1)
+
+        RWUcentroidLabel = "mean RWU depth\n(based on uptake only)"
+    end
+
+    return (row_RWU_centroid_mm = sum(RWU_percent .* y_center; dims=1),
+            RWUcentroidLabel)
+end
+
+function intern___get_data_for_isotopePlot(simulation)
+    # 1) prepare data to plot
+    solu = simulation.ODESolution
+
+    # 1a) extract data from solution object `solu`
+    # # Two ways to extract data from soil object: using `[]` or `()`
+    # u_SWATI = reduce(hcat, [solu[t_idx].SWATI.mm  for t_idx = eachindex(solu)])
+    # u_SWATI = reduce(hcat, [solu(t_days).SWATI.mm for t_days = days_to_read_out_d])
+
+    # days_to_read_out_d decides which points to use:
+    # days_to_read_out_d = nothing # read out all simulation steps
+    days_to_read_out_d = :daily  # read out only daily values
+    if isnothing(days_to_read_out_d)
+        days_to_read_out_d = solu.t # warning this can
+        error("Too many output times requested. This easily freezes the program...")
+    elseif days_to_read_out_d == :daily
+        days_to_read_out_d = unique(round.(solu.t))
+    end
+    t_ref = solu.prob.p.REFERENCE_DATE
+    x = RelativeDaysFloat2DateTime.(days_to_read_out_d, t_ref);
+    y_center = cumsum(solu.prob.p.p_soil.p_THICK) - solu.prob.p.p_soil.p_THICK/2
+
+    simulate_isotopes = solu.prob.p.simulate_isotopes
+    @assert simulate_isotopes "Provided DiscretizedSPAC() did not simulate isotopes"
+
+    # # Some hardcoded options:
+    # xlimits = RelativeDaysFloat2DateTime.(solu.prob.tspan, t_ref)
+    # tick_function = (x1, x2) -> PlotUtils.optimize_ticks(x1, x2; k_min = 4)
+    # # color_scheme = :default # https://docs.juliaplots.org/latest/generated/colorschemes
+    # # color_scheme = :blues
+    # color_scheme = :heat
+
+    # Results
+    t_ref = solu.prob.p.REFERENCE_DATE
+    t1 = range(extrema(solu.t)..., step = 1) # Plot forcing as daily, even if solution output (ODESolution.t) is not dense
+    # x1 = RelativeDaysFloat2DateTime.(t1, t_ref);
+    # maxdepth = maximum(cumsum(solu.prob.p.p_soil.p_THICK))
+    # Scalar quantities (use DataFrame for Storage, reshape to Matrix/Rows for plotting)
+    df_scalar = DataFrame(
+        days_to_read_out_d = days_to_read_out_d,
+        col_PREC_amt_dense  = solu.prob.p.p_PREC.(t1),
+        col_PREC_d18O_dense = solu.prob.p.p_δ18O_PREC.(t1),
+        col_PREC_d2H_dense  = solu.prob.p.p_δ2H_PREC.(t1),
+        col_PREC_d18O = solu.prob.p.p_δ18O_PREC.(days_to_read_out_d),
+        col_PREC_d2H  = solu.prob.p.p_δ2H_PREC.(days_to_read_out_d),
+        col_INTS_d18O = [solu(t).INTS.d18O for t in days_to_read_out_d],
+        col_INTR_d18O = [solu(t).INTR.d18O for t in days_to_read_out_d],
+        col_SNOW_d18O = [solu(t).SNOW.d18O for t in days_to_read_out_d],
+        col_GWAT_d18O = [solu(t).GWAT.d18O for t in days_to_read_out_d],
+        col_RWU_d18O  = [solu(t).RWU.d18O for t in days_to_read_out_d],
+        col_XYL_d18O  = [solu(t).XYLEM.d18O for t in days_to_read_out_d],
+        col_INTS_d2H  = [solu(t).INTS.d2H for t in days_to_read_out_d],
+        col_INTR_d2H  = [solu(t).INTR.d2H for t in days_to_read_out_d],
+        col_SNOW_d2H  = [solu(t).SNOW.d2H for t in days_to_read_out_d],
+        col_GWAT_d2H  = [solu(t).GWAT.d2H for t in days_to_read_out_d],
+        col_RWU_d2H   = [solu(t).RWU.d2H for t in days_to_read_out_d],
+        col_XYL_d2H   = [solu(t).XYLEM.d2H for t in days_to_read_out_d])
+
+    # Vector quantities
+    cols_SWAT_d18O = reduce(vcat, [solu(t).SWATI.d18O' for t in days_to_read_out_d])
+    cols_SWAT_d2H  = reduce(vcat, [solu(t).SWATI.d2H' for t in days_to_read_out_d])
+
+    # Compute RWU centroid
+    cols_RWU_mmDay  = reduce(vcat, [solu(t).TRANI.mmday'   for t in days_to_read_out_d])
+    rows_RWU_mmDay  = permutedims(cols_RWU_mmDay)
+    row_RWU_centroid_mm, RWUcentroidLabel = LWFBrook90.intern___get_RWU_centroid(rows_RWU_mmDay, y_center)
+    col_RWU_centroid_mm = reshape(row_RWU_centroid_mm, :)
+    # if (RWUcentroid == :showRWUcentroid)
+    # end
+
+    # Finalize DataFrame for storage
+    df_scalar.col_RWU_centroid_mm = col_RWU_centroid_mm
+    # df_amt  = DataFrame(cols_SWAT_amt,  ["amt_$depth"  for depth in (round.(Int, y_center))])
+    df_d18O = DataFrame(cols_SWAT_d18O, ["d18O_$depth" for depth in (round.(Int, y_center))])
+    df_d2H  = DataFrame(cols_SWAT_d2H,  ["d2H_$depth"  for depth in (round.(Int, y_center))])
+    df = hcat(df_scalar, df_d18O, df_d2H)
+
+    return (df = df, RWUcentroidLabel = RWUcentroidLabel)
+end
+
+#######
+####### Public facing API: plotting recipes ================================================
+#######
 function plot_monthly_water_partitioning(df_partitioning_monthly, fig = Figure())
-    color_palette = get_water_partitioning_colorpalette()
+    color_palette = intern___get_water_partitioning_colorpalette()
     # Preprocess
     df_partitioning_monthly_forMakie = @chain df_partitioning_monthly begin
         stack(Not([:year, :month, :nrow, :date]))
@@ -612,7 +709,7 @@ function plot_monthly_water_partitioning(df_partitioning_monthly, fig = Figure()
     return fig, aog_draw
 end
 function plot_yearly_water_partitioning(df_partitioning_yearly, fig = Figure())
-    color_palette = get_water_partitioning_colorpalette()
+    color_palette = intern___get_water_partitioning_colorpalette()
     # Preprocess
     df_partitioning_yearly_forMakie = @chain df_partitioning_yearly begin
         stack(Not([:year, :nrow, :date]))
@@ -657,23 +754,7 @@ end
 
 
 
-function get_RWU_centroid(rows_RWU_mmDay, y_center)
-    # old solution, that gives bad values when some RWU is negative:
-    RWU_percent = rows_RWU_mmDay ./ sum(rows_RWU_mmDay; dims = 1)
-    RWUcentroidLabel = "mean RWU depth"
-    if (any(RWU_percent .< 0))
-        @warn "Some root water outfluxes detected. Centroid of RWU is  based only on uptakes."
-        rows_RWU_mmDay_onlyUptake = ifelse.(rows_RWU_mmDay.>0,rows_RWU_mmDay, 0)
-        RWU_percent_onlyUptake = rows_RWU_mmDay_onlyUptake ./ sum(rows_RWU_mmDay_onlyUptake; dims = 1)
-        RWU_percent = RWU_percent_onlyUptake
-        # RWU_percent = min.(0,rows_RWU_mmDay) ./ sum(min.(0,rows_RWU_mmDay); dims = 1)
 
-        RWUcentroidLabel = "mean RWU depth\n(based on uptake only)"
-    end
-
-    return (row_RWU_centroid_mm = sum(RWU_percent .* y_center; dims=1),
-            RWUcentroidLabel)
-end
 
 """
     plotamounts(simulation::DiscretizedSPAC)
@@ -871,14 +952,14 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
         compute_WB_Ireson2023(solu);
 
     if (RWUcentroid == :showRWUcentroid)
-        row_RWU_centroid_mm, RWUcentroidLabel = get_RWU_centroid(rows_RWU_mmDay, y_center)
+        row_RWU_centroid_mm, RWUcentroidLabel = intern___get_RWU_centroid(rows_RWU_mmDay, y_center)
     end
 
     # reduce how deep to plot soil:
     soil_discr_to_plot = simulation.parametrizedSPAC.soil_discretization.df#[simulation.soil_discretization.Lower_m .>= -0.2, :]
 
     (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-        get_auxiliary_variables(simulation, days_to_read_out_d = days_to_read_out_d);
+        intern___get_SWATI_derivatives(simulation, days_to_read_out_d = days_to_read_out_d);
 
     # compute total amount of soil water: a) in whole domain, b) per physical soil layer
     # a)
@@ -1255,7 +1336,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     solu = simulation.ODESolution
 
     # 1a) extract data from solution object `solu`
-    df, RWUcentroidLabel = get_data_for_isotopePlot(simulation)
+    df, RWUcentroidLabel = intern___get_data_for_isotopePlot(simulation)
 
     days_to_read_out_d = df.days_to_read_out_d
     t_ref = solu.prob.p.REFERENCE_DATE
@@ -1473,85 +1554,6 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     #     clims = clims_d2H,
     #     layout = l, link = :x);
 end
-function get_data_for_isotopePlot(simulation)
-    # 1) prepare data to plot
-    solu = simulation.ODESolution
-
-    # 1a) extract data from solution object `solu`
-    # # Two ways to extract data from soil object: using `[]` or `()`
-    # u_SWATI = reduce(hcat, [solu[t_idx].SWATI.mm  for t_idx = eachindex(solu)])
-    # u_SWATI = reduce(hcat, [solu(t_days).SWATI.mm for t_days = days_to_read_out_d])
-
-    # days_to_read_out_d decides which points to use:
-    # days_to_read_out_d = nothing # read out all simulation steps
-    days_to_read_out_d = :daily  # read out only daily values
-    if isnothing(days_to_read_out_d)
-        days_to_read_out_d = solu.t # warning this can
-        error("Too many output times requested. This easily freezes the program...")
-    elseif days_to_read_out_d == :daily
-        days_to_read_out_d = unique(round.(solu.t))
-    end
-    t_ref = solu.prob.p.REFERENCE_DATE
-    x = RelativeDaysFloat2DateTime.(days_to_read_out_d, t_ref);
-    y_center = cumsum(solu.prob.p.p_soil.p_THICK) - solu.prob.p.p_soil.p_THICK/2
-
-    simulate_isotopes = solu.prob.p.simulate_isotopes
-    @assert simulate_isotopes "Provided DiscretizedSPAC() did not simulate isotopes"
-
-    # # Some hardcoded options:
-    # xlimits = RelativeDaysFloat2DateTime.(solu.prob.tspan, t_ref)
-    # tick_function = (x1, x2) -> PlotUtils.optimize_ticks(x1, x2; k_min = 4)
-    # # color_scheme = :default # https://docs.juliaplots.org/latest/generated/colorschemes
-    # # color_scheme = :blues
-    # color_scheme = :heat
-
-    # Results
-    t_ref = solu.prob.p.REFERENCE_DATE
-    t1 = range(extrema(solu.t)..., step = 1) # Plot forcing as daily, even if solution output (ODESolution.t) is not dense
-    # x1 = RelativeDaysFloat2DateTime.(t1, t_ref);
-    # maxdepth = maximum(cumsum(solu.prob.p.p_soil.p_THICK))
-    # Scalar quantities (use DataFrame for Storage, reshape to Matrix/Rows for plotting)
-    df_scalar = DataFrame(
-        days_to_read_out_d = days_to_read_out_d,
-        col_PREC_amt_dense  = solu.prob.p.p_PREC.(t1),
-        col_PREC_d18O_dense = solu.prob.p.p_δ18O_PREC.(t1),
-        col_PREC_d2H_dense  = solu.prob.p.p_δ2H_PREC.(t1),
-        col_PREC_d18O = solu.prob.p.p_δ18O_PREC.(days_to_read_out_d),
-        col_PREC_d2H  = solu.prob.p.p_δ2H_PREC.(days_to_read_out_d),
-        col_INTS_d18O = [solu(t).INTS.d18O for t in days_to_read_out_d],
-        col_INTR_d18O = [solu(t).INTR.d18O for t in days_to_read_out_d],
-        col_SNOW_d18O = [solu(t).SNOW.d18O for t in days_to_read_out_d],
-        col_GWAT_d18O = [solu(t).GWAT.d18O for t in days_to_read_out_d],
-        col_RWU_d18O  = [solu(t).RWU.d18O for t in days_to_read_out_d],
-        col_XYL_d18O  = [solu(t).XYLEM.d18O for t in days_to_read_out_d],
-        col_INTS_d2H  = [solu(t).INTS.d2H for t in days_to_read_out_d],
-        col_INTR_d2H  = [solu(t).INTR.d2H for t in days_to_read_out_d],
-        col_SNOW_d2H  = [solu(t).SNOW.d2H for t in days_to_read_out_d],
-        col_GWAT_d2H  = [solu(t).GWAT.d2H for t in days_to_read_out_d],
-        col_RWU_d2H   = [solu(t).RWU.d2H for t in days_to_read_out_d],
-        col_XYL_d2H   = [solu(t).XYLEM.d2H for t in days_to_read_out_d])
-
-    # Vector quantities
-    cols_SWAT_d18O = reduce(vcat, [solu(t).SWATI.d18O' for t in days_to_read_out_d])
-    cols_SWAT_d2H  = reduce(vcat, [solu(t).SWATI.d2H' for t in days_to_read_out_d])
-
-    # Compute RWU centroid
-    cols_RWU_mmDay  = reduce(vcat, [solu(t).TRANI.mmday'   for t in days_to_read_out_d])
-    rows_RWU_mmDay  = permutedims(cols_RWU_mmDay)
-    row_RWU_centroid_mm, RWUcentroidLabel = LWFBrook90.get_RWU_centroid(rows_RWU_mmDay, y_center)
-    col_RWU_centroid_mm = reshape(row_RWU_centroid_mm, :)
-    # if (RWUcentroid == :showRWUcentroid)
-    # end
-
-    # Finalize DataFrame for storage
-    df_scalar.col_RWU_centroid_mm = col_RWU_centroid_mm
-    # df_amt  = DataFrame(cols_SWAT_amt,  ["amt_$depth"  for depth in (round.(Int, y_center))])
-    df_d18O = DataFrame(cols_SWAT_d18O, ["d18O_$depth" for depth in (round.(Int, y_center))])
-    df_d2H  = DataFrame(cols_SWAT_d2H,  ["d2H_$depth"  for depth in (round.(Int, y_center))])
-    df = hcat(df_scalar, df_d18O, df_d2H)
-
-    return (df = df, RWUcentroidLabel = RWUcentroidLabel)
-end
 
 
 
@@ -1610,7 +1612,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
     #     # plot!(twinx(), simulation.ODESolution_datetime, simulation.ODESolution.prob.p.p_HEIGHT.(t2))               #;labels = "p_HEIGHT [-]")
 
     # 1a) ii) states (scalar and vector)
-    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) = LWFBrook90.get_auxiliary_variables(simulation)
+    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) = LWFBrook90.intern___get_SWATI_derivatives(simulation)
 
     x3 = simulation.ODESolution_datetime;
     y31 = hcat(reduce(hcat, [simulation.ODESolution(t).INTR.mm   for t in simulation.ODESolution.t])',
