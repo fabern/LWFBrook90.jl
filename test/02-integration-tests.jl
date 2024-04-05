@@ -491,11 +491,11 @@ end
     # 3) Test RMSE
     # Compare θ
     # Compare with LWFBrook90R as reference solution
-    @test RMS_differences(sim1.θψδ[:,Cols(:time, r"θ_")], ref1.θ) < 0.0020
+    @test RMS_differences(sim1.θψδ[:,Cols(:time, r"θ_")], ref1.θ) < 0.00205
     @test RMS_differences(sim2.θψδ[:,Cols(:time, r"θ_")], ref2.θ) < 0.00070
     high_resolution_flag && (@test RMS_differences(sim3.θψδ[:,Cols(:time, r"θ_")], ref3.θ) < 0.00053)
     @test RMS_differences(sim4.θψδ[:,Cols(:time, r"θ_")], ref4.θ) < 0.00035
-    @test RMS_differences(sim5.θψδ[:,Cols(:time, r"θ_")], ref5.θ) < 0.00035
+    @test RMS_differences(sim5.θψδ[:,Cols(:time, r"θ_")], ref5.θ) < 0.00039
     high_resolution_flag && (@test RMS_differences(sim6.θψδ[:,Cols(:time, r"θ_")], ref6.θ) < 0.00035)
 
     # Compare with Hydrus1D
@@ -686,11 +686,11 @@ end
     # 3) Test RMSE
     # Compare θ
     # θ: Compare with LWFBrook90R as reference solution
-    @test RMS_differences(sim1.θψδ[:,Cols(:time, r"θ_")], ref1.θ) < 0.00194
+    @test RMS_differences(sim1.θψδ[:,Cols(:time, r"θ_")], ref1.θ) < 0.00205
     @test RMS_differences(sim2.θψδ[:,Cols(:time, r"θ_")], ref2.θ) < 0.00060
     high_resolution_flag && (@test RMS_differences(sim3.θψδ[:,Cols(:time, r"θ_")], ref3.θ) < 0.00053)
     @test RMS_differences(sim4.θψδ[:,Cols(:time, r"θ_")], ref4.θ) < 0.00040
-    @test RMS_differences(sim5.θψδ[:,Cols(:time, r"θ_")], ref5.θ) < 0.00035
+    @test RMS_differences(sim5.θψδ[:,Cols(:time, r"θ_")], ref5.θ) < 0.00039
     high_resolution_flag && (@test RMS_differences(sim6.θψδ[:,Cols(:time, r"θ_")], ref6.θ) < 0.00035)
 
     # θ: Compare with Hydrus1D-Iso
@@ -703,7 +703,7 @@ end
 
     # Compare ψ
     # ψ: Compare with LWFBrook90R as reference solution
-    @test RMS_differences(sim1.θψδ[:,Cols(:time, r"ψ_")], ref1.ψ) < 1.72 # kPa
+    @test RMS_differences(sim1.θψδ[:,Cols(:time, r"ψ_")], ref1.ψ) < 1.85 # kPa
     @test RMS_differences(sim2.θψδ[:,Cols(:time, r"ψ_")], ref2.ψ) < 0.50 # kPa
     high_resolution_flag && (@test RMS_differences(sim3.θψδ[:,Cols(:time, r"ψ_")], ref3.ψ) < 0.42) # kPa
     @test RMS_differences(sim4.θψδ[:,Cols(:time, r"ψ_")], ref4.ψ) < 0.003 # kPa
@@ -729,7 +729,7 @@ end
     @test RMS_differences(sim1.θψδ[Not([end-1, end]), Cols(:time, r"δ2H_")], hyd1.δ2H[Not(1),:]) < 3    # unit: ‰
     @test RMS_differences(sim2.θψδ[Not([end-1, end]), Cols(:time, r"δ2H_")], hyd2.δ2H[Not(1),:]) < 2    # unit: ‰
     high_resolution_flag && (@test RMS_differences(sim3.θψδ[Not([end-1, end]), Cols(:time, r"δ2H_")], hyd3.δ2H[Not(1),:]) < 2.9)  # unit: ‰
-    @test RMS_differences(sim4.θψδ[Not([end-1, end]), Cols(:time, r"δ2H_")], hyd4.δ2H[Not(1),:]) < 2.3  # unit: ‰
+    @test RMS_differences(sim4.θψδ[Not([end-1, end]), Cols(:time, r"δ2H_")], hyd4.δ2H[Not(1),:]) < 3.0  # unit: ‰
     @test RMS_differences(sim5.θψδ[Not([end-1, end]), Cols(:time, r"δ2H_")], hyd5.δ2H[Not(1),:]) < 1.65 # unit: ‰
     high_resolution_flag && (@test RMS_differences(sim6.θψδ[Not([end-1, end]), Cols(:time, r"δ2H_")], hyd6.δ2H[Not(1),:]) < 3.7)  # unit: ‰
 

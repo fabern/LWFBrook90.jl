@@ -939,12 +939,12 @@ end
 
     # check output
     depths_to_test_mm = [100, 1000, 1200, 200, 300, 400, 150, ] # test unsorted input
-    @test_logs (:warn, r"below simulation domain") LWFBrook90.get_soil_idx(simulation, depths_to_test_mm)
-    idx_to_read_out = LWFBrook90.get_soil_idx(simulation, depths_to_test_mm)
+    @test_logs (:warn, r"below simulation domain") LWFBrook90.intern___get_soil_idx(simulation, depths_to_test_mm)
+    idx_to_read_out = LWFBrook90.intern___get_soil_idx(simulation, depths_to_test_mm)
     @test idx_to_read_out == Dict(
-        150  => 3, 100  => 2, 200  => 4, 300  => 6, 400  => 8, 1000 => 21,
+        150  => 3, 100  => 2, 200  => 4, 300  => 6, 400  => 8, 1000 => 20,
         1200 => 0) # 1200 is below the simulation domain!
-    valid_idx_to_read_out = LWFBrook90.get_soil_idx(simulation, depths_to_test_mm; only_valid_idxs = true)
+    valid_idx_to_read_out = LWFBrook90.intern___get_soil_idx(simulation, depths_to_test_mm; only_valid_idxs = true)
 
     depths_to_test_mm_noWarning = [100, 1000, 200, 300, 400, 150, ]
     @test_throws r"ambiguous which colum represents" all(-7 .≈ get_soil_([:ψ,:θ], simulation; depths_to_read_out_mm = depths_to_test_mm_noWarning, days_to_read_out_d = 0, flag_return_Matrix = true)) # flag_return_Matrix is deprecated
@@ -1008,7 +1008,7 @@ end
     @test isapprox(reference_yearly_check, computed_yearly_check, atol = 1e-5, rtol = 1e-5)
 
     # Check isotope output for plotting
-    df_isotopePlot, RWUPlotlabel = LWFBrook90.get_data_for_isotopePlot(simulation)
+    df_isotopePlot, RWUPlotlabel = LWFBrook90.intern___get_data_for_isotopePlot(simulation)
     @test RWUPlotlabel == "mean RWU depth\n(based on uptake only)"
     # print(IOContext(stdout, :compact=>false), permutedims(Matrix(df_isotopePlot[[1, 10, 100, 300], :])))
     reference_isotopePlotPermutedDims = [

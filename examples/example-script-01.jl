@@ -19,13 +19,21 @@
 using LWFBrook90
 
 ## `using LWFBrook90` brings the following exported functions into scope:
-## - `SPAC()`
-## - `DiscretizedSPAC()`
-## - `discretize()`
-## - `simulate!()`
-## - `get_soil_()`
-## - `get_amounts()`
-## - `get_δ()`,
+## - `loadSPAC()`                   # to define and run a simulation
+## - `setup()`                      # to define and run a simulation
+## - `simulate!()`                  # to define and run a simulation
+## - `remakeSPAC()`                 # to define and run a simulation
+## - `SPAC()`                       # to define and run a simulation
+## - `DiscretizedSPAC()`            # to define and run a simulation
+## - `get_states()`                 # to postprocess a simulation
+## - `get_fluxes()`                 # to postprocess a simulation
+## - `get_forcing()`                # to postprocess a simulation
+## - `get_soil_()`                  # to postprocess a simulation
+## - `get_water_partitioning()`     # to postprocess a simulation
+## - `RelativeDaysFloat2DateTime()` # a helper function for time
+## - `prepare_for_LWFBrook90R()`    # a helper function
+
+# Documentation can be accessed by typing: `?loadSPAC`, `?setup`, `?simulate!`, `?plotisotopes`, etc.
 
 # Define simulation model by reading in system definition and input data from input files.
 # When printed, the generated SPAC model gives a summary.
@@ -100,26 +108,72 @@ simulate!(simulation_mod) # Run it a second time to showcase shorter runtime
 # This compilation is not needed for any subsequent run.
 
 # ## Postprocessing results
-# These simulations can then be post-processed with predefined functions.
+# These simulations can then be post-processed with predefined functions as shown below.
 # Alternatively the following variables contain the simuation results for user-defined post-processing:
 simulation_mod.ODESolution;
 simulation_mod.ODESolution_datetime;
 typeof(simulation_mod.ODESolution);
+propertynames(simulation_mod.ODESolution)
 ## HINT: To get these names, type `simulation_mod.` and wait for the autocomplete!
 
 # `simulation_mod.ODESolution` is a ODESolution object: documentation how to access under:
-# `https://docs.sciml.ai/DiffEqDocs/stable/basics/solution/`
+# https://docs.sciml.ai/DiffEqDocs/stable/basics/solution/
 # and more generally:
-# `https://docs.sciml.ai/Overview/stable/`
+# https://docs.sciml.ai/Overview/stable/
 # simulation_mod.ODESolution.t
 # simulation_mod.ODESolution.u
 # simulation_mod.ODESolution.retcode
 # simulation_mod.ODESolution.destats
 
-# Note that it is possible to use R Code from within Julia, e.g ggplot:
-# `https://stackoverflow.com/a/70073193/3915004`
+# Note that it is possible to use R Code from within Julia, e.g ggplot: https://stackoverflow.com/a/70073193/3915004
 
-# ### Plotting (using provided functions)
+
+# ## Postprocessing: Extract values
+# Below illustrative code how to extract states and fluxes:
+
+## Get simulation output (states, fluxes, forcing) as DataFrames
+# The three functions: `get_states()`, `get_fluxes()`, and `get_forcing()` return `DataFrames``
+# with daily values of all the state variables, fluxes, and the input forcing.
+get_states(simulation_mod)
+get_fluxes(simulation_mod)
+get_forcing(simulation_mod)
+
+get_states(simulation_mod; days_to_read_out_d = 0:30:360) # specific days relative to simulation.parametrizedSPAC.reference_date can be specified
+
+
+# Below an illustrative code snippet  how to export certain depths into a *.csv:
+using CSV, DataFrames
+
+## Single soil variables: How to get θ, or ψ, or δ18Os?
+get_soil_(:θ, simulation_mod;
+    depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
+depth_to_read_out_mm = [10, 150, 500, 1000, 1150]
+get_soil_(:θ, simulation_mod;
+    depths_to_read_out_mm = depth_to_read_out_mm, days_to_read_out_d = nothing)
+get_soil_(:θ, simulation_mod;
+    depths_to_read_out_mm = depth_to_read_out_mm)
+get_soil_(:ψ, simulation_mod;
+    depths_to_read_out_mm = depth_to_read_out_mm)
+get_soil_(:δ18O, simulation_mod;
+    depths_to_read_out_mm = depth_to_read_out_mm)
+
+## How to export θ as CSV?
+## Only every day, provide days_to_read_out
+days_to_read_out = range(simulation_mod.ODESolution.prob.tspan...)
+dates_to_read_out = LWFBrook90.RelativeDaysFloat2DateTime.(
+    days_to_read_out, simulation_mod.parametrizedSPAC.reference_date)
+df_out_daily = get_soil_(:θ, simulation_mod;
+    depths_to_read_out_mm = depth_to_read_out_mm, days_to_read_out_d = days_to_read_out)
+
+insertcols!(df_out_daily, 1, :dates => dates_to_read_out);
+show(df_out_daily)
+##plot(df_out_daily[:,:dates], Matrix(df_out_daily[:,Not([:dates, :time])]))
+##CSV.write(
+##    joinpath(out_dir, fname * "_θ_depths_daily.csv"),
+##    df_out_daily)
+
+
+# ## Postprocessing: Plotting (using provided functions)
 # Below an example script using the provided plot recipes that plot a) amounts, b) isotopes, or c) forcing and states as an additional internal check:
 
 using Plots, Measures; gr();
@@ -153,123 +207,109 @@ pl3
 ## savefig(pl3, joinpath(out_dir, fname*"_plotRecipe_CHECK.png"))
 
 
-# ### Extract values
-# Below an illustrative code snippet  how to export certain depths into a *.csv:
+# ## Postprocessing: Plotting (using your own functions)
+# Below an example script using the manually written code to plot the simulation_mod.#
 
-using CSV, DataFrames
+# sim_states = get_states(simulation) # this gives an error since it has not been simulated!
+sim_states = get_states(simulation_mod)
+sim_fluxes = get_fluxes(simulation_mod)
 
-## How to get θ?
-get_soil_(:θ, simulation_mod;
-    depths_to_read_out_mm = nothing, days_to_read_out_d = nothing)
-depth_to_read_out_mm = [10, 150, 500, 1000, 1150]
-get_soil_(:θ, simulation_mod;
-    depths_to_read_out_mm = depth_to_read_out_mm, days_to_read_out_d = nothing)
-get_soil_(:θ, simulation_mod;
-    depths_to_read_out_mm = depth_to_read_out_mm)
+names(sim_states) # show column names
+names(sim_fluxes) # show column names
 
-## How to export θ as CSV?
-## Only every day, provide days_to_read_out
-days_to_read_out = range(simulation_mod.ODESolution.prob.tspan...)
-dates_to_read_out = LWFBrook90.RelativeDaysFloat2DateTime.(
-    days_to_read_out, simulation_mod.parametrizedSPAC.reference_date)
-df_out_daily = get_soil_(:θ, simulation_mod;
-    depths_to_read_out_mm = depth_to_read_out_mm, days_to_read_out_d = days_to_read_out)
-
-insertcols!(df_out_daily, 1, :dates => dates_to_read_out);
-show(df_out_daily)
-##plot(df_out_daily[:,:dates], Matrix(df_out_daily[:,Not([:dates, :time])]))
-##CSV.write(
-##    joinpath(out_dir, fname * "_θ_depths_daily.csv"),
-##    df_out_daily)
-
-#-
+# plot some of the scalar states
+states_to_plot = ["INTS_mm", "INTR_mm", "SNOW_mm", "GWAT_mm", "SWAT_mm"]
+sim_states_to_plot = sim_states[:, states_to_plot]
+plot(sim_states[:,"dates"], Matrix(sim_states_to_plot),
+    labels=permutedims(names(sim_states_to_plot)), legend=:topleft, ylabel = "-")
 
 
-## # ### Plotting (using your own functions)
-## # Below an example script using the manually written code to plot the simulation_mod.#
+# plot the fates of water partitioning
+fluxes_to_plot = ["flow", "seep", "evap"]
+sim_fluxes_to_plot = sim_fluxes[:, fluxes_to_plot]
+plot(sim_fluxes[:,"dates"], Matrix(sim_fluxes_to_plot),
+    labels=permutedims(names(sim_fluxes_to_plot)), legend=:topleft, ylabel = "mm/day")
 
-## # Resulting plot of some aboveground quantities:
-## pl_ab_3 = plot(simulation_mod.ODESolution; vars = [2, 3, 4],
-##     label=["INTS (mm)" "INTR (mm)" "SNOW (mm)"])
-## plot!(pl_ab_3,
-##         [ref_aboveground.intr,
-##         ref_aboveground.ints,
-##         ref_aboveground.snow], label = "LWFBrook90R", line = :dash, color = :black)#
+# plot internal fluxes
+fluxes_to_plot = [
+    "cum_d_prec", "cum_d_rnet", "cum_d_smlt",
+    "cum_d_tran",
+    "srfl", "slfl", "byfl", "dsfl", "gwfl", "vrfln"]
+sim_fluxes_to_plot = sim_fluxes[:, fluxes_to_plot]
+plot(sim_fluxes[:,"dates"], Matrix(sim_fluxes_to_plot),
+    labels=permutedims(names(sim_fluxes_to_plot)), legend=:topleft, ylabel = "mm/day")
 
-## # Resulting plot of other aboveground quantities:
-## pl_ab_4 = plot(simulation_mod.ODESolution; vars = [2, 3],
-##     label=["INTS (mm)" "INTR (mm)"])
-## plot!(pl_ab_4,
-##         [ref_aboveground.intr,
-##         ref_aboveground.ints], label = "LWFBrook90R", line = :dash, color = :black)
+# plot isotope signatures of fluxes
+fluxes_to_plot = ["RWU_d18O", "RWU_d2H", "PREC_d18O", "PREC_d2H"]
+sim_fluxes_to_plot = sim_fluxes[:, fluxes_to_plot]
+plot(sim_fluxes[:,"dates"], Matrix(sim_fluxes_to_plot),
+    labels=permutedims(names(sim_fluxes_to_plot)), legend=:topleft, ylabel = "mm/day")
 
 
-## # Belowground quantities (θ,ψ,δ of soil water)
-## PREC_color = :black
-## depth_to_read_out_mm = [150, 500, 800, 1500]
-## if true # simulate_isotopes
-##     df_δsoil = get_soil_([:δ18O, :δ2H],
-##         example_result; depths_to_read_out_mm = depth_to_read_out_mm)
-##     δ_results = get_δ(simulation_mod)
-## end
-##
-## timepoints = simulation_mod.ODESolution_datetime
-## df_θψ = get_soil_([:θ, :ψ],
-##     simulation_mod, depths_to_read_out_mm = depth_to_read_out_mm)
-##
-## pl_θ = plot(timepoints, #df_θψ.time,
-##     Matrix(select(df_θψ, r"θ_")),
-##     labels = permutedims(names(select(df_θψ, r"θ_"))),
-##     xlabel = "Date",
-##     ylabel = "θ\n[-]",
-##     legend = :outerright)
-## pl_ψ = plot(timepoints, #df_θψ.time,
-##     ## -Matrix(select(df_θψ, r"ψ_")),
-##     Matrix(select(df_θψ, r"ψ_")),
-##     labels = permutedims(names(select(df_θψ, r"ψ_"))),
-##     xlabel = "Date",
-##     ylabel = "ψ\n[kPa]",
-##     legend = :outerright);
-#
-## if simulate_isotopes
-##     pl_δ18O = plot(simulation_mod.ODESolution_datetime,
-##         Matrix(select(df_δsoil, r"δ18O_")),
-##         labels = permutedims(names(select(df_δsoil, r"δ18O_"))),
-##         xlabel = "Date",
-##         ylabel = "δ¹⁸O soil\n[‰]",
-##         legend = :outerright);
-##     pl_δ2H = plot(simulation_mod.ODESolution_datetime,
-##         Matrix(select(df_δsoil, r"δ2H_")),
-##         labels = permutedims(names(select(df_δsoil, r"δ2H_"))),
-##         xlabel = "Date",
-##         ylabel = "δ²H soil\n[‰]",
-##         legend = :outerright);
-##     ## add precipitation to soil δ
-##     plot!(pl_δ2H,
-##         simulation_mod.ODESolution_datetime,
-##         δ_results.PREC_d2H, labels = "PREC", color = PREC_color, linestyle = :dot);
-##     plot!(pl_δ18O,
-##         simulation_mod.ODESolution_datetime,
-##         δ_results.PREC_d18O, labels = "PREC", color = PREC_color, linestyle = :dot);
-## else
-##     pl_δ18O = plot();
-##     pl_δ2H = plot();
-## end
-##
-##
-##
-## pl_PREC = plot(
-##     simulation_mod.ODESolution_datetime,
-##     simulation_mod.ODESolution.prob.p.p_PREC.(simulation_mod.ODESolution.t),
-##     t = :bar, color=PREC_color,
-##     legend = :outerright, labels = "PREC    ", # whitespace for hardcoded alignment of legend
-##     ylabel = "PREC\n[mm]");
-## plot(plot(pl_PREC, xlab = "", xticks = :none, topmargin = 5mm, bottommargin = 0mm),
-##     plot(pl_θ;     xlab = "", xticks = :none, topmargin = 0mm, bottommargin = 0mm),
-##     plot(pl_ψ;     xlab = "", xticks = :none, topmargin = 0mm, bottommargin = 0mm),
-##     plot(pl_δ18O;  xlab = "", xticks = :none, topmargin = 0mm, bottommargin = 0mm),
-##     plot(pl_δ2H;   xtick_direction=:out     , topmargin = 0mm, bottommargin = 5mm),
-##     link = :x,
-##     layout = grid(5, 1, heights=[0.1, 0.25 ,0.25, 0.2, 0.2]),
-##     size=(600,500), dpi = 300, margin = 5mm)
+# Belowground quantities (θ,ψ,δ of soil water)
+
+# if you want some specific depths: use get_soil_(): e.g
+# depth_to_read_out_mm = [150, 500, 800, 1500]
+# df_δsoil = get_soil_([:δ18O, :δ2H], simulation_mod; depths_to_read_out_mm = depth_to_read_out_mm)
+# df_θψ = get_soil_([:θ, :ψ],
+#     simulation_mod, depths_to_read_out_mm = depth_to_read_out_mm)
+
+# if we use depths that are already contained in sim_states we can use those:
+@show propertynames(sim_states[:,r"(d18O)|(d2H)"]);
+df_δsoil = sim_states[:, ["d18O_permil_160mm", "d18O_permil_510mm",
+                          "d18O_permil_820mm", "d18O_permil_1200mm",
+                          "d2H_permil_160mm", "d2H_permil_510mm",
+                          "d2H_permil_820mm", "d2H_permil_1200mm"]]
+df_θψ    = sim_states[:, ["θ_m3m3_160mm", "θ_m3m3_510mm",
+                          "θ_m3m3_820mm", "θ_m3m3_1200mm",
+                          "ψ_kPa_160mm", "ψ_kPa_510mm",
+                          "ψ_kPa_820mm", "ψ_kPa_1200mm"]]
+pl_θ = plot(sim_states.dates,
+    Matrix(select(df_θψ, r"θ_")),
+    labels = permutedims(names(select(df_θψ, r"θ_"))),
+    xlabel = "Date",
+    ylabel = "θ\n[-]",
+    legend = :outerright)
+pl_ψ = plot(sim_states.dates,
+    ## Matrix(select(df_θψ, r"ψ_")),
+    log10.(-Matrix(select(df_θψ, r"ψ_"))), yflip = true,
+    labels = permutedims(names(select(df_θψ, r"ψ_"))),
+    xlabel = "Date",
+    ylabel = "log10(ψ\n[kPa])",
+    legend = :outerright);
+pl_δ18O = plot(sim_states.dates,
+    Matrix(select(df_δsoil, r"d18O_")),
+    labels = permutedims(names(select(df_δsoil, r"d18O_"))),
+    xlabel = "Date",
+    ylabel = "δ¹⁸O soil\n[‰]",
+    legend = :outerright);
+pl_δ2H = plot(sim_states.dates,
+    Matrix(select(df_δsoil, r"d2H_")),
+    labels = permutedims(names(select(df_δsoil, r"d2H_"))),
+    xlabel = "Date",
+    ylabel = "δ²H soil\n[‰]",
+    legend = :outerright);
+## add precipitation to soil δ
+PREC_color = :black
+plot!(pl_δ18O, sim_fluxes.dates, sim_fluxes.PREC_d18O,
+    labels = "PREC", color = PREC_color, linestyle = :dot);
+plot!(pl_δ2H, sim_fluxes.dates, sim_fluxes.PREC_d2H,
+    labels = "PREC", color = PREC_color, linestyle = :dot);
+
+
+pl_PREC = plot(
+    sim_fluxes.dates,
+    sim_fluxes.cum_d_prec,
+    t = :bar, color=PREC_color,
+    legend = :outerright, labels = "PREC    ", # whitespace for hardcoded alignment of legend
+    ylabel = "PREC\n[mm]");
+
+plot(plot(pl_PREC, xlab = "", xticks = :none, topmargin = 5mm, bottommargin = 0mm),
+    plot(pl_θ;     xlab = "", xticks = :none, topmargin = 0mm, bottommargin = 0mm),
+    plot(pl_ψ;     xlab = "", xticks = :none, topmargin = 0mm, bottommargin = 0mm),
+    plot(pl_δ18O;  xlab = "", xticks = :none, topmargin = 0mm, bottommargin = 0mm),
+    plot(pl_δ2H;   xtick_direction=:out     , topmargin = 0mm, bottommargin = 5mm),
+    link = :x,
+    layout = grid(5, 1, heights=[0.1, 0.25 ,0.25, 0.2, 0.2]),
+    size=(600,500), dpi = 300, margin = 5mm)
 # ####################

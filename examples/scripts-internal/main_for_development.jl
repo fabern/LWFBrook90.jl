@@ -401,7 +401,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
         y_labels=round.(y_soil_ticks; digits=0)
         # a) for θ and ψ:
         (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-                        LWFBrook90.get_auxiliary_variables(simulation.ODESolution)
+                        LWFBrook90.get_auxiliary_variables(simulation)
         t_to_plot = simulation.ODESolution.t
         pl_θ = heatmap(x, y,
                     u_aux_θ, colorbar_title = "θ [-]", clims = θ_limits, c=cgrad(:inferno, rev=true),

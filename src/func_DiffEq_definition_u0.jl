@@ -8,7 +8,7 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
     name_fluxes = ifelse(simulate_isotopes, (:mmday, :d18O, :d2H), (:mmday,))
     name_aux       = (:θ,:ψ,:K)
     name_accum     = (:cum_d_prec, :cum_d_rfal, :cum_d_sfal, :cum_d_rint,  :cum_d_sint, :cum_d_rsno,
-                    :cum_d_rnet, :cum_d_smlt, :cum_d_evap, :cum_d_tran, :cum_d_irvp, :cum_d_isvp,
+                    :cum_d_rnet, :cum_d_smlt, :evap, :cum_d_tran, :cum_d_irvp, :cum_d_isvp,
                     :cum_d_slvp, :cum_d_snvp, :cum_d_pint, :cum_d_ptran, :cum_d_pslvp,
                     :flow, :seep, :srfl, :slfl, :byfl, :dsfl, :gwfl, :vrfln,
                     :cum_d_rthr, :cum_d_sthr,

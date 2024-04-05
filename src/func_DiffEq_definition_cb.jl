@@ -267,7 +267,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         integrator.u.accum.cum_d_rsno       = p_DTP * (aux_du_RSNO[1])                                                  # cum_d_rsno
         integrator.u.accum.cum_d_rnet       = p_DTP * (p_fT_RFAL - aux_du_RINT[1] - aux_du_RSNO[1]) # cum_d_RTHR - RSNOD   # cum_d_rnet
         integrator.u.accum.cum_d_smlt       = p_DTP * (aux_du_SMLT[1])                                                  # cum_d_smlt
-        integrator.u.accum.cum_d_evap       = p_DTP * (aux_du_IRVP[1] + aux_du_ISVP[1] + aux_du_SNVP[1] + aux_du_SLVP[1] + sum(aux_du_TRANI))  # cum_d_evap
+        integrator.u.accum.evap             = p_DTP * (aux_du_IRVP[1] + aux_du_ISVP[1] + aux_du_SNVP[1] + aux_du_SLVP[1] + sum(aux_du_TRANI))  # evap
         integrator.u.accum.cum_d_tran       = p_DTP * (sum(aux_du_TRANI))                                                          # cum_d_tran
         integrator.u.accum.cum_d_irvp       = p_DTP * (aux_du_IRVP[1])                                                                # cum_d_irvp
         integrator.u.accum.cum_d_isvp       = p_DTP * (aux_du_ISVP[1])                                                                # cum_d_isvp
@@ -1284,7 +1284,7 @@ function LWFBrook90R_check_balance_errors!(integrator)
 
         # b2) BALERD_total = old_StorageWATER - StorageWATER + PRECD - EVAPD - FLOWD - SEEPD
         accum_qin_total  = integrator.u.accum.cum_d_prec
-        accum_qout_total = integrator.u.accum.cum_d_evap + integrator.u.accum.flow + integrator.u.accum.seep
+        accum_qout_total = integrator.u.accum.evap + integrator.u.accum.flow + integrator.u.accum.seep
 
         # c) Compute balance error
         # d) Store balance errors into state vector

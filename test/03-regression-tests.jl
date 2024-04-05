@@ -51,11 +51,14 @@ function get_some_states_to_compare(example_result)
         # reduce(hcat, [example_result.ODESolution[t_idx].accum       for t_idx = eachindex(example_result.ODESolution)])
     )
     u_mm = hcat(DataFrame(time = t_out), DataFrame(permutedims(mat_aboveground), df_aboveground_names[:]))
-    u_δ     = get_δ(example_result; days_to_read_out_d = t_out)
+    u_δ     = innerjoin(
+        get_states(example_result, days_to_read_out_d = t_out),
+        get_fluxes(example_result, days_to_read_out_d = t_out),
+        on = [:dates])[:,[:dates,:PREC_d18O,:GWAT_d18O,:INTS_d18O,:INTR_d18O,:SNOW_d18O,:RWU_d18O,:XYLEM_d18O,:PREC_d2H,:GWAT_d2H,:INTS_d2H,:INTR_d2H,:SNOW_d2H,:RWU_d2H,:XYLEM_d2H]]
     ## vector quantities
     u_belowground = get_soil_([:SWATI, :W, :ψ, :θ, :K, :δ18O, :δ2H], example_result;
         days_to_read_out_d = t_out)
-    u_belowground = u_belowground[:,Not(r"(K_Lay)|(W_Lay)")]
+    u_belowground = u_belowground[:,Not(r"(K_)|(W_)")]
 
     return u_mm, u_δ, u_belowground
     # return t_out, u_ref_names, mat_aboveground, u_δ, u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_θ, p_fu_KK, u_δsoil_d18O, u_δsoil_d2H
@@ -167,7 +170,7 @@ function test_states_comparison(u_mm, u_δ, u_belowground, currSPAC,
         # Test scalar states
         compare_scalar = (A,B; nans = false) -> all(isapprox.(Matrix(A), Matrix(B); nans))
         @test compare_scalar(loaded_u_ref, u_ref)
-        @test compare_scalar(loaded_u_δ[:, Not(:time)],   u_δ[:, Not(:time)]; nans=true)
+        @test compare_scalar(loaded_u_δ[:, Not(1)],   u_δ[:, Not(1)]; nans=true) # Not(1) removes :time or :dates
 
         # Test vector states
         compare_vector = (A,B) -> all(isapprox.(Matrix(A), Matrix(B)))
@@ -246,7 +249,6 @@ function get_daily_soilFluxes(simulation)
         cum_d_rsno      = [simulation.ODESolution(t_days).accum.cum_d_rsno      for t_days = t_out],
         cum_d_rnet      = [simulation.ODESolution(t_days).accum.cum_d_rnet      for t_days = t_out],
         cum_d_smlt      = [simulation.ODESolution(t_days).accum.cum_d_smlt      for t_days = t_out],
-        cum_d_evap      = [simulation.ODESolution(t_days).accum.cum_d_evap      for t_days = t_out],
         cum_d_tran      = [simulation.ODESolution(t_days).accum.cum_d_tran      for t_days = t_out],
         cum_d_irvp      = [simulation.ODESolution(t_days).accum.cum_d_irvp      for t_days = t_out],
         cum_d_isvp      = [simulation.ODESolution(t_days).accum.cum_d_isvp      for t_days = t_out],
@@ -255,6 +257,7 @@ function get_daily_soilFluxes(simulation)
         cum_d_pint      = [simulation.ODESolution(t_days).accum.cum_d_pint      for t_days = t_out],
         cum_d_ptran     = [simulation.ODESolution(t_days).accum.cum_d_ptran     for t_days = t_out],
         # cum_d_pslvp     = [simulation.ODESolution(t_days).accum.cum_d_pslvp     for t_days = t_out],
+        evap            = [simulation.ODESolution(t_days).accum.evap      for t_days = t_out],
         flow            = [simulation.ODESolution(t_days).accum.flow            for t_days = t_out],
         seep            = [simulation.ODESolution(t_days).accum.seep            for t_days = t_out],
         srfl            = [simulation.ODESolution(t_days).accum.srfl            for t_days = t_out],
@@ -287,7 +290,6 @@ function plot_simulated_fluxes_vs_reference(simulated_fluxes_arg, reference_arg;
         Plots.plot(d_out, [simulated_fluxes.cum_d_rsno      reference["cum_d_rsno"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_rsno", kwargs...),
         Plots.plot(d_out, [simulated_fluxes.cum_d_rnet      reference["cum_d_rnet"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_rnet", kwargs...),
         Plots.plot(d_out, [simulated_fluxes.cum_d_smlt      reference["cum_d_smlt"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_smlt", kwargs...),
-        Plots.plot(d_out, [simulated_fluxes.cum_d_evap      reference["cum_d_evap"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_evap", kwargs...),
         Plots.plot(d_out, [simulated_fluxes.cum_d_tran      reference["cum_d_tran"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_tran", kwargs...),
         Plots.plot(d_out, [simulated_fluxes.cum_d_irvp      reference["cum_d_irvp"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_irvp", kwargs...),
         Plots.plot(d_out, [simulated_fluxes.cum_d_isvp      reference["cum_d_isvp"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_isvp", kwargs...),
@@ -296,8 +298,9 @@ function plot_simulated_fluxes_vs_reference(simulated_fluxes_arg, reference_arg;
         Plots.plot(d_out, [simulated_fluxes.cum_d_pint      reference["cum_d_pint"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_pint", kwargs...),
         Plots.plot(d_out, [simulated_fluxes.cum_d_ptran     reference["cum_d_ptran"]],    linestyle = [:solid :dot], label = labels, title = "accum.cum_d_ptran", kwargs...),
         # Plots.plot(d_out, [simulated_fluxes.cum_d_pslvp     reference["cum_d_pslvp"]],    linestyle = [:solid :dot], label = labels, title = "accum.cum_d_pslvp", kwargs...), # PSLVP was removed from output,
-        Plots.plot(d_out, [simulated_fluxes.flow            reference["flow"]],           linestyle = [:solid :dot], label = labels, title = "accum.flow", kwargs...),
-        Plots.plot(d_out, [simulated_fluxes.seep            reference["seep"]],           linestyle = [:solid :dot], label = labels, title = "accum.seep", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.evap            reference["evap"]],           linestyle = [:solid :dot], label = labels, title = "accum.evap => fate", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.flow            reference["flow"]],           linestyle = [:solid :dot], label = labels, title = "accum.flow => fate", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.seep            reference["seep"]],           linestyle = [:solid :dot], label = labels, title = "accum.seep => fate", kwargs...),
         Plots.plot(d_out, [simulated_fluxes.srfl            reference["srfl"]],           linestyle = [:solid :dot], label = labels, title = "accum.srfl", kwargs...),
         Plots.plot(d_out, [simulated_fluxes.slfl            reference["slfl"]],           linestyle = [:solid :dot], label = labels, title = "accum.slfl", kwargs...),
         Plots.plot(d_out, [simulated_fluxes.byfl            reference["byfl"]],           linestyle = [:solid :dot], label = labels, title = "accum.byfl", kwargs...),
@@ -325,7 +328,7 @@ function test_fluxes_comparison(simulated_fluxes_arg, reference_arg)
         @test isapprox(reference["cum_d_rsno"],     simulated_fluxes.cum_d_rsno,     atol = 1e-4, rtol = 1e-4)
         @test isapprox(reference["cum_d_rnet"],     simulated_fluxes.cum_d_rnet,     atol = 1e-4, rtol = 1e-4)
         @test isapprox(reference["cum_d_smlt"],     simulated_fluxes.cum_d_smlt,     atol = 1e-4, rtol = 1e-4)
-        @test_skip isapprox(reference["cum_d_evap"],     simulated_fluxes.cum_d_evap,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test_skip isapprox(reference["evap"],      simulated_fluxes.evap,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
         @test_skip isapprox(reference["cum_d_tran"],     simulated_fluxes.cum_d_tran,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
         @test isapprox(reference["cum_d_irvp"],     simulated_fluxes.cum_d_irvp,     atol = 1e-4, rtol = 1e-4)
         @test isapprox(reference["cum_d_isvp"],     simulated_fluxes.cum_d_isvp,     atol = 1e-4, rtol = 1e-4)
