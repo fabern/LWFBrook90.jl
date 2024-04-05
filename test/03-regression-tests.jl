@@ -51,7 +51,10 @@ function get_some_states_to_compare(example_result)
         # reduce(hcat, [example_result.ODESolution[t_idx].accum       for t_idx = eachindex(example_result.ODESolution)])
     )
     u_mm = hcat(DataFrame(time = t_out), DataFrame(permutedims(mat_aboveground), df_aboveground_names[:]))
-    u_δ     = get_δ(example_result; days_to_read_out_d = t_out)
+    u_δ     = innerjoin(
+        get_states(example_result, days_to_read_out_d = t_out),
+        get_fluxes(example_result, days_to_read_out_d = t_out),
+        on = [:dates, :PREC_d2H, :PREC_d18O])[:,[:dates,:PREC_d18O,:GWAT_d18O,:INTS_d18O,:INTR_d18O,:SNOW_d18O,:RWU_d18O,:XYLEM_d18O,:PREC_d2H,:GWAT_d2H,:INTS_d2H,:INTR_d2H,:SNOW_d2H,:RWU_d2H,:XYLEM_d2H]]
     ## vector quantities
     u_belowground = get_soil_([:SWATI, :W, :ψ, :θ, :K, :δ18O, :δ2H], example_result;
         days_to_read_out_d = t_out)
@@ -167,7 +170,7 @@ function test_states_comparison(u_mm, u_δ, u_belowground, currSPAC,
         # Test scalar states
         compare_scalar = (A,B; nans = false) -> all(isapprox.(Matrix(A), Matrix(B); nans))
         @test compare_scalar(loaded_u_ref, u_ref)
-        @test compare_scalar(loaded_u_δ[:, Not(:time)],   u_δ[:, Not(:time)]; nans=true)
+        @test compare_scalar(loaded_u_δ[:, Not(1)],   u_δ[:, Not(1)]; nans=true) # Not(1) removes :time or :dates
 
         # Test vector states
         compare_vector = (A,B) -> all(isapprox.(Matrix(A), Matrix(B)))

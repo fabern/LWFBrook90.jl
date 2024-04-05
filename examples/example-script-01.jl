@@ -25,7 +25,8 @@ using LWFBrook90
 ## - `simulate!()`
 ## - `get_soil_()`
 ## - `get_states()`
-## - `get_δ()`,
+## - `get_fluxes()`,
+## - `get_forcing()`,
 
 # Define simulation model by reading in system definition and input data from input files.
 # When printed, the generated SPAC model gives a summary.
@@ -210,7 +211,7 @@ show(df_out_daily)
 ## if true # simulate_isotopes
 ##     df_δsoil = get_soil_([:δ18O, :δ2H],
 ##         example_result; depths_to_read_out_mm = depth_to_read_out_mm)
-##     δ_results = get_δ(simulation_mod)
+##     δ_results = get_states(simulation_mod)
 ## end
 ##
 ## timepoints = simulation_mod.ODESolution_datetime

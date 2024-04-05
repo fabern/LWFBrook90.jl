@@ -28,7 +28,7 @@ function get_states(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
     timepoints =
         isnothing(days_to_read_out_d)           ? unique(round.(simulation.ODESolution.t)) : # case nothing: return daily by default
         days_to_read_out_d == :integrator_step  ? simulation.ODESolution.t :                 # if requested return for each integration step stored in ODESolution
-        (1:10)[1] isa Number                    ? days_to_read_out_d :                       # else assume we got a vector of days
+        days_to_read_out_d[1] isa Number        ? days_to_read_out_d :                       # else assume we got a vector of days
         error("Unknown `days_to_read_out_d` provided.")
 
     # i) scalar states (+PREC forcing)
@@ -132,7 +132,7 @@ function get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
         isnothing(days_to_read_out_d)           ? unique(round.(simulation.ODESolution.t)) : # case nothing: return daily by default
         days_to_read_out_d == :integrator_step  ? error("Cumulative fluxes should not be read out on subdaily intervals.") : # if requested return for each integration step stored in ODESolution
         # days_to_read_out_d == :integrator_step  ? simulation.ODESolution.t :                 # if requested return for each integration step stored in ODESolution
-        # (1:10)[1] isa Number                    ? days_to_read_out_d :                       # else assume we got a vector of days
+        days_to_read_out_d[1] isa Number        ? days_to_read_out_d :                       # else assume we got a vector of days
         error("Unknown `days_to_read_out_d` provided.")
     t_ref = simulation.ODESolution.prob.p.REFERENCE_DATE
 
@@ -443,24 +443,6 @@ end
 
 ##########################
 # Functions to get values either isotopes or amounts (or otherwise)
-"""
-    get_δ(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
-
-Returns a DataFrame with the isotopoic compositions of the inputs and state variables: PREC, GWAT, INTS, INTR, SNOW, RWU, XYLEM.
-By default, the values are returned for each simulation timestep.
-The user can define timesteps as `days_to_read_out_d` by optionally providing a numeric vector, e.g. saveat = 1:1.0:100
-"""
-function get_δ(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
-    compartments_to_extract = [:PREC, :GWAT, :INTS, :INTR, :SNOW, :RWU, :XYLEM]
-    units_to_extract        = [:d18O, :d18O, :d18O, :d18O, :d18O, :d18O, :d18O]
-    dfd18O = get_scalars(compartments_to_extract, units_to_extract, simulation, days_to_read_out_d);
-
-    units_to_extract        = [:d2H,  :d2H, :d2H, :d2H, :d2H, :d2H, :d2H]
-    dfd2H = get_scalars(compartments_to_extract, units_to_extract, simulation, days_to_read_out_d);
-
-    return hcat(dfd18O, dfd2H[:, Not(:time)])
-end
-get_delta = get_δ
 
 function get_scalars(compartments_to_extract, units_to_extract, simulation::DiscretizedSPAC, days_to_read_out_d = nothing)
     solution = simulation.ODESolution;
