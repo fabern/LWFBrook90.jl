@@ -42,8 +42,8 @@ function get_states(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
 
     states = hcat(
         LWFBrook90.intern___get_scalars(
-            [:GWAT, :INTS, :INTR, :SNOW, :CC, :SNOWLQ],
-            [:mm, :mm, :mm, :mm, :MJm2, :mm],
+            [:GWAT, :INTS, :INTR, :SNOW, :CC,   :SNOWLQ, :SWATI],
+            [:mm,   :mm,   :mm,   :mm,   :MJm2, :mm,     :mm],
             simulation, timepoints),
         !simulate_isotopes ? DataFrame() : LWFBrook90.intern___get_scalars(
             [:GWAT, :INTS, :INTR, :SNOW, :XYLEM], # , :RWU
@@ -53,6 +53,8 @@ function get_states(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
             [:GWAT, :INTS, :INTR, :SNOW, :XYLEM], # , :RWU
             [:d2H,  :d2H,  :d2H,  :d2H,  :d2H],   # , :d2H
             simulation, timepoints)[:,Not(:time)]) # alternatively innerjoin on = [:time])
+    rename!(states, :SWATI_mm => :SWAT_mm)
+    states.SWAT_mm = sum.(states.SWAT_mm)
     # scalar states:
     # simulation.ODESolution.u[1].GWAT
     # simulation.ODESolution.u[1].INTS
@@ -64,7 +66,7 @@ function get_states(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
 
     # ii) vector states
     # names(get_soil_([:θ, :ψ, :δ18O, :δ2H, :W, :SWATI, :K], simulation))
-    vect_states = get_soil_([:θ, :ψ, :δ18O, :δ2H], simulation; days_to_read_out_d = timepoints)
+    vect_states = get_soil_([:θ, :ψ, :d18O, :d2H], simulation; days_to_read_out_d = timepoints)
 
     # simulation.ODESolution.u[1].SWATI.mm
     # simulation.ODESolution.u[1].SWATI.d2H
@@ -134,12 +136,21 @@ Returns:
          ⋯ 0.154122  0.154122  0.154122      0.0  0.101445        0.0434988          0.00995972         0.00240976         0.000574825        0.00013463   ⋯                0.0               0.0
 """
 function get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) # returns fluxes (external, internal, errorterms)
+    if isnothing(simulation.ODESolution)
+        error("The provided simulation has not yet been solved. Please `simulate!()` the DiscretizedSPAC first.")
+    end
     timepoints =
         isnothing(days_to_read_out_d)           ? unique(round.(simulation.ODESolution.t)) : # case nothing: return daily by default
-        days_to_read_out_d == :integrator_step  ? error("Cumulative fluxes should not be read out on subdaily intervals.") : # if requested return for each integration step stored in ODESolution
-        # days_to_read_out_d == :integrator_step  ? simulation.ODESolution.t :                 # if requested return for each integration step stored in ODESolution
+        # days_to_read_out_d == :integrator_step  ? error("Cumulative fluxes should not be read out on subdaily intervals.") : # if requested return for each integration step stored in ODESolution
+        days_to_read_out_d == :integrator_step  ? simulation.ODESolution.t :
         days_to_read_out_d[1] isa Number        ? days_to_read_out_d :                       # else assume we got a vector of days
         error("Unknown `days_to_read_out_d` provided.")
+    if !isnothing(days_to_read_out_d) @warn("""
+        Provided `days_to_read_out_d` to `get_fluxes()`.
+        Be careful at what points you read out the average or daily cumulative fluxes to use them properly.
+        It might be simpler to read out daily fluxes (by not specifiying `days_to_read_out_d`) and aggregate later with more control. """)
+    end
+
     t_ref = simulation.ODESolution.prob.p.REFERENCE_DATE
 
     # 1) scalar fluxes

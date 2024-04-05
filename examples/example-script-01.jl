@@ -210,7 +210,7 @@ pl3
 # ## Postprocessing: Plotting (using your own functions)
 # Below an example script using the manually written code to plot the simulation_mod.#
 
-sim_states = get_states(simulation)
+# sim_states = get_states(simulation) # this gives an error since it has not been simulated!
 sim_states = get_states(simulation_mod)
 sim_fluxes = get_fluxes(simulation_mod)
 
@@ -219,7 +219,6 @@ names(sim_fluxes) # show column names
 
 # plot some of the scalar states
 states_to_plot = ["INTS_mm", "INTR_mm", "SNOW_mm", "GWAT_mm", "SWAT_mm"]
-states_to_plot = ["INTS_mm", "INTR_mm", "SNOW_mm"]
 sim_states_to_plot = sim_states[:, states_to_plot]
 plot(sim_states[:,"dates"], Matrix(sim_states_to_plot),
     labels=permutedims(names(sim_states_to_plot)), legend=:topleft, ylabel = "-")
