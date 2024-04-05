@@ -1,3 +1,283 @@
+@doc raw"""
+    get_states(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
+
+Returns a DataFrame with amounts (and isotopoic compositions) of the inputs and state variables:
+PREC, GWAT, INTS, INTR, SNOW, (amount only: CC, SNOWLQ), (signature only: XYLEM). RWU flux can be obtained with `get_fluxes()`.
+By default, the values are returned for each simulation day.
+The user can optionally define timestep using the input argument `days_to_read_out_d` as:
+- `:integrator_step` to have it each simulation time step
+- a numeric vector, e.g. `days_to_read_out_d = 1:1.0:100` for specific days since `simulation.parametrizedSPAC.reference_date`
+
+Subsets of scalar state variables or soil states can be mad afterwards with:
+
+    simout_states = get_states(simulation)
+    simout_states[:, Not(r"[0-9]mm$")]    # select only scalar states (by de-selecting columns containing depth information e.g. "_150mm")
+    simout_states[:, r"(dates)|([0-9]mm)"] # select only vector states (by selecting columns containing depth information e.g. "_150mm")
+
+Returns:
+
+    366×108 DataFrame
+     Row │ dates                PREC_mmday  GWAT_mm  INTS_mm   INTR_mm       SNOW_mm  CC_MJm2     SNOWLQ_mm  PREC_d18O  GWAT_d18O  INTS_d18O  INTR_d18O  SNOW_d18O  XYLEM_d18O  ⋯ δ18O_permil_50mm  δ18O_permil_100mm  δ18O_permil_1 ⋯ ψ_kPa_1100mm
+         │ DateTime             Float64     Float64  Float64   Float64       Float64  Float64     Float64    Float64    Float64    Float64    Float64    Float64    Float64     ⋯ Float64           Float64            Float64       ⋯ Float 64
+    ─────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+       1 │ 2021-01-01T00:00:00         0.0      1.0  0.0        0.0           0.0     0.0          0.0          -15.04   -13.0        -13.0      -13.0      -13.0     -10.1111  ⋯         -10.1111           -10.1111           -10. ⋯ -7
+       2 │ 2021-01-02T00:00:00         0.0      1.0  0.0        0.0           0.0     0.0          0.0          -15.04   -12.5973     -15.04     -15.04     -15.04    -10.1111            -10.1111           -10.1111           -10. ⋯ -6.43
+"""
+function get_states(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) # returns scalar states GWAT, INTS, INTR, SNOW, CC (amount only), SNOWLQ (amount only), XYLEM (signature only)
+    # TODO: replace undocumented get_scalars() with get_states(), get_fluxes(), and get_forcing()
+    timepoints =
+        isnothing(days_to_read_out_d)           ? unique(round.(simulation.ODESolution.t)) : # case nothing: return daily by default
+        days_to_read_out_d == :integrator_step  ? simulation.ODESolution.t :                 # if requested return for each integration step stored in ODESolution
+        (1:10)[1] isa Number                    ? days_to_read_out_d :                       # else assume we got a vector of days
+        error("Unknown `days_to_read_out_d` provided.")
+
+    # i) scalar states (+PREC forcing)
+    simulate_isotopes = simulation.parametrizedSPAC.solver_options.simulate_isotopes
+
+    states = hcat(
+        LWFBrook90.get_scalars(
+            [:PREC, :GWAT, :INTS, :INTR, :SNOW, :CC, :SNOWLQ],
+            [:mmday, :mm, :mm, :mm, :mm, :MJm2, :mm],
+            simulation, timepoints),
+        !simulate_isotopes ? DataFrame() : LWFBrook90.get_scalars(
+            [:PREC, :GWAT, :INTS, :INTR, :SNOW, :XYLEM], # , :RWU
+            [:d18O, :d18O, :d18O, :d18O, :d18O, :d18O],  # , :d18O
+            simulation, timepoints)[:,Not(:time)],
+        !simulate_isotopes ? DataFrame() : LWFBrook90.get_scalars(
+            [:PREC, :GWAT, :INTS, :INTR, :SNOW, :XYLEM], # , :RWU
+            [:d2H,  :d2H,  :d2H,  :d2H,  :d2H,  :d2H],   # , :d2H
+            simulation, timepoints)[:,Not(:time)]) # alternatively innerjoin on = [:time])
+    # scalar states:
+    # simulation.ODESolution.u[1].GWAT
+    # simulation.ODESolution.u[1].INTS
+    # simulation.ODESolution.u[1].INTR
+    # simulation.ODESolution.u[1].SNOW
+    # simulation.ODESolution.u[1].XYLEM
+    # simulation.ODESolution.u[1].CC.MJm2
+    # simulation.ODESolution.u[1].SNOWLQ.mm
+
+    # ii) vector states
+    # names(get_soil_([:θ, :ψ, :δ18O, :δ2H, :W, :SWATI, :K], simulation))
+    vect_states = get_soil_([:θ, :ψ, :δ18O, :δ2H], simulation; days_to_read_out_d = timepoints)
+
+    # simulation.ODESolution.u[1].SWATI.mm
+    # simulation.ODESolution.u[1].SWATI.d2H
+    # simulation.ODESolution.u[1].SWATI.d18O
+    # simulation.ODESolution.u[1].aux.θ
+    # simulation.ODESolution.u[1].aux.ψ
+    # simulation.ODESolution.u[1].aux.K
+
+    # Define dates as DateTime from time:
+    t_ref = simulation.ODESolution.prob.p.REFERENCE_DATE
+    # dates = RelativeDaysFloat2DateTime.(days_to_read_out_d, t_ref)
+    states.time      = RelativeDaysFloat2DateTime.(states.time,      t_ref); rename!(states,      :time => :dates)
+    vect_states.time = RelativeDaysFloat2DateTime.(vect_states.time, t_ref); rename!(vect_states, :time => :dates)
+
+    return innerjoin(states, vect_states, on = [:dates])
+end
+
+@doc raw"""
+    get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
+
+Returns a DataFrame with amounts (and isotopoic compositions) of the ecosystem water fluxes*.
+
+By default, the values are returned for each simulation day.
+The user can optionally define timestep using the input argument `days_to_read_out_d` as:
+- a numeric vector, e.g. `days_to_read_out_d = 1:1.0:100` for specific days since `simulation.parametrizedSPAC.reference_date`
+
+Subsets of scalar state variables or soil states can be mad afterwards with:
+
+    simout_fluxes = get_fluxes(simulation)
+    simout_fluxes[:, Not(r"[0-9]mm$")]    # select only scalar fluxes (by de-selecting columns containing depth information e.g. "_150mm")
+    simout_fluxes[:, r"(dates)|([0-9]mm)"] # select only vector fluxes (by selecting columns containing depth information e.g. "_150mm")
+
+\* fluxes returned as columns in the DataFrame are:
+
+    :dates
+
+    :cum_d_prec,:cum_d_sfal,:cum_d_sthr,:cum_d_sint,
+    :cum_d_rfal,:cum_d_rint,:cum_d_rthr,:cum_d_rsno,:cum_d_rnet,:cum_d_smlt,
+    :cum_d_irvp,:cum_d_isvp,:cum_d_snvp,:cum_d_slvp,
+    :cum_d_tran,
+    :cum_d_pint, :cum_d_ptran, :cum_d_pslvp,
+    :srfl,:slfl,:byfl,:dsfl,:gwfl,:vrfln,
+
+    :flow, :seep, :evap,
+
+    :TRANI_mmday_50mm, :TRANI_mmday_100mm, ... :TRANI_mmday_1050mm, :TRANI_mmday_1100mm
+
+Returns:
+
+    366×50 DataFrame
+     Row │ dates                cum_d_prec  cum_d_sfal  cum_d_sthr  cum_d_sint  cum_d_rfal  cum_d_rint  cum_d_rthr  cum_d_rsno  cum_d_rnet  cum_d_smlt   ⋯
+         │ DateTime             Float64     Float64     Float64     Float64     Float64     Float64     Float64     Float64     Float64     Float64      ⋯
+    ─────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── ─
+       1 │ 2021-01-01T00:00:00         0.0    0.0         0.0        0.0          0.0         0.0         0.0         0.0          0.0         0.0       ⋯
+       2 │ 2021-01-02T00:00:00         0.0    0.0         0.0        0.0          0.0         0.0         0.0         0.0          0.0         0.0       ⋯
+
+         ⋯ cum_d_irvp  cum_d_isvp  cum_d_snvp  cum_d_slvp  cum_d_tran   cum_d_pint  cum_d_ptran  cum_d_pslvp  srfl     slfl      byfl     dsfl      ⋯
+         ⋯ Float64     Float64     Float64     Float64     Float64      Float64     Float64      Float64      Float64  Float64   Float64  Float64   ⋯
+         ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+         ⋯   0.0        0.0         0.0        0.0         0.0            0.0       0.0            0.0            0.0   0.0          0.0      0.0   ⋯
+         ⋯   0.0        0.0         0.0        0.0448292   0.0566162      2.64652   0.0566162      0.364727       0.0   0.0          0.0      0.0   ⋯
+
+         ⋯ gwfl      vrfln     flow      seep     evap       TRANI_mmday_50mm  TRANI_mmday_100mm  TRANI_mmday_150mm  TRANI_mmday_200mm  TRANI_mmday_250mm  ⋯ TRANI_mmday_1050mm TRANI_mmday_1100mm
+         ⋯ Float64   Float64   Float64   Float64  Float64    Float64           Float64            Float64            Float64            Float64            ⋯ Float64            Float64
+         ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+         ⋯ 0.0       0.0       0.0           0.0  0.0             0.0                0.0                0.0                0.0                0.0          ⋯                0.0               0.0
+         ⋯ 0.154122  0.154122  0.154122      0.0  0.101445        0.0434988          0.00995972         0.00240976         0.000574825        0.00013463   ⋯                0.0               0.0
+"""
+function get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) # returns fluxes (external, internal, errorterms)
+    timepoints =
+        isnothing(days_to_read_out_d)           ? unique(round.(simulation.ODESolution.t)) : # case nothing: return daily by default
+        days_to_read_out_d == :integrator_step  ? error("Cumulative fluxes should not be read out on subdaily intervals.") : # if requested return for each integration step stored in ODESolution
+        # days_to_read_out_d == :integrator_step  ? simulation.ODESolution.t :                 # if requested return for each integration step stored in ODESolution
+        # (1:10)[1] isa Number                    ? days_to_read_out_d :                       # else assume we got a vector of days
+        error("Unknown `days_to_read_out_d` provided.")
+    t_ref = simulation.ODESolution.prob.p.REFERENCE_DATE
+
+    # 1) scalar fluxes
+    ks = keys(simulation.ODESolution.u[1].accum)
+    df_scalar_fluxes =
+        DataFrame((:dates => RelativeDaysFloat2DateTime.(timepoints, t_ref)),
+                (k => [simulation.ODESolution(t).accum[k] for t in timepoints] for k in ks)...)
+    # DataFrame((:date => simulation.ODESolution_datetime ),
+    #         (k => [ut.accum[k] for ut in simulation.ODESolution.u] for k in ks)...)
+
+    # 2) vector fluxes
+    # trani:
+    df_vector_fluxes = get_soil_([:TRANI], simulation; days_to_read_out_d = timepoints)
+    # TODO: # byfli, infli, dsfli are currently not done
+
+    t_ref = simulation.ODESolution.prob.p.REFERENCE_DATE
+    df_vector_fluxes.time = RelativeDaysFloat2DateTime.(df_vector_fluxes.time, t_ref)
+    rename!(df_vector_fluxes, :time => :dates)
+
+
+    # combine scalar and vector
+    df_all_fluxes = innerjoin(df_scalar_fluxes, df_vector_fluxes, on = [:dates])
+    # names(df_scalar_fluxes)
+    # names(df_vector_fluxes)
+
+    # Reorder columns
+    return select(df_all_fluxes,
+        :dates,
+        # i) internal fluxes:
+        :cum_d_prec,:cum_d_sfal,:cum_d_sthr,:cum_d_sint,
+        :cum_d_rfal,:cum_d_rint,:cum_d_rthr,:cum_d_rsno,:cum_d_rnet,:cum_d_smlt,
+        :cum_d_irvp,:cum_d_isvp,:cum_d_snvp,:cum_d_slvp,
+        :cum_d_tran, # TODO: :accum.cum_d_tran, # delete. we can use u[1].RWU.mmday # all([(simulation.ODESolution.u[idx].accum.cum_d_tran == simulation.ODESolution.u[idx].RWU.mmday) for idx in eachindex(simulation.ODESolution.u)])
+        # :RWU.mmday, # use RWU instead of accum.cum_d_tran
+        # :RWU.d18O,  # use RWU instead of accum.cum_d_tran
+        # :RWU.d2H,   # use RWU instead of accum.cum_d_tran
+        :cum_d_pint, :cum_d_ptran, :cum_d_pslvp, # not shown in Figure of P2
+        :srfl,:slfl,:byfl,:dsfl,:gwfl,:vrfln,
+
+        # ii) external fluxes:
+        # :cum_d_prec
+        :flow, :seep, :evap, # formerly cum_d_evap
+
+        # # iii) for error computation
+        # simulation.ODESolution.u[1].accum.StorageSWAT
+        # simulation.ODESolution.u[1].accum.StorageWATER
+        # simulation.ODESolution.u[1].accum.BALERD_SWAT
+        # simulation.ODESolution.u[1].accum.BALERD_total
+
+        # iv) internal fluxes per soil layer
+        # # # TODO: add byfli # define this as accum.vec_byfl.mmday, .d18O, .d2H # similar to u.TRANI
+        # # # TODO: add infli # define this as accum.vec_infl.mmday, .d18O, .d2H # similar to u.TRANI
+        # # # TODO: add dsfli # define this as accum.vec_dsfl.mmday, .d18O, .d2H # similar to u.TRANI
+        # # simulation.ODESolution.u[1].TRANI.mmday
+        r"TRANI_"
+        )
+                            # df_partitioning_daily = @chain df_fluxes begin
+                            #         @rtransform begin
+                            #             :ETa           = :evap # is actual evapotranspiration, i.e. sum of IRVP + ISVP + SNVP + SLVP + sum(aux_du_TRANI)
+                            #             :Esoil         = :cum_d_slvp
+                            #             :Esnow         = :cum_d_snvp
+                            #             :Einterception = :cum_d_irvp + :cum_d_isvp
+                            #             :Ta            = :cum_d_tran
+                            #             :Precip        = :cum_d_prec
+                            #             :Td            = :cum_d_ptran - :cum_d_tran
+                            #             :D             = - :vrfln
+                            #             # :R1          = -(:flow - :vrfln)    # flow = srfl+byfl+dsfli+gwfl, gwfl, vrfln
+                            #             :R             = -(:srfl + :byfl + :dsfl) # This is more correctly not accounting for gwfl, thereby excluding state variable GWAT from the balance
+                            #             :Swat          = :StorageSWAT
+                            #         end
+                            #         @select(:date, :year, :month, :ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Td,:D,:R,:Swat)
+                            #     end
+end
+
+@doc raw"""
+    get_forcing(simulation::DiscretizedSPAC)
+
+Returns a DataFrame with amounts (and isotopoic compositions) of the input forcing.
+Note that meteorologic forcing (amounts and isotopic signatures) is same as in input csvs,
+vegetation evolution (lai, height, sai) have been transformed to absolute units.
+
+     Row │ dates                globrad_MJDayM2  tmax_degC  tmin_degC  vappres_kPa  windspeed_ms  prec_mmDay  precdelta18O_permil  precdelta2H_permil  densef_percent  height_m  lai_m2m2  sai_m2m2
+         │ DateTime             Float64          Float64    Float64    Float64      Float64       Float64     Float64              Float64             Float64         Float64   Float64   Float64
+    ─────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+       1 │ 2021-01-01T00:00:00             5.53        0.9      -10.1         0.26           1.5         0.0               -15.04             -111.96           100.0      25.0       2.1       1.0
+       2 │ 2021-01-02T00:00:00             5.1        -0.6       -9.3         0.3            1.6         0.0               -15.04             -111.96           100.0      25.0       2.1       1.0
+"""
+function get_forcing(simulation::DiscretizedSPAC) # returns forcing [..., ..., ..., ..., ...]
+
+    # Extract data from simulation object
+    # input forcings (from definition of parametrized SPAC):
+    input_meteo = simulation.parametrizedSPAC.forcing.meteo
+    # simulation.parametrizedSPAC.forcing.meteoiso
+    simulation.parametrizedSPAC.forcing.storm_durations
+
+    # processed forcings (integrated as time-varying parameters in ODEProblem):
+    p_fT = simulation.ODESolution.prob.p;
+
+    # handle time
+    t_ref = p_fT.REFERENCE_DATE
+    timepoints = simulation.parametrizedSPAC.forcing.meteo["p_days"]         # forcing period can be longer than simulation output (e.g. when using a spinup period)
+    # timepoints = range(simulation.ODEProblem.tspan..., step = 1)           # Plot forcing as daily, even if solution output (ODESolution.t) is not dense
+    # timepoints = range(extrema(simulation.ODESolution.t)..., step = 1)     # Plot forcing as daily, even if solution output (ODESolution.t) is not dense
+
+    # 1) prepare data to plot
+    # i) meteo forcing (wind, vappres, globrad, tmax, tmin, prec, lai, )
+    return DataFrame(
+        :dates                   => RelativeDaysFloat2DateTime.(timepoints, t_ref),
+        :globrad_MJDayM2         => p_fT.p_GLOBRAD.(timepoints),
+        :tmax_degC               => p_fT.p_TMAX.(timepoints),
+        :tmin_degC               => p_fT.p_TMIN.(timepoints),
+        :vappres_kPa             => p_fT.p_VAPPRES.(timepoints),
+        :windspeed_ms            => p_fT.p_WIND.(timepoints),
+        :prec_mmDay              => p_fT.p_PREC.(timepoints),
+        :precdelta18O_permil     => p_fT.p_δ18O_PREC.(timepoints),
+        :precdelta2H_permil      => p_fT.p_δ2H_PREC.(timepoints),
+        :densef_percent          => p_fT.p_DENSEF.(timepoints)*100,
+        :height_m                => p_fT.p_HEIGHT.(timepoints),
+        :lai_m2m2                => p_fT.p_LAI.(timepoints),
+        :sai_m2m2                => p_fT.p_SAI.(timepoints))
+
+        # # ii) states (scalar and vector)
+        # (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) = LWFBrook90.get_auxiliary_variables(simulation)
+        # timepoints_states = simulation.ODESolution.t
+        # # x3 = simulation.ODESolution_datetime;
+        # x3 = RelativeDaysFloat2DateTime.(timepoints_states, t_ref);
+        # y31 = hcat(reduce(hcat,  [simulation.ODESolution(t).INTR.mm   for t in simulation.ODESolution.t])',
+        #             reduce(hcat, [simulation.ODESolution(t).INTS.mm   for t in simulation.ODESolution.t])',
+        #             reduce(hcat, [simulation.ODESolution(t).SNOW.mm   for t in simulation.ODESolution.t])',
+        #             reduce(hcat, [simulation.ODESolution(t).SNOWLQ.mm   for t in simulation.ODESolution.t])',
+        #             reduce(hcat, [simulation.ODESolution(t).XYLEM.mm   for t in simulation.ODESolution.t])');
+        # lbl31 = ["INTR [mm]" "INTS [mm]" "SNOW [mm]" "SNOWLQ [mm]" "XYLEM [mm]"];
+        # y32 = hcat(sum(u_SWATI; dims=1)',
+        #             reduce(hcat, [simulation.ODESolution(t).GWAT.mm   for t in simulation.ODESolution.t])');
+        # lbl32 = ["Total Soil Water [mm]" "GWAT [mm]"];
+
+        # # iii) fluxes
+        # x4 = simulation.ODESolution_datetime;
+        # y41 = hcat(  reduce(hcat, [simulation.ODESolution(t).RWU.mmday   for t in simulation.ODESolution.t])',
+        #                                     sum(reduce(hcat, [simulation.ODESolution(t).TRANI.mmday   for t in simulation.ODESolution.t]); dims=1)')
+        # lbl41 = ["RWU (mm/day)" "sum(TRANI)"]
+end
+
+
 
 ##########################
 # Functions to get values linked to soil domain:
