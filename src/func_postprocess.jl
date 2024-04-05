@@ -452,9 +452,6 @@ function get_δ(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
     return hcat(dfd18O, dfd2H[:, Not(:time)])
 end
 get_delta = get_δ
-# get_δ(simulation)[:,:PREC_d2H]
-# get_δ(simulation).PREC_d18O
-# get_δ(simulation)
 
 function get_scalars(compartments_to_extract, units_to_extract, simulation::DiscretizedSPAC, days_to_read_out_d = nothing)
     solution = simulation.ODESolution;
@@ -466,42 +463,30 @@ function get_scalars(compartments_to_extract, units_to_extract, simulation::Disc
     df_time = DataFrame(:time => (timepoints isa AbstractArray ? timepoints : [timepoints])) # transform to vector even if input as scalar
 
     # Extract scalar values from state variable vector u
-    is_prec = compartments_to_extract .== :PREC # Dont cycle over PREC
-    cycle_over = zip(compartments_to_extract[Not(is_prec)], units_to_extract[Not(is_prec)])
+    # Treat precipitation separately
+    is_prec = compartments_to_extract .== :PREC
+    @show is_prec
+    cycle_over1 = zip(compartments_to_extract[Not(is_prec)], units_to_extract[Not(is_prec)])
+    cycle_over2 = zip(compartments_to_extract[is_prec], units_to_extract[is_prec])
 
-    if isnothing(days_to_read_out_d)
-        # u_aboveground = collect(solution[t_idx][comp][uni] for t_idx = eachindex(solution), (comp,uni) in cycle_over)
-        df_states = DataFrame((
-            string(comp) * "_" * string(uni) => [
-                solution[t_idx][comp][uni] for t_idx = eachindex(solution)
-            ] for (comp, uni) in cycle_over
-        )...)
-    else
-        # u_aboveground = collect(solution(t_days)[comp][uni]  for t_days = days_to_read_out_d, (comp,uni) in cycle_over)
-        df_states = DataFrame((
-            string(comp) * "_" * string(uni) => [
-                solution(t_days)[comp][uni] for t_days = timepoints
-            ] for (comp, uni) in cycle_over
-        )...)
-    end
+    # u_aboveground = collect(solution(t_days)[comp][uni]  for t_days = days_to_read_out_d, (comp,uni) in cycle_over1)
+    df_states = DataFrame((
+        string(comp) * "_" * string(uni) => [
+            solution(t_days)[comp][uni] for t_days = timepoints
+        ] for (comp, uni) in cycle_over1)...)
 
     # Extract precipitation from forcing
-    if any(is_prec)
-        df_PREC = DataFrame("PREC_" * string(units_to_extract[is_prec][1]) =>
-            if (units_to_extract[is_prec][1] .== :mm || units_to_extract[is_prec][1] .== :mmday)
-                if (isnothing(days_to_read_out_d)) solution.prob.p.p_PREC.(solution.t)
-                else solution.prob.p.p_PREC.(days_to_read_out_d) end
-            elseif (units_to_extract[is_prec][1] .== :d18O)
-                if (isnothing(days_to_read_out_d)) solution.prob.p.p_δ18O_PREC.(solution.t)
-                else solution.prob.p.p_δ18O_PREC.(days_to_read_out_d) end
-            elseif (units_to_extract[is_prec][1] .== :d2H)
-                if (isnothing(days_to_read_out_d)) solution.prob.p.p_δ2H_PREC.(solution.t)
-                else solution.prob.p.p_δ2H_PREC.(days_to_read_out_d) end
-            end
-        )
-    else
-        df_PREC = DataFrame()
-    end
+    df_PREC = DataFrame((string(comp) * "_" * string(uni) =>
+        # comp == :PREC ?
+        uni ∈ [:mmday,  :mm] ? solution.prob.p.p_PREC.(timepoints) :
+            uni ∈ [:d18O, :δ18O] ? solution.prob.p.p_δ18O_PREC.(timepoints) :
+            uni ∈ [:d2H , :δ2H ] ? solution.prob.p.p_δ2H_PREC.(timepoints) :
+            error("Unknown compartments or units to extract provided.")
+        for (comp, uni) in cycle_over2)...)
+
+    # TODO: if we cycle only once over states and fluxes we would get the same order as provided in
+    #       compartments_to_extract, units_to_extract. This would be better behavior.
+    #       But only modify this if get_scalars() becomes part of the public API
 
     # returns DataFrame of dimenstion (t, N_variables = 9)
     #   where t is number of time steps
