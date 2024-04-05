@@ -16,17 +16,16 @@ using CategoricalArrays
 using Distributions: Gamma, cdf, truncated
 
 # NOTE TO DEVELOPERS: EXPORTED ELEMENTS CONSTITUTE THE API AND SHOULD BE STABLE AND DOCUMENTED.
-export SPAC, DiscretizedSPAC, loadSPAC, setup, simulate!, remakeSPAC
-export run_simulation
-export prepare_for_LWFBrook90R
-export Rootden_
+# to define and run a simulation
+export loadSPAC, setup, simulate!, remakeSPAC, SPAC, DiscretizedSPAC
+# to postprocess a simulation
+export get_states, get_fluxes, get_forcing # read out daily results
+export get_water_partitioning              # more specific: read out results for water partitioning
+export get_soil_                           # read out results for soil domain variables
+# helper function for time:
 export RelativeDaysFloat2DateTime
-# read out results for soil domain variables
-export get_soil_
-# read out results for aboveground/scalar variables
-export get_forcing, get_states, get_fluxes # TODO(bernhard): make sure we have documentation for these exported variables
-# read out results for water partitioning
-export get_water_partitioning
+export prepare_for_LWFBrook90R
+
 
 @doc raw"""
     SPAC

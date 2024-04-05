@@ -19,14 +19,21 @@
 using LWFBrook90
 
 ## `using LWFBrook90` brings the following exported functions into scope:
-## - `SPAC()`
-## - `DiscretizedSPAC()`
-## - `discretize()`
-## - `simulate!()`
-## - `get_soil_()`
-## - `get_states()`
-## - `get_fluxes()`,
-## - `get_forcing()`,
+## - `loadSPAC()`                   # to define and run a simulation
+## - `setup()`                      # to define and run a simulation
+## - `simulate!()`                  # to define and run a simulation
+## - `remakeSPAC()`                 # to define and run a simulation
+## - `SPAC()`                       # to define and run a simulation
+## - `DiscretizedSPAC()`            # to define and run a simulation
+## - `get_states()`                 # to postprocess a simulation
+## - `get_fluxes()`                 # to postprocess a simulation
+## - `get_forcing()`                # to postprocess a simulation
+## - `get_soil_()`                  # to postprocess a simulation
+## - `get_water_partitioning()`     # to postprocess a simulation
+## - `RelativeDaysFloat2DateTime()` # a helper function for time
+## - `prepare_for_LWFBrook90R()`    # a helper function
+
+# Documentation can be accessed by typing: `?loadSPAC`, `?setup`, `?simulate!`, `?plotisotopes`, etc.
 
 # Define simulation model by reading in system definition and input data from input files.
 # When printed, the generated SPAC model gives a summary.
