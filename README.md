@@ -31,34 +31,17 @@ LWFBrook90.jl is developed with the following objectives in mind:
 <p align="center"><img src="https://github.com/fabern/LWFBrook90.jl/blob/develop/docs/src/assets/LWFBrook90jl_overview_v1.4-juliacolors.png?raw=true" width="400"><p>
 <p align="center">Figure 1: Summary of processes and state variables used in LWFBrook90.jl<p>
 
-Further model description can be found in the [documentation](https://fabern.github.io/LWFBrook90.jl/stable).
-
-
-## License
-LWFBrook90.jl is licensed under GPL-3.0 (for details see the file `LICENSE`).
-
-## Acknowledgements
-Development of LWFBrook90.jl builds on the following works:
-- BROOK90 (v4.8) by C. Anthony Federer, Licensed under CC0 1.0, http://www.ecoshift.net/brook/brook90.htm
-- LWFBrook90R (v0.4.3) by Paul Schmidt-Walter, Volodymyr Trotsiuk, Klaus Hammel, Martin Kennel, Anthony Federer, Robert Nuske, Licensed under GPL-3.0, https://github.com/pschmidtwalter/LWFBrook90R
-
-Note that LWFBrook90R itself uses LWF-BROOK90 by Hammel and Kennel, 2001
-(Hammel, K., & Kennel, M. (2001). Charakterisierung und Analyse der Wasserverfügbarkeit und des Wasserhaushalts von Waldstandorten in Bayern mit dem Simulationsmodell BROOK90 (No. 185; *Forstliche Forschungsberichte München*, p. 135). Technische Uni München Wissenschaftszentrum Weihenstephan. ISBN 3-933506-16-6)
-
-All literature references are reported in the section [References](https://fabern.github.io/LWFBrook90.jl/stable/#References) in the documentation.
-
-The Swiss National Science Foundation is acknowledged for funding the development of this package through the project "Give and take: How much water does soil retain for trees?" (project number 185093, https://p3.snf.ch/project-185093).
-
-Matthias Häni, Katrin Meusburger, Peter Waldner, Lorenz Walthert, Stephan Zimmermann of [WSL](http://www.wsl.ch) and its Long-term Forest Ecosystem Research (LWF) project are gratefully acknowledged for providing example data files located in `examples/BEA2016*`.
-
 ## For Users: getting started
-To get started with Julia: see the section [Installation](https://fabern.github.io/LWFBrook90.jl/stable/user-guide/#Installation) in the documentation.
+You can start by reading the [documentation](https://fabern.github.io/LWFBrook90.jl/stable) and to get started have a look at Example-01.
+
 
 An example data set `BEA2016*` was generated using the R package LWFBrook90R and is located in the folder `examples/`. See outputs in the next section.
 
 To run this example simulation simply call `LWFBrook90.run_example()`. Note, that the first time might take some time to load and compile the package. Another possibility is to follow the script `main.jl`, which sets up a simulation and shows some simple plotting commands. See documentation section [Example](https://fabern.github.io/LWFBrook90.jl/stable/example/).
 
 Further documentation for LWFBrook90.jl is available [here](https://fabern.github.io/LWFBrook90.jl/stable) and for BROOK90 [here](http://www.ecoshift.net/brook/b90doc.html).
+
+To get started with Julia: see the section [Installation](https://fabern.github.io/LWFBrook90.jl/stable/user-guide/#Installation) in the documentation.
 
 If you're new to scientific computing in Julia. There are many useful tutorials around. For a quick start you can check out:
 - Getting Started With Julia, targeted at epidemiologists, by C.Arnold-Leps: https://juliaepibook.callumarnold.com/install-julia and https://juliaepibook.callumarnold.com/julia-basics
@@ -92,6 +75,22 @@ Tests are run to assert agreement with results from LWFBrook90R. Visualizations 
 Note that some features of LWFBrook90R are not implemented in the main version of LWFBrook90.jl. The time step adaptivity and `Reset==1` of LWFBrook90R would require code refactoring, which goes slightly against the intended use of the library for ODEs DifferentialEquations.jl. Because of this, implementation of these features is left away from the main version. However, an attempt at their implementation resides currently in a feature branch `005`.
 
 
+## License
+LWFBrook90.jl is licensed under GPL-3.0 (for details see the file `LICENSE`).
+
+## Acknowledgements
+Development of LWFBrook90.jl builds on the following works:
+- BROOK90 (v4.8) by C. Anthony Federer, Licensed under CC0 1.0, http://www.ecoshift.net/brook/brook90.htm
+- LWFBrook90R (v0.4.3) by Paul Schmidt-Walter, Volodymyr Trotsiuk, Klaus Hammel, Martin Kennel, Anthony Federer, Robert Nuske, Licensed under GPL-3.0, https://github.com/pschmidtwalter/LWFBrook90R
+
+Note that LWFBrook90R itself uses LWF-BROOK90 by Hammel and Kennel, 2001
+(Hammel, K., & Kennel, M. (2001). Charakterisierung und Analyse der Wasserverfügbarkeit und des Wasserhaushalts von Waldstandorten in Bayern mit dem Simulationsmodell BROOK90 (No. 185; *Forstliche Forschungsberichte München*, p. 135). Technische Uni München Wissenschaftszentrum Weihenstephan. ISBN 3-933506-16-6)
+
+All literature references are reported in the section [References](https://fabern.github.io/LWFBrook90.jl/stable/#References) in the documentation.
+
+The Swiss National Science Foundation is acknowledged for funding the development of this package through the project "Give and take: How much water does soil retain for trees?" (project number 185093, https://p3.snf.ch/project-185093).
+
+Matthias Häni, Katrin Meusburger, Peter Waldner, Lorenz Walthert, Stephan Zimmermann of [WSL](http://www.wsl.ch) and its Long-term Forest Ecosystem Research (LWF) project are gratefully acknowledged for providing example data files located in `examples/BEA2016*`.
 
 ## For Developers:
 Any help in form of discussions, pull requests, example data sets, or otherwise is very welcome. Please don't hesitate to contact us.

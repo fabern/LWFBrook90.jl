@@ -21,14 +21,16 @@ Subsets of scalar state variables or soil states can be mad afterwards with:
 Returns:
 
     366×108 DataFrame
-     Row │ dates                PREC_mmday  GWAT_mm  INTS_mm   INTR_mm       SNOW_mm  CC_MJm2     SNOWLQ_mm  PREC_d18O  GWAT_d18O  INTS_d18O  INTR_d18O  SNOW_d18O  XYLEM_d18O  ⋯ δ18O_permil_50mm  δ18O_permil_100mm  δ18O_permil_1 ⋯ ψ_kPa_1100mm
-         │ DateTime             Float64     Float64  Float64   Float64       Float64  Float64     Float64    Float64    Float64    Float64    Float64    Float64    Float64     ⋯ Float64           Float64            Float64       ⋯ Float 64
-    ─────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-       1 │ 2021-01-01T00:00:00         0.0      1.0  0.0        0.0           0.0     0.0          0.0          -15.04   -13.0        -13.0      -13.0      -13.0     -10.1111  ⋯         -10.1111           -10.1111           -10. ⋯ -7
-       2 │ 2021-01-02T00:00:00         0.0      1.0  0.0        0.0           0.0     0.0          0.0          -15.04   -12.5973     -15.04     -15.04     -15.04    -10.1111            -10.1111           -10.1111           -10. ⋯ -6.43
+     Row │ dates                GWAT_mm  INTS_mm   INTR_mm       SNOW_mm  CC_MJm2     SNOWLQ_mm  SWAT_mm  GWAT_d18O  INTS_d18O  INTR_d18O  SNOW_d18O  XYLEM_d18O  ⋯ δ18O_permil_50mm  δ18O_permil_100mm  δ18O_permil_1 ⋯ ψ_kPa_1100mm
+         │ DateTime             Float64  Float64   Float64       Float64  Float64     Float64    Float64  Float64    Float64    Float64    Float64    Float64     ⋯ Float64           Float64            Float64       ⋯ Float 64
+    ─────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+       1 │ 2021-01-01T00:00:00      1.0  0.0        0.0           0.0     0.0          0.0       90.2641  -13.0        -13.0      -13.0      -13.0     -10.1111  ⋯         -10.1111           -10.1111           -10. ⋯ -7
+       2 │ 2021-01-02T00:00:00      1.0  0.0        0.0           0.0     0.0          0.0       90.4532  -12.5973     -15.04     -15.04     -15.04    -10.1111            -10.1111           -10.1111           -10. ⋯ -6.43
 """
 function get_states(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) # returns scalar states GWAT, INTS, INTR, SNOW, CC (amount only), SNOWLQ (amount only), XYLEM (signature only)
-    # TODO: replace undocumented intern___get_scalars() with get_states(), get_fluxes(), and get_forcing()
+    if isnothing(simulation.ODESolution)
+        error("The provided simulation has not yet been solved. Please `simulate!()` the DiscretizedSPAC first.")
+    end
     timepoints =
         isnothing(days_to_read_out_d)           ? unique(round.(simulation.ODESolution.t)) : # case nothing: return daily by default
         days_to_read_out_d == :integrator_step  ? simulation.ODESolution.t :                 # if requested return for each integration step stored in ODESolution
@@ -40,16 +42,16 @@ function get_states(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
 
     states = hcat(
         LWFBrook90.intern___get_scalars(
-            [:PREC, :GWAT, :INTS, :INTR, :SNOW, :CC, :SNOWLQ],
-            [:mmday, :mm, :mm, :mm, :mm, :MJm2, :mm],
+            [:GWAT, :INTS, :INTR, :SNOW, :CC, :SNOWLQ],
+            [:mm, :mm, :mm, :mm, :MJm2, :mm],
             simulation, timepoints),
         !simulate_isotopes ? DataFrame() : LWFBrook90.intern___get_scalars(
-            [:PREC, :GWAT, :INTS, :INTR, :SNOW, :XYLEM], # , :RWU
-            [:d18O, :d18O, :d18O, :d18O, :d18O, :d18O],  # , :d18O
+            [:GWAT, :INTS, :INTR, :SNOW, :XYLEM], # , :RWU
+            [:d18O, :d18O, :d18O, :d18O, :d18O],  # , :d18O
             simulation, timepoints)[:,Not(:time)],
         !simulate_isotopes ? DataFrame() : LWFBrook90.intern___get_scalars(
-            [:PREC, :GWAT, :INTS, :INTR, :SNOW, :XYLEM], # , :RWU
-            [:d2H,  :d2H,  :d2H,  :d2H,  :d2H,  :d2H],   # , :d2H
+            [:GWAT, :INTS, :INTR, :SNOW, :XYLEM], # , :RWU
+            [:d2H,  :d2H,  :d2H,  :d2H,  :d2H],   # , :d2H
             simulation, timepoints)[:,Not(:time)]) # alternatively innerjoin on = [:time])
     # scalar states:
     # simulation.ODESolution.u[1].GWAT

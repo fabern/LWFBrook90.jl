@@ -54,7 +54,7 @@ function get_some_states_to_compare(example_result)
     u_δ     = innerjoin(
         get_states(example_result, days_to_read_out_d = t_out),
         get_fluxes(example_result, days_to_read_out_d = t_out),
-        on = [:dates, :PREC_d2H, :PREC_d18O])[:,[:dates,:PREC_d18O,:GWAT_d18O,:INTS_d18O,:INTR_d18O,:SNOW_d18O,:RWU_d18O,:XYLEM_d18O,:PREC_d2H,:GWAT_d2H,:INTS_d2H,:INTR_d2H,:SNOW_d2H,:RWU_d2H,:XYLEM_d2H]]
+        on = [:dates])[:,[:dates,:PREC_d18O,:GWAT_d18O,:INTS_d18O,:INTR_d18O,:SNOW_d18O,:RWU_d18O,:XYLEM_d18O,:PREC_d2H,:GWAT_d2H,:INTS_d2H,:INTR_d2H,:SNOW_d2H,:RWU_d2H,:XYLEM_d2H]]
     ## vector quantities
     u_belowground = get_soil_([:SWATI, :W, :ψ, :θ, :K, :δ18O, :δ2H], example_result;
         days_to_read_out_d = t_out)
