@@ -435,21 +435,6 @@ end
 ##########################
 # Functions to get values either isotopes or amounts (or otherwise)
 """
-    get_amounts(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
-
-Returns a DataFrame with amounts of the inputs and state variables: PREC, GWAT, INTS, INTR, SNOW, SNOWLQ in mm and CC in MJm2.
-By default, the values are returned for each simulation timestep.
-The user can define timesteps as `days_to_read_out_d` by optionally providing a numeric vector, e.g. saveat = 1:1.0:100
-"""
-function get_amounts(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
-    compartments_to_extract = [:GWAT, :INTS, :INTR, :SNOW, :CC, :SNOWLQ] # CC is in MJm2
-    units_to_extract = [:mm, :mm, :mm, :mm, :MJm2, :mm]
-    # compartments_to_extract = [:GWAT, :INTS, :INTR, :SNOW, :CC, :SNOWLQ, :RWU, :XYLEM, :SWATI] # CC is in MJm2
-    # units_to_extract = [:mm, :mm, :mm, :mm, :MJm2, :mm, :mmday, :mm, :mm]
-    return get_scalars(compartments_to_extract, units_to_extract, simulation, days_to_read_out_d)
-end
-
-"""
     get_δ(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
 
 Returns a DataFrame with the isotopoic compositions of the inputs and state variables: PREC, GWAT, INTS, INTR, SNOW, RWU, XYLEM.
@@ -470,10 +455,6 @@ get_delta = get_δ
 # get_δ(simulation)[:,:PREC_d2H]
 # get_δ(simulation).PREC_d18O
 # get_δ(simulation)
-# get_amounts(simulation; days_to_read_out_d = days_to_read_out_d)
-
-# plot(dates_to_read_out,     Matrix(dat_aboveground[:, Not(:time)]), labels = reshape(names(dat_aboveground[:, Not(:time)]),1,:))
-#     u_aboveground = LWFBrook90.get_amounts(simulation; days_to_read_out_d = timesteps);
 
 function get_scalars(compartments_to_extract, units_to_extract, simulation::DiscretizedSPAC, days_to_read_out_d = nothing)
     solution = simulation.ODESolution;

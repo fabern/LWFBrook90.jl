@@ -237,7 +237,9 @@ function prepare_θψAboveground_from_sim_and_ref(
 
     # Postprocess simulation
     timesteps = ref_below_1.θ.time;
-    u_aboveground = LWFBrook90.get_amounts(simulation; days_to_read_out_d = timesteps);
+    u_aboveground = get_states(simulation, days_to_read_out_d = timesteps)[:, [:dates, :GWAT_mm, :INTS_mm, :INTR_mm, :SNOW_mm, :CC_MJm2, :SNOWLQ_mm]]
+    rename!(u_aboveground, :dates => :time)
+    u_aboveground.time = LWFBrook90.DateTime2RelativeDaysFloat.(u_aboveground.time, simulation.parametrizedSPAC.reference_date)
     ## Extract certain depths of simulation
     depth_to_read_out_mm = [100, 500, 1000, 1500, 1900];
     u_belowground = get_soil_([:θ, :ψ], simulation; days_to_read_out_d = timesteps, depths_to_read_out_mm = depth_to_read_out_mm)

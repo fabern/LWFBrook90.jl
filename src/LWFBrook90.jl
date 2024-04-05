@@ -24,9 +24,8 @@ export RelativeDaysFloat2DateTime
 # read out results for soil domain variables
 export get_soil_
 # read out results for aboveground/scalar variables
-export get_amounts, get_δ, get_delta # get_mm # # TODO(bernhard): make sure we have documentation for these exported variables
-    #TODO: rename above to: export get_scalarState_amounts, get_scalarState_signatures and update documentation in examples/example-script-01.jl
-export get_forcing, get_states, get_fluxes
+export get_δ, get_delta # get_mm #
+export get_forcing, get_states, get_fluxes # TODO(bernhard): make sure we have documentation for these exported variables
 # read out results for water partitioning
 export get_water_partitioning
 
