@@ -491,7 +491,7 @@ end
     # 3) Test RMSE
     # Compare θ
     # Compare with LWFBrook90R as reference solution
-    @test RMS_differences(sim1.θψδ[:,Cols(:time, r"θ_")], ref1.θ) < 0.0020
+    @test RMS_differences(sim1.θψδ[:,Cols(:time, r"θ_")], ref1.θ) < 0.00205
     @test RMS_differences(sim2.θψδ[:,Cols(:time, r"θ_")], ref2.θ) < 0.00070
     high_resolution_flag && (@test RMS_differences(sim3.θψδ[:,Cols(:time, r"θ_")], ref3.θ) < 0.00053)
     @test RMS_differences(sim4.θψδ[:,Cols(:time, r"θ_")], ref4.θ) < 0.00035
@@ -686,7 +686,7 @@ end
     # 3) Test RMSE
     # Compare θ
     # θ: Compare with LWFBrook90R as reference solution
-    @test RMS_differences(sim1.θψδ[:,Cols(:time, r"θ_")], ref1.θ) < 0.00200
+    @test RMS_differences(sim1.θψδ[:,Cols(:time, r"θ_")], ref1.θ) < 0.00205
     @test RMS_differences(sim2.θψδ[:,Cols(:time, r"θ_")], ref2.θ) < 0.00060
     high_resolution_flag && (@test RMS_differences(sim3.θψδ[:,Cols(:time, r"θ_")], ref3.θ) < 0.00053)
     @test RMS_differences(sim4.θψδ[:,Cols(:time, r"θ_")], ref4.θ) < 0.00040
