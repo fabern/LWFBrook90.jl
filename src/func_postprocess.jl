@@ -153,11 +153,19 @@ function get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
     df_vector_fluxes.time = RelativeDaysFloat2DateTime.(df_vector_fluxes.time, t_ref)
     rename!(df_vector_fluxes, :time => :dates)
 
+    # 3) scalar fluxes, signatures
+    simulate_isotopes = simulation.parametrizedSPAC.solver_options.simulate_isotopes
+    df_scalar_signatures = !simulate_isotopes ? DataFrame() : LWFBrook90.get_scalars(
+        [:RWU, :PREC, :RWU, :PREC, :RWU],
+        [:mmday,:d18O, :d18O, :d2H, :d2H],
+        simulation, timepoints)[:,Not(:time)]
+
+    # 4) vector fluxes, signatures
+    df_vector_signatures = DataFrame() # TODO: this is currently not stored anywhere when simulating (would need to append to state vector u0)
 
     # combine scalar and vector
     df_all_fluxes = innerjoin(df_scalar_fluxes, df_vector_fluxes, on = [:dates])
-    # names(df_scalar_fluxes)
-    # names(df_vector_fluxes)
+    df_all_fluxes = hcat(df_all_fluxes, df_scalar_signatures, df_vector_signatures)
 
     # Reorder columns
     return select(df_all_fluxes,
@@ -167,9 +175,10 @@ function get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
         :cum_d_rfal,:cum_d_rint,:cum_d_rthr,:cum_d_rsno,:cum_d_rnet,:cum_d_smlt,
         :cum_d_irvp,:cum_d_isvp,:cum_d_snvp,:cum_d_slvp,
         :cum_d_tran, # TODO: :accum.cum_d_tran, # delete. we can use u[1].RWU.mmday # all([(simulation.ODESolution.u[idx].accum.cum_d_tran == simulation.ODESolution.u[idx].RWU.mmday) for idx in eachindex(simulation.ODESolution.u)])
-        # :RWU.mmday, # use RWU instead of accum.cum_d_tran
-        # :RWU.d18O,  # use RWU instead of accum.cum_d_tran
-        # :RWU.d2H,   # use RWU instead of accum.cum_d_tran
+        # :RWU_mmday, # use RWU instead of accum.cum_d_tran
+        :RWU_d18O, :RWU_d2H,
+        :PREC_d18O, :PREC_d2H,
+
         :cum_d_pint, :cum_d_ptran, :cum_d_pslvp, # not shown in Figure of P2
         :srfl,:slfl,:byfl,:dsfl,:gwfl,:vrfln,
 
@@ -465,7 +474,6 @@ function get_scalars(compartments_to_extract, units_to_extract, simulation::Disc
     # Extract scalar values from state variable vector u
     # Treat precipitation separately
     is_prec = compartments_to_extract .== :PREC
-    @show is_prec
     cycle_over1 = zip(compartments_to_extract[Not(is_prec)], units_to_extract[Not(is_prec)])
     cycle_over2 = zip(compartments_to_extract[is_prec], units_to_extract[is_prec])
 
