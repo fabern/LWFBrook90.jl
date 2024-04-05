@@ -1,3 +1,426 @@
+
+##########################
+# Functions to get values linked to soil domain:
+function get_soil_idx(simulation::DiscretizedSPAC, depths_to_read_out_mm; only_valid_idxs = false)
+    @assert all(depths_to_read_out_mm .> 0) # depths and lower_boundaries must all be positive numbers
+    lower_boundaries = round.(Int, cumsum(simulation.ODESolution.prob.p.p_soil.p_THICK))      # NOTE: this rounds hardcoded to mm
+    # center = round.(Int, lower_boundaries - 0.5*simulation.ODESolution.prob.p.p_soil.p_THICK) # NOTE: this rounds hardcoded to mm
+
+    idx_to_read_out = fill(0, length(depths_to_read_out_mm))
+    for (it, curr_depth_mm) in enumerate(depths_to_read_out_mm)
+        if (curr_depth_mm > maximum(lower_boundaries))
+            # Only read out values that are within the simulation domain
+            idx_to_read_out[it] = 0 # 0 means this depth has not been simulated
+            @warn "Requested read-out depth of $curr_depth_mm is below simulation domain and is silently omitted for the output."
+        else
+            idx_to_read_out[it] = findfirst(curr_depth_mm .<= lower_boundaries)
+        end
+    end
+    all_idxs = Dict((d => i) for (d,i) in zip(depths_to_read_out_mm, idx_to_read_out))
+    if only_valid_idxs
+        return filter((k, v)::Pair -> v != 0, all_idxs)
+    else # default
+        return all_idxs
+    end
+end
+
+function get_auxiliary_variables(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
+    solution = simulation.ODESolution
+    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
+
+    p_soil = solution.prob.p.p_soil
+    NLAYER = p_soil.NLAYER
+    if isnothing(days_to_read_out_d)
+        u_SWATI = reduce(hcat, [solution[t_idx].SWATI.mm  for t_idx = eachindex(solution)])
+    else
+        u_SWATI = reduce(hcat, [solution(t_days).SWATI.mm for t_days = days_to_read_out_d])
+    end
+
+    u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK =
+        (fill(NaN, size(u_SWATI)) for i in 1:5)
+    for t in 1:size(u_SWATI,2)
+        (u_aux_WETNES[:, t], u_aux_PSIM[:, t], u_aux_PSITI[:, t], u_aux_θ[:, t], p_fu_KK[:, t]) =
+            KPT.derive_auxiliary_SOILVAR(u_SWATI[:,t], p_soil)
+    end
+    # returns arrays of dimenstion (t,z) where t is number of timesteps and z number of computational layers
+    return (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
+end
+
+"""
+    get_soil_(symbols, simulation; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing))
+
+Returns a 2D DataFrame of soil variables with soil layers as columns and time steps as rows.
+Supports a number of variables:
+    - `:θ` (= `:theta`) = volumetric soil moisture values (m3/m3)
+    - `:ψ` (= `:psi`) = soil matric potential (kPa)
+    - `:W` = soil wetness (-)
+    - `:SWATI` = soil water volumes contained in discretized layers (mm)
+    - `:K` = soil hydraulic conductivities (mm/day)
+    - `:δ18O`, `:δ2H`, `:d18O`, `:d2H` = isotopic signatures (delta)
+    - `TRANI`, `RWU` = root water uptake flux from each cell (mm/day)
+The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
+that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `days_to_read_out_d = 1:1.0:100`
+
+Function to read out soil variables from a simulated simulation.
+- `symbols`: can be a single symbol (:θ) or a vector of symbols [:θ] or [:θ, :ψ, :δ18O, :δ2H, :W, :SWATI, :K]
+    - Please note that also non-Unicode symbols are accepted: e.g. [:theta, :psi, :delta18O, :delta2H, :d18O, :d2H]
+- `simulation`: is a `DiscretizedSPAC` that has been simulated.
+- `depths_to_read_out_mm`: either `nothing` or vector of Integers.
+- `days_to_read_out_d`: either  `nothing` or vector of Floats representing days.
+
+Examples
+    get_soil_(:θ, simulation)
+    get_soil_([:θ, :ψ, :K], simulation; depths_to_read_out_mm = [100, 200, 500, 1200])
+"""
+function get_soil_(
+    symbols, simulation::DiscretizedSPAC;
+    depths_to_read_out_mm = nothing,
+    days_to_read_out_d = nothing,
+    flag_return_Matrix = false) # legacy flag that can be set to request Matrix output... will be deprecated in future...
+
+    solution          = simulation.ODESolution
+    simulate_isotopes = simulation.parametrizedSPAC.solver_options.simulate_isotopes
+
+    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
+    @assert (isnothing(depths_to_read_out_mm) || eltype(depths_to_read_out_mm) <: Integer) "`depths_to_read_out_mm` must be Vector{Int}. They are $(typeof(depths_to_read_out_mm))"
+    @assert (isnothing(days_to_read_out_d) || all(days_to_read_out_d .>= 0)) "`days_to_read_out_d` must be Vector{Float64} and all >= 0. Received $(days_to_read_out_d)"
+
+    # parse requested time points
+    timepoints = isnothing(days_to_read_out_d) ? solution.t : days_to_read_out_d;
+    timepoints = (timepoints isa AbstractArray ? timepoints : [timepoints]) # transform to vector even if input as scalar
+    symbols    = (symbols    isa AbstractArray ? symbols    : [symbols]   ) # transform to vector even if input as scalar
+
+    # 1a) get states
+    # get auxiliary variables with requested time resolution (i.e. days_to_read_out_d)
+    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+        LWFBrook90.get_auxiliary_variables(simulation; days_to_read_out_d = days_to_read_out_d)
+    # 1b) get isotope values
+    if simulate_isotopes
+        u_SWATI_d18O = reduce(hcat, [solution(t_days).SWATI.d18O for t_days = timepoints])
+        u_SWATI_d2H  = reduce(hcat, [solution(t_days).SWATI.d2H  for t_days = timepoints])
+    else
+        u_SWATI_d18O = fill(missing, size(u_SWATI))
+        u_SWATI_d2H  = fill(missing, size(u_SWATI))
+        # old variant: # remove requested symbols from
+        # old variant: symbols[symbols .!= (:δ18O) .&& symbols .!= (:delta18O) .&& symbols .!= (:delta2H) .&& symbols .!= (:delta2H)]
+    end
+    # 2) get fluxes
+    u_TRANI = reduce(hcat, [solution(t_days).TRANI.mmday for t_days = timepoints])
+    # TODO: possibly add BYFLI, INFLI, DSFLI
+
+    # Setup DataFrame to fill
+    df = DataFrame()
+    df[:, :time] = timepoints
+
+    # Fill DataFrame with requested soil layers and requested variables
+    if isnothing(depths_to_read_out_mm)
+        lower_boundaries = round.(Int, cumsum(simulation.ODESolution.prob.p.p_soil.p_THICK))      # NOTE: this rounds hardcoded to mm
+        # center = round.(Int, lower_boundaries - 0.5*simulation.ODESolution.prob.p.p_soil.p_THICK) # NOTE: this rounds hardcoded to mm
+        depths_to_read_out_mm = lower_boundaries
+    end
+    idxs = LWFBrook90.get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = true)
+
+    for symbol in sort(symbols)
+        variable_to_return, unit_to_return = (
+            symbol in [:θ, :theta              ] ? (u_aux_θ,      "m3m3"   ) :   # also accept non-unicode
+            symbol in [:ψ, :psi                ] ? (u_aux_PSIM,   "kPa"    ) :   # also accept non-unicode
+            # symbol == :ψtot ? u_aux_PSITI :
+            symbol in [:δ18O, :delta18O, :d18O ] ? (u_SWATI_d18O, "permil" ) : # also accept non-unicode
+            symbol in [:δ2H,  :delta2H,  :d2H  ] ? (u_SWATI_d2H,  "permil" ) : # also accept non-unicode
+            symbol in [:W                      ] ? (u_aux_WETNES, "_"      ) :
+            symbol in [:SWATI                  ] ? (u_SWATI,      "mm"     ) :
+            symbol in [:K                      ] ? (p_fu_KK,      "mmday"  ) :
+            symbol in [:TRANI, :RWU            ] ? (u_TRANI,      "mmday"  ) :
+            # TODO: possibly add BYFLI, INFLI, DSFLI
+            error("Unknown symobl $(symbol) requested in `get_soil_()`"))
+
+        # Add columns
+        # append requested layers with the depths as column titles
+        [df[:, Symbol("$(string(symbol))_$(unit_to_return)_$(Int(k))mm")] = variable_to_return[v,:] for
+            (k,v) in sort(collect(idxs)) if v != 0]; # Note we sort the idxs by depth
+    end
+
+    # Return as DataFrame or Matrix (latter is to support legacy code)
+    if (flag_return_Matrix)
+        @assert length(symbols)==1 """
+            Aborting `get_soil_()` with non-DataFrame output for more than 1 soil variable. It is ambiguous which colum represents which variable (θ, ψ, ...).
+            Correct by either requesting only 1 variable type by supplying only one `symbols`. Alternatively mutliple variable types are supported for specified `depths_to_read_out_mm`.
+        """
+        return permutedims(Matrix(df[:,Not(:time)]))
+    else
+        return df
+    end
+end
+
+##########################
+# Functions to get values either isotopes or amounts (or otherwise)
+"""
+    get_amounts(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
+
+Returns a DataFrame with amounts of the inputs and state variables: PREC, GWAT, INTS, INTR, SNOW, SNOWLQ in mm and CC in MJm2.
+By default, the values are returned for each simulation timestep.
+The user can define timesteps as `days_to_read_out_d` by optionally providing a numeric vector, e.g. saveat = 1:1.0:100
+"""
+function get_amounts(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
+    compartments_to_extract = [:GWAT, :INTS, :INTR, :SNOW, :CC, :SNOWLQ] # CC is in MJm2
+    units_to_extract = [:mm, :mm, :mm, :mm, :MJm2, :mm]
+    # compartments_to_extract = [:GWAT, :INTS, :INTR, :SNOW, :CC, :SNOWLQ, :RWU, :XYLEM, :SWATI] # CC is in MJm2
+    # units_to_extract = [:mm, :mm, :mm, :mm, :MJm2, :mm, :mmday, :mm, :mm]
+    return get_scalars(compartments_to_extract, units_to_extract, simulation, days_to_read_out_d)
+end
+
+"""
+    get_δ(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
+
+Returns a DataFrame with the isotopoic compositions of the inputs and state variables: PREC, GWAT, INTS, INTR, SNOW, RWU, XYLEM.
+By default, the values are returned for each simulation timestep.
+The user can define timesteps as `days_to_read_out_d` by optionally providing a numeric vector, e.g. saveat = 1:1.0:100
+"""
+function get_δ(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
+    compartments_to_extract = [:PREC, :GWAT, :INTS, :INTR, :SNOW, :RWU, :XYLEM]
+    units_to_extract        = [:d18O, :d18O, :d18O, :d18O, :d18O, :d18O, :d18O]
+    dfd18O = get_scalars(compartments_to_extract, units_to_extract, simulation, days_to_read_out_d);
+
+    units_to_extract        = [:d2H,  :d2H, :d2H, :d2H, :d2H, :d2H, :d2H]
+    dfd2H = get_scalars(compartments_to_extract, units_to_extract, simulation, days_to_read_out_d);
+
+    return hcat(dfd18O, dfd2H[:, Not(:time)])
+end
+get_delta = get_δ
+# get_δ(simulation)[:,:PREC_d2H]
+# get_δ(simulation).PREC_d18O
+# get_δ(simulation)
+# get_amounts(simulation; days_to_read_out_d = days_to_read_out_d)
+
+# plot(dates_to_read_out,     Matrix(dat_aboveground[:, Not(:time)]), labels = reshape(names(dat_aboveground[:, Not(:time)]),1,:))
+#     u_aboveground = LWFBrook90.get_amounts(simulation; days_to_read_out_d = timesteps);
+
+function get_scalars(compartments_to_extract, units_to_extract, simulation::DiscretizedSPAC, days_to_read_out_d = nothing)
+    solution = simulation.ODESolution;
+    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
+    @assert (isnothing(days_to_read_out_d) || all(days_to_read_out_d .>= 0)) "`days_to_read_out_d` must be Vector{Float64} and all >= 0. Received $(days_to_read_out_d)"
+
+    # parse requested time points and compartments
+    timepoints = isnothing(days_to_read_out_d) ? solution.t : days_to_read_out_d;
+    df_time = DataFrame(:time => (timepoints isa AbstractArray ? timepoints : [timepoints])) # transform to vector even if input as scalar
+
+    # Extract scalar values from state variable vector u
+    is_prec = compartments_to_extract .== :PREC # Dont cycle over PREC
+    cycle_over = zip(compartments_to_extract[Not(is_prec)], units_to_extract[Not(is_prec)])
+
+    if isnothing(days_to_read_out_d)
+        # u_aboveground = collect(solution[t_idx][comp][uni] for t_idx = eachindex(solution), (comp,uni) in cycle_over)
+        df_states = DataFrame((
+            string(comp) * "_" * string(uni) => [
+                solution[t_idx][comp][uni] for t_idx = eachindex(solution)
+            ] for (comp, uni) in cycle_over
+        )...)
+    else
+        # u_aboveground = collect(solution(t_days)[comp][uni]  for t_days = days_to_read_out_d, (comp,uni) in cycle_over)
+        df_states = DataFrame((
+            string(comp) * "_" * string(uni) => [
+                solution(t_days)[comp][uni] for t_days = timepoints
+            ] for (comp, uni) in cycle_over
+        )...)
+    end
+
+    # Extract precipitation from forcing
+    if any(is_prec)
+        df_PREC = DataFrame("PREC_" * string(units_to_extract[is_prec][1]) =>
+            if (units_to_extract[is_prec][1] .== :mm || units_to_extract[is_prec][1] .== :mmday)
+                if (isnothing(days_to_read_out_d)) solution.prob.p.p_PREC.(solution.t)
+                else solution.prob.p.p_PREC.(days_to_read_out_d) end
+            elseif (units_to_extract[is_prec][1] .== :d18O)
+                if (isnothing(days_to_read_out_d)) solution.prob.p.p_δ18O_PREC.(solution.t)
+                else solution.prob.p.p_δ18O_PREC.(days_to_read_out_d) end
+            elseif (units_to_extract[is_prec][1] .== :d2H)
+                if (isnothing(days_to_read_out_d)) solution.prob.p.p_δ2H_PREC.(solution.t)
+                else solution.prob.p.p_δ2H_PREC.(days_to_read_out_d) end
+            end
+        )
+    else
+        df_PREC = DataFrame()
+    end
+
+    # returns DataFrame of dimenstion (t, N_variables = 9)
+    #   where t is number of time steps
+    #   and 9 = 1 (time) + 1(PREC) + 6 (number of compartments)
+    return hcat(df_time, df_PREC, df_states)
+end
+
+
+"""
+    get_water_partitioning(simulation)
+
+Returns three 2D DataFrame of water fluxes with different fluxes as columns and time steps as rows.
+The three DataFrames are in daily, monthly and yearly resolution and span the entire simulation.
+
+Examples
+    df_part_daily, df_part_monthly, df_part_yearly = get_water_partitioning(simulation)
+"""
+function get_water_partitioning(simulation::DiscretizedSPAC;)
+    solution          = simulation.ODESolution
+    simulate_isotopes = simulation.parametrizedSPAC.solver_options.simulate_isotopes
+
+    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
+    @assert all(diff(simulation.ODESolution_datetime) .== Millisecond(Day(1))) """
+    Solution is not computed with daily output resolution.
+    Make sure you provide simulate!(save_everystep = false, saveat = ...) with `saveat` in daily resolution."""
+
+    ks = keys(simulation.ODESolution.u[1].accum)
+    df_partitioning_raw =
+        DataFrame((:date => simulation.ODESolution_datetime ),
+                (k => [ut.accum[k] for ut in simulation.ODESolution.u] for k in ks)...)
+    # Compute ETa, Es, Esn, Ei, Ta, P, Td, D, R, Swat
+    df_partitioning_daily = @chain df_partitioning_raw begin
+        @rtransform begin
+            :ETa           = :evap # is actual evapotranspiration, i.e. sum of IRVP + ISVP + SNVP + SLVP + sum(aux_du_TRANI)
+            :Esoil         = :cum_d_slvp
+            :Esnow         = :cum_d_snvp
+            :Einterception = :cum_d_irvp + :cum_d_isvp
+            :Ta            = :cum_d_tran
+            :Precip        = :cum_d_prec
+            :Td            = :cum_d_ptran - :cum_d_tran
+            :D             = - :vrfln
+            # :R1          = -(:flow - :vrfln)    # flow = srfl+byfl+dsfli+gwfl, gwfl, vrfln
+            :R             = -(:srfl + :byfl + :dsfl) # This is more correctly not accounting for gwfl, thereby excluding state variable GWAT from the balance
+            :Swat          = :StorageSWAT
+        end
+        @transform :year = year.(:date)
+        @transform :month = month.(:date)
+        @select(:date, :year, :month, :ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Td,:D,:R,:Swat)
+    end
+
+    # Aggregate to monghly and yearly
+    df_partitioning_monthly = @chain df_partitioning_daily begin
+        groupby([:year, :month])
+        combine(
+            nrow,
+            [:ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Td,:D,:R] .=> sum,
+            [:Swat] .=> mean, renamecols=false)
+        @rtransform :date = Date(:year, :month)
+        select(Between(:year, :nrow), :date, All()) # Bring date to beginning
+    end
+    df_partitioning_yearly = @chain df_partitioning_daily begin
+        groupby([:year])
+        combine(
+            nrow,
+            [:ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Td,:D,:R] .=> sum,
+            [:Swat] .=> mean, renamecols=false)
+        @rtransform :date = Date(:year)
+        select(Between(:year, :nrow), :date, All()) # Bring date to beginning
+    end
+    # and also define color palette
+    return (df_partitioning_daily, df_partitioning_monthly, df_partitioning_yearly)
+end
+
+function get_water_partitioning_colorpalette()
+        color_palette_Meusburger2022 = reverse([
+            "Td"            => :red2,
+            "Ta"            => :darkolivegreen2,
+            "Einterception" => :forestgreen,
+            "Esoil"         => :khaki3,
+            "Esnow"         => :white,
+            "R"             => :lightskyblue,
+            "D"             => :steelblue4,
+            # "ETa"   => :black,
+            # "P2"    => :darkblue,
+            "P"     => :darkblue,
+            # "Swat" => :brown
+        ])
+        color_palette_Schmidt_Walter2020 = reverse([
+            "Td"            => colorant"#d01c8b", #:palevioletred4,
+            "Ta"            => colorant"#abdda4", #:darkseagreen,
+            "Einterception" => colorant"#fdae61", #:lightyellow,
+            "Esoil"         => colorant"#FFD700", #:navajowhite, #:orange2,
+            "Esnow"         => :white,
+            "R"             => colorant"#91bfdb", #:slategray2,
+            "D"             => colorant"#2b83ba", #:skyblue4,
+            "Precip"        => :black,
+            # "ETa"  => :black,
+            # "P2"   => :darkblue,
+            # "Swat" => :brown
+        ])
+        return color_palette = color_palette_Schmidt_Walter2020
+end
+function plot_monthly_water_partitioning(df_partitioning_monthly, fig = Figure())
+    color_palette = get_water_partitioning_colorpalette()
+    # Preprocess
+    df_partitioning_monthly_forMakie = @chain df_partitioning_monthly begin
+        stack(Not([:year, :month, :nrow, :date]))
+        # only keep variables we need
+        @subset(:variable .∈ ([first(pair) for pair in color_palette],))
+        # make categorical
+        @transform :variable = CategoricalArrays.categorical(:variable, levels = [first(pair) for pair in color_palette])
+        @transform :variable_code = CategoricalArrays.levelcode.(:variable)
+        # Remove fluxes that were not computed (e.g. removes runoff)
+        @subset(:value .!= 0.0)
+        end
+    # Plot
+    aog_monthly = AlgebraOfGraphics.mapping(
+            :date => "",
+            :value => "Water flux per month (mm)",
+            stack = :variable,
+            color = :variable => "") *
+        (# bar plot of fluxes
+        AlgebraOfGraphics.data(@subset(df_partitioning_monthly_forMakie, :variable .!= "Precip")) * AlgebraOfGraphics.visual(BarPlot, gap = -31*0.8) +
+        # line plot of precip input
+        AlgebraOfGraphics.data(@subset(df_partitioning_monthly_forMakie, :variable .== "Precip")) * AlgebraOfGraphics.visual(Lines)
+        )
+    xticks = sort(unique(Dates.floor.(df_partitioning_monthly_forMakie.date, Dates.Month(6))))
+
+    aog_draw = AlgebraOfGraphics.draw!(fig, aog_monthly, palettes = (; color = color_palette),
+        # axis = (; xticks = AlgebraOfGraphics.datetimeticks((x -> Dates.format(x, "mm\nY")), (Date.(xticks)))))
+        axis = (; ygridvisible = true,
+                xticks = AlgebraOfGraphics.datetimeticks((x -> Dates.format(x, "u\nY")), (Date.(xticks)))))
+    return fig, aog_draw
+end
+function plot_yearly_water_partitioning(df_partitioning_yearly, fig = Figure())
+    color_palette = get_water_partitioning_colorpalette()
+    # Preprocess
+    df_partitioning_yearly_forMakie = @chain df_partitioning_yearly begin
+        stack(Not([:year, :nrow, :date]))
+        # only keep variables we need
+        @subset(:variable .∈ ([first(pair) for pair in color_palette],))
+        # make categorical
+        @transform :variable = CategoricalArrays.categorical(:variable, levels = [first(pair) for pair in color_palette])
+        @transform :variable_code = CategoricalArrays.levelcode.(:variable)
+        # Remove fluxes that were not computed (e.g. removes runoff)
+        @subset(:value .!= 0.0)
+        end
+    # Plot
+    aog_yearly = AlgebraOfGraphics.mapping(
+        :date => "",
+        :value => "Water flux per year (mm)",
+        stack = :variable,
+        color = :variable => "") *
+    (# bar plot of fluxes
+    AlgebraOfGraphics.data(@subset(df_partitioning_yearly_forMakie, :variable .!= "Precip")) * AlgebraOfGraphics.visual(BarPlot, gap = -366*0.8) +
+    # line plot of precip input
+    AlgebraOfGraphics.data(@subset(df_partitioning_yearly_forMakie, :variable .== "Precip")) * AlgebraOfGraphics.visual(Lines)
+    )
+
+    xticks = sort(unique(df_partitioning_yearly_forMakie.year))
+    aog_draw = AlgebraOfGraphics.draw!(fig, aog_yearly,
+        palettes = (; color = color_palette),
+        axis = (; ygridvisible = true,
+                #   xticks = AlgebraOfGraphics.datetimeticks((x -> Dates.format(x, "Y-mm")), (Date.(xticks)))))
+                  xticks = AlgebraOfGraphics.datetimeticks((x -> Dates.format(x, "Y")), (Date.(xticks)))))
+    return fig, aog_draw
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
 function get_RWU_centroid(rows_RWU_mmDay, y_center)
     # old solution, that gives bad values when some RWU is negative:
     RWU_percent = rows_RWU_mmDay ./ sum(rows_RWU_mmDay; dims = 1)
@@ -1017,419 +1440,6 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
     own_plotseries("", 9, lbl32, x3, y32)
     own_plotseries("", 10, lbl41, x4, y41)
 end
-
-
-
-##########################
-# Functions to get values linked to soil domain:
-function get_soil_idx(simulation::DiscretizedSPAC, depths_to_read_out_mm; only_valid_idxs = false)
-    @assert all(depths_to_read_out_mm .> 0) # depths and lower_boundaries must all be positive numbers
-    lower_boundaries = round.(Int, cumsum(simulation.ODESolution.prob.p.p_soil.p_THICK))      # NOTE: this rounds hardcoded to mm
-    # center = round.(Int, lower_boundaries - 0.5*simulation.ODESolution.prob.p.p_soil.p_THICK) # NOTE: this rounds hardcoded to mm
-
-    idx_to_read_out = fill(0, length(depths_to_read_out_mm))
-    for (it, curr_depth_mm) in enumerate(depths_to_read_out_mm)
-        if (curr_depth_mm > maximum(lower_boundaries))
-            # Only read out values that are within the simulation domain
-            idx_to_read_out[it] = 0 # 0 means this depth has not been simulated
-            @warn "Requested read-out depth of $curr_depth_mm is below simulation domain and is silently omitted for the output."
-        else
-            idx_to_read_out[it] = findfirst(curr_depth_mm .<= lower_boundaries)
-        end
-    end
-    all_idxs = Dict((d => i) for (d,i) in zip(depths_to_read_out_mm, idx_to_read_out))
-    if only_valid_idxs
-        return filter((k, v)::Pair -> v != 0, all_idxs)
-    else # default
-        return all_idxs
-    end
-end
-
-function get_auxiliary_variables(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
-    solution = simulation.ODESolution
-    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
-
-    p_soil = solution.prob.p.p_soil
-    NLAYER = p_soil.NLAYER
-    if isnothing(days_to_read_out_d)
-        u_SWATI = reduce(hcat, [solution[t_idx].SWATI.mm  for t_idx = eachindex(solution)])
-    else
-        u_SWATI = reduce(hcat, [solution(t_days).SWATI.mm for t_days = days_to_read_out_d])
-    end
-
-    u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK =
-        (fill(NaN, size(u_SWATI)) for i in 1:5)
-    for t in 1:size(u_SWATI,2)
-        (u_aux_WETNES[:, t], u_aux_PSIM[:, t], u_aux_PSITI[:, t], u_aux_θ[:, t], p_fu_KK[:, t]) =
-            KPT.derive_auxiliary_SOILVAR(u_SWATI[:,t], p_soil)
-    end
-    # returns arrays of dimenstion (t,z) where t is number of timesteps and z number of computational layers
-    return (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK)
-end
-
-"""
-    get_soil_(symbols, simulation; depths_to_read_out_mm = nothing, days_to_read_out_d = nothing))
-
-Returns a 2D DataFrame of soil variables with soil layers as columns and time steps as rows.
-Supports a number of variables:
-    - `:θ` (= `:theta`) = volumetric soil moisture values (m3/m3)
-    - `:ψ` (= `:psi`) = soil matric potential (kPa)
-    - `:W` = soil wetness (-)
-    - `:SWATI` = soil water volumes contained in discretized layers (mm)
-    - `:K` = soil hydraulic conductivities (mm/day)
-    - `:δ18O`, `:δ2H`, `:d18O`, `:d2H` = isotopic signatures (delta)
-    - `TRANI`, `RWU` = root water uptake flux from each cell (mm/day)
-The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
-that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `days_to_read_out_d = 1:1.0:100`
-
-Function to read out soil variables from a simulated simulation.
-- `symbols`: can be a single symbol (:θ) or a vector of symbols [:θ] or [:θ, :ψ, :δ18O, :δ2H, :W, :SWATI, :K]
-    - Please note that also non-Unicode symbols are accepted: e.g. [:theta, :psi, :delta18O, :delta2H, :d18O, :d2H]
-- `simulation`: is a `DiscretizedSPAC` that has been simulated.
-- `depths_to_read_out_mm`: either `nothing` or vector of Integers.
-- `days_to_read_out_d`: either  `nothing` or vector of Floats representing days.
-
-Examples
-    get_soil_(:θ, simulation)
-    get_soil_([:θ, :ψ, :K], simulation; depths_to_read_out_mm = [100, 200, 500, 1200])
-"""
-function get_soil_(
-    symbols, simulation::DiscretizedSPAC;
-    depths_to_read_out_mm = nothing,
-    days_to_read_out_d = nothing,
-    flag_return_Matrix = false) # legacy flag that can be set to request Matrix output... will be deprecated in future...
-
-    solution          = simulation.ODESolution
-    simulate_isotopes = simulation.parametrizedSPAC.solver_options.simulate_isotopes
-
-    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
-    @assert (isnothing(depths_to_read_out_mm) || eltype(depths_to_read_out_mm) <: Integer) "`depths_to_read_out_mm` must be Vector{Int}. They are $(typeof(depths_to_read_out_mm))"
-    @assert (isnothing(days_to_read_out_d) || all(days_to_read_out_d .>= 0)) "`days_to_read_out_d` must be Vector{Float64} and all >= 0. Received $(days_to_read_out_d)"
-
-    # parse requested time points
-    timepoints = isnothing(days_to_read_out_d) ? solution.t : days_to_read_out_d;
-    timepoints = (timepoints isa AbstractArray ? timepoints : [timepoints]) # transform to vector even if input as scalar
-    symbols    = (symbols    isa AbstractArray ? symbols    : [symbols]   ) # transform to vector even if input as scalar
-
-    # 1a) get states
-    # get auxiliary variables with requested time resolution (i.e. days_to_read_out_d)
-    (u_SWATI, u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-        LWFBrook90.get_auxiliary_variables(simulation; days_to_read_out_d = days_to_read_out_d)
-    # 1b) get isotope values
-    if simulate_isotopes
-        u_SWATI_d18O = reduce(hcat, [solution(t_days).SWATI.d18O for t_days = timepoints])
-        u_SWATI_d2H  = reduce(hcat, [solution(t_days).SWATI.d2H  for t_days = timepoints])
-    else
-        u_SWATI_d18O = fill(missing, size(u_SWATI))
-        u_SWATI_d2H  = fill(missing, size(u_SWATI))
-        # old variant: # remove requested symbols from
-        # old variant: symbols[symbols .!= (:δ18O) .&& symbols .!= (:delta18O) .&& symbols .!= (:delta2H) .&& symbols .!= (:delta2H)]
-    end
-    # 2) get fluxes
-    u_TRANI = reduce(hcat, [solution(t_days).TRANI.mmday for t_days = timepoints])
-    # TODO: possibly add BYFLI, INFLI, DSFLI
-
-    # Setup DataFrame to fill
-    df = DataFrame()
-    df[:, :time] = timepoints
-
-    # Fill DataFrame with requested soil layers and requested variables
-    if isnothing(depths_to_read_out_mm)
-        lower_boundaries = round.(Int, cumsum(simulation.ODESolution.prob.p.p_soil.p_THICK))      # NOTE: this rounds hardcoded to mm
-        # center = round.(Int, lower_boundaries - 0.5*simulation.ODESolution.prob.p.p_soil.p_THICK) # NOTE: this rounds hardcoded to mm
-        depths_to_read_out_mm = lower_boundaries
-    end
-    idxs = LWFBrook90.get_soil_idx(simulation, depths_to_read_out_mm; only_valid_idxs = true)
-
-    for symbol in sort(symbols)
-        variable_to_return, unit_to_return = (
-            symbol in [:θ, :theta              ] ? (u_aux_θ,      "m3m3"   ) :   # also accept non-unicode
-            symbol in [:ψ, :psi                ] ? (u_aux_PSIM,   "kPa"    ) :   # also accept non-unicode
-            # symbol == :ψtot ? u_aux_PSITI :
-            symbol in [:δ18O, :delta18O, :d18O ] ? (u_SWATI_d18O, "permil" ) : # also accept non-unicode
-            symbol in [:δ2H,  :delta2H,  :d2H  ] ? (u_SWATI_d2H,  "permil" ) : # also accept non-unicode
-            symbol in [:W                      ] ? (u_aux_WETNES, "_"      ) :
-            symbol in [:SWATI                  ] ? (u_SWATI,      "mm"     ) :
-            symbol in [:K                      ] ? (p_fu_KK,      "mmday"  ) :
-            symbol in [:TRANI, :RWU            ] ? (u_TRANI,      "mmday"  ) :
-            # TODO: possibly add BYFLI, INFLI, DSFLI
-            error("Unknown symobl $(symbol) requested in `get_soil_()`"))
-
-        # Add columns
-        # append requested layers with the depths as column titles
-        [df[:, Symbol("$(string(symbol))_$(unit_to_return)_$(Int(k))mm")] = variable_to_return[v,:] for
-            (k,v) in sort(collect(idxs)) if v != 0]; # Note we sort the idxs by depth
-    end
-
-    # Return as DataFrame or Matrix (latter is to support legacy code)
-    if (flag_return_Matrix)
-        @assert length(symbols)==1 """
-            Aborting `get_soil_()` with non-DataFrame output for more than 1 soil variable. It is ambiguous which colum represents which variable (θ, ψ, ...).
-            Correct by either requesting only 1 variable type by supplying only one `symbols`. Alternatively mutliple variable types are supported for specified `depths_to_read_out_mm`.
-        """
-        return permutedims(Matrix(df[:,Not(:time)]))
-    else
-        return df
-    end
-end
-
-##########################
-# Functions to get values either isotopes or amounts (or otherwise)
-"""
-    get_amounts(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
-
-Returns a DataFrame with amounts of the inputs and state variables: PREC, GWAT, INTS, INTR, SNOW, SNOWLQ in mm and CC in MJm2.
-By default, the values are returned for each simulation timestep.
-The user can define timesteps as `days_to_read_out_d` by optionally providing a numeric vector, e.g. saveat = 1:1.0:100
-"""
-function get_amounts(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
-    compartments_to_extract = [:GWAT, :INTS, :INTR, :SNOW, :CC, :SNOWLQ] # CC is in MJm2
-    units_to_extract = [:mm, :mm, :mm, :mm, :MJm2, :mm]
-    # compartments_to_extract = [:GWAT, :INTS, :INTR, :SNOW, :CC, :SNOWLQ, :RWU, :XYLEM, :SWATI] # CC is in MJm2
-    # units_to_extract = [:mm, :mm, :mm, :mm, :MJm2, :mm, :mmday, :mm, :mm]
-    return get_scalars(compartments_to_extract, units_to_extract, simulation, days_to_read_out_d)
-end
-
-"""
-    get_δ(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
-
-Returns a DataFrame with the isotopoic compositions of the inputs and state variables: PREC, GWAT, INTS, INTR, SNOW, RWU, XYLEM.
-By default, the values are returned for each simulation timestep.
-The user can define timesteps as `days_to_read_out_d` by optionally providing a numeric vector, e.g. saveat = 1:1.0:100
-"""
-function get_δ(simulation::DiscretizedSPAC; days_to_read_out_d = nothing)
-    compartments_to_extract = [:PREC, :GWAT, :INTS, :INTR, :SNOW, :RWU, :XYLEM]
-    units_to_extract        = [:d18O, :d18O, :d18O, :d18O, :d18O, :d18O, :d18O]
-    dfd18O = get_scalars(compartments_to_extract, units_to_extract, simulation, days_to_read_out_d);
-
-    units_to_extract        = [:d2H,  :d2H, :d2H, :d2H, :d2H, :d2H, :d2H]
-    dfd2H = get_scalars(compartments_to_extract, units_to_extract, simulation, days_to_read_out_d);
-
-    return hcat(dfd18O, dfd2H[:, Not(:time)])
-end
-get_delta = get_δ
-# get_δ(simulation)[:,:PREC_d2H]
-# get_δ(simulation).PREC_d18O
-# get_δ(simulation)
-# get_amounts(simulation; days_to_read_out_d = days_to_read_out_d)
-
-# plot(dates_to_read_out,     Matrix(dat_aboveground[:, Not(:time)]), labels = reshape(names(dat_aboveground[:, Not(:time)]),1,:))
-#     u_aboveground = LWFBrook90.get_amounts(simulation; days_to_read_out_d = timesteps);
-
-function get_scalars(compartments_to_extract, units_to_extract, simulation::DiscretizedSPAC, days_to_read_out_d = nothing)
-    solution = simulation.ODESolution;
-    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
-    @assert (isnothing(days_to_read_out_d) || all(days_to_read_out_d .>= 0)) "`days_to_read_out_d` must be Vector{Float64} and all >= 0. Received $(days_to_read_out_d)"
-
-    # parse requested time points and compartments
-    timepoints = isnothing(days_to_read_out_d) ? solution.t : days_to_read_out_d;
-    df_time = DataFrame(:time => (timepoints isa AbstractArray ? timepoints : [timepoints])) # transform to vector even if input as scalar
-
-    # Extract scalar values from state variable vector u
-    is_prec = compartments_to_extract .== :PREC # Dont cycle over PREC
-    cycle_over = zip(compartments_to_extract[Not(is_prec)], units_to_extract[Not(is_prec)])
-
-    if isnothing(days_to_read_out_d)
-        # u_aboveground = collect(solution[t_idx][comp][uni] for t_idx = eachindex(solution), (comp,uni) in cycle_over)
-        df_states = DataFrame((
-            string(comp) * "_" * string(uni) => [
-                solution[t_idx][comp][uni] for t_idx = eachindex(solution)
-            ] for (comp, uni) in cycle_over
-        )...)
-    else
-        # u_aboveground = collect(solution(t_days)[comp][uni]  for t_days = days_to_read_out_d, (comp,uni) in cycle_over)
-        df_states = DataFrame((
-            string(comp) * "_" * string(uni) => [
-                solution(t_days)[comp][uni] for t_days = timepoints
-            ] for (comp, uni) in cycle_over
-        )...)
-    end
-
-    # Extract precipitation from forcing
-    if any(is_prec)
-        df_PREC = DataFrame("PREC_" * string(units_to_extract[is_prec][1]) =>
-            if (units_to_extract[is_prec][1] .== :mm || units_to_extract[is_prec][1] .== :mmday)
-                if (isnothing(days_to_read_out_d)) solution.prob.p.p_PREC.(solution.t)
-                else solution.prob.p.p_PREC.(days_to_read_out_d) end
-            elseif (units_to_extract[is_prec][1] .== :d18O)
-                if (isnothing(days_to_read_out_d)) solution.prob.p.p_δ18O_PREC.(solution.t)
-                else solution.prob.p.p_δ18O_PREC.(days_to_read_out_d) end
-            elseif (units_to_extract[is_prec][1] .== :d2H)
-                if (isnothing(days_to_read_out_d)) solution.prob.p.p_δ2H_PREC.(solution.t)
-                else solution.prob.p.p_δ2H_PREC.(days_to_read_out_d) end
-            end
-        )
-    else
-        df_PREC = DataFrame()
-    end
-
-    # returns DataFrame of dimenstion (t, N_variables = 9)
-    #   where t is number of time steps
-    #   and 9 = 1 (time) + 1(PREC) + 6 (number of compartments)
-    return hcat(df_time, df_PREC, df_states)
-end
-
-
-"""
-    get_water_partitioning(simulation)
-
-Returns three 2D DataFrame of water fluxes with different fluxes as columns and time steps as rows.
-The three DataFrames are in daily, monthly and yearly resolution and span the entire simulation.
-
-Examples
-    df_part_daily, df_part_monthly, df_part_yearly = get_water_partitioning(simulation)
-"""
-function get_water_partitioning(simulation::DiscretizedSPAC;)
-    solution          = simulation.ODESolution
-    simulate_isotopes = simulation.parametrizedSPAC.solver_options.simulate_isotopes
-
-    @assert !isnothing(solution) "Solution was not yet computed. Please simulate!(simulation)"
-    @assert all(diff(simulation.ODESolution_datetime) .== Millisecond(Day(1))) """
-    Solution is not computed with daily output resolution.
-    Make sure you provide simulate!(save_everystep = false, saveat = ...) with `saveat` in daily resolution."""
-
-    ks = keys(simulation.ODESolution.u[1].accum)
-    df_partitioning_raw =
-        DataFrame((:date => simulation.ODESolution_datetime ),
-                (k => [ut.accum[k] for ut in simulation.ODESolution.u] for k in ks)...)
-    # Compute ETa, Es, Esn, Ei, Ta, P, Td, D, R, Swat
-    df_partitioning_daily = @chain df_partitioning_raw begin
-        @rtransform begin
-            :ETa           = :evap # is actual evapotranspiration, i.e. sum of IRVP + ISVP + SNVP + SLVP + sum(aux_du_TRANI)
-            :Esoil         = :cum_d_slvp
-            :Esnow         = :cum_d_snvp
-            :Einterception = :cum_d_irvp + :cum_d_isvp
-            :Ta            = :cum_d_tran
-            :Precip        = :cum_d_prec
-            :Td            = :cum_d_ptran - :cum_d_tran
-            :D             = - :vrfln
-            # :R1          = -(:flow - :vrfln)    # flow = srfl+byfl+dsfli+gwfl, gwfl, vrfln
-            :R             = -(:srfl + :byfl + :dsfl) # This is more correctly not accounting for gwfl, thereby excluding state variable GWAT from the balance
-            :Swat          = :StorageSWAT
-        end
-        @transform :year = year.(:date)
-        @transform :month = month.(:date)
-        @select(:date, :year, :month, :ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Td,:D,:R,:Swat)
-    end
-
-    # Aggregate to monghly and yearly
-    df_partitioning_monthly = @chain df_partitioning_daily begin
-        groupby([:year, :month])
-        combine(
-            nrow,
-            [:ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Td,:D,:R] .=> sum,
-            [:Swat] .=> mean, renamecols=false)
-        @rtransform :date = Date(:year, :month)
-        select(Between(:year, :nrow), :date, All()) # Bring date to beginning
-    end
-    df_partitioning_yearly = @chain df_partitioning_daily begin
-        groupby([:year])
-        combine(
-            nrow,
-            [:ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Td,:D,:R] .=> sum,
-            [:Swat] .=> mean, renamecols=false)
-        @rtransform :date = Date(:year)
-        select(Between(:year, :nrow), :date, All()) # Bring date to beginning
-    end
-    # and also define color palette
-    return (df_partitioning_daily, df_partitioning_monthly, df_partitioning_yearly)
-end
-
-function get_water_partitioning_colorpalette()
-        color_palette_Meusburger2022 = reverse([
-            "Td"            => :red2,
-            "Ta"            => :darkolivegreen2,
-            "Einterception" => :forestgreen,
-            "Esoil"         => :khaki3,
-            "Esnow"         => :white,
-            "R"             => :lightskyblue,
-            "D"             => :steelblue4,
-            # "ETa"   => :black,
-            # "P2"    => :darkblue,
-            "P"     => :darkblue,
-            # "Swat" => :brown
-        ])
-        color_palette_Schmidt_Walter2020 = reverse([
-            "Td"            => colorant"#d01c8b", #:palevioletred4,
-            "Ta"            => colorant"#abdda4", #:darkseagreen,
-            "Einterception" => colorant"#fdae61", #:lightyellow,
-            "Esoil"         => colorant"#FFD700", #:navajowhite, #:orange2,
-            "Esnow"         => :white,
-            "R"             => colorant"#91bfdb", #:slategray2,
-            "D"             => colorant"#2b83ba", #:skyblue4,
-            "Precip"        => :black,
-            # "ETa"  => :black,
-            # "P2"   => :darkblue,
-            # "Swat" => :brown
-        ])
-        return color_palette = color_palette_Schmidt_Walter2020
-end
-function plot_monthly_water_partitioning(df_partitioning_monthly, fig = Figure())
-    color_palette = get_water_partitioning_colorpalette()
-    # Preprocess
-    df_partitioning_monthly_forMakie = @chain df_partitioning_monthly begin
-        stack(Not([:year, :month, :nrow, :date]))
-        # only keep variables we need
-        @subset(:variable .∈ ([first(pair) for pair in color_palette],))
-        # make categorical
-        @transform :variable = CategoricalArrays.categorical(:variable, levels = [first(pair) for pair in color_palette])
-        @transform :variable_code = CategoricalArrays.levelcode.(:variable)
-        # Remove fluxes that were not computed (e.g. removes runoff)
-        @subset(:value .!= 0.0)
-        end
-    # Plot
-    aog_monthly = AlgebraOfGraphics.mapping(
-            :date => "",
-            :value => "Water flux per month (mm)",
-            stack = :variable,
-            color = :variable => "") *
-        (# bar plot of fluxes
-        AlgebraOfGraphics.data(@subset(df_partitioning_monthly_forMakie, :variable .!= "Precip")) * AlgebraOfGraphics.visual(BarPlot, gap = -31*0.8) +
-        # line plot of precip input
-        AlgebraOfGraphics.data(@subset(df_partitioning_monthly_forMakie, :variable .== "Precip")) * AlgebraOfGraphics.visual(Lines)
-        )
-    xticks = sort(unique(Dates.floor.(df_partitioning_monthly_forMakie.date, Dates.Month(6))))
-
-    aog_draw = AlgebraOfGraphics.draw!(fig, aog_monthly, palettes = (; color = color_palette),
-        # axis = (; xticks = AlgebraOfGraphics.datetimeticks((x -> Dates.format(x, "mm\nY")), (Date.(xticks)))))
-        axis = (; ygridvisible = true,
-                xticks = AlgebraOfGraphics.datetimeticks((x -> Dates.format(x, "u\nY")), (Date.(xticks)))))
-    return fig, aog_draw
-end
-function plot_yearly_water_partitioning(df_partitioning_yearly, fig = Figure())
-    color_palette = get_water_partitioning_colorpalette()
-    # Preprocess
-    df_partitioning_yearly_forMakie = @chain df_partitioning_yearly begin
-        stack(Not([:year, :nrow, :date]))
-        # only keep variables we need
-        @subset(:variable .∈ ([first(pair) for pair in color_palette],))
-        # make categorical
-        @transform :variable = CategoricalArrays.categorical(:variable, levels = [first(pair) for pair in color_palette])
-        @transform :variable_code = CategoricalArrays.levelcode.(:variable)
-        # Remove fluxes that were not computed (e.g. removes runoff)
-        @subset(:value .!= 0.0)
-        end
-    # Plot
-    aog_yearly = AlgebraOfGraphics.mapping(
-        :date => "",
-        :value => "Water flux per year (mm)",
-        stack = :variable,
-        color = :variable => "") *
-    (# bar plot of fluxes
-    AlgebraOfGraphics.data(@subset(df_partitioning_yearly_forMakie, :variable .!= "Precip")) * AlgebraOfGraphics.visual(BarPlot, gap = -366*0.8) +
-    # line plot of precip input
-    AlgebraOfGraphics.data(@subset(df_partitioning_yearly_forMakie, :variable .== "Precip")) * AlgebraOfGraphics.visual(Lines)
-    )
-
-    xticks = sort(unique(df_partitioning_yearly_forMakie.year))
-    aog_draw = AlgebraOfGraphics.draw!(fig, aog_yearly,
-        palettes = (; color = color_palette),
-        axis = (; ygridvisible = true,
-                #   xticks = AlgebraOfGraphics.datetimeticks((x -> Dates.format(x, "Y-mm")), (Date.(xticks)))))
-                  xticks = AlgebraOfGraphics.datetimeticks((x -> Dates.format(x, "Y")), (Date.(xticks)))))
-    return fig, aog_draw
-end
-
 ############################################################################################
 ############################################################################################
 ############################################################################################
