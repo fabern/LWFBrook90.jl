@@ -138,8 +138,8 @@ get_states(simulation_mod)
 get_fluxes(simulation_mod)
 get_forcing(simulation_mod)
 
-get_states(simulation_mod; days_to_read_out_d = 0:30:360) # specific days relative to simulation.parametrizedSPAC.reference_date can be specified
-
+df = get_states(simulation_mod; days_to_read_out_d = 0:30:360) # specific days relative to simulation.parametrizedSPAC.reference_date can be specified
+show(df)
 
 # Below an illustrative code snippet  how to export certain depths into a *.csv:
 using CSV, DataFrames
@@ -177,11 +177,11 @@ show(df_out_daily)
 # Below an example script using the provided plot recipes that plot a) amounts, b) isotopes, or c) forcing and states as an additional internal check:
 
 using Plots, Measures; gr();
-pl1 = plotamounts(simulation_mod, :above_and_belowground, :showRWUcentroid)
-pl1
-#-
 pl2 = plotisotopes(simulation_mod, :d18O, (d18O = :auto, d2H = :auto), :showRWUcentroid)
 pl2
+#-
+pl1 = plotamounts(simulation_mod, :above_and_belowground, :showRWUcentroid)
+pl1
 #-
 pl3 = plotforcingandstates(simulation_mod)
 pl3
@@ -210,12 +210,11 @@ pl3
 # ## Postprocessing: Plotting (using your own functions)
 # Below an example script using the manually written code to plot the simulation_mod.#
 
-# sim_states = get_states(simulation) # this gives an error since it has not been simulated!
-sim_states = get_states(simulation_mod)
-sim_fluxes = get_fluxes(simulation_mod)
-
-names(sim_states) # show column names
-names(sim_fluxes) # show column names
+## sim_states = get_states(simulation) # this gives an error since it has not been simulated!
+sim_states = get_states(simulation_mod);
+sim_fluxes = get_fluxes(simulation_mod);
+##names(sim_states) # show column names
+##names(sim_fluxes) # show column names
 
 # plot some of the scalar states
 states_to_plot = ["INTS_mm", "INTR_mm", "SNOW_mm", "GWAT_mm", "SWAT_mm"]
@@ -247,14 +246,13 @@ plot(sim_fluxes[:,"dates"], Matrix(sim_fluxes_to_plot),
 
 
 # Belowground quantities (θ,ψ,δ of soil water)
+## if you want some specific depths: use get_soil_(): e.g
+## depth_to_read_out_mm = [150, 500, 800, 1500]
+## df_δsoil = get_soil_([:δ18O, :δ2H], simulation_mod; depths_to_read_out_mm = depth_to_read_out_mm)
+## df_θψ = get_soil_([:θ, :ψ],
+##     simulation_mod, depths_to_read_out_mm = depth_to_read_out_mm)
 
-# if you want some specific depths: use get_soil_(): e.g
-# depth_to_read_out_mm = [150, 500, 800, 1500]
-# df_δsoil = get_soil_([:δ18O, :δ2H], simulation_mod; depths_to_read_out_mm = depth_to_read_out_mm)
-# df_θψ = get_soil_([:θ, :ψ],
-#     simulation_mod, depths_to_read_out_mm = depth_to_read_out_mm)
-
-# if we use depths that are already contained in sim_states we can use those:
+## if we use depths that are already contained in sim_states we can use those:
 @show propertynames(sim_states[:,r"(d18O)|(d2H)"]);
 df_δsoil = sim_states[:, ["d18O_permil_160mm", "d18O_permil_510mm",
                           "d18O_permil_820mm", "d18O_permil_1200mm",

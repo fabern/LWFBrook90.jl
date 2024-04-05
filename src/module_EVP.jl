@@ -575,7 +575,7 @@ snow interception, with different calling variables.
 
 # Arguments:
 - `p_fT_RFAL`: 24-hour average rainfall rate, mm/d
-- `p_fu_PINT`: potential interception rate, mm/d
+- `p_fu_PINT`: potential interception rate, mm/d (i.e. total amount of evaporated water from a continuously wet canopy)
 - `p_fu_LAI`: projected leaf area index, m2/m2
 - `p_fu_SAI`: projected stem area index, m2/m2
 - `p_FRINTL`: intercepted fraction of p_fT_RFAL per unit p_fu_LAI

@@ -18,7 +18,7 @@ Subsets of scalar state variables or soil states can be mad afterwards with:
     simout_states[:, Not(r"[0-9]mm$")]    # select only scalar states (by de-selecting columns containing depth information e.g. "_150mm")
     simout_states[:, r"(dates)|([0-9]mm)"] # select only vector states (by selecting columns containing depth information e.g. "_150mm")
 
-Returns:
+Function returns a DataFrame:
 
     366×108 DataFrame
      Row │ dates                GWAT_mm  INTS_mm   INTR_mm       SNOW_mm  CC_MJm2     SNOWLQ_mm  SWAT_mm  GWAT_d18O  INTS_d18O  INTR_d18O  SNOW_d18O  XYLEM_d18O  ⋯ δ18O_permil_50mm  δ18O_permil_100mm  δ18O_permil_1 ⋯ ψ_kPa_1100mm
@@ -28,9 +28,7 @@ Returns:
        2 │ 2021-01-02T00:00:00      1.0  0.0        0.0           0.0     0.0          0.0       90.4532  -12.5973     -15.04     -15.04     -15.04    -10.1111            -10.1111           -10.1111           -10. ⋯ -6.43
 """
 function get_states(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) # returns scalar states GWAT, INTS, INTR, SNOW, CC (amount only), SNOWLQ (amount only), XYLEM (signature only)
-    if isnothing(simulation.ODESolution)
-        error("The provided simulation has not yet been solved. Please `simulate!()` the DiscretizedSPAC first.")
-    end
+    @assert !isnothing(simulation.ODESolution) "Solution was not yet computed. Please simulate!(simulation)"
     timepoints =
         isnothing(days_to_read_out_d)           ? unique(round.(simulation.ODESolution.t)) : # case nothing: return daily by default
         days_to_read_out_d == :integrator_step  ? simulation.ODESolution.t :                 # if requested return for each integration step stored in ODESolution
@@ -93,52 +91,47 @@ By default, the values are returned for each simulation day.
 The user can optionally define timestep using the input argument `days_to_read_out_d` as:
 - a numeric vector, e.g. `days_to_read_out_d = 1:1.0:100` for specific days since `simulation.parametrizedSPAC.reference_date`
 
-Subsets of scalar state variables or soil states can be mad afterwards with:
+Subsets of scalar state variables or soil states can be created afterwards with:
 
     simout_fluxes = get_fluxes(simulation)
     simout_fluxes[:, Not(r"[0-9]mm$")]    # select only scalar fluxes (by de-selecting columns containing depth information e.g. "_150mm")
     simout_fluxes[:, r"(dates)|([0-9]mm)"] # select only vector fluxes (by selecting columns containing depth information e.g. "_150mm")
 
-\* fluxes returned as columns in the DataFrame are:
+Naming of fluxes is the same as in the illustration in the documentation. (TODO, copy paste figure and table from article into documentation.)
+Not shown in illustration are PINT, PTRAN, PSLVP, which correspond to the potential
+interception rate (i.e. total amount of evaporated water from a continuously wet canopy),
+potential transpiration rate, and potential ground evaporation rate (of soil water or snow).
 
-    :dates
-
-    :cum_d_prec,:cum_d_sfal,:cum_d_sthr,:cum_d_sint,
-    :cum_d_rfal,:cum_d_rint,:cum_d_rthr,:cum_d_rsno,:cum_d_rnet,:cum_d_smlt,
-    :cum_d_irvp,:cum_d_isvp,:cum_d_snvp,:cum_d_slvp,
-    :cum_d_tran,
-    :cum_d_pint, :cum_d_ptran, :cum_d_pslvp,
-    :srfl,:slfl,:byfl,:dsfl,:gwfl,:vrfln,
-
-    :flow, :seep, :evap,
-
-    :TRANI_mmday_50mm, :TRANI_mmday_100mm, ... :TRANI_mmday_1050mm, :TRANI_mmday_1100mm
-
-Returns:
+Function returns a DataFrame:
 
     366×50 DataFrame
      Row │ dates                cum_d_prec  cum_d_sfal  cum_d_sthr  cum_d_sint  cum_d_rfal  cum_d_rint  cum_d_rthr  cum_d_rsno  cum_d_rnet  cum_d_smlt   ⋯
          │ DateTime             Float64     Float64     Float64     Float64     Float64     Float64     Float64     Float64     Float64     Float64      ⋯
-    ─────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── ─
+    ─────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── ⋯
        1 │ 2021-01-01T00:00:00         0.0    0.0         0.0        0.0          0.0         0.0         0.0         0.0          0.0         0.0       ⋯
        2 │ 2021-01-02T00:00:00         0.0    0.0         0.0        0.0          0.0         0.0         0.0         0.0          0.0         0.0       ⋯
 
-         ⋯ cum_d_irvp  cum_d_isvp  cum_d_snvp  cum_d_slvp  cum_d_tran   cum_d_pint  cum_d_ptran  cum_d_pslvp  srfl     slfl      byfl     dsfl      ⋯
-         ⋯ Float64     Float64     Float64     Float64     Float64      Float64     Float64      Float64      Float64  Float64   Float64  Float64   ⋯
-         ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-         ⋯   0.0        0.0         0.0        0.0         0.0            0.0       0.0            0.0            0.0   0.0          0.0      0.0   ⋯
-         ⋯   0.0        0.0         0.0        0.0448292   0.0566162      2.64652   0.0566162      0.364727       0.0   0.0          0.0      0.0   ⋯
+         ⋯ cum_d_irvp  cum_d_isvp  cum_d_snvp  cum_d_slvp  cum_d_tran  ⋯
+         ⋯ Float64     Float64     Float64     Float64     Float64     ⋯
+         ⋯ ─────────────────────────────────────────────────────────── ⋯
+         ⋯   0.0        0.0         0.0        0.0         0.0         ⋯
+         ⋯   0.0        0.0         0.0        0.0448292   0.0566162   ⋯
 
-         ⋯ gwfl      vrfln     flow      seep     evap       TRANI_mmday_50mm  TRANI_mmday_100mm  TRANI_mmday_150mm  TRANI_mmday_200mm  TRANI_mmday_250mm  ⋯ TRANI_mmday_1050mm TRANI_mmday_1100mm
-         ⋯ Float64   Float64   Float64   Float64  Float64    Float64           Float64            Float64            Float64            Float64            ⋯ Float64            Float64
-         ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-         ⋯ 0.0       0.0       0.0           0.0  0.0             0.0                0.0                0.0                0.0                0.0          ⋯                0.0               0.0
-         ⋯ 0.154122  0.154122  0.154122      0.0  0.101445        0.0434988          0.00995972         0.00240976         0.000574825        0.00013463   ⋯                0.0               0.0
+         ⋯ cum_d_pint  cum_d_ptran  cum_d_pslvp ⋯ srfl     slfl      byfl     dsfl      gwfl      vrfln     ⋯
+         ⋯ Float64     Float64      Float64     ⋯ Float64  Float64   Float64  Float64   Float64   Float64   ⋯
+         ⋯ ──────────────────────────────────────────────────────────────────────────────────────────────── ⋯
+         ⋯ 0.0       0.0            0.0         ⋯   0.0   0.0          0.0      0.0   0.0       0.0         ⋯
+         ⋯ 2.64652   0.0566162      0.364727    ⋯   0.0   0.0          0.0      0.0   0.154122  0.154122    ⋯
+
+         ⋯ flow      seep     evap       TRANI_mmday_50mm  TRANI_mmday_100mm  TRANI_mmday_150mm  TRANI_mmday_200mm  TRANI_mmday_250mm  ⋯ TRANI_mmday_1050mm TRANI_mmday_1100mm
+         ⋯ Float64   Float64  Float64    Float64           Float64            Float64            Float64            Float64            ⋯ Float64            Float64
+         ⋯ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+         ⋯ 0.0           0.0  0.0             0.0                0.0                0.0                0.0                0.0          ⋯                0.0               0.0
+         ⋯ 0.154122      0.0  0.101445        0.0434988          0.00995972         0.00240976         0.000574825        0.00013463   ⋯                0.0               0.0
 """
 function get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) # returns fluxes (external, internal, errorterms)
-    if isnothing(simulation.ODESolution)
-        error("The provided simulation has not yet been solved. Please `simulate!()` the DiscretizedSPAC first.")
-    end
+    @assert !isnothing(simulation.ODESolution) "Solution was not yet computed. Please simulate!(simulation)"
+
     timepoints =
         isnothing(days_to_read_out_d)           ? unique(round.(simulation.ODESolution.t)) : # case nothing: return daily by default
         # days_to_read_out_d == :integrator_step  ? error("Cumulative fluxes should not be read out on subdaily intervals.") : # if requested return for each integration step stored in ODESolution
@@ -308,24 +301,24 @@ end
 
 Returns a 2D DataFrame of soil variables with soil layers as columns and time steps as rows.
 Supports a number of variables:
-    - `:θ` (= `:theta`) = volumetric soil moisture values (m3/m3)
-    - `:ψ` (= `:psi`) = soil matric potential (kPa)
-    - `:W` = soil wetness (-)
-    - `:SWATI` = soil water volumes contained in discretized layers (mm)
-    - `:K` = soil hydraulic conductivities (mm/day)
-    - `:δ18O`, `:δ2H`, `:d18O`, `:d2H` = isotopic signatures (delta)
-    - `TRANI`, `RWU` = root water uptake flux from each cell (mm/day)
+- `:θ`, `:theta` = volumetric soil moisture values (m3/m3)
+- `:ψ`, `:psi` = soil matric potential (kPa)
+- `:W` = soil wetness (-)
+- `:SWATI` = soil water volumes contained in discretized layers (mm)
+- `:K` = soil hydraulic conductivities (mm/day)
+- `:δ18O`, `:δ2H`, `:d18O`, `:d2H` = isotopic signatures (delta)
+- `:TRANI`, `:RWU` = root water uptake flux from each cell (mm/day)
+
 The user can define timesteps as `days_to_read_out_d` or specific depths as `depths_to_read_out_mm`,
 that are both optionally provided as numeric vectors, e.g. `depths_to_read_out_mm = [100, 150]` or `days_to_read_out_d = 1:1.0:100`
-
 Function to read out soil variables from a simulated simulation.
-- `symbols`: can be a single symbol (:θ) or a vector of symbols [:θ] or [:θ, :ψ, :δ18O, :δ2H, :W, :SWATI, :K]
-    - Please note that also non-Unicode symbols are accepted: e.g. [:theta, :psi, :delta18O, :delta2H, :d18O, :d2H]
+- `symbols`: can be a single symbol (:θ) or a vector of symbols [:θ] or [:θ, :ψ,], see above for accepted symbols, and not that non-Unicode symbols are supported: e.g. [:theta, :psi, :delta18O, :delta2H, :d18O, :d2H]
 - `simulation`: is a `DiscretizedSPAC` that has been simulated.
 - `depths_to_read_out_mm`: either `nothing` or vector of Integers.
 - `days_to_read_out_d`: either  `nothing` or vector of Floats representing days.
 
 Examples
+
     get_soil_(:θ, simulation)
     get_soil_([:θ, :ψ, :K], simulation; depths_to_read_out_mm = [100, 200, 500, 1200])
 """

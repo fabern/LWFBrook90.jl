@@ -290,7 +290,7 @@ function MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM
                 p_fu_ATRI[J,i] = ATRANI[i]
             end
             if (ATR[J] < p_fu_PTR[J])
-                # soil water limitation, new GER
+                # soil water limitation of transpiration rate, resulting in new (larger?) GER
                 p_fu_GER[J]=LWFBrook90.PET.SWGE(AA, ASUBS, VPD, RAA, RAS, p_fu_RSS, DELTA, ATR[J])
             end
         else
