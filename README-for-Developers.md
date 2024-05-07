@@ -27,6 +27,9 @@ __Version numbering__: https://semver.org
 __Before pushing__: you **could** run test suite locally and test generation of documentation.
 To do so use `julia --project=docs docs/make.jl` or `julia --project=. test/runtests.jl`
 (as could be inferred from `.github/workflows/Documentation.yml`)
+Note: actually according to (https://discourse.julialang.org/t/add-test-as-a-dependency-of-project/89043/7 and https://discourse.julialang.org/t/is-there-a-difference-under-the-hood-between-running-code-via-a-jl-file-and-running-code-via-test-name-of-pkg/38097/3?u=fabern)
+an alternative way to better locally reproduce the empty environemnt on CI is by doing: julia --project=. using Pkg; Pkg.test("LWFBrook90"), since
+Pkg.test generates a new environment not including the default environment.
 
 __Testing__: Testing asserts the functioning of the program as expected.
 Combined with _continuous integration_, changes to the functioning are detected as early as possible.

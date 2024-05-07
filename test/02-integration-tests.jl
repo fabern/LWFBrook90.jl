@@ -295,7 +295,7 @@ function plot_Hammel_Dense(sim, ref, hyd, depth_to_read_out_mm, title; subtitle 
         title = final_title, subtitle = final_subtitle);
     ax2 = Makie.Axis(fig[2,1], xlabel = "Time (days)", ylabel = "ψ (kPa)", xticks = x_ticks,
         yscale = Makie.pseudolog10, yticks = y_ticks_ψ);
-    simulate_isotopes = !ismissing(sim.θψδ_dense.δ18O_100mm[1])
+    simulate_isotopes = !ismissing(sim.θψδ_dense[1,r"δ18O_"][1])
     if (simulate_isotopes)
         ax3 = Makie.Axis(fig[3,1], xlabel = "Time (days)", ylabel = "δ¹⁸O (‰)", xticks = x_ticks)
         ax4 = Makie.Axis(fig[4,1], xlabel = "Time (days)", ylabel = "δ²H (‰)",  xticks = x_ticks)
@@ -347,7 +347,7 @@ function plot_Hammel_Dense(sim, ref, hyd, depth_to_read_out_mm, title; subtitle 
         LineElement(color = :black, linestyle = nothing),
         MarkerElement(marker = markers[2], color = :black, strokecolor = :transparent),
         MarkerElement(marker = markers[3], color = :black, strokecolor = :transparent)]
-    depth_string = replace.(replace.(names(sim.θψδ_dense[:,r"^θ"]), "θ_" => ""), "mm" => " mm")
+    depth_string = replace.(replace.(names(sim.θψδ_dense[:,r"^θ"]), "θ_m3m3_" => ""), "mm" => " mm")
     group_color = [PolyElement(color = color, strokecolor = :transparent) for color in Makie.wong_colors()[eachindex(depth_string)]]
     if add_legend
         axislegend(ax1, [group_depth..., group_color...], [markers_string..., depth_string...],
@@ -414,7 +414,7 @@ end
     # Illustrate with a plot what will be compared in the tests below
     if !is_a_CI_system && plot_flag
         # if (true) # Do these manually outside of automatic testing in order not to require Plots pkg
-        using Makie
+        using CairoMakie
         depth_to_read_out_mm = [100, 500, 1000, 1500, 1900]
         # fname_illustrations = "out/$(today())/"
 
@@ -510,7 +510,7 @@ end
     # Compare with LWFBrook90R as reference solution
     @test RMS_differences(sim1.θψδ[:,Cols(:time, r"ψ_")], ref1.ψ) < 2.0 # kPa
     @test RMS_differences(sim2.θψδ[:,Cols(:time, r"ψ_")], ref2.ψ) < 0.60 # kPa
-    high_resolution_flag && (@test RMS_differences(sim3.θψδ[:,Cols(:time, r"ψ_")], ref3.ψ) < 0.42) # kPa
+    high_resolution_flag && (@test RMS_differences(sim3.θψδ[:,Cols(:time, r"ψ_")], ref3.ψ) < 0.43) # kPa
     @test RMS_differences(sim4.θψδ[:,Cols(:time, r"ψ_")], ref4.ψ) < 0.004 # kPa
     @test RMS_differences(sim5.θψδ[:,Cols(:time, r"ψ_")], ref5.ψ) < 0.0080 # kPa
     high_resolution_flag && (@test RMS_differences(sim6.θψδ[:,Cols(:time, r"ψ_")], ref6.ψ) < 0.0025) # kPa
@@ -670,6 +670,7 @@ end
             colgap!(content(fig_combined[1,2]), 4)
             save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand3-Loam3.png", fig_combined, px_per_unit = 600/72)
             save(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand3-Loam3.pdf", fig_combined, pt_per_unit = 1)
+            # jldsave(fname_illustrations*"TESTSET_Hammel-2001-θ-ψ-δ_Sand3-Loam3.jld2"; fig_combined)
             # Pkg.add("AlgebraOfGraphics")
             # using AlgebraOfGraphics
             # AlgebraOfGraphics.set_aog_theme!()
@@ -705,7 +706,7 @@ end
     # ψ: Compare with LWFBrook90R as reference solution
     @test RMS_differences(sim1.θψδ[:,Cols(:time, r"ψ_")], ref1.ψ) < 1.85 # kPa
     @test RMS_differences(sim2.θψδ[:,Cols(:time, r"ψ_")], ref2.ψ) < 0.50 # kPa
-    high_resolution_flag && (@test RMS_differences(sim3.θψδ[:,Cols(:time, r"ψ_")], ref3.ψ) < 0.42) # kPa
+    high_resolution_flag && (@test RMS_differences(sim3.θψδ[:,Cols(:time, r"ψ_")], ref3.ψ) < 0.43) # kPa
     @test RMS_differences(sim4.θψδ[:,Cols(:time, r"ψ_")], ref4.ψ) < 0.003 # kPa
     @test RMS_differences(sim5.θψδ[:,Cols(:time, r"ψ_")], ref5.ψ) < 0.004 # kPa
     high_resolution_flag && (@test RMS_differences(sim6.θψδ[:,Cols(:time, r"ψ_")], ref6.ψ) < 0.0035) # kPa

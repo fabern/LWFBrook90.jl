@@ -279,6 +279,7 @@ function plot_simulated_fluxes_vs_reference(simulated_fluxes_arg, reference_arg;
     simulated_fluxes = NamedTuple([k=>v for (k,v) in pairs(eachcol(simulated_fluxes_arg))])
     reference = Dict([String(k)=>v for (k,v) in pairs(eachcol(reference_arg))])
 
+    evap_key = "evap" ∈ keys(reference) ? "evap" : "cum_d_evap"
     Plots.plot(
         Plots.plot(d_out, [simulated_fluxes.cum_d_prec      reference["cum_d_prec"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_prec", kwargs...),
         Plots.plot(d_out, [simulated_fluxes.cum_d_rfal      reference["cum_d_rfal"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_rfal", kwargs...),
@@ -298,7 +299,9 @@ function plot_simulated_fluxes_vs_reference(simulated_fluxes_arg, reference_arg;
         Plots.plot(d_out, [simulated_fluxes.cum_d_pint      reference["cum_d_pint"]],     linestyle = [:solid :dot], label = labels, title = "accum.cum_d_pint", kwargs...),
         Plots.plot(d_out, [simulated_fluxes.cum_d_ptran     reference["cum_d_ptran"]],    linestyle = [:solid :dot], label = labels, title = "accum.cum_d_ptran", kwargs...),
         # Plots.plot(d_out, [simulated_fluxes.cum_d_pslvp     reference["cum_d_pslvp"]],    linestyle = [:solid :dot], label = labels, title = "accum.cum_d_pslvp", kwargs...), # PSLVP was removed from output,
-        Plots.plot(d_out, [simulated_fluxes.evap            reference["evap"]],           linestyle = [:solid :dot], label = labels, title = "accum.evap => fate", kwargs...),
+        # Plots.plot(d_out, [simulated_fluxes.evap            reference["evap"]],           linestyle = [:solid :dot], label = labels, title = "accum.evap => fate", kwargs...),
+        # Plots.plot(d_out, [simulated_fluxes.evap            reference["cum_d_evap"]],     linestyle = [:solid :dot], label = labels, title = "accum.evap => fate", kwargs...),
+        Plots.plot(d_out, [simulated_fluxes.evap            reference[evap_key]],         linestyle = [:solid :dot], label = labels, title = "accum.evap => fate", kwargs...),
         Plots.plot(d_out, [simulated_fluxes.flow            reference["flow"]],           linestyle = [:solid :dot], label = labels, title = "accum.flow => fate", kwargs...),
         Plots.plot(d_out, [simulated_fluxes.seep            reference["seep"]],           linestyle = [:solid :dot], label = labels, title = "accum.seep => fate", kwargs...),
         Plots.plot(d_out, [simulated_fluxes.srfl            reference["srfl"]],           linestyle = [:solid :dot], label = labels, title = "accum.srfl", kwargs...),
