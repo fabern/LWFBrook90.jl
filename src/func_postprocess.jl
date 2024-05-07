@@ -485,7 +485,7 @@ function intern___get_soil_idx(simulation::DiscretizedSPAC, depths_to_read_out_m
             idx_to_read_out[it] = findfirst(curr_depth_mm .<= lower_boundaries)
         end
     end
-    all_idxs = Dict((d => i) for (d,i) in zip(depths_to_read_out_mm, idx_to_read_out))
+    all_idxs = sort(Dict((d => i) for (d,i) in zip(depths_to_read_out_mm, idx_to_read_out)))
     if only_valid_idxs
         return filter((k, v)::Pair -> v != 0, all_idxs)
     else # default
