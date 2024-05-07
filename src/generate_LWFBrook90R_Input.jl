@@ -237,7 +237,7 @@ function prepare_for_LWFBrook90R(spac_; return_value = "inputs", out_dir = ".", 
     imodel           = "MvG"
     use_growthperiod = false
     @assert parSPAC.pars.root_distribution isa NamedTuple "root distribution needs to be a NamedTuple of parameters."
-    @assert keys(parSPAC.pars.root_distribution) == (:beta, :z_rootMax_m)
+    @assert all(keys(parSPAC.pars.root_distribution) .∈ ((:beta, :z_rootMax_m, :root_θ_cm, :root_k), ))
     root_method      = "soilvar"
     opts = (;
         startdate        = startdate,

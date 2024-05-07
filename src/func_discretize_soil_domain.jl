@@ -537,7 +537,7 @@ function Rootden_beta_(
     # e.g. Δz_m = fill(0.10, 10)
     #      z_rootMax_m = -0.22
     #      β = 0.97
-    Rootden_(root_β = β, Δz_m = Δz_m, z_rootMax_m = z_rootMax_m, z_Upper_m = z_Upper_m)
+    Rootden_(beta = β, Δz_m = Δz_m, z_rootMax_m = z_rootMax_m, z_Upper_m = z_Upper_m)
 end
 # Δz_m = fill(0.10, 10) # (m)
 # Δz_m = diff(collect(0:0.01:1)) # (m)
