@@ -79,7 +79,7 @@ function prepare_θψδ_from_sim_and_reference(;
     @assert sim_sol.prob.p.p_soil.NLAYER == length(unique(referenceSolution_layer.nl)) """
         Discrtizations of simulated and reference solution are not equal, check arguments.
         """
-    idx_ref = idx
+    idx_ref = sort(collect(idx))
     ref_θ = unstack(
         referenceSolution_layer[:,[:yr, :mo, :da, :doy, :nl, :theta]],
         [:yr, :mo, :da, :doy], # ID variable
@@ -92,7 +92,7 @@ function prepare_θψδ_from_sim_and_reference(;
         [:yr, :mo, :da, :doy], # ID variable
         :nl,   # variable that will be spread out into column names
         :psimi,# value that will be filled into the wide table
-        renamecols=x->Symbol(:nl_, x))[:, [:doy; Symbol.("nl_" .* string.(idx))]]
+        renamecols=x->Symbol(:nl_, x))[:, [:doy; Symbol.("nl_" .* string.(idx_ref))]]
     rename!(ref_ψ, :doy => :time)
 
     ref_δ18O = allowmissing(copy(ref_ψ))
