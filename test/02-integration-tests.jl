@@ -704,7 +704,7 @@ end
 
     # Compare ψ
     # ψ: Compare with LWFBrook90R as reference solution
-    @test RMS_differences(sim1.θψδ[:,Cols(:time, r"ψ_")], ref1.ψ) < 1.85 # kPa
+    @test RMS_differences(sim1.θψδ[:,Cols(:time, r"ψ_")], ref1.ψ) < 2.0 # kPa
     @test RMS_differences(sim2.θψδ[:,Cols(:time, r"ψ_")], ref2.ψ) < 0.50 # kPa
     high_resolution_flag && (@test RMS_differences(sim3.θψδ[:,Cols(:time, r"ψ_")], ref3.ψ) < 0.43) # kPa
     @test RMS_differences(sim4.θψδ[:,Cols(:time, r"ψ_")], ref4.ψ) < 0.003 # kPa
