@@ -55,6 +55,7 @@ makedocs(;
         prettyurls=get(ENV, "CI", "false") == "true",
         canonical="https://fabern.github.io/LWFBrook90.jl",
         assets=String[],
+        size_threshold = 2000 * 2^10 #200 * 2^10, set to 2000 KiB instead of 200 KiB
     ),
     # workdir = joinpath(@__DIR__, ".."),
     pages=[
