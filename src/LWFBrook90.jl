@@ -421,7 +421,19 @@ function setup(parametrizedSPAC::SPAC;
             modifiedSPAC.pars.params[:QDEPTH_m];
             ε = ε)
     Δz_refined = refined_soil_discretizationDF.Upper_m - refined_soil_discretizationDF.Lower_m
-    # if rootden (and initial conditions were given parametrically redo them):
+    # redo rootden
+        # TODO: replace further below with directly below
+    # if ()
+    #     modifiedSPAC.pars.root_distribution = -1234567890 # TODO: interpolate the dataframe
+    #     # modifiedSPAC.pars.IC_soil = -1234567890         # TODO: interpolate the dataframe
+    #     # TODO: do this interpolation not here, but already after initial loadSPAC(). Then here we could simply use overwrite_X!()
+    #     # TODO: also include these cases in overwrite_rootden!() and overwrite_IC!()
+    # end
+    # overwrite_rootden!(refined_soil_discretizationDF, modifiedSPAC.pars.root_distribution, Δz_refined)
+    # overwrite_IC!(     refined_soil_discretizationDF, modifiedSPAC.pars.IC_soil, modifiedSPAC.solver_options.simulate_isotopes)
+    # TODO: replace below with above
+    # TODO: remove below
+    # if rootden (and initial conditions) were given parametrically redo them:
     modifiedSPAC.pars.root_distribution
     if (modifiedSPAC.pars.root_distribution isa DataFrame)
         # keep as is
@@ -429,6 +441,7 @@ function setup(parametrizedSPAC::SPAC;
         overwrite_rootden!(refined_soil_discretizationDF, modifiedSPAC.pars.root_distribution, Δz_refined)
         overwrite_IC!(     refined_soil_discretizationDF, modifiedSPAC.pars.IC_soil, modifiedSPAC.solver_options.simulate_isotopes)
     end
+    # TODO: remove above
 
     # Discretize the model in space as `soil_discretization`
     final_soil_discretizationDF = map_soil_horizons_to_discretization(modifiedSPAC.pars.soil_horizons, refined_soil_discretizationDF)#computational_grid)
