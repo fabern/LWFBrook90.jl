@@ -201,6 +201,8 @@ function refine_soil_discretization(
                 insert!.(eachcol(refined_soil_discr),
                         pos,
                         Matrix(refined_soil_discr)[pos-1,:]) # use properties from cell above
+                                                             # properties include: Rootden_, IC (ψ, d18O, d2H)
+                                                             # TODO: note that for Rootden_ this computation leads to sum(Rootden_) != 1.0
                 refined_soil_discr[pos-1, "Lower_m"] = interface_to_add[1] # modify
                 refined_soil_discr[pos,   "Upper_m"] = interface_to_add[1] # modify
                 push!(added_interfaces, interface_to_add[1])

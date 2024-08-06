@@ -76,7 +76,6 @@ Base.@kwdef mutable struct SPAC
         # pars.params:            e.g. (VXYLEM_mm = 20.0, DISPERSIVITY_mm = 10, Str = "oh")
         # pars.root_distribution: e.g. (beta = 0.97, z_rootMax_m = nothing)
         # pars.IC:                e.g. .soil = PSIM, δ2H, δ18O, but also .scalar = SNOW,INTR,INTS
-        # pars.root_distribution = (beta = 0.97, z_rootMax_m = nothing)
         # pars.canopy_evolution:  e.g. LAI(t), ...
         # pars.soil_horizons
 end
@@ -371,7 +370,8 @@ function setup(parametrizedSPAC::SPAC;
 
     @assert all(soil_output_depths_m .< 0)
 
-    if !isnothing(requested_tspan) # if argument requested_tspan provided, check its value:
+    # if argument requested_tspan provided, check its value:
+    if !isnothing(requested_tspan)
         if requested_tspan[1] isa DateTime
             requested_tspan = LWFBrook90.DateTime2RelativeDaysFloat.(
                 requested_tspan, parametrizedSPAC.reference_date)
@@ -389,7 +389,7 @@ function setup(parametrizedSPAC::SPAC;
     # A discretizedSPAC stores:
         # Its needed input:
             # - SPAC (that contains arguments `requested_tspan` and `soil_output_depths_m`)
-            #        (hence setup(discreteSPAC.parametrizedSPAC) works as expected)
+            #        (hence we have the equality setup(discreteSPAC.parametrizedSPAC) == discreteSPAC)
         # And derived fields:
             # - ODEProblem
             # - ODESolution
@@ -455,19 +455,21 @@ function setup(parametrizedSPAC::SPAC;
         # 1) define a grid resolution Δz (either a) reading in from soil_discretization or b) manually defined vector)
         # 2) get info about initial conditions (either a) reading in from soil_discretization or then or b) manually defined mathematical function  )
         # 2) get info about root distribution (either a) reading in from soil_discretization or then or b) manually defined mathematical function  )
-        # 3) map initial condition to discretized grid resolution Δz
-        # 3) map root distribution to discretized grid resolution Δz (and interpolate in time giving us a function rootden(z, t))
-        # 4) include additional interfaces for observation_nodes and other needed interfaces (such as soil layers)...
+        # 1b) refine grid: include additional interfaces for observation_nodes and other needed interfaces (such as soil layers)...
             # TODO(bernhard): combine step 4) with 1). -> Requires mapping in 3) regardless of whether we have a) or b)
-        # 5) map soil physical properties from soil layers to discretized grid resolution Δz
+        # 3) map initial condition to refined, discretized grid resolution Δz
+        # 3) map root distribution to refined, discretized grid resolution Δz (and interpolate in time giving us a function rootden(z, t))
+        # 5) map soil physical properties from soil layers to refined, discretized grid resolution Δz
     ####################
 
     ####################
     ## c) Derive time evolution of aboveground vegetation based on parameter from SPAC
+    # TODO: move to loadSPAC()
     canopy_evolution_relative = generate_canopy_timeseries_relative(
         modifiedSPAC.pars.canopy_evolution,
         days = modifiedSPAC.forcing.meteo["p_days"],
         reference_date = modifiedSPAC.reference_date)
+    # TODO: move to loadSPAC()
     canopy_evolutionDF = make_absolute_from_relative(
                 aboveground_relative          = canopy_evolution_relative,
                 p_MAXLAI                      = modifiedSPAC.pars.params[:MAXLAI],

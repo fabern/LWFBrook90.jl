@@ -128,7 +128,7 @@ function loadSPAC(folder::String, prefix::String;
             @assert all(_to_use_canopy_evolution.LAI_rel .>= 0) "Error in vegetation parameters: LAI must be above 0%."
         else
             error("""
-                Input_meteoveg is expected to contain one or multiple of the columns: :DENSEF_re, :HEIGHT_rel, :LAI_rel, or :SAI_rel.
+                Input_meteoveg is expected to contain one or multiple of the columns: :DENSEF_rel, :HEIGHT_rel, :LAI_rel, or :SAI_rel.
                 Please check your input files with the current documentation and possibly contact the developer team if the error persists.
                 If it does not contain the columns please provide a parametrization to loadSPAC(, canopy_evolution::NamedTuple = ())
                 with the NamedTuple containing relative values in percent:
@@ -210,7 +210,8 @@ function loadSPAC(folder::String, prefix::String;
 
         if root_distribution == "soil_discretization.csv" error("Requested to create soil discretization manually instead of using `soil_discretization.csv`, but no parametric root_distribution provided.") end
         if IC_soil           == "soil_discretization.csv" error("Requested to create soil discretization manually instead of using `soil_discretization.csv`, but no parametric soil initial conditions provided.") end
-        # _to_use_root_distribution = (beta = 0.97, z_rootMax_m = nothing)
+        # _to_use_root_distribution = (; beta = 0.97, z_rootMax_m = nothing)
+        # _to_use_root_distribution = (; root_k = 1.0, root_θ_cm = 20);
         # _to_use_IC_soil           = (PSIM_init_kPa = -6.3, delta18O_init_permil = -10., delta2H_init_permil = -95.)
         _to_use_Δz_thickness_m = Δz_thickness_m
 
@@ -489,7 +490,6 @@ function saveSPAC(sim::DiscretizedSPAC, out_dir; prefix = basename(dirname(out_d
     # "soil_discretization.csv": sd
     (u0_aux_WETNES, u0_aux_PSIM, u0_aux_PSITI, u0_aux_θ, p_fu0_KK) =
         LWFBrook90.KPT.derive_auxiliary_SOILVAR(sim.ODEProblem.u0.SWATI.mm, sim.ODEProblem.p.p_soil);
-    sim.parametrizedSPAC.soil_discretization.df       # <- (pars.root_distribution) (pars.IC_soil)
     sd = sim.parametrizedSPAC.soil_discretization.df[:,["Upper_m","Lower_m","Rootden_","uAux_PSIM_init_kPa","u_delta18O_init_permil","u_delta2H_init_permil"]]
     sd_subheader = ["m","m","-","kPa","permil","permil"]
 
