@@ -276,14 +276,13 @@ function loadSPAC(folder::String, prefix::String;
     extended_soil_horizons = extend_lowest_horizon(soil_horizons, soil_discretization)
 
     ## Make time dependent input parameters continuous in time (interpolate)
-    (meteo_forcing_cont, meteo_iso_forcing_cont, available_forcing_tspan) =
+    (meteo_forcing_cont, meteo_iso_forcing_cont) =
         LWFBrook90.interpolate_meteo(;
             meteo_forcing                 = meteo_forcing,
             meteo_iso_forcing             = meteo_iso_forcing);
 
     return SPAC(;
         reference_date    = reference_date,
-        tspan             = available_forcing_tspan,
         solver_options    = solver_options,
         soil_discretization    = (Δz = _to_use_Δz_thickness_m,
                                   df = soil_discretization),

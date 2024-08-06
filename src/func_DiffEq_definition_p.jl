@@ -748,7 +748,7 @@ function interpolate_meteo(;
         ("p_d18OPREC",  p_d18OPREC),
         ("p_d2HPREC",   p_d2HPREC)])
 
-    return (meteo_forcing_cont, meteo_iso_forcing_cont, available_forcing_tspan)
+    return (meteo_forcing_cont, meteo_iso_forcing_cont)
 end
 
 """

@@ -33,7 +33,7 @@ export prepare_for_LWFBrook90R
 An instance of a soil-plant-atmopsheric continuum model with the following fields:
 
 - `reference_date`: DateTime to relate internal use of numerical days to real-world dates
-- `tspan`: Tuple `(0, Int)` Time span of available input data in days since reference date
+
 - `solver_options`: `NamedTuple`: (compute_intermediate_quantities, simulate_isotopes, DTIMAX, DSWMAX, DPSIMAX), containing some solver options for the model
 
 - `soil_discretization`: `DataFrame` with contents from `soil_discretizations.csv`, i.e. containing columns:
@@ -66,7 +66,6 @@ Base.@kwdef mutable struct SPAC
     # A) Assumed known: will not be estimated
     # A1) Simulation related (non-physical)
     reference_date
-    tspan               # this is available_forcing_tspan
     solver_options
     soil_discretization
     # A2) Physical forcing
