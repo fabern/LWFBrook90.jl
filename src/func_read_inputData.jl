@@ -303,7 +303,8 @@ function Base.show(io::IO, mime::MIME"text/plain", model::SPAC; show_SPAC_title=
     if (show_SPAC_title) println(io, "SPAC model:") end
 
     println(io, "===== DATES:===============")
-    available_forcing_tspan_dates = LWFBrook90.RelativeDaysFloat2DateTime.(model.tspan, model.reference_date)
+    available_forcing_tspan_dates = LWFBrook90.RelativeDaysFloat2DateTime.(
+        extrema(model.forcing.meteo["p_days"]), model.reference_date)
     println("Available forcing period:              ", format.(available_forcing_tspan_dates, "YYYY-mm-dd"),
             " (reference datum: "       , format.(model.reference_date,          "YYYY-mm-dd"),")")
     println(io, "\n===== METEO FORCING:===============")

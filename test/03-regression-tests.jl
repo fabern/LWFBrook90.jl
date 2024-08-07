@@ -165,7 +165,6 @@ function test_states_comparison(u_mm, u_δ, u_belowground, currSPAC,
         [@test all([getfield(discrShpA[i_layer], field) == getfield(discrShpB[i_layer], field) for i_layer in eachindex(discrShpA)]) for field in fieldnames(typeof(discrShpA[1]))]
 
         @test loaded_currSPAC.solver_options == currSPAC.solver_options
-        @test loaded_currSPAC.tspan == currSPAC.tspan
 
         # Test scalar states
         compare_scalar = (A,B; nans = false) -> all(isapprox.(Matrix(A), Matrix(B); nans))
@@ -361,8 +360,8 @@ end
         Δz_thickness_m = [fill(0.05, 42);],
         IC_soil = (PSIM_init_kPa = -6.3, delta18O_init_permil = -13.0, delta2H_init_permil = -95.0),
         root_distribution = (beta = 0.90, z_rootMax_m = nothing));
-    simulation2  = setup(model2; requested_tspan = (0,300));
-    simulate!(simulation2);
+    simulation2  = setup(model2);
+    simulate!(simulation2; requested_tspan = (0,300));
     simulation2_withVariousFlows = remakeSPAC(simulation2, params = (
         # activate all flow processes INFL, BYFL, SRFL DSFLI, SEEP/GWFL
         BYPAR=1, QDEPTH_m = 0.40, QFFC = 0.2, QFPAR = 0.3,
@@ -370,7 +369,7 @@ end
         # DSLOPE = 10,
         # DRAIN=.33,
         GSC = 0.05, GSP = 0.2));
-    simulate!(simulation2_withVariousFlows);
+    simulate!(simulation2_withVariousFlows; requested_tspan = (0,300));
 
     df_simulatedFluxes2 = get_daily_soilFluxes(simulation2);
     df_simulatedFluxes2b = get_daily_soilFluxes(simulation2_withVariousFlows);
@@ -447,7 +446,7 @@ end
                       u_SNOW_init_permil = -95.)),
         storm_durations_h = [4, 4, 4, 4, 8, 8, 8, 4, 4, 4, 4, 4]);
     @githash_time example_result3 = remakeSPAC(
-        example_result2,
+        example_result2.parametrizedSPAC,
         soil_horizons = (ths_ = 0.4, Ksat_mmday = 3854.9, alpha_per_m = 7.11, gravel_volFrac = 0.1),
         LAI_rel = (DOY_Bstart = 115,),
         root_distribution = (beta = 0.88, z_rootMax_m = -0.6,),
@@ -461,7 +460,7 @@ end
                 GSC = 0.05, GSP = 0.2,
             ALB=0.15, ALBSN=0.7, RSSA=720., PSICR=-1.6, FXYLEM=0.4, MXKPL=16.5, MAXLAI=9.999,
             GLMAX=.00801, R5=235., CVPD=1.9, CINTRL=0.18,))
-    simulate!(example_result3)
+    simulate!(example_result3, requested_tspan = (0, 300))
 
     # extract required data from solution object
     df_simulatedFluxes = get_daily_soilFluxes(example_result3);

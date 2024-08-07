@@ -499,7 +499,6 @@ end
                                u_INTR_init_permil = -95.333,
                                u_SNOW_init_permil = -95.444)));
 
-    @test_throws r"tspan \([0-9., ]*\) goes beyond input forcing data" setup(parametrizedSPAC, requested_tspan = (0., 400)) # forcing only defined from 0 to 364
     @test_throws AssertionError simulation = setup(parametrizedSPAC, soil_output_depths_m = [-1.0755, -1.096])
     simulation                             = setup(parametrizedSPAC, soil_output_depths_m = [-1.0755, -1.096], ε = 0.005);
     # Test soil discretization
@@ -575,6 +574,8 @@ end
     @test simulation.ODEProblem.u0.INTS.d2H  == -95.222
     @test simulation.ODEProblem.u0.INTR.d2H  == -95.333
     @test simulation.ODEProblem.u0.SNOW.d2H  == -95.444
+
+    @test_throws r"tspan \([0-9., ]*\) goes beyond input forcing data" simulate!(setup(parametrizedSPAC), requested_tspan = (0., 400)) # forcing only defined from 0 to 364
 end
 
 @testset "remake-SPAC" begin
@@ -844,7 +845,7 @@ end
                                 d2H     = (u_GWAT_init_permil = -95.111, u_INTS_init_permil = -95.222,
                                         u_INTR_init_permil = -95.333, u_SNOW_init_permil = -95.444)));
 
-    base_simulation = LWFBrook90.setup(model; requested_tspan = (0,300));
+    base_simulation = LWFBrook90.setup(model);
     mod_simulation  = LWFBrook90.setup(mod_model)
 
 
@@ -964,7 +965,11 @@ end
 
     # Check water partitioning output
     @test_throws r"daily resolution" get_water_partitioning(simulation)
-    simulate!(simulation; save_everystep = false, saveat = range(parametrizedSPAC.tspan...), tspan = parametrizedSPAC.tspan);
+    tspan = extrema(parametrizedSPAC.forcing.meteo["p_days"])
+    simulate!(simulation; save_everystep = false,
+                saveat = range(tspan...),
+                tspan = tspan);
+
     df_partitioning_daily, df_partitioning_monthly, df_partitioning_yearly = get_water_partitioning(simulation)
 
     reference_daily_check = [

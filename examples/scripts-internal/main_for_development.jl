@@ -52,7 +52,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
                     Δz_thickness_m = Δz_m,
                     IC_soil = (PSIM_init_kPa = -6.3, delta18O_init_permil = -13.0, delta2H_init_permil = -95.0),
                     root_distribution = (beta = 0.90, z_rootMax_m = nothing));
-    simulation  = setup(model; soil_output_depths_m = [-0.03, -0.11], requested_tspan = (0,300));
+    simulation  = setup(model; soil_output_depths_m = [-0.03, -0.11]);
     ####################
 
     ####################
@@ -75,7 +75,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
         # # TODO
 
     # Solve ODE:
-    simulate!(simulation);
+    simulate!(simulation; requested_tspan = (0,300));
     # plot(simulation.ODESolution)
 
     #u_soil1_amt_d18_d2 = reduce(hcat, [simulation.ODESolution[i].x[simulation.ODESolution.prob.p.row_idx_SWATI][1,:] for i = eachindex(simulation.ODESolution)])
@@ -85,7 +85,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
     ####################
     ## Benchmarking of input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/"
     # @time simulation.ODESolution = solve_LWFB90(u0, tspan, p);
-    # @time simulation.ODESolution = LWFBrook90.simulate!(simulation);
+    # @time simulation.ODESolution = LWFBrook90.simulate!(simulation; requested_tspan = (0,300));
         # 700 days in: 40 seconds dt=1e-3, adaptive = false (isoBea default spacing: NLAYER = 7)
         # 700 days in: 90 seconds dt=1e-3, adaptive = false (isoBea dense spacing (0.05m): NLAYER = 26)
         #  git+c4d37eb+gitdirty: NLAYER=7:  25.944645 seconds (196.27 M allocations: 16.947 GiB, 15.09% gc time)

@@ -33,7 +33,6 @@ export prepare_for_LWFBrook90R
 An instance of a soil-plant-atmopsheric continuum model with the following fields:
 
 - `reference_date`: DateTime to relate internal use of numerical days to real-world dates
-
 - `solver_options`: `NamedTuple`: (compute_intermediate_quantities, simulate_isotopes, DTIMAX, DSWMAX, DPSIMAX), containing some solver options for the model
 
 - `soil_discretization`: `DataFrame` with contents from `soil_discretizations.csv`, i.e. containing columns:
@@ -179,13 +178,11 @@ include("../examples/func_run_example.jl")
 
 """
     remakeSPAC(discrSPAC::DiscretizedSPAC;
-                requested_tspan = nothing,
                 soil_output_depths_m::Vector = zeros(Float64, 0),
                 kwargs...)
 or
 
     remakeSPAC(parametrizedSPAC::SPAC;
-                requested_tspan = nothing,
                 soil_output_depths_m::Vector = zeros(Float64, 0),
                 kwargs...)
 
@@ -210,16 +207,13 @@ horizon. A mix of vectors and scalars is also possible.
 
 """
 function remakeSPAC(discrSPAC::DiscretizedSPAC;
-                requested_tspan = nothing,
                 soil_output_depths_m::Vector = zeros(Float64, 0),
                 kwargs...)
     return remakeSPAC(discrSPAC.parametrizedSPAC;
-                requested_tspan = requested_tspan,
                 soil_output_depths_m = soil_output_depths_m,
                 kwargs...)
 end
 function remakeSPAC(parametrizedSPAC::SPAC;
-                requested_tspan = nothing,
                 soil_output_depths_m::Vector = zeros(Float64, 0),
                 kwargs...) # kwargs collects all others
     # dump(kwargs) # kwargs contains NamedTuples to be modified
@@ -247,7 +241,6 @@ function remakeSPAC(parametrizedSPAC::SPAC;
         end
     end
     return setup(modifiedSPAC;
-                requested_tspan = requested_tspan,
                 soil_output_depths_m = soil_output_depths_m)
 end
 function remake_soil_horizons(spac, changesNT)
@@ -344,7 +337,6 @@ end
 
 """
     setup(parametrizedSPAC::SPAC;
-        requested_tspan = nothing,
         soil_output_depths_m::Vector = zeros(Float64, 0))
 
 Takes the definition of SPAC model and discretize to a system of ODEs that can be solved by
@@ -352,16 +344,8 @@ the package DifferentialEquations.jl
 
 If needed, the computational grid of the soil is refined to output values at specific depths,
 e.g. by doing `setup(SPAC; soil_output_depths_m = [-0.35, -0.42, -0.48, -1.05])`.
-
-The argument `requested_tspan` is a tuple defining the duration of the simulation either
-with a start- and an end-day relative to the reference date: `setup(SPAC; requested_tspan = (0,150))`.
-or alternatively as a tuple of 2 DataTime's.
-Note that the reference date given by the `SPAC.reference_date` refers to the day 0.
-Further note that it is possible to provide a tspan not starting at 0, e.g. (120,150).
-In that case, initial conditions are applied tspan[1], but atmospheric forcing is correctly taken into account.
 """
 function setup(parametrizedSPAC::SPAC;
-                requested_tspan = nothing,
                 soil_output_depths_m::Vector = zeros(Float64, 0), # e.g. # soil_output_depths_m = [-0.35, -0.42, -0.48, -1.05]
                 # Define what is close enough for soil_output_depths_m
                 ε = 0.050   # thickness of layer to be inserted, [m]
@@ -369,26 +353,12 @@ function setup(parametrizedSPAC::SPAC;
 
     @assert all(soil_output_depths_m .< 0)
 
-    # if argument requested_tspan provided, check its value:
-    if !isnothing(requested_tspan)
-        if requested_tspan[1] isa DateTime
-            requested_tspan = LWFBrook90.DateTime2RelativeDaysFloat.(
-                requested_tspan, parametrizedSPAC.reference_date)
-        end
-        available_forcing_data = extrema(parametrizedSPAC.forcing.meteo["p_days"])
-        if ((requested_tspan[1] < available_forcing_data[1]) |  (requested_tspan[2] > available_forcing_data[2]))
-            error("Requested simulation tspan $requested_tspan goes beyond input forcing data: $(available_forcing_data)")
-        end
-        if !(requested_tspan[1] ≈ 0)
-            @warn    "Requested time span doesn't start at 0. This is supported and correctly takes into account atmospheric forcing." * "\n" *
-            "         Note, however, that initial conditions are applied at $(parametrizedSPAC.reference_date + Second(floor(requested_tspan[1] * 24*3600))), i.e. at t=$(requested_tspan[1])."
-        end
-    end
     # This function prepares a discretizedSPAC, which is a container for a DifferentialEquations::ODEProblem.
     # A discretizedSPAC stores:
         # Its needed input:
-            # - SPAC (that contains arguments `requested_tspan` and `soil_output_depths_m`)
-            #        (hence we have the equality setup(discreteSPAC.parametrizedSPAC) == discreteSPAC)
+            # - SPAC (that was modified according to argument `soil_output_depths_m`)
+            #        (hence we have the inequality model !=        setup(model, soil_output_depths_m=0.017).parametrizedSPAC)
+            #        (but the             equality setup(model) == setup(setup(model).parametrizedSPAC))
         # And derived fields:
             # - ODEProblem
             # - ODESolution
@@ -533,16 +503,6 @@ function setup(parametrizedSPAC::SPAC;
     # tspan = (LWFBrook90.DateTime2RelativeDaysFloat(DateTime(1980,1,1), reference_date),
     #          LWFBrook90.DateTime2RelativeDaysFloat(DateTime(1985,1,1), reference_date)) # simulates selected period
 
-    if isnothing(requested_tspan)
-        tspan_to_use = modifiedSPAC.tspan
-    else
-        @warn "Overwriting tspan defined in SPAC $(modifiedSPAC.tspan) with provided value of $requested_tspan"
-        tspan_to_use = requested_tspan
-
-        # Update tspan in underlying SPAC model
-        modifiedSPAC.tspan = requested_tspan
-    end
-
     # Seperate updating of different states (INTS, INTR, SNOW, CC, SNOWLQ are updated once per
     # day while GWAT and SWATI are updated continuously) is implemented by means of operator
     # splitting using a callback function for the daily updates and a ODE RHS (right hand
@@ -563,6 +523,8 @@ function setup(parametrizedSPAC::SPAC;
     # Note that documentation for solve()-arguments can be found at:
     # `https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/#solver_options`
     # `https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/`
+    tspan_to_use = extrema(parametrizedSPAC.forcing.meteo["p_days"]) # by default use available_forcing_tspan
+                                                                   # can be overriden in simulate!(..., requested_tspan)
     ode_LWFBrook90 =
         ODEProblem(LWFBrook90.f_LWFBrook90!, u0, tspan_to_use, p;
                     callback = cb_func,
@@ -612,10 +574,18 @@ function Base.show(io::IO, mime::MIME"text/plain", discSPAC::DiscretizedSPAC)
     # Print discretization:
     println(io, "Discretized SPAC model: =============== solution was computed: $(!isnothing(discSPAC.ODESolution))")
     println(io, "\n===== SIMULATION PERIOD:===============")
-    requested_tspan_dates = LWFBrook90.RelativeDaysFloat2DateTime.(discSPAC.ODEProblem.tspan, discSPAC.parametrizedSPAC.reference_date)
-    requested_tspan_duration = discSPAC.ODEProblem.tspan[2] - discSPAC.ODEProblem.tspan[1]
-    println("Requested/simulated simulation period: ", format.(requested_tspan_dates, "YYYY-mm-dd"),
-            " (duration of $(requested_tspan_duration) days)")
+    available_tspan_dates = LWFBrook90.RelativeDaysFloat2DateTime.(discSPAC.ODEProblem.tspan,
+                                                                   discSPAC.parametrizedSPAC.reference_date)
+    available_tspan_duration = discSPAC.ODEProblem.tspan[2] - discSPAC.ODEProblem.tspan[1]
+    println("Available simulation period: ", format.(available_tspan_dates, "YYYY-mm-dd"),
+            " (duration of $(available_tspan_duration) days)")
+    if (!isnothing(discSPAC.ODESolution))
+        simulated_tspan_dates = LWFBrook90.RelativeDaysFloat2DateTime.(discSPAC.ODESolution.tspan,
+                                                                    discSPAC.parametrizedSPAC.reference_date)
+        simulated_tspan_duration = discSPAC.ODEProblem.tspan[2] - discSPAC.ODEProblem.tspan[1]
+        println("Simulated simulation period: ", format.(simulated_tspan_dates, "YYYY-mm-dd"),
+                " (duration of $(simulated_tspan_duration) days)")
+    end
 
     # Print parametrization
     println(io, "")
@@ -623,7 +593,7 @@ function Base.show(io::IO, mime::MIME"text/plain", discSPAC::DiscretizedSPAC)
 
     # DO WE NEED BELOW EXPLICIT CANOPY EVOLUTION? NO.
     # println(io, "\n===== CANOPY EVOLUTION:===============")
-    # println(io, show_avg_and_range(model.canopy_evolution.p_AGE.(model.tspan),    "AGE         (years): "))
+    # println(io, show_avg_and_range(model.canopy_evolution.p_AGE.(extrema(model.forcing.meteo["p_days"])),    "AGE         (years): "))
     # println(io, show_avg_and_range(model.canopy_evolution.p_DENSEF.itp.itp.coefs, "DENSEF         (°C): "))
     # println(io, show_avg_and_range(model.canopy_evolution.p_HEIGHT.itp.itp.coefs, "HEIGHT          (m): "))
     # println(io, show_avg_and_range(model.canopy_evolution.p_LAI.itp.itp.coefs,    "LAI         (m2/m2): "))
@@ -636,10 +606,41 @@ end
 
 Simulates a SPAC model and stores the solution in s.ODESolution.
 
+The argument `requested_tspan` is a tuple defining the duration of the simulation either
+with a start- and an end-day relative to the reference date: `simulate!(DiscrSPAC; requested_tspan = (0,150))`.
+or alternatively as a tuple of 2 DataTime's.
+Note that the reference date given by the `SPAC.reference_date` refers to the day 0.
+Further note that it is possible to provide a tspan not starting at 0, e.g. (120,150).
+In that case, initial conditions are applied at tspan[1] and atmospheric forcing is correctly taken into account.
+
 `kwargs...` are passed through to solve(SciML::ODEProblem; ...) and are
 documented under `https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/#solver_options`
 """
-function simulate!(s::DiscretizedSPAC; assert_retcode = true, description = "", kwargs...)
+function simulate!(s::DiscretizedSPAC;
+    requested_tspan = nothing,
+    assert_retcode = true,
+    description = "",
+    kwargs...)
+
+    # if argument requested_tspan provided
+    if !isnothing(requested_tspan)
+        # a) check its value:
+        if requested_tspan[1] isa DateTime
+            requested_tspan = LWFBrook90.DateTime2RelativeDaysFloat.(
+                requested_tspan, s.parametrizedSPAC.reference_date)
+        end
+        available_forcing_data = extrema(s.parametrizedSPAC.forcing.meteo["p_days"])
+        if ((requested_tspan[1] < available_forcing_data[1]) |  (requested_tspan[2] > available_forcing_data[2]))
+            error("Requested simulation tspan $requested_tspan goes beyond input forcing data: $(available_forcing_data)")
+        end
+        if !(requested_tspan[1] ≈ 0)
+            @warn    "Requested time span doesn't start at 0. This is supported and correctly takes into account atmospheric forcing." * "\n" *
+            "         Note, however, that initial conditions are applied at $(s.parametrizedSPAC.reference_date + Second(floor(requested_tspan[1] * 24*3600))), i.e. at t=$(requested_tspan[1])."
+        end
+        # b) and modify underlying ODEProblem
+        s.ODEProblem = remake(s.ODEProblem, tspan = requested_tspan) # remake(s.ODEProblem, tspan = (0,300))
+    end
+
     if (:saveat ∈ keys(kwargs))
         @info description * """
           Start of simulation at $(now()).

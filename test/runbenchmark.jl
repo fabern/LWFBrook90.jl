@@ -59,8 +59,7 @@ Random.seed!(1234)
         );
 
         soil_output_depths_m = zeros(Float64, 0)
-        parametrizedSPAC.tspan
-        DS = LWFBrook90.setup(parametrizedSPAC; requested_tspan = (0., 10.));
+        DS = LWFBrook90.setup(parametrizedSPAC);
 
         # Test the f and cb() functions (LWFBrook90.f_LWFBrook90!, )
         t0 = 0.0
@@ -75,13 +74,12 @@ Random.seed!(1234)
         # # LWFBrook90.LWFBrook90R_updateIsotopes_GWAT_SWAT!(u0, t0, integrator)
         @btime LWFBrook90.LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u0, t0, integrator)
         # # LWFBrook90.LWFBrook90R_check_balance_errors!(integrator)
-        # # # @run simulate!(DS) # with ArrayParition this simulating 10 days takes about 0.373707 seconds (1.45 M allocations: 105.396 MiB, 14.36% gc time)
-        # DS.ODEProblem.tspan
-        # simulate!(DS); # with ArrayParition this simulating 10 days takes about 0.373707 seconds (1.45 M allocations: 105.396 MiB, 14.36% gc time) Time steps for solving: 580 (580 accepted out of 612 total)
-        # # simulate!(DS); # with ArrayParition this simulating 10 days takes about 0.373707 seconds (1.45 M allocations: 105.396 MiB, 14.36% gc time) Time steps for solving: 580 (580 accepted out of 612 total)
+        # # # @run simulate!(DS; requested_tspan = (0., 10.)) # with ArrayParition this simulating 10 days takes about 0.373707 seconds (1.45 M allocations: 105.396 MiB, 14.36% gc time)
+        # simulate!(DS; requested_tspan = (0., 10.)); # with ArrayParition this simulating 10 days takes about 0.373707 seconds (1.45 M allocations: 105.396 MiB, 14.36% gc time) Time steps for solving: 580 (580 accepted out of 612 total)
+        # # simulate!(DS; requested_tspan = (0., 10.)); # with ArrayParition this simulating 10 days takes about 0.373707 seconds (1.45 M allocations: 105.396 MiB, 14.36% gc time) Time steps for solving: 580 (580 accepted out of 612 total)
         # DS = LWFBrook90.setup(parametrizedSPAC::SPAC; Δz = Δz);
         # DS.ODEProblem.tspan
-        # # simulate!(DS); # with ArrayParition this simulating all the days takes about 167.115807 seconds (762.30 M allocations: 53.365 GiB, 6.18% gc time, 12.43% compilation time) Time steps for solving: 295894 (295894 accepted out of 314371 total)
+        # # simulate!(DS; requested_tspan = (0., 10.)); # with ArrayParition this simulating all the days takes about 167.115807 seconds (762.30 M allocations: 53.365 GiB, 6.18% gc time, 12.43% compilation time) Time steps for solving: 295894 (295894 accepted out of 314371 total)
 
 
 
@@ -216,7 +214,7 @@ base_model = loadSPAC(
     loadSPAC_args[Not([:input_path, :input_prefix])]...)
 
 LWFBrook90.DateTime2RelativeDaysFloat.(simulation_tspan_dates, base_model.reference_date)
-base_model_tspan_dates = LWFBrook90.RelativeDaysFloat2DateTime.(base_model.tspan, base_model.reference_date)
+base_model_tspan_dates = LWFBrook90.RelativeDaysFloat2DateTime.(extrema(base_model.forcing.meteo["p_days"]), base_model.reference_date)
 simulation_tspan = LWFBrook90.DateTime2RelativeDaysFloat.(simulation_tspan_dates, base_model.reference_date)
 
 # does_x_cover_y(base_model_tspan_dates, simulation_tspan_dates) || @warn "Available period of input data $base_model_tspan_dates, does not cover requested simulation period $simulation_tspan_dates."
@@ -225,13 +223,13 @@ simulation_tspan = LWFBrook90.DateTime2RelativeDaysFloat.(simulation_tspan_dates
 @show  simulation_tspan_dates
 
 # soil_output_depths_m = -[0.150, 0.500, 0.800, 1.500]
-base_simulation = setup(base_model, requested_tspan = simulation_tspan_dates);
+base_simulation = setup(base_model);
 display(base_simulation)
 
 
 # Solve ODE:
-@time simulate!(base_simulation);
-@time simulate!(base_simulation);
+@time simulate!(base_simulation; requested_tspan = simulation_tspan_dates);
+@time simulate!(base_simulation; requested_tspan = simulation_tspan_dates);
 
 # plot(simulation.ODESolution)
 plotamounts(base_simulation)
