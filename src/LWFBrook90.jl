@@ -93,6 +93,115 @@ Base.@kwdef mutable struct DiscretizedSPAC
     ODESolution_datetime
 end
 
+function Base.show(io::IO, ::MIME"text/plain", models::Vector{DiscretizedSPAC}) print(io, "Array of $(length(models)) DiscretizedSPAC. Not showing details...") end # https://discourse.julialang.org/t/9589
+function Base.show(io::IO, mime::MIME"text/plain", model::SPAC; show_SPAC_title=true)
+    if (show_SPAC_title) println(io, "SPAC model:") end
+
+    println(io, "===== DATES:===============")
+    available_forcing_tspan_dates = LWFBrook90.RelativeDaysFloat2DateTime.(
+        extrema(model.forcing.meteo["p_days"]), model.reference_date)
+    println("Available forcing period:              ", format.(available_forcing_tspan_dates, "YYYY-mm-dd"),
+            " (reference datum: "       , format.(model.reference_date,          "YYYY-mm-dd"),")")
+    println(io, "\n===== METEO FORCING:===============")
+    show_avg_and_range = function(vector, title)
+        # "$(title)avg:$(round(Statistics.mean(vector); digits=2)), range:$(extrema(vector))"
+        @sprintf("%savg:%7.2f, range:%7.2f to%7.2f",
+                 title, mean(vector), extrema(vector)[1], extrema(vector)[2])
+    end
+    println(io, show_avg_and_range(model.forcing.meteo["p_GLOBRAD"].itp.itp.coefs,     "GLOBRAD (MJ/m2/day): "))
+    println(io, show_avg_and_range(model.forcing.meteo["p_PREC"].itp.itp.coefs,        "PREC       (mm/day): "))
+    println(io, show_avg_and_range(model.forcing.meteo["p_TMAX"].itp.itp.coefs,        "TMAX           (°C): "))
+    println(io, show_avg_and_range(model.forcing.meteo["p_TMIN"].itp.itp.coefs,        "TMIN           (°C): "))
+    println(io, show_avg_and_range(model.forcing.meteo["p_VAPPRES"].itp.itp.coefs,     "VAPPRES       (kPa): "))
+    println(io, show_avg_and_range(model.forcing.meteo["p_WIND"].itp.itp.coefs,        "WIND          (m/s): "))
+    if (model.solver_options.simulate_isotopes)
+        println(io, show_avg_and_range(model.forcing.meteo_iso["p_d18OPREC"].itp.coefs,"δ18O            (‰): "))
+        println(io, show_avg_and_range(model.forcing.meteo_iso["p_d2HPREC"].itp.coefs, "δ2H             (‰): "))
+    end
+    # println(io, model.forcing.storm_durations)
+
+    println(io, "\n===== CANOPY EVOLUTION:===============")
+    if model.pars.canopy_evolution isa DataFrame
+        println(io, "model.pars.canopy_evolution was loaded form meteoveg.csv")
+        # println(io, show_avg_and_range(model.pars.canopy_evolution.DENSEF_rel,"DENSEF            (%): "))
+        # println(io, show_avg_and_range(model.pars.canopy_evolution.HEIGHT_rel,"HEIGHT            (%): "))
+        # println(io, show_avg_and_range(model.pars.canopy_evolution.LAI_rel,"LAI            (%): "))
+        # println(io, show_avg_and_range(model.pars.canopy_evolution.SAI_rel,"SAI            (%): "))
+    else
+        println(io, model.pars.canopy_evolution)
+    end
+
+    println(io, "\n===== INITIAL CONDITIONS:===============")
+    println(io, "Soil   IC: $(model.pars.IC_soil)")
+    print(  io, "Scalar IC: ")
+    println(io, model.pars.IC_scalar)
+
+    println(io, "\n===== MODEL PARAMETRIZATION:===============")
+    # println(io, model.params)
+    #display(io, model.params) # dump(model.params); using PrettyPrinting; pprintln(model.params)
+    # maxlengthname = maximum(length.(string.(keys(model.pars.params)))) == 17 -> 18 is safe:
+    string_vec = [@sprintf("%18s => % 8.1f",k,v) for (k,v) in pairs(model.pars.params)];
+
+    ncols = 3
+    # what's needed to allow a rectangular form for reshape:
+    nrows, n_last_row   = divrem(length(string_vec), ncols)
+    n_fillup            = ncols - n_last_row
+    # string_vec_to_print = [string_vec; fill("", n_fillup)]
+    string_vec_to_print = [string_vec; fill(repeat(" ", 18+4+8), n_fillup)]
+    # show(IOContext(io, :limit => true), "text/plain",
+    #      reshape(vcat(string_vec, fill("", 21*4-length(string_vec))), 21, 4))
+    # display.(join.(eachrow(reshape(string_vec_to_print, :, ncols))));
+    # show(IOContext(io, :limit => false), "text/plain",
+    #     join.(eachrow(reshape(string_vec_to_print, :, ncols)), "|"))
+    println(io, join(join.(eachrow(reshape(string_vec_to_print, :, ncols)), " |")," |\n"))
+
+    println(io, "\n===== SOIL DOMAIN:===============")
+    print(  io, "Root distribution:       "); println(io, model.pars.root_distribution)
+    print(  io, "Soil layer properties:   ")
+    # println(io, model.pars.soil_horizons)
+    # for shp in model.pars.soil_horizons.shp println(io, shp) end
+    # show(IOContext(io, :limit => false), "text/plain", model.pars.soil_horizons)
+    show(IOContext(io, :limit => false), mime, model.pars.soil_horizons[:,Not(:HorizonNr)]; truncate = 100);
+    println(io, "")
+    Δz = model.soil_discretization.Δz
+    println(io, "Soil discretized into N=$(length(model.soil_discretization.df.Lower_m)) layers, "*
+                "$(@sprintf("Δz layers: (avg, min, max) = (%.3f,%.3f,%.3f)m.", mean(Δz),minimum(Δz),maximum(Δz)))")
+    println(io, round.(model.soil_discretization.df.Lower_m; digits=3))
+
+    println(io, "\n===== SOLVER OPTIONS:===============")
+    println(io, model.solver_options)
+end
+
+function Base.show(io::IO, mime::MIME"text/plain", discSPAC::DiscretizedSPAC)
+    # Print discretization:
+    println(io, "Discretized SPAC model: =============== solution was computed: $(!isnothing(discSPAC.ODESolution))")
+    println(io, "\n===== SIMULATION PERIOD:===============")
+    available_tspan_dates = LWFBrook90.RelativeDaysFloat2DateTime.(discSPAC.ODEProblem.tspan,
+                                                                   discSPAC.parametrizedSPAC.reference_date)
+    available_tspan_duration = discSPAC.ODEProblem.tspan[2] - discSPAC.ODEProblem.tspan[1]
+    println("Available simulation period: ", format.(available_tspan_dates, "YYYY-mm-dd"),
+            " (duration of $(available_tspan_duration) days)")
+    if (!isnothing(discSPAC.ODESolution))
+        simulated_tspan_dates = LWFBrook90.RelativeDaysFloat2DateTime.(discSPAC.ODESolution.tspan,
+                                                                    discSPAC.parametrizedSPAC.reference_date)
+        simulated_tspan_duration = discSPAC.ODEProblem.tspan[2] - discSPAC.ODEProblem.tspan[1]
+        println("Simulated simulation period: ", format.(simulated_tspan_dates, "YYYY-mm-dd"),
+                " (duration of $(simulated_tspan_duration) days)")
+    end
+
+    # Print parametrization
+    println(io, "")
+    Base.show(io, mime, discSPAC.parametrizedSPAC; show_SPAC_title=false)
+
+    # DO WE NEED BELOW EXPLICIT CANOPY EVOLUTION? NO.
+    # println(io, "\n===== CANOPY EVOLUTION:===============")
+    # println(io, show_avg_and_range(model.canopy_evolution.p_AGE.(extrema(model.forcing.meteo["p_days"])),    "AGE         (years): "))
+    # println(io, show_avg_and_range(model.canopy_evolution.p_DENSEF.itp.itp.coefs, "DENSEF         (°C): "))
+    # println(io, show_avg_and_range(model.canopy_evolution.p_HEIGHT.itp.itp.coefs, "HEIGHT          (m): "))
+    # println(io, show_avg_and_range(model.canopy_evolution.p_LAI.itp.itp.coefs,    "LAI         (m2/m2): "))
+    # println(io, show_avg_and_range(model.canopy_evolution.p_SAI.itp.itp.coefs,    "SAI         (m2/m2): "))
+end
+
 # input_prefix = "isoBEAdense2010-18-reset-FALSE";
 # input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/";
 # model = loadSPAC(input_path, input_prefix;
@@ -570,35 +679,6 @@ function is_setup(parametrizedSPAC::SPAC)
     "shp" ∈ names(parametrizedSPAC.soil_discretization.df)
 end
 
-function Base.show(io::IO, mime::MIME"text/plain", discSPAC::DiscretizedSPAC)
-    # Print discretization:
-    println(io, "Discretized SPAC model: =============== solution was computed: $(!isnothing(discSPAC.ODESolution))")
-    println(io, "\n===== SIMULATION PERIOD:===============")
-    available_tspan_dates = LWFBrook90.RelativeDaysFloat2DateTime.(discSPAC.ODEProblem.tspan,
-                                                                   discSPAC.parametrizedSPAC.reference_date)
-    available_tspan_duration = discSPAC.ODEProblem.tspan[2] - discSPAC.ODEProblem.tspan[1]
-    println("Available simulation period: ", format.(available_tspan_dates, "YYYY-mm-dd"),
-            " (duration of $(available_tspan_duration) days)")
-    if (!isnothing(discSPAC.ODESolution))
-        simulated_tspan_dates = LWFBrook90.RelativeDaysFloat2DateTime.(discSPAC.ODESolution.tspan,
-                                                                    discSPAC.parametrizedSPAC.reference_date)
-        simulated_tspan_duration = discSPAC.ODEProblem.tspan[2] - discSPAC.ODEProblem.tspan[1]
-        println("Simulated simulation period: ", format.(simulated_tspan_dates, "YYYY-mm-dd"),
-                " (duration of $(simulated_tspan_duration) days)")
-    end
-
-    # Print parametrization
-    println(io, "")
-    Base.show(io, mime, discSPAC.parametrizedSPAC; show_SPAC_title=false)
-
-    # DO WE NEED BELOW EXPLICIT CANOPY EVOLUTION? NO.
-    # println(io, "\n===== CANOPY EVOLUTION:===============")
-    # println(io, show_avg_and_range(model.canopy_evolution.p_AGE.(extrema(model.forcing.meteo["p_days"])),    "AGE         (years): "))
-    # println(io, show_avg_and_range(model.canopy_evolution.p_DENSEF.itp.itp.coefs, "DENSEF         (°C): "))
-    # println(io, show_avg_and_range(model.canopy_evolution.p_HEIGHT.itp.itp.coefs, "HEIGHT          (m): "))
-    # println(io, show_avg_and_range(model.canopy_evolution.p_LAI.itp.itp.coefs,    "LAI         (m2/m2): "))
-    # println(io, show_avg_and_range(model.canopy_evolution.p_SAI.itp.itp.coefs,    "SAI         (m2/m2): "))
-end
 
 
 """
