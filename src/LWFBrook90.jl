@@ -286,18 +286,11 @@ include("../examples/func_run_example.jl")
 # end
 
 """
-    remakeSPAC(discrSPAC::DiscretizedSPAC;
-                soil_output_depths_m::Vector = zeros(Float64, 0),
-                kwargs...)
-or
+    remakeSPAC(parametrizedSPAC::SPAC; kwargs...)
 
-    remakeSPAC(parametrizedSPAC::SPAC;
-                soil_output_depths_m::Vector = zeros(Float64, 0),
-                kwargs...)
-
-Generates a copy of the provided SPAC or DiscretizedSPAC and modifies all the parameter
+Generates a copy of the provided SPAC and modifies all the parameter
 that are provided as kwargs. This is useful running the same model with a range of different
-parameter.
+parameter. Returns a SPAC.
 
 Possible kwargs are:
 - `soil_horizons = (ths_ = 0.4, Ksat_mmday = 3854.9, alpha_per_m = 7.11, gravel_volFrac = 0.1)`
@@ -315,16 +308,7 @@ the argument `soil_horizons` can be provided with a vector or vectors with a val
 horizon. A mix of vectors and scalars is also possible.
 
 """
-function remakeSPAC(discrSPAC::DiscretizedSPAC;
-                soil_output_depths_m::Vector = zeros(Float64, 0),
-                kwargs...)
-    return remakeSPAC(discrSPAC.parametrizedSPAC;
-                soil_output_depths_m = soil_output_depths_m,
-                kwargs...)
-end
-function remakeSPAC(parametrizedSPAC::SPAC;
-                soil_output_depths_m::Vector = zeros(Float64, 0),
-                kwargs...) # kwargs collects all others
+function remakeSPAC(parametrizedSPAC::SPAC; kwargs...) # kwargs collects all others
     # dump(kwargs) # kwargs contains NamedTuples to be modified
     modifiedSPAC = deepcopy(parametrizedSPAC)
     for curr_change in keys(kwargs)
@@ -349,8 +333,7 @@ function remakeSPAC(parametrizedSPAC::SPAC;
             error("Unknown argument provided to remake(): $curr_change")
         end
     end
-    return setup(modifiedSPAC;
-                soil_output_depths_m = soil_output_depths_m)
+    return modifiedSPAC
 end
 function remake_soil_horizons(spac, changesNT)
     shp_names = Dict(:ths_           => :p_THSAT,

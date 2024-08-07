@@ -543,7 +543,7 @@ end
 
         # # base_simulation = setup(base_model)
         # # # simulation_tspan       = LWFBrook90.DateTime2RelativeDaysFloat.(simulation_tspan_dates, base_model.reference_date)
-        # # # remakeSPAC(base_simulation; NamedTuple(k => v for (k, v) in pairs(opt_pars[sim_id]))...)
+        # # # remakeSPAC(base_simulation.parametrizedSPAC; NamedTuple(k => v for (k, v) in pairs(opt_pars[sim_id]))...)
         # # base_simulation
 
         # curr_simulation = base_simulation
