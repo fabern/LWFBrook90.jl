@@ -1,19 +1,10 @@
 # LWFBrook90.jl
 Isotope-enabled implementation of the LWF-BROOK90 hydrological model in Julia
 
-<p align="center">User info:
-<a href="https://www.repostatus.org/#wip"><img title="Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public." src="https://www.repostatus.org/badges/latest/wip.svg"/></a>
+<!-- <a href="https://www.repostatus.org/#wip"><img title="Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public." src="https://www.repostatus.org/badges/latest/wip.svg"/></a> -->
+<a href="https://fabern.github.io/LWFBrook90.jl/stable"><img title="Stable" src="https://img.shields.io/badge/documentation-stable-blue.svg"></a>
 <a href="https://www.gnu.org/licenses/gpl-3.0"><img title="License: GPL v3" src="https://img.shields.io/badge/License-GPLv3-blue.svg"></a>
-<a href="https://gitter.im/fabern/LWFBrook90.jl"><img title="Join the chat at https://gitter.im/fabern/LWFBrook90.jl" src="https://badges.gitter.im/fabern/LWFBrook90.jl.svg"></a>
-<a href="https://fabern.github.io/LWFBrook90.jl/stable"><img title="Stable" src="https://img.shields.io/badge/docs-stable-blue.svg"></a>
-</p>
-<p align="center">Developer info:
-<a href="https://github.com/fabern/LWFBrook90.jl/actions/workflows/CI.yml"><img title="Build Status" src="https://github.com/fabern/LWFBrook90.jl/actions/workflows/CI.yml/badge.svg?branch=develop"/></a>
-<a href="https://codecov.io/gh/fabern/LWFBrook90.jl"><img title="Coverage" src="https://codecov.io/gh/fabern/LWFBrook90.jl/branch/develop/graph/badge.svg?token=6F1BUJ8UR9"/>
-<a href="https://github.com/invenia/BlueStyle"><img title="Code Style: Blue" src="https://img.shields.io/badge/code%20style-blue-4495d1.svg"/></a>
-<a href="https://fabern.github.io/LWFBrook90.jl/dev"><img title="Dev" src="https://img.shields.io/badge/docs-dev-blue.svg"></a>
-<a href="https://discourse.julialang.org/t/good-practices-for-package-development-in-the-julia-ecosystem/8175/2">Git branch model</a>
-</p>
+<!-- <a href="https://gitter.im/fabern/LWFBrook90.jl"><img title="Join the chat at https://gitter.im/fabern/LWFBrook90.jl" src="https://badges.gitter.im/fabern/LWFBrook90.jl.svg"></a> -->
 
 ## What is LWFBrook90.jl?
 <p align="center"><img src="https://github.com/fabern/LWFBrook90.jl/blob/develop/docs/src/assets/logo2.png?raw=true" width="150"><p>
@@ -93,6 +84,15 @@ The Swiss National Science Foundation is acknowledged for funding the developmen
 Matthias Häni, Katrin Meusburger, Peter Waldner, Lorenz Walthert, Stephan Zimmermann of [WSL](http://www.wsl.ch) and its Long-term Forest Ecosystem Research (LWF) project are gratefully acknowledged for providing example data files located in `examples/BEA2016*`.
 
 ## For Developers:
+
+<p align="center">Developer info:
+<a href="https://github.com/fabern/LWFBrook90.jl/actions/workflows/CI.yml"><img title="Build Status" src="https://github.com/fabern/LWFBrook90.jl/actions/workflows/CI.yml/badge.svg?branch=develop"/></a>
+<a href="https://codecov.io/gh/fabern/LWFBrook90.jl"><img title="Coverage" src="https://codecov.io/gh/fabern/LWFBrook90.jl/branch/develop/graph/badge.svg?token=6F1BUJ8UR9"/>
+<a href="https://github.com/invenia/BlueStyle"><img title="Code Style: Blue" src="https://img.shields.io/badge/code%20style-blue-4495d1.svg"/></a>
+<a href="https://fabern.github.io/LWFBrook90.jl/dev"><img title="Dev" src="https://img.shields.io/badge/docs-dev-blue.svg"></a>
+<a href="https://discourse.julialang.org/t/good-practices-for-package-development-in-the-julia-ecosystem/8175/2">Git branch model</a>
+</p>
+
 Any help in form of discussions, pull requests, example data sets, or otherwise is very welcome. Please don't hesitate to contact us.
 
 For implementation details: see documentation section [Implementation](https://fabern.github.io/LWFBrook90.jl/stable/model/#Implementation).
