@@ -347,6 +347,7 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
     #         p_VAPPRES      = parametrizedSPAC.forcing.meteo["p_VAPPRES"],
     #         p_WIND         = parametrizedSPAC.forcing.meteo["p_WIND"],
     #         p_PREC         = parametrizedSPAC.forcing.meteo["p_PREC"],
+    #         p_IRRIG        = parametrizedSPAC.forcing.meteo["p_IRRIG"],
 
     #         p_DENSEF       = vegetation_fT["p_DENSEF"], # canopy density multiplier between 0.05 and 1, dimensionless
     #         p_HEIGHT       = vegetation_fT["p_HEIGHT"],
@@ -357,6 +358,8 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
 
     #         p_d18OPREC     = parametrizedSPAC.forcing.meteo_iso["p_d18OPREC"],
     #         p_d2HPREC      = parametrizedSPAC.forcing.meteo_iso["p_d2HPREC"],
+    #         p_d18OIRRIG    = parametrizedSPAC.forcing.irrig_iso["p_d18OIRRIG"],
+    #         p_d2HIRRIG     = parametrizedSPAC.forcing.irrig_iso["p_d2HIRRIG"],
     #         REFERENCE_DATE = parametrizedSPAC.reference_date)
     # # Documentation from ecoshift:
     # # DENSEF (Fixed parameter) - canopy density multiplier between 0.05 and 1, dimensionless. DENSEF is normally 1; it should be reduced below this ONLY to simulate thinning of the existing canopy by cutting. It multiplies MAXLAI, CS, MXRTLN, and MXKPL and thus proportionally reduces LAI, SAI, and RTLEN, and increases RPLANT. However it does NOT reduce canopy HEIGHT and thus will give erroneous aerodynamic resistances if it is less than about 0.05. It should NOT be set to 0 to simulate a clearcut. [see PET-CANOPY]
@@ -485,6 +488,7 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
         p_VAPPRES      = parametrizedSPAC.forcing.meteo["p_VAPPRES"],
         p_WIND         = parametrizedSPAC.forcing.meteo["p_WIND"],
         p_PREC         = parametrizedSPAC.forcing.meteo["p_PREC"],
+        p_IRRIG        = parametrizedSPAC.forcing.meteo["p_IRRIG"],
 
         p_DENSEF       = vegetation_fT["p_DENSEF"], # canopy density multiplier between 0.05 and 1, dimensionless
         p_HEIGHT       = vegetation_fT["p_HEIGHT"],
@@ -495,6 +499,8 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
 
         p_δ18O_PREC     = parametrizedSPAC.forcing.meteo_iso["p_d18OPREC"],
         p_δ2H_PREC      = parametrizedSPAC.forcing.meteo_iso["p_d2HPREC"],
+        p_δ18O_IRRIG    = parametrizedSPAC.forcing.irrig_iso["p_d18OIRRIG"],
+        p_δ2H_IRRIG     = parametrizedSPAC.forcing.irrig_iso["p_d2HIRRIG"],
         REFERENCE_DATE  = parametrizedSPAC.reference_date,
 
         # formerly p_fu:
@@ -636,7 +642,8 @@ Take meteorologic parameters in `input_meteoveg` and `input_meteoiso` and genera
 """
 function interpolate_meteo(;
     meteo_forcing::DataFrame,
-    meteo_iso_forcing::Union{DataFrame,Nothing})
+    meteo_iso_forcing::Union{DataFrame,Nothing},
+    irrig_iso_forcing::Union{DataFrame,Nothing})
 
     # @assert meteo_iso_forcing.days # NOTE: DataFrame `meteo_iso_forcing` can be on a different spacing
 
@@ -695,6 +702,7 @@ function interpolate_meteo(;
     # p_VAPPRES = extrapolate(interpolate((meteo_forcing.days  .- 0.00001, ), meteo_forcing.VAPPRES,          Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
     # p_WIND    = extrapolate(interpolate((meteo_forcing.days  .- 0.00001, ), meteo_forcing.WIND,             Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
     # p_PREC    = extrapolate(interpolate((meteo_forcing.days  .- 0.00001, ), meteo_forcing.PRECIN,           Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
+    # p_IRRIG   = extrapolate(interpolate((meteo_forcing.days  .- 0.00001, ), meteo_forcing.IRRIGIN,          Gridded(Constant{Previous}())), Throw()) #extrapolate flat, alternative: Throw())
     # # NOTE: PRECIN is already in mm/day from the input data set. No transformation is needed for p_PREC.
 
     # # Interpolate input data with consideration of baselines
@@ -722,6 +730,7 @@ function interpolate_meteo(;
     p_VAPPRES = extrapolate(scale(interpolate(meteo_forcing_forInt.VAPPRES, (BSpline(Constant{Previous}()))), time_range) , Throw())
     p_WIND    = extrapolate(scale(interpolate(meteo_forcing_forInt.WIND,    (BSpline(Constant{Previous}()))), time_range) , Throw())
     p_PREC    = extrapolate(scale(interpolate(meteo_forcing_forInt.PRECIN,  (BSpline(Constant{Previous}()))), time_range) , Throw())
+    p_IRRIG   = extrapolate(scale(interpolate(meteo_forcing_forInt.IRRIGIN,  (BSpline(Constant{Previous}()))), time_range) , Throw())
     ###
 
     # Note that meteoiso does not need to be regularly spaced:
@@ -735,6 +744,14 @@ function interpolate_meteo(;
         p_d18OPREC = extrapolate(interpolate((meteo_iso_forcing.days .+ 12/24, ), meteo_iso_forcing.delta18O_permil,    (Gridded(Constant{Next}()))), Flat()) #extrapolate flat, alternative: Throw())
         p_d2HPREC  = extrapolate(interpolate((meteo_iso_forcing.days .+ 12/24, ), meteo_iso_forcing.delta2H_permil,     (Gridded(Constant{Next}()))), Flat()) #extrapolate flat, alternative: Throw())
     end
+    if (isnothing(irrig_iso_forcing))
+        p_d18OIRRIG = (t) -> nothing
+        p_d2HIRRIG  = (t) -> nothing
+    else
+        # Here we shift the days of collection of the cumulative samples to noon. => + 12/24 days
+        p_d18OIRRIG = extrapolate(interpolate((irrig_iso_forcing.days .+ 12/24, ), irrig_iso_forcing.delta18O_permil,    (Gridded(Constant{Next}()))), Flat()) #extrapolate flat, alternative: Throw())
+        p_d2HIRRIG  = extrapolate(interpolate((irrig_iso_forcing.days .+ 12/24, ), irrig_iso_forcing.delta2H_permil,     (Gridded(Constant{Next}()))), Flat()) #extrapolate flat, alternative: Throw())
+    end
 
     meteo_forcing_cont = Dict([
         ("p_days",      time_range),
@@ -743,12 +760,16 @@ function interpolate_meteo(;
         ("p_TMIN",      p_TMIN),
         ("p_VAPPRES",   p_VAPPRES),
         ("p_WIND",      p_WIND),
-        ("p_PREC",      p_PREC)])
+        ("p_PREC",      p_PREC),
+        ("p_IRRIG",     p_IRRIG)])
     meteo_iso_forcing_cont = Dict([
         ("p_d18OPREC",  p_d18OPREC),
         ("p_d2HPREC",   p_d2HPREC)])
+    irrig_iso_forcing_cont = Dict([
+        ("p_d18OIRRIG",  p_d18OIRRIG),
+        ("p_d2HIRRIG",   p_d2HIRRIG)])
 
-    return (meteo_forcing_cont, meteo_iso_forcing_cont, available_forcing_tspan)
+    return (meteo_forcing_cont, meteo_iso_forcing_cont, irrig_iso_forcing_cont, available_forcing_tspan)
 end
 
 """

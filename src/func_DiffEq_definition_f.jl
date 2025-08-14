@@ -24,9 +24,9 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
             p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX, p_GSC, p_GSP, p_BYPAR = p;
 
         ## B) time dependent parameters
-        @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND,  p_PREC,
+        @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC, p_IRRIG,
             p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_RELDEN,
-            p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = p;
+            p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, REFERENCE_DATE = p;
 
         ## C) state dependent parameters:
         # Calculate parameters:

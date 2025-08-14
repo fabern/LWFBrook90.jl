@@ -93,9 +93,9 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         p_VXYLEM, p_DISPERSIVITY = integrator.p;
 
     ## B) time dependent parameters
-    @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
+    @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC, p_IRRIG,
         p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_RELDEN,
-        p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p;
+        p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, REFERENCE_DATE = integrator.p;
 
     ## C) state dependent parameters:
     # Calculate parameters:
@@ -324,10 +324,10 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         @unpack p_DTP = integrator.p # TODO: is p_DTP still used??
 
         ## B) time dependent parameters
-        # @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
+        # @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC, p_IRRIG,
         #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_RELDEN,
-        #     p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p
-        @unpack p_δ18O_PREC, p_δ2H_PREC = integrator.p
+        #     p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, REFERENCE_DATE = integrator.p
+        @unpack p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG = integrator.p
 
         ## C) state dependent parameters or intermediate results:
         # These were computed in the callback and are kept constant in between two
@@ -556,12 +556,12 @@ end
         #         ############
         #         ### Compute parameters
         #         ## B) time dependent parameters
-        #         # p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
+        #         # p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC, p_IRRIG,
         #         #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_RELDEN,
-        #         #     p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p[2]
-        #         @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
+        #         #     p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, REFERENCE_DATE = integrator.p[2]
+        #         @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC, p_IRRIG,
         #             p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_RELDEN,
-        #             p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE                = integrator.p
+        #             p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, REFERENCE_DATE                = integrator.p
 
         #         ## C) state dependent parameters or intermediate results:
         #         # These were computed in the callback and are kept constant in between two callbacks.
@@ -709,10 +709,10 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         @unpack du_GWFL, du_SEEP = integrator.p     # all in mm/day
 
         ## B) time dependent parameters
-        # @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
+        # @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC, p_IRRIG,
         #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_RELDEN,
-        #     p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p
-        @unpack p_δ18O_PREC, p_δ2H_PREC = integrator.p
+        #     p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, REFERENCE_DATE = integrator.p
+        @unpack p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG = integrator.p
 
         ## C) state dependent parameters or intermediate results:
         # These were computed in the callback and are kept constant in between two

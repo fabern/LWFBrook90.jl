@@ -735,3 +735,52 @@ end
     high_resolution_flag && (@test RMS_differences(sim6.θψδ[Not([end-1, end]), Cols(:time, r"δ2H_")], hyd6.δ2H[Not(1),:]) < 3.7)  # unit: ‰
 
 end
+
+
+
+# path_meteoveg = "../examples/DAV2020-irrigation/DAV2020-irrigation_meteoveg.csv"
+# path_meteoiso = "../examples/DAV2020-irrigation/DAV2020-irrigation_meteoiso.csv"
+# path_irrigiso = "../examples/DAV2020-irrigation/DAV2020-irrigation_irrigiso.csv"
+# meteo_forcing, reference_date = LWFBrook90.read_path_meteoveg(path_meteoveg)
+# meteo_iso_forcing             = LWFBrook90.read_path_meteoiso(path_meteoiso, meteo_forcing, reference_date)
+# irrig_iso_forcing             = LWFBrook90.read_path_meteoiso(path_irrigiso, meteo_forcing, reference_date)
+# if basename(pwd()) != "test"; cd("test"); end
+@testset "irrigation" begin
+    Δz_m = fill(0.1, 11)
+
+    parametrizedSPAC = loadSPAC(
+        "../examples/DAV2020-irrigation/", "DAV2020-irrigation";
+        simulate_isotopes = true,
+        simulate_irrigation = true,
+        Δz_thickness_m = Δz_m,
+        root_distribution = (beta = 0.77, z_rootMax_m = -0.5),
+        IC_soil = (PSIM_init_kPa = -7.0, delta18O_init_permil = -10.11111, delta2H_init_permil = -91.1111),
+        canopy_evolution = (DENSEF_rel = 100, HEIGHT_rel = 100, SAI_rel    = 100,
+                                        LAI_rel = (DOY_Bstart = 120,
+                                            Bduration  = 21,
+                                            DOY_Cstart = 270,
+                                            Cduration  = 60,
+                                            LAI_perc_BtoC = 95,
+                                            LAI_perc_CtoB = 70)),
+        storm_durations_h = [5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44, 5.44],
+        IC_scalar = (amount = (u_GWAT_init_mm = 1.,
+                               u_INTS_init_mm = 13.7,
+                               u_INTR_init_mm = 0.,
+                               u_SNOW_init_mm = 22.222,
+                               u_CC_init_MJ_per_m2 = 0.101010,
+                               u_SNOWLQ_init_mm =  0.),
+                    d18O    = (u_GWAT_init_permil = -11.111,
+                               u_INTS_init_permil = -12.222,
+                               u_INTR_init_permil = -13.333,
+                               u_SNOW_init_permil = -14.444),
+                    d2H     = (u_GWAT_init_permil = -95.111,
+                               u_INTS_init_permil = -95.222,
+                               u_INTR_init_permil = -95.333,
+                               u_SNOW_init_permil = -95.444)));
+
+    simulation = setup(parametrizedSPAC, soil_output_depths_m = [-1.0755, -1.096], ε = 0.005);
+    # TODO add tests for irrigation
+    simulate!(simulation)
+    # TODO add tests for irrigation
+
+end

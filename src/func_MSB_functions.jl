@@ -703,7 +703,7 @@ end
 #         u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT, NaN, NaN,
 #         # for SWATI:
 #         du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI, # (non-fractionating)
-#         aux_du_SLVP, p_fT_TADTM, p_fT_VAPPRES, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
+#         aux_du_SLVP, p_fT_TADTM, p_fT_VAPPRES, p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, u_aux_WETNES, # (fractionating)
 #         u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, EffectiveDiffusivity_18O, EffectiveDiffusivity_2H,
 #         )
 #     compute_isotope_GWAT_SWATI("analytical-u", integrator,
@@ -711,7 +711,7 @@ end
 #         u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT, du_GWFL, du_SEEP,
 #         # for SWATI:
 #         du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI, # (non-fractionating)
-#         aux_du_SLVP, p_fT_TADTM, p_fT_VAPPRES, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
+#         aux_du_SLVP, p_fT_TADTM, p_fT_VAPPRES, p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, u_aux_WETNES, # (fractionating)
 #         u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, EffectiveDiffusivity_18O, EffectiveDiffusivity_2H,
 #         )
 
@@ -749,7 +749,7 @@ end
 #         u_GWAT, u_δ18O_GWAT, u_δ2H_GWAT, du_GWFL, du_SEEP,
 #         # for SWATI:
 #         du_NTFLI, aux_du_VRFLI, aux_du_TRANI, aux_du_DSFLI, aux_du_INFLI, δ18O_INFLI, δ2H_INFLI, # (non-fractionating)
-#         aux_du_SLVP, p_fT_TADTM, p_fT_VAPPRES, p_δ2H_PREC, p_δ18O_PREC, u_aux_WETNES, # (fractionating)
+#         aux_du_SLVP, p_fT_TADTM, p_fT_VAPPRES, p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, u_aux_WETNES, # (fractionating)
 #         u_SWATI, u_δ18O_SWATI, u_δ2H_SWATI, EffectiveDiffusivity_18O, EffectiveDiffusivity_2H,
 #         )
 

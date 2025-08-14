@@ -49,6 +49,8 @@ Of these only the CSV files for the parameters `soil_horizons.csv` and `param.cs
 
 The structure of the input CSV's is illustrated by the example input data sets `isoBEA2010-18-*` or `DAV2020-bare-minimum` or `DAV2020-full` located in the folder `examples/`, as well as below in this documentation. Please follow these examples closely when generating your own input files, including the exact column names and header lines containing the units.
 
+As a special case, below canopy irrigation was implemented, avoiding interception losses. The example input data set `DAV2020-irrigation` illustrates the required inputs.
+
 For convenience, input CSV files can be generated from a script that sets up a simulation with the R package [LWFBrook90R (v0.4.3)](https://github.com/pschmidtwalter/LWFBrook90R#usage). Instead of running the simulation with `run_LWFB90()`, the same arguments can be used to generate the input files for LWFBrook90.jl using the R function provided in the file `generate_LWFBrook90jl_Input.R`. Note that the input file `meteoiso.csv` needs to be generated separately and the files containing the initial conditions (`initial_conditions.csv` and `soil_discretization.csv`) also need to be extended manually with the isotope values (see structure of these input files below).
 
 To load input data and prepare a simulation follow the instructions in section [Example Script 01](@ref) or alternatively use the sample script `main_with_isotopes.jl`. NOTE: these will be replaced with Jupyter-notebooks generated with Literate.jl.

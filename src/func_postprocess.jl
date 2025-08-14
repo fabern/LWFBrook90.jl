@@ -269,6 +269,9 @@ function get_forcing(simulation::DiscretizedSPAC) # returns forcing [..., ..., .
         :prec_mmDay              => p_fT.p_PREC.(timepoints),
         :precdelta18O_permil     => p_fT.p_δ18O_PREC.(timepoints),
         :precdelta2H_permil      => p_fT.p_δ2H_PREC.(timepoints),
+        # :irrig_mmDay             => p_fT.p_IRRIG.(timepoints),
+        # :irrigdelta18O_permil    => p_fT.p_δ18O_IRRIG.(timepoints),
+        # :irrigdelta2H_permil     => p_fT.p_δ2H_IRRIG.(timepoints),
         :densef_percent          => p_fT.p_DENSEF.(timepoints)*100,
         :height_m                => p_fT.p_HEIGHT.(timepoints),
         :lai_m2m2                => p_fT.p_LAI.(timepoints),
@@ -540,6 +543,9 @@ function intern___get_scalars(compartments_to_extract, units_to_extract, simulat
         uni ∈ [:mmday,  :mm] ? solution.prob.p.p_PREC.(timepoints) :
             uni ∈ [:d18O, :δ18O] ? solution.prob.p.p_δ18O_PREC.(timepoints) :
             uni ∈ [:d2H , :δ2H ] ? solution.prob.p.p_δ2H_PREC.(timepoints) :
+            # uni ∈ [:mmday,  :mm] ? solution.prob.p.p_IRRIG.(timepoints) :
+            # uni ∈ [:d18O, :δ18O] ? solution.prob.p.p_δ18O_IRRIG.(timepoints) :
+            # uni ∈ [:d2H , :δ2H ] ? solution.prob.p.p_δ2H_IRRIG.(timepoints) :
             error("Unknown compartments or units to extract provided.")
         for (comp, uni) in cycle_over2)...)
 
@@ -644,6 +650,11 @@ function intern___get_data_for_isotopePlot(simulation)
         col_PREC_d2H_dense  = solu.prob.p.p_δ2H_PREC.(t1),
         col_PREC_d18O = solu.prob.p.p_δ18O_PREC.(days_to_read_out_d),
         col_PREC_d2H  = solu.prob.p.p_δ2H_PREC.(days_to_read_out_d),
+        # col_IRRIG_amt_dense  = solu.prob.p.p_IRRIG.(t1),
+        # col_IRRIG_d18O_dense = solu.prob.p.p_δ18O_IRRIG.(t1),
+        # col_IRRIG_d2H_dense  = solu.prob.p.p_δ2H_IRRIG.(t1),
+        # col_IRRIG_d18O = solu.prob.p.p_δ18O_IRRIG.(days_to_read_out_d),
+        # col_IRRIG_d2H  = solu.prob.p.p_δ2H_IRRIG.(days_to_read_out_d),
         col_INTS_d18O = [solu(t).INTS.d18O for t in days_to_read_out_d],
         col_INTR_d18O = [solu(t).INTR.d18O for t in days_to_read_out_d],
         col_SNOW_d18O = [solu(t).SNOW.d18O for t in days_to_read_out_d],
@@ -887,6 +898,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     # bar(reshape(x1_input,1,:), reshape(row_PREC_amt_dense_input,1,:))
 
     row_PREC_amt_dense = reshape(solu.prob.p.p_PREC.(t1), 1, :)
+    # row_IRRIG_amt_dense = reshape(solu.prob.p.p_IRRIG.(t1), 1, :)
     rows_SWAT_amt  = reduce(hcat, [solu(t).SWATI.mm    for t in days_to_read_out_d])
     rows_RWU_mmDay = reduce(hcat, [solu(t).TRANI.mmday for t in days_to_read_out_d])
     row_NaN       = fill(NaN, 1,length(x))
@@ -1599,6 +1611,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
     y14 = hcat(simulation.ODESolution.prob.p.p_TMIN.(t1),
                simulation.ODESolution.prob.p.p_TMAX.(t1));lbl14 = ["p_TMIN [°C]" "p_TMAX [°C]"]
     y15 = simulation.ODESolution.prob.p.p_PREC.(t1);      lbl15 = "p_PREC [mm]"
+    # y15 = simulation.ODESolution.prob.p.p_IRRIG.(t1);      lbl15 = "p_IRRIG [mm]"
     # plot_forcing = plot(layout = (:,1),
     #     plot(x1, y11; labels = lbl11),
     #     plot(x1, y12; labels = lbl12),

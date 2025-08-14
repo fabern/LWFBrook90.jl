@@ -210,7 +210,7 @@ end
 
 """
     compute_isotope_U_of_INTS_INTR_SNOW_and_SLFL(
-        p_δ2H_PREC, p_δ18O_PREC, p_fT_TADTM, p_fT_VAPPRES,
+        p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, p_fT_TADTM, p_fT_VAPPRES,
         # for INTS (in: SINT; out: ISVP):
         u_INTS, aux_du_SINT, aux_du_ISVP, p_DTP, u_δ2H_INTS, u_δ18O_INTS,
         # for INTR (in: RINT; out: IRVP):
@@ -238,7 +238,7 @@ The function returns: p_fu_δ18O_SLFL, p_fu_δ2H_SLFL, as well as:
     u_δ2H_SNOW
 """
 function compute_isotope_U_of_INTS_INTR_SNOW_and_SLFL(
-    p_δ2H_PREC, p_δ18O_PREC, p_fT_TADTM, p_fT_VAPPRES,
+    p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, p_fT_TADTM, p_fT_VAPPRES,
     # for INTS (in: SINT; out: ISVP):
     u_INTS, aux_du_SINT, aux_du_ISVP, p_DTP, u_δ2H_INTS, u_δ18O_INTS,
     # for INTR (in: RINT; out: IRVP):

@@ -8,6 +8,7 @@ using Statistics: mean
     loadSPAC(folder::String, prefix::String;
             # OPTIONAL ARGUMENTS ARE:
             simulate_isotopes::Bool = true,
+            simulate_irrigation::Bool = false,
             canopy_evolution  = "meteoveg.csv",
             Δz_thickness_m    = "soil_discretization.csv",
             root_distribution = "soil_discretization.csv",
@@ -73,6 +74,7 @@ Initial conditions of states other than soil can be provided as NamedTuple, e.g.
 """
 function loadSPAC(folder::String, prefix::String;
     simulate_isotopes::Bool = true,
+    simulate_irrigation::Bool = false,
     # compute_intermediate_quantities::Bool = true,
     canopy_evolution  = "meteoveg.csv",
     Δz_thickness_m    = "soil_discretization.csv",
@@ -98,19 +100,20 @@ function loadSPAC(folder::String, prefix::String;
     solver_options =
         (#Reset                           = false, # currently only Reset = 0 implemented
          compute_intermediate_quantities = true,   # Flag whether ODE containes additional quantities than only states
-         simulate_isotopes               = simulate_isotopes
+         simulate_isotopes               = simulate_isotopes,
+         simulate_irrigation             = simulate_irrigation
         )
 
     ## Load model input parameters
-    params, solver_opts = init_param(path_param; simulate_isotopes = simulate_isotopes)
+    params, solver_opts = init_param(path_param; simulate_isotopes = simulate_isotopes) # simulate_irrigation = simulate_irrigation
 
     solver_options = merge(solver_options, solver_opts) # append to manually provided solver options
 
     ## Load time-varying atmospheric forcing
-    reference_date, input_meteoveg, meteo_iso_forcing, storm_durations =
-        init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes, storm_durations_h)
+    reference_date, input_meteoveg, meteo_iso_forcing, irrig_iso_forcing, storm_durations =
+        init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes, simulate_irrigation, storm_durations_h)
 
-    meteo_forcing = input_meteoveg[:, [:days, :GLOBRAD, :TMAX, :TMIN, :VAPPRES, :WIND, :PRECIN]]
+    meteo_forcing = input_meteoveg[:, [:days, :GLOBRAD, :TMAX, :TMIN, :VAPPRES, :WIND, :PRECIN, :IRRIGIN]]
     @assert all(meteo_forcing.GLOBRAD .>= 0) "Error in vegetation parameters: GLOBRAD must be above 0."
     # @assert all(meteo_forcing.TMAX    .> 0) "Error in vegetation parameters: TMAX must be above 0."
     # @assert all(meteo_forcing.TMIN    .> 0) "Error in vegetation parameters: TMIN must be above 0."
@@ -275,10 +278,12 @@ function loadSPAC(folder::String, prefix::String;
     extended_soil_horizons = extend_lowest_horizon(soil_horizons, soil_discretization)
 
     ## Make time dependent input parameters continuous in time (interpolate)
-    (meteo_forcing_cont, meteo_iso_forcing_cont, available_forcing_tspan) =
+    (meteo_forcing_cont, meteo_iso_forcing_cont, irrig_iso_forcing_cont, available_forcing_tspan) =
         LWFBrook90.interpolate_meteo(;
             meteo_forcing                 = meteo_forcing,
-            meteo_iso_forcing             = meteo_iso_forcing);
+            meteo_iso_forcing             = meteo_iso_forcing,
+            irrig_iso_forcing             = irrig_iso_forcing
+    );
 
     return SPAC(;
         reference_date    = reference_date,
@@ -288,6 +293,7 @@ function loadSPAC(folder::String, prefix::String;
                                   df = soil_discretization),
         forcing = (meteo           = meteo_forcing_cont,
                    meteo_iso       = meteo_iso_forcing_cont,
+                   irrig_iso       = irrig_iso_forcing_cont,
                    storm_durations = storm_durations),
         pars    = (params = params,
                    root_distribution = _to_use_root_distribution,
@@ -314,6 +320,7 @@ function Base.show(io::IO, mime::MIME"text/plain", model::SPAC; show_SPAC_title=
     end
     println(io, show_avg_and_range(model.forcing.meteo["p_GLOBRAD"].itp.itp.coefs,     "GLOBRAD (MJ/m2/day): "))
     println(io, show_avg_and_range(model.forcing.meteo["p_PREC"].itp.itp.coefs,        "PREC       (mm/day): "))
+    println(io, show_avg_and_range(model.forcing.meteo["p_IRRIG"].itp.itp.coefs,       "IRRIG       (mm/day): "))
     println(io, show_avg_and_range(model.forcing.meteo["p_TMAX"].itp.itp.coefs,        "TMAX           (°C): "))
     println(io, show_avg_and_range(model.forcing.meteo["p_TMIN"].itp.itp.coefs,        "TMIN           (°C): "))
     println(io, show_avg_and_range(model.forcing.meteo["p_VAPPRES"].itp.itp.coefs,     "VAPPRES       (kPa): "))
@@ -410,6 +417,7 @@ function saveSPAC(sim::DiscretizedSPAC, out_dir; prefix = basename(dirname(out_d
     mv_col5 = sim.parametrizedSPAC.forcing.meteo["p_VAPPRES"].(t);
     mv_col6 = sim.parametrizedSPAC.forcing.meteo["p_WIND"].(t);
     mv_col7 = sim.parametrizedSPAC.forcing.meteo["p_PREC"].(t);
+    mv_col7b= sim.parametrizedSPAC.forcing.meteo["p_IRRIG"].(t);
     mv_col8 = round.(Int, sim.ODEProblem.p.p_DENSEF.(t) * 100)
     mv_col9 = round.(Int, sim.ODEProblem.p.p_HEIGHT.(t) / maximum(sim.ODEProblem.p.p_HEIGHT.itp.itp.coefs) * 100)
     mv_col10= round.(Int, sim.ODEProblem.p.p_LAI.(t) / maximum(sim.ODEProblem.p.p_LAI.itp.itp.coefs) * 100)
@@ -423,12 +431,13 @@ function saveSPAC(sim::DiscretizedSPAC, out_dir; prefix = basename(dirname(out_d
         vappres_kPa     = mv_col5,
         windspeed_ms    = mv_col6,
         prec_mmDay      = mv_col7,
+        irrig_mmDay     = mv_col7b,
         densef_percent  = mv_col8,
         height_percent  = mv_col9,
         lai_percent     = mv_col10,
         sai_percent     = mv_col11)
     mv_df = mv_df[1:end-1,:] # croping last row, that was added for correct subdaily interpolation
-    mv_subheader = ["YYYY-MM-DD","MJ/Day/m2","degree C","degree C","kPa","m per s","mm per day","percent","percent","percent","percent"]
+    mv_subheader = ["YYYY-MM-DD","MJ/Day/m2","degree C","degree C","kPa","m per s","mm per day","mm per day","percent","percent","percent","percent"]
     write_with_subheader(joinpath(out_dir, prefix*"_meteoveg.csv"), mv_df, mv_subheader)
         # dates,globrad_MJDayM2,tmax_degC,tmin_degC,vappres_kPa,windspeed_ms,prec_mmDay,densef_percent,height_percent,lai_percent,sai_percent
         # YYYY-MM-DD,MJ/Day/m2,degree C,degree C,kPa,m per s,mm per day,percent,percent,percent,percent
@@ -660,19 +669,30 @@ function p_MONTHN(t::Float64, reference::DateTime)
     month(reference + Day(floor(t)))
 end
 
-function init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes = true, storm_durations_h)
+function init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes = true, simulate_irrigation = true, storm_durations_h)
 
     # Load daily values of meteo and precipitation isotopes
     if (simulate_isotopes)
         path_meteoiso = replace(path_meteoveg, "meteoveg" => "meteoiso")
     end
+    if (simulate_isotopes && simulate_irrigation)
+        path_irrigiso = replace(path_meteoveg, "meteoveg" => "irrigiso")
+    end
+    
     meteo_forcing, reference_date = read_path_meteoveg(path_meteoveg)
 
-    if (simulate_isotopes)
+    if (simulate_isotopes & simulate_irrigation)
         meteo_iso_forcing = read_path_meteoiso(
             path_meteoiso, meteo_forcing, reference_date)
+        irrig_iso_forcing = read_path_meteoiso(
+            path_irrigiso, meteo_forcing, reference_date)
+    elseif (simulate_isotopes)
+        meteo_iso_forcing = read_path_meteoiso(
+            path_meteoiso, meteo_forcing, reference_date)
+        irrig_iso_forcing = nothing
     else
         meteo_iso_forcing = nothing
+        irrig_iso_forcing = nothing
     end
 
     # Load parameter for subdaily model of precipitation
@@ -693,12 +713,15 @@ function init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes = t
 
     # Impose type of Float64 instead of Float64?
     disallowmissing!(meteo_forcing)
-    if (simulate_isotopes)
+    if (simulate_isotopes & simulate_irrigation)
+        disallowmissing!(meteo_iso_forcing, [:days, :delta18O_permil, :delta2H_permil])
+        disallowmissing!(irrig_iso_forcing, [:days, :delta18O_permil, :delta2H_permil])
+    elseif (simulate_isotopes)
         disallowmissing!(meteo_iso_forcing, [:days, :delta18O_permil, :delta2H_permil])
     end
     disallowmissing!(storm_durations, [:month, :storm_durations_h])
 
-    return reference_date, meteo_forcing, meteo_iso_forcing, storm_durations
+    return reference_date, meteo_forcing, meteo_iso_forcing, irrig_iso_forcing, storm_durations
 end
 
 function init_IC(path_initial_conditions; simulate_isotopes = true)
@@ -714,32 +737,54 @@ function init_param(path_param; simulate_isotopes = true)
 end
 
 function read_path_meteoveg(path_meteoveg)
+    f = File(path_meteoveg)
+    received_colnames = f.names
+    
+    # Specify expected inputs:
 
-    if (File(path_meteoveg).cols == 7)
-        # [:dates, :globrad_MJDayM2, :tmax_degC, :tmin_degC, :vappres_kPa, :windspeed_ms, :prec_mmDay]
-        # accomodate case when canopy_evolution is provided manually:
-        parsing_types =
-            Dict(:dates          => DateTime,
-                :globrad_MJDayM2 => Float64,
-                :tmax_degC       => Float64,
-                :tmin_degC       => Float64,
-                :vappres_kPa     => Float64,
-                :windspeed_ms    => Float64,
-                :prec_mmDay      => Float64)
-    else
-        parsing_types =
-            Dict(:dates          => DateTime,
-                :globrad_MJDayM2 => Float64,
-                :tmax_degC       => Float64,
-                :tmin_degC       => Float64,
-                :vappres_kPa     => Float64,
-                :windspeed_ms    => Float64,
-                :prec_mmDay      => Float64,
-                :densef_percent  => Float64,
-                :height_percent  => Float64,
-                :lai_percent     => Float64,
-                :sai_percent     => Float64)
+    allowed_colname_variations = [
+        # accomodate case when canopy_evolution is provided parametrically:
+        [:dates, :globrad_MJDayM2, :tmax_degC, :tmin_degC, :vappres_kPa, :windspeed_ms, :prec_mmDay],
+        [:dates, :globrad_MJDayM2, :tmax_degC, :tmin_degC, :vappres_kPa, :windspeed_ms, :prec_mmDay, :irrig_mmDay],
+        # accomodate case when canopy_evolution is provided as forcing:
+        [:dates, :globrad_MJDayM2, :tmax_degC, :tmin_degC, :vappres_kPa, :windspeed_ms, :prec_mmDay, :densef_percent, :height_percent, :lai_percent, :sai_percent],
+        [:dates, :globrad_MJDayM2, :tmax_degC, :tmin_degC, :vappres_kPa, :windspeed_ms, :prec_mmDay, :irrig_mmDay, :densef_percent, :height_percent, :lai_percent, :sai_percent]
+    ]
+    if (!(received_colnames ∈ allowed_colname_variations))
+        error("Invalid combintations of column names provided in $(basename(path_meteoveg)) ($path_meteoveg).")
     end
+
+    allowed_coltypes = Dict(
+        :dates          => DateTime,
+        :globrad_MJDayM2 => Float64,
+        :tmax_degC       => Float64,
+        :tmin_degC       => Float64,
+        :vappres_kPa     => Float64,
+        :windspeed_ms    => Float64,
+        :prec_mmDay      => Float64,
+        :irrig_mmDay     => Float64,
+        :densef_percent  => Float64,
+        :height_percent  => Float64,
+        :lai_percent     => Float64,
+        :sai_percent     => Float64)
+    allowed_renaming = Dict( # to rename to variable names in previous implementations of LWFBrook90
+        :globrad_MJDayM2 => :GLOBRAD,
+        :tmax_degC       => :TMAX,
+        :tmin_degC       => :TMIN,
+        :vappres_kPa     => :VAPPRES,
+        :windspeed_ms    => :WIND,
+        :prec_mmDay      => :PRECIN,
+        :irrig_mmDay     => :IRRIGIN,
+        :densef_percent  => :DENSEF_rel,
+        :height_percent  => :HEIGHT_rel,
+        :lai_percent     => :LAI_rel,
+        :sai_percent     => :SAI_rel)
+    
+    parsing_types  = Dict(k => allowed_coltypes[k] for k in received_colnames if haskey(allowed_coltypes, k))
+    parsing_rename = Dict(k => allowed_renaming[k] for k in received_colnames if haskey(allowed_renaming, k))
+    
+    # Read data: 
+
     # input_meteoveg = DataFrame(File(path_meteoveg;
     #     skipto=3, delim=',', ignorerepeated=false,
     #     # Be strict about loading NA's -> error if NA present
@@ -765,6 +810,7 @@ function read_path_meteoveg(path_meteoveg)
         DataFrame(dates = "YYYY-MM-DD", globrad_MJDayM2 = "MJ/Day/m2",
         tmax_degC = "degree C", tmin_degC = "degree C", vappres_kPa = "kPa",
         windspeed_ms = "m per s", prec_mmDay = "mm per day",
+        irrig_mmDay = "mm per day",
         densef_percent = "percent", height_percent = "percent",
         lai_percent = "percent", sai_percent = "percent")[[1], 1:ncol(input_meteoveg)])
 
@@ -782,27 +828,7 @@ function read_path_meteoveg(path_meteoveg)
 
     input_meteoveg = filter(:dates => (d) -> d .>= starting_date && d .<= stopping_date, input_meteoveg)
 
-    if (File(path_meteoveg).cols == 7)
-        rename!(input_meteoveg,
-            :globrad_MJDayM2 => :GLOBRAD,
-            :tmax_degC       => :TMAX,
-            :tmin_degC       => :TMIN,
-            :vappres_kPa     => :VAPPRES,
-            :windspeed_ms    => :WIND,
-            :prec_mmDay      => :PRECIN)
-    else
-        rename!(input_meteoveg,
-            :globrad_MJDayM2 => :GLOBRAD,
-            :tmax_degC       => :TMAX,
-            :tmin_degC       => :TMIN,
-            :vappres_kPa     => :VAPPRES,
-            :windspeed_ms    => :WIND,
-            :prec_mmDay      => :PRECIN,
-            :densef_percent  => :DENSEF_rel,
-            :height_percent  => :HEIGHT_rel,
-            :lai_percent     => :LAI_rel,
-            :sai_percent     => :SAI_rel)
-    end
+    rename!(input_meteoveg, parsing_rename...)
 
     # Transform times from DateTimes to simulation time (Float of Days)
     reference_date = starting_date
@@ -975,7 +1001,7 @@ end
 Reads in the `param.csv` based on a provided path. The `param.csv` has a structure shown in
 the documentation (User Guide -> Input data). [Structure of input data](@ref)
 """
-function read_path_param(path_param; simulate_isotopes::Bool = false)
+function read_path_param(path_param; simulate_isotopes::Bool = false) # simulate_irrigation::Bool = false
     parsing_types =
         Dict(### Isotope transport parameters  -------,NA
             # "TODO" => Float64, "TODO2" => Float64,
