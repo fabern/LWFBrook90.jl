@@ -113,7 +113,12 @@ function loadSPAC(folder::String, prefix::String;
     reference_date, input_meteoveg, meteo_iso_forcing, irrig_iso_forcing, storm_durations =
         init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes, simulate_irrigation, storm_durations_h)
 
-    meteo_forcing = input_meteoveg[:, [:days, :GLOBRAD, :TMAX, :TMIN, :VAPPRES, :WIND, :PRECIN, :IRRIGIN]]
+    column_select = intersect(
+        # actual names
+        Symbol.(names(input_meteoveg)), 
+        # accepted names
+        [:days, :GLOBRAD, :TMAX, :TMIN, :VAPPRES, :WIND, :PRECIN, :IRRIGIN])
+    meteo_forcing = input_meteoveg[:, column_select]
     @assert all(meteo_forcing.GLOBRAD .>= 0) "Error in vegetation parameters: GLOBRAD must be above 0."
     # @assert all(meteo_forcing.TMAX    .> 0) "Error in vegetation parameters: TMAX must be above 0."
     # @assert all(meteo_forcing.TMIN    .> 0) "Error in vegetation parameters: TMIN must be above 0."
@@ -124,9 +129,13 @@ function loadSPAC(folder::String, prefix::String;
     ## Load time-varying vegetation parameters
     if (canopy_evolution == "meteoveg.csv")
         # Use DataFrame from meteoveg.csv
+        column_select = intersect(
+            Symbol.(names(input_meteoveg)), # actual names
+            [:days, :DENSEF_rel, :HEIGHT_rel, :LAI_rel, :SAI_rel] # accepted names
+        )
         if ("DENSEF_rel" in names(input_meteoveg) && "HEIGHT_rel" in names(input_meteoveg) &&
             "LAI_rel"    in names(input_meteoveg) && "SAI_rel"    in names(input_meteoveg))
-            _to_use_canopy_evolution = input_meteoveg[:, [:days, :DENSEF_rel, :HEIGHT_rel, :LAI_rel, :SAI_rel]] # store DataFrame in SPAC
+            _to_use_canopy_evolution = input_meteoveg[:, column_select] # store DataFrame in SPAC
             # Assert validity of vegetation values
             @assert all(_to_use_canopy_evolution.LAI_rel .>= 0) "Error in vegetation parameters: LAI must be above 0%."
         else
@@ -736,6 +745,7 @@ function init_param(path_param; simulate_isotopes = true)
     input_param, solver_opts = read_path_param(path_param; simulate_isotopes = simulate_isotopes)
 end
 
+#path_meteoveg = "examples/DAV2020-irrigation/DAV2020-irrigation_meteoveg.csv"
 function read_path_meteoveg(path_meteoveg)
     f = File(path_meteoveg)
     received_colnames = f.names
@@ -751,7 +761,7 @@ function read_path_meteoveg(path_meteoveg)
         [:dates, :globrad_MJDayM2, :tmax_degC, :tmin_degC, :vappres_kPa, :windspeed_ms, :prec_mmDay, :irrig_mmDay, :densef_percent, :height_percent, :lai_percent, :sai_percent]
     ]
     if (!(received_colnames ∈ allowed_colname_variations))
-        error("Invalid combintations of column names provided in $(basename(path_meteoveg)) ($path_meteoveg).")
+        error("Invalid combinations (or wrong order) of column names provided in $(basename(path_meteoveg)) ($path_meteoveg).")
     end
 
     allowed_coltypes = Dict(
@@ -767,6 +777,19 @@ function read_path_meteoveg(path_meteoveg)
         :height_percent  => Float64,
         :lai_percent     => Float64,
         :sai_percent     => Float64)
+    allowed_units = Dict(
+        :dates            => "YYYY-MM-DD", 
+        :globrad_MJDayM2  => "MJ/Day/m2",
+        :tmax_degC        => "degree C", 
+        :tmin_degC        => "degree C", 
+        :vappres_kPa      => "kPa",
+        :windspeed_ms     => "m per s", 
+        :prec_mmDay       => "mm per day",
+        :irrig_mmDay      => "mm per day",
+        :densef_percent   => "percent", 
+        :height_percent   => "percent",
+        :lai_percent      => "percent", 
+        :sai_percent      => "percent")
     allowed_renaming = Dict( # to rename to variable names in previous implementations of LWFBrook90
         :globrad_MJDayM2 => :GLOBRAD,
         :tmax_degC       => :TMAX,
@@ -780,39 +803,23 @@ function read_path_meteoveg(path_meteoveg)
         :lai_percent     => :LAI_rel,
         :sai_percent     => :SAI_rel)
     
-    parsing_types  = Dict(k => allowed_coltypes[k] for k in received_colnames if haskey(allowed_coltypes, k))
-    parsing_rename = Dict(k => allowed_renaming[k] for k in received_colnames if haskey(allowed_renaming, k))
+    received_types      = Dict(k => allowed_coltypes[k] for k in received_colnames if haskey(allowed_coltypes, k))
+    # received_units    = Dict(k => allowed_units[k]    for k in received_colnames if haskey(allowed_units,    k))
+    received_col_rename = Dict(k => allowed_renaming[k] for k in received_colnames if haskey(allowed_renaming, k))
     
     # Read data: 
-
-    # input_meteoveg = DataFrame(File(path_meteoveg;
-    #     skipto=3, delim=',', ignorerepeated=false,
-    #     # Be strict about loading NA's -> error if NA present
-    #     types=parsing_types, missingstring = nothing, strict=true))
-    # input_meteoveg.dates = DateTime.(input_meteoveg.dates)
-    # ipnut_meteove = transform(input_meteove, :dates = DateTime.(:dates))
     input_meteoveg = @chain begin DataFrame(File(path_meteoveg;
         skipto=3, delim=',', ignorerepeated=false,
         # Be strict about loading NA's -> error if NA present
-        types=parsing_types, missingstring = nothing, strict=true))
+        types=received_types, missingstring = nothing, strict=true))
         transform(:dates => (d) -> DateTime.(d), renamecols = false)
     end
-    expected_names = [String(k) for k in keys(parsing_types)]
+    expected_names = [String(k) for k in keys(received_types)]
     assert_colnames_as_expected(input_meteoveg, path_meteoveg, expected_names)
-    # DataFrame(dates = "YYYY-MM-DD", globrad_MJDayM2 = "MJ/Day/m2",
-    #     tmax_degC = "degree C", tmin_degC = "degree C", vappres_kPa = "kPa",
-    #     windspeed_ms = "m per s", prec_mmDay = "mm per day",
-    #     densef_percent = "percent", height_percent = "percent",
-    #     lai_percent = "percent", sai_percent = "percent")
 
     # Assert units:
-    assert_unitsHeader_as_expected(path_meteoveg,
-        DataFrame(dates = "YYYY-MM-DD", globrad_MJDayM2 = "MJ/Day/m2",
-        tmax_degC = "degree C", tmin_degC = "degree C", vappres_kPa = "kPa",
-        windspeed_ms = "m per s", prec_mmDay = "mm per day",
-        irrig_mmDay = "mm per day",
-        densef_percent = "percent", height_percent = "percent",
-        lai_percent = "percent", sai_percent = "percent")[[1], 1:ncol(input_meteoveg)])
+    expected_units = DataFrame(allowed_units)
+    assert_unitsHeader_as_expected(path_meteoveg, expected_units)
 
     # Assert validity of values
     # ...
@@ -828,7 +835,7 @@ function read_path_meteoveg(path_meteoveg)
 
     input_meteoveg = filter(:dates => (d) -> d .>= starting_date && d .<= stopping_date, input_meteoveg)
 
-    rename!(input_meteoveg, parsing_rename...)
+    rename!(input_meteoveg, received_col_rename...)
 
     # Transform times from DateTimes to simulation time (Float of Days)
     reference_date = starting_date
@@ -863,7 +870,7 @@ function read_path_meteoiso(path_meteoiso,
     is_from_PisoAI = occursin(r"^#Data produced with Piso.AI",readlines(path_meteoiso)[1])
 
     if is_from_PisoAI
-        parsing_types =
+        received_types =
                 Dict(#:Column1        => Int64, # is directly removed afterwards
                     :Site            => String,
                     :Date            => DateTime,
@@ -876,7 +883,7 @@ function read_path_meteoiso(path_meteoiso,
         input_meteoiso = @chain begin DataFrame(File(path_meteoiso; header = 4,
                     skipto=5, delim=',', ignorerepeated=true,
                     # Don't be strict, allow for NA as missing. Treat this later with disallowmissing!.
-                    types=parsing_types, missingstring = ["","NA"]))
+                    types=received_types, missingstring = ["","NA"]))
                     end
         select!(input_meteoiso, Not([:Column1]))
     else
@@ -888,7 +895,7 @@ function read_path_meteoiso(path_meteoiso,
             # 2021-01-29,-10.1,-70.1
             # ...
         # where the first line
-        parsing_types =
+        received_types =
                 Dict(:dates          => DateTime,
                     :delta18O_permil => Float64,
                     :delta2H_permil  => Float64)
@@ -896,11 +903,11 @@ function read_path_meteoiso(path_meteoiso,
         input_meteoiso = DataFrame(File(path_meteoiso;
                 skipto=3, delim=',', ignorerepeated=true,
                 # Don't be strict, allow for NA as missing. Treat this later with disallowmissing!.
-                types=parsing_types, missingstring = ["","NA"]))
+                types=received_types, missingstring = ["","NA"]))
     end
 
     # Assert column names as expected
-    expected_names = [String(k) for k in keys(parsing_types)]
+    expected_names = [String(k) for k in keys(received_types)]
     assert_colnames_as_expected(input_meteoiso, path_meteoiso, expected_names)
 
     if is_from_PisoAI
@@ -970,7 +977,7 @@ function read_path_meteoiso(path_meteoiso,
 end
 
 function read_path_initial_conditions(path_initial_conditions)
-    parsing_types =
+    received_types =
         Dict(# Initial conditions (of vector states) -------
             "u_GWAT_init_mm" => Float64,       "u_INTS_init_mm" => Float64,
             "u_INTR_init_mm" => Float64,       "u_SNOW_init_mm" => Float64,
@@ -978,9 +985,9 @@ function read_path_initial_conditions(path_initial_conditions)
     input_initial_conditions = DataFrame(File(path_initial_conditions;
         transpose=true, drop=[1], comment = "###",
         # Don't be strict, allow for NA as missing. Treat this later with disallowmissing!.
-        types=parsing_types, missingstring = "NA"))
+        types=received_types, missingstring = "NA"))
 
-    expected_names = [String(k) for k in keys(parsing_types)]
+    expected_names = [String(k) for k in keys(received_types)]
     assert_colnames_as_expected(input_initial_conditions, path_initial_conditions, expected_names)
 
     # Impose type of Float64 instead of Float64?, by defining unused variables as -9999.99
@@ -1002,7 +1009,7 @@ Reads in the `param.csv` based on a provided path. The `param.csv` has a structu
 the documentation (User Guide -> Input data). [Structure of input data](@ref)
 """
 function read_path_param(path_param; simulate_isotopes::Bool = false) # simulate_irrigation::Bool = false
-    parsing_types =
+    received_types =
         Dict(### Isotope transport parameters  -------,NA
             # "TODO" => Float64, "TODO2" => Float64,
             # TODO(bernhard): this needs to be extended with the currently hardcoded isotope transport parameters
@@ -1053,16 +1060,16 @@ function read_path_param(path_param; simulate_isotopes::Bool = false) # simulate
             # Numerical solver parameters -------
             "DTIMAX" => Float64,           "DSWMAX" => Float64,           "DPSIMAX" => Float64)
     # if (!simulate_isotopes)
-    #     delete!(parsing_types, "TODO")
-    #     delete!(parsing_types, "TODO2")
+    #     delete!(received_types, "TODO")
+    #     delete!(received_types, "TODO2")
     # end
 
     input_param_df = DataFrame(File(path_param;
         transpose=true, drop=[1], comment = "###",
         # Be strict about loading NA's -> error if NA present
-        types = parsing_types, missingstring = nothing, strict=true))
+        types = received_types, missingstring = nothing, strict=true))
 
-    expected_names = [String(k) for k in keys(parsing_types)]
+    expected_names = [String(k) for k in keys(received_types)]
     assert_colnames_as_expected(input_param_df, path_param, expected_names)
 
     # Set minimum/maximum values
@@ -1085,14 +1092,14 @@ function read_path_param(path_param; simulate_isotopes::Bool = false) # simulate
 end
 
 function read_path_storm_durations(path_storm_durations)
-    parsing_types =
+    received_types =
         Dict("month" => String, "average_storm_duration_h" => Float64)
     input_storm_durations = DataFrame(File(path_storm_durations;
         comment = "###",
         # Be strict about loading NA's -> error if NA present
-        types = parsing_types, missingstring = nothing, strict = true))
+        types = received_types, missingstring = nothing, strict = true))
 
-    expected_names = [String(k) for k in keys(parsing_types)]
+    expected_names = [String(k) for k in keys(received_types)]
     assert_colnames_as_expected(input_storm_durations, path_storm_durations, expected_names)
 
     # Assert months to be ordered
@@ -1190,7 +1197,7 @@ function read_path_soil_horizons(path_soil_horizons)
 end
 
 function read_path_soil_discretization(path_soil_discretization)
-    parsing_types =
+    received_types =
         Dict("Upper_m"      => Float64,
              "Lower_m"      => Float64,
              "Rootden_"      => Float64,
@@ -1199,10 +1206,10 @@ function read_path_soil_discretization(path_soil_discretization)
              "u_delta2H_init_permil"  => Float64)
 
     input_soil_discretization = DataFrame(File(path_soil_discretization;
-        skipto=3, missingstring = "NA", types=parsing_types))
+        skipto=3, missingstring = "NA", types=received_types))
 
     # Assert colnames
-    expected_names = [String(k) for k in keys(parsing_types)]
+    expected_names = [String(k) for k in keys(received_types)]
     assert_colnames_as_expected(input_soil_discretization, path_soil_discretization, expected_names)
 
     # Check that defined layers do not overlap
@@ -1250,7 +1257,7 @@ end
 
 function assert_unitsHeader_as_expected(path, expected_units)
     actual_units = DataFrame(File(path;skipto=2,limit=1,types=String))
-    @assert actual_units == expected_units """
+    @assert actual_units == expected_units[:,names(actual_units)] """
     Unexpected units in input file $path. Expected units:
     $expected_units
     Received units:

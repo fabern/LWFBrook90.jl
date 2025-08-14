@@ -724,6 +724,10 @@ function interpolate_meteo(;
     time_range = range(available_forcing_tspan..., step = 1)
     meteo_forcing_forInt = meteo_forcing[[1:end..., end],:] # duplicate last day
 
+    if (!("IRRIGIN" ∈ names(meteo_forcing_forInt)))
+        meteo_forcing_forInt.IRRIGIN .= 0
+    end
+
     p_GLOBRAD = extrapolate(scale(interpolate(meteo_forcing_forInt.GLOBRAD, (BSpline(Constant{Previous}()))), time_range) , Throw())
     p_TMAX    = extrapolate(scale(interpolate(meteo_forcing_forInt.TMAX,    (BSpline(Constant{Previous}()))), time_range) , Throw())
     p_TMIN    = extrapolate(scale(interpolate(meteo_forcing_forInt.TMIN,    (BSpline(Constant{Previous}()))), time_range) , Throw())
