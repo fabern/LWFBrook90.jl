@@ -859,7 +859,8 @@ end
     # b1)
     @test isequal(Matrix(args.meteo[365:366,:]),
         #generated with: print(IOContext(stdout, :compact=>false), Matrix(args.meteo[365:366,:]))
-        Any[Date("2021-12-31") -1.8 6.6 NaN 0.0 100 6.13 1.1 0.52; Date("2022-01-01") -1.8 6.6 NaN 0.0 100 6.13 1.1 0.52])
+        Any[Date("2021-12-31") -1.8 6.6 NaN 0.0 100 6.13 1.1 0.52; 
+            Date("2022-01-01") -1.8 6.6 NaN 0.0 100 6.13 1.1 0.52])
     @test isapprox(
         Matrix(args.soil[:, [:upper, :lower, :gravel, :ths, :thr, :alpha, :npar, :mpar, :ksat, :tort, :rootden]]),
         [       # generated with print(IOContext(stdout, :compact=>false), Matrix(args.soil[:, [:upper, :lower, :gravel, :ths, :thr, :alpha, :npar, :mpar, :ksat, :tort, :rootden]]))

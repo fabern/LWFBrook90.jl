@@ -329,12 +329,17 @@ function prepare_for_LWFBrook90R(spac_; return_value = "inputs", out_dir = ".", 
         tmax  = tmax,
         tmean = NaN, #(tmin .+ tmax)/2,
         prec = parSPAC.forcing.meteo["p_PREC"].itp.itp.coefs,
-        irrig= parSPAC.forcing.meteo["p_IRRIG"].itp.itp.coefs,
+        #irrig= parSPAC.forcing.meteo["p_IRRIG"].itp.itp.coefs, # do not include irrigation unless LWFBrook90R supports this.
         relhum_dummy = 100, #parSPAC.forcing.meteo["p_VAPPRES"],
         globrad = parSPAC.forcing.meteo["p_GLOBRAD"].itp.itp.coefs,
         windspeed = parSPAC.forcing.meteo["p_WIND"].itp.itp.coefs,
         vappres = parSPAC.forcing.meteo["p_VAPPRES"].itp.itp.coefs,
     )
+    @assert all(parSPAC.forcing.meteo["p_IRRIG"].itp.itp.coefs .== 0.0) """
+    The provided model used the irrigation functionality. 
+    Please check yourself if this is meanwhile supported by LWFBrook90R, and 
+    contact the developer of LWFBrook90.jl to update this function accordingly.
+    """
 
     # D) soil
     shps = parSPAC.soil_discretization.df.shp
