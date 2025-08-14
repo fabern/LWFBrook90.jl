@@ -734,7 +734,7 @@ function interpolate_meteo(;
     p_VAPPRES = extrapolate(scale(interpolate(meteo_forcing_forInt.VAPPRES, (BSpline(Constant{Previous}()))), time_range) , Throw())
     p_WIND    = extrapolate(scale(interpolate(meteo_forcing_forInt.WIND,    (BSpline(Constant{Previous}()))), time_range) , Throw())
     p_PREC    = extrapolate(scale(interpolate(meteo_forcing_forInt.PRECIN,  (BSpline(Constant{Previous}()))), time_range) , Throw())
-    p_IRRIG   = extrapolate(scale(interpolate(meteo_forcing_forInt.IRRIGIN,  (BSpline(Constant{Previous}()))), time_range) , Throw())
+    p_IRRIG   = extrapolate(scale(interpolate(meteo_forcing_forInt.IRRIGIN, (BSpline(Constant{Previous}()))), time_range) , Throw())
     ###
 
     # Note that meteoiso does not need to be regularly spaced:

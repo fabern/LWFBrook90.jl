@@ -745,13 +745,11 @@ function init_param(path_param; simulate_isotopes = true)
     input_param, solver_opts = read_path_param(path_param; simulate_isotopes = simulate_isotopes)
 end
 
-#path_meteoveg = "examples/DAV2020-irrigation/DAV2020-irrigation_meteoveg.csv"
 function read_path_meteoveg(path_meteoveg)
     f = File(path_meteoveg)
     received_colnames = f.names
     
     # Specify expected inputs:
-
     allowed_colname_variations = [
         # accomodate case when canopy_evolution is provided parametrically:
         [:dates, :globrad_MJDayM2, :tmax_degC, :tmin_degC, :vappres_kPa, :windspeed_ms, :prec_mmDay],
@@ -760,10 +758,6 @@ function read_path_meteoveg(path_meteoveg)
         [:dates, :globrad_MJDayM2, :tmax_degC, :tmin_degC, :vappres_kPa, :windspeed_ms, :prec_mmDay, :densef_percent, :height_percent, :lai_percent, :sai_percent],
         [:dates, :globrad_MJDayM2, :tmax_degC, :tmin_degC, :vappres_kPa, :windspeed_ms, :prec_mmDay, :irrig_mmDay, :densef_percent, :height_percent, :lai_percent, :sai_percent]
     ]
-    if (!(received_colnames ∈ allowed_colname_variations))
-        error("Invalid combinations (or wrong order) of column names provided in $(basename(path_meteoveg)) ($path_meteoveg).")
-    end
-
     allowed_coltypes = Dict(
         :dates          => DateTime,
         :globrad_MJDayM2 => Float64,
@@ -803,25 +797,28 @@ function read_path_meteoveg(path_meteoveg)
         :lai_percent     => :LAI_rel,
         :sai_percent     => :SAI_rel)
     
+    if (!(received_colnames ∈ allowed_colname_variations))
+        error("Invalid combinations (or wrong order) of column names provided in $(basename(path_meteoveg)) ($path_meteoveg).")
+    end
+
     received_types      = Dict(k => allowed_coltypes[k] for k in received_colnames if haskey(allowed_coltypes, k))
-    # received_units    = Dict(k => allowed_units[k]    for k in received_colnames if haskey(allowed_units,    k))
     received_col_rename = Dict(k => allowed_renaming[k] for k in received_colnames if haskey(allowed_renaming, k))
     
     # Read data: 
     input_meteoveg = @chain begin DataFrame(File(path_meteoveg;
         skipto=3, delim=',', ignorerepeated=false,
         # Be strict about loading NA's -> error if NA present
-        types=received_types, missingstring = nothing, strict=true))
+        types = received_types, missingstring = nothing, strict=true))
         transform(:dates => (d) -> DateTime.(d), renamecols = false)
     end
-    expected_names = [String(k) for k in keys(received_types)]
+    expected_names = String.(keys(received_types))
     assert_colnames_as_expected(input_meteoveg, path_meteoveg, expected_names)
 
     # Assert units:
     expected_units = DataFrame(allowed_units)
     assert_unitsHeader_as_expected(path_meteoveg, expected_units)
 
-    # Assert validity of values
+    # Assert validity of values:
     # ...
 
     # Assert that no gaps
@@ -883,7 +880,7 @@ function read_path_meteoiso(path_meteoiso,
         input_meteoiso = @chain begin DataFrame(File(path_meteoiso; header = 4,
                     skipto=5, delim=',', ignorerepeated=true,
                     # Don't be strict, allow for NA as missing. Treat this later with disallowmissing!.
-                    types=received_types, missingstring = ["","NA"]))
+                    types = received_types, missingstring = ["","NA"]))
                     end
         select!(input_meteoiso, Not([:Column1]))
     else
@@ -903,11 +900,11 @@ function read_path_meteoiso(path_meteoiso,
         input_meteoiso = DataFrame(File(path_meteoiso;
                 skipto=3, delim=',', ignorerepeated=true,
                 # Don't be strict, allow for NA as missing. Treat this later with disallowmissing!.
-                types=received_types, missingstring = ["","NA"]))
+                types = received_types, missingstring = ["","NA"]))
     end
 
     # Assert column names as expected
-    expected_names = [String(k) for k in keys(received_types)]
+    expected_names = String.(keys(received_types))
     assert_colnames_as_expected(input_meteoiso, path_meteoiso, expected_names)
 
     if is_from_PisoAI
@@ -985,9 +982,9 @@ function read_path_initial_conditions(path_initial_conditions)
     input_initial_conditions = DataFrame(File(path_initial_conditions;
         transpose=true, drop=[1], comment = "###",
         # Don't be strict, allow for NA as missing. Treat this later with disallowmissing!.
-        types=received_types, missingstring = "NA"))
+        types = received_types, missingstring = "NA"))
 
-    expected_names = [String(k) for k in keys(received_types)]
+    expected_names = String.(keys(received_types))
     assert_colnames_as_expected(input_initial_conditions, path_initial_conditions, expected_names)
 
     # Impose type of Float64 instead of Float64?, by defining unused variables as -9999.99
@@ -1009,7 +1006,7 @@ Reads in the `param.csv` based on a provided path. The `param.csv` has a structu
 the documentation (User Guide -> Input data). [Structure of input data](@ref)
 """
 function read_path_param(path_param; simulate_isotopes::Bool = false) # simulate_irrigation::Bool = false
-    received_types =
+    required_coltypes =
         Dict(### Isotope transport parameters  -------,NA
             # "TODO" => Float64, "TODO2" => Float64,
             # TODO(bernhard): this needs to be extended with the currently hardcoded isotope transport parameters
@@ -1060,16 +1057,16 @@ function read_path_param(path_param; simulate_isotopes::Bool = false) # simulate
             # Numerical solver parameters -------
             "DTIMAX" => Float64,           "DSWMAX" => Float64,           "DPSIMAX" => Float64)
     # if (!simulate_isotopes)
-    #     delete!(received_types, "TODO")
-    #     delete!(received_types, "TODO2")
+    #     delete!(required_coltypes, "TODO")
+    #     delete!(required_coltypes, "TODO2")
     # end
 
     input_param_df = DataFrame(File(path_param;
         transpose=true, drop=[1], comment = "###",
         # Be strict about loading NA's -> error if NA present
-        types = received_types, missingstring = nothing, strict=true))
+        types = required_coltypes, missingstring = nothing, strict=true))
 
-    expected_names = [String(k) for k in keys(received_types)]
+    expected_names = [String(k) for k in keys(required_coltypes)]
     assert_colnames_as_expected(input_param_df, path_param, expected_names)
 
     # Set minimum/maximum values
@@ -1092,18 +1089,38 @@ function read_path_param(path_param; simulate_isotopes::Bool = false) # simulate
 end
 
 function read_path_storm_durations(path_storm_durations)
-    received_types =
-        Dict("month" => String, "average_storm_duration_h" => Float64)
-    input_storm_durations = DataFrame(File(path_storm_durations;
+    f = File(path_storm_durations)
+    received_colnames = f.names
+
+    # Specify expected inputs:
+    allowed_colname_variations = [
+        [:month, :average_storm_duration_h]
+    ]
+    allowed_coltypes = Dict(
+        :month                    => String,
+        :average_storm_duration_h => Float64)
+    # allowed_units = unused
+    allowed_renaming = Dict( # to rename to variable names in previous implementations of LWFBrook90
+        # :month                    => :no_rename,
+        :average_storm_duration_h => :storm_durations_h)
+    if (!(received_colnames ∈ allowed_colname_variations))
+        error("Invalid combinations (or wrong order) of column names provided in $(basename(path_storm_durations)) ($path_storm_durations).")
+    end
+
+    received_types      = Dict(k => allowed_coltypes[k] for k in received_colnames if haskey(allowed_coltypes, k))
+    received_col_rename = Dict(k => allowed_renaming[k] for k in received_colnames if haskey(allowed_renaming, k))
+
+    # Read data: 
+    input_storm_durations = @chain begin DataFrame(File(path_storm_durations;
         comment = "###",
         # Be strict about loading NA's -> error if NA present
         types = received_types, missingstring = nothing, strict = true))
-
-    expected_names = [String(k) for k in keys(received_types)]
+    end
+    expected_names = String.(keys(received_types))
     assert_colnames_as_expected(input_storm_durations, path_storm_durations, expected_names)
 
     # Assert months to be ordered
-    received_month_names = input_storm_durations[!,"month"]
+    received_month_names = input_storm_durations[:,"month"]
     expected_month_names = ["January", "Februrary", "March", "April", "May", "June", "July",
                             "August", "September", "October", "November", "December"]
     @assert received_month_names == expected_month_names """
@@ -1113,22 +1130,72 @@ function read_path_storm_durations(path_storm_durations)
         """
 
     # Rename column names
-    rename!(input_storm_durations,
-        :average_storm_duration_h => :storm_durations_h)
+    rename!(input_storm_durations, received_col_rename...)
 
     return input_storm_durations
 end
 
 function read_path_soil_horizons(path_soil_horizons)
-    # Derive whether to use Clapp Hornberger or MualemVanGenuchten based on the input data
-    MualVanGen_expected_column_names =
-        ["HorizonNr","Upper_m","Lower_m","ths_volFrac","thr_volFrac","alpha_perMeter","npar_","ksat_mmDay","tort_","gravel_volFrac"]
-    ClappHornberger_expected_column_names =
-        ["HorizonNr","Upper_m","Lower_m","thsat_volFrac","thetaf_volFrac","psif_kPa","bexp_","kf_mmDay","wtinf_","gravel_volFrac"]
+    f = File(path_soil_horizons)
+    received_colnames = f.names
+    
+    # Specify expected inputs:
+    allowed_colname_variations = [
+        # accomodate Mualem Van Genuchten
+        [:HorizonNr, :Upper_m, :Lower_m, :ths_volFrac, :thr_volFrac, :alpha_perMeter, :npar_, :ksat_mmDay, :tort_, :gravel_volFrac],
+        # accomodate Clapp Hornberger
+        [:HorizonNr, :Upper_m, :Lower_m, :thsat_volFrac, :thetaf_volFrac, :psif_kPa, :bexp_, :kf_mmDay, :wtinf_, :gravel_volFrac]
+    ]
+    allowed_coltypes = Dict(
+        # generic units
+        :HorizonNr       => Int64,
+        :Upper_m         => Float64,
+        :Lower_m         => Float64,
+        # Mualem van genuchten units
+        :ths_volFrac     => Float64,
+        :thr_volFrac     => Float64,
+        :alpha_perMeter  => Float64,
+        :npar_           => Float64,
+        :ksat_mmDay      => Float64,
+        :tort_           => Float64,
+        :gravel_volFrac  => Float64,
+        # Clapp Hornberger units
+        :thsat_volFrac   => Float64,
+        :thetaf_volFrac  => Float64,
+        :psif_kPa        => Float64,
+        :bexp_           => Float64,
+        :kf_mmDay        => Float64,
+        :wtinf_          => Float64)
+    allowed_units = Dict(
+        # generic units
+        :HorizonNr       => "-",
+        :Upper_m         => "m",
+        :Lower_m         => "m",
+        # Mualem van genuchten units
+        :ths_volFrac     => "volume fraction (-)",
+        :thr_volFrac     => "volume fraction (-)",
+        :alpha_perMeter  => "perMeter",
+        :npar_           => "-",
+        :ksat_mmDay      => "mm per day",
+        :tort_           => "-",
+        :gravel_volFrac  => "volume fraction (-)",
+        # Clapp Hornberger units
+        :thsat_volFrac   => "volume fraction (-)",
+        :thetaf_volFrac  => "volume fraction (-)",
+        :psif_kPa        => "kPa",
+        :bexp_           => "-",
+        :kf_mmDay        => "mm per day",
+        :wtinf_          => "-")
+    # allowed_renaming = unused
 
-    if strip.(String.(propertynames(File(path_soil_horizons)))) == MualVanGen_expected_column_names
+    if (!(received_colnames ∈ allowed_colname_variations))
+        error("Invalid combinations (or wrong order) of column names provided in $(basename(path_initial_conditions)) ($path_initial_conditions).")
+    end
+
+    # Derive whether to use Clapp Hornberger or MualemVanGenuchten based on the input data
+    if received_colnames == allowed_colname_variations[1]
         FLAG_MualVanGen = 1
-    elseif strip.(String.(propertynames(File(path_soil_horizons)))) == ClappHornberger_expected_column_names
+    elseif received_colnames == allowed_colname_variations[2]
         FLAG_MualVanGen = 0
     else
         error("""
@@ -1137,41 +1204,28 @@ function read_path_soil_horizons(path_soil_horizons)
         Please check and correct the input file!
 
         Expected column names are either:
-        Mualem-Van-Genuchten: $MualVanGen_expected_column_names
-        or for Clapp-Hornberger: $ClappHornberger_expected_column_names
+        Mualem-Van-Genuchten: $allowed_colname_variations[1]
+        or for Clapp-Hornberger: $allowed_colname_variations[1]
         """)
     end
 
-    if FLAG_MualVanGen == 1
-        # Assert units:
-        assert_unitsHeader_as_expected(path_soil_horizons,
-            DataFrame(HorizonNr = "-", Upper_m = "m", Lower_m = "m", ths_volFrac = "volume fraction (-)",
-                thr_volFrac = "volume fraction (-)", alpha_perMeter = "perMeter", npar_ = "-",
-                ksat_mmDay = "mm per day", tort_ = "-", gravel_volFrac = "volume fraction (-)"))
+    received_types      = Dict(k => allowed_coltypes[k] for k in received_colnames if haskey(allowed_coltypes, k))
+    # received_col_rename = unused
 
-        # Load file
-        input_soil_horizons = DataFrame(File(path_soil_horizons;
-            skipto=3, header=MualVanGen_expected_column_names,
-            delim=',',
-            # Be strict about loading NA's -> error if NA present
-            types=[Int64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64],
-            missingstring = nothing, strict = true))
-
-    else # FLAG_MualVanGen = 0 (Clapp-Hornberger)
-        # Assert units:
-        assert_unitsHeader_as_expected(path_soil_horizons,
-            DataFram(HorizonNr = "-", Upper_m = "m", Lower_m = "m", thsat_volFrac = "volume fraction (-)",
-                thetaf_volFrac = "volume fraction (-)", psif_kPa = "kPa", bexp_ = "-",
-                kf_mmDay = "mm per day", wtinf_ = "-", gravel_volFrac = "volume fraction "))
-
-        # Load file
-        input_soil_horizons = DataFrame(File(path_soil_horizons;
-            skipto=3, header=ClappHornberger_expected_column_names,
-            delim=',', # ignorerepeated=true
-            # Be strict about loading NA's -> error if NA present
-            types=[Int64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64],
-            missingstring = nothing, strict = true))
+    # Read data:
+    input_soil_horizons = @chain begin DataFrame(File(path_soil_horizons;
+        skipto=3, header=String.(received_colnames),
+        delim=',', # ignorerepeated=true
+        # Be strict about loading NA's -> error if NA present
+        types = received_types, missingstring = nothing, strict = true))
     end
+    expected_names = String.(keys(received_types))
+    assert_colnames_as_expected(input_soil_horizons, path_soil_horizons, expected_names)
+
+    # Assert units:
+    expected_units = DataFrame(allowed_units)
+    assert_unitsHeader_as_expected(path_soil_horizons, expected_units)
+
 
     # Check that defined horizons do not overlap
     @assert input_soil_horizons[1:end-1,"Lower_m"] == input_soil_horizons[2:end,"Upper_m"] """
@@ -1191,27 +1245,65 @@ function read_path_soil_horizons(path_soil_horizons)
     # Make dataframe representing physical horizons/layers in 1D domain
     # soil_horizons = DataFrame()
     soil_horizons = input_soil_horizons[:,["HorizonNr", "Upper_m", "Lower_m"]];
-    soil_horizons[!, :shp] = LWFBrook90.MualemVanGenuchtenSHP(input_soil_horizons);
 
+    if FLAG_MualVanGen == 1
+        soil_horizons[!, :shp] = LWFBrook90.MualemVanGenuchtenSHP(input_soil_horizons);
+    else # FLAG_MualVanGen = 0 (Clapp-Hornberger)
+        error("""
+        Clapp-Hornberger currently not yet supported. 
+        Please request this from the developer by providing an example parameter set.
+        Or alternatively open yourself a PR in the GitHub repo.
+        """)
+        # soil_horizons[!, :shp] = LWFBrook90.ClappHornbergerSHP(input_soil_horizons);
+    end
     return soil_horizons
 end
 
 function read_path_soil_discretization(path_soil_discretization)
-    received_types =
-        Dict("Upper_m"      => Float64,
-             "Lower_m"      => Float64,
-             "Rootden_"      => Float64,
-             "uAux_PSIM_init_kPa"   => Float64,
-             "u_delta18O_init_permil" => Float64,
-             "u_delta2H_init_permil"  => Float64)
+    f = File(path_soil_discretization)
+    received_colnames = f.names
 
-    input_soil_discretization = DataFrame(File(path_soil_discretization;
-        skipto=3, missingstring = "NA", types=received_types))
+    # Specify expected inputs:
+    allowed_colname_variations = [
+        #[:Upper_m, :Lower_m, :Rootden_, :uAux_PSIM_init_kPa] # NOTE: this is now allowed
+        [:Upper_m, :Lower_m, :Rootden_, :uAux_PSIM_init_kPa, :u_delta18O_init_permil, :u_delta2H_init_permil]
+    ]
+    allowed_coltypes = Dict(
+        :Upper_m                 => Float64,
+        :Lower_m                 => Float64,
+        :Rootden_                => Float64,
+        :uAux_PSIM_init_kPa      => Float64,
+        :u_delta18O_init_permil  => Float64,
+        :u_delta2H_init_permil   => Float64)
+    allowed_units = Dict(
+        :Upper_m                 => "m",
+        :Lower_m                 => "m",
+        :Rootden_                => "-",
+        :uAux_PSIM_init_kPa      => "kPa",
+        :u_delta18O_init_permil  => "permil",
+        :u_delta2H_init_permil   => "permil")
+    # allowed_renaming = unused
 
-    # Assert colnames
-    expected_names = [String(k) for k in keys(received_types)]
+    if (!(received_colnames ∈ allowed_colname_variations))
+        error("Invalid combinations (or wrong order) of column names provided in $(basename(path_soil_discretization)) ($path_soil_discretization).")
+    end
+
+    received_types      = Dict(k => allowed_coltypes[k] for k in received_colnames if haskey(allowed_coltypes, k))
+    # received_col_rename = unused
+
+    # Read data: 
+    input_soil_discretization = @chain begin DataFrame(File(path_soil_discretization;
+        skipto=3, delim=',',
+        types=received_types, missingstring = "NA"))
+    end
+    expected_names = String.(keys(received_types))
     assert_colnames_as_expected(input_soil_discretization, path_soil_discretization, expected_names)
 
+    # Assert units:
+    expected_units = DataFrame(allowed_units)
+    assert_unitsHeader_as_expected(path_soil_discretization, expected_units)
+
+    # Assert validity of values:
     # Check that defined layers do not overlap
     @assert input_soil_discretization[1:end-1,"Lower_m"] == input_soil_discretization[2:end,"Upper_m"] """
         Input file '$path_soil_discretization' contains overlapping layers.
@@ -1229,12 +1321,6 @@ function read_path_soil_discretization(path_soil_discretization)
         $(input_soil_discretization[[idx_layer_zero_height[1]-1, idx_layer_zero_height[1], idx_layer_zero_height[1]+1], :])
         Please check and correct the input file.
         """
-
-    # Assert units:
-    assert_unitsHeader_as_expected(path_soil_discretization,
-        DataFrame(Upper_m = "m", Lower_m = "m", Rootden_ = "-",
-            uAux_PSIM_init_kPa = "kPa",
-            u_delta18O_init_permil = "permil", u_delta2H_init_permil = "permil"))
 
     return input_soil_discretization
 end
