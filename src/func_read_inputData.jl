@@ -126,6 +126,13 @@ function loadSPAC(folder::String, prefix::String;
     @assert all(meteo_forcing.WIND    .>= 0) "Error in vegetation parameters: WIND must be above 0."
     @assert all(meteo_forcing.PRECIN  .>= 0) "Error in vegetation parameters: PRECIN must be above 0."
 
+    if !simulate_irrigation
+        # disregard irrigation input if not simulating irrigation
+        meteo_forcing.IRRIGIN .= 0.0
+    else
+        @assert all(meteo_forcing.IRRIGIN .>= 0) "Error in vegetation parameters: IRRIGIN must be above 0."
+    end
+
     ## Load time-varying vegetation parameters
     if (canopy_evolution == "meteoveg.csv")
         # Use DataFrame from meteoveg.csv
@@ -329,7 +336,7 @@ function Base.show(io::IO, mime::MIME"text/plain", model::SPAC; show_SPAC_title=
     end
     println(io, show_avg_and_range(model.forcing.meteo["p_GLOBRAD"].itp.itp.coefs,     "GLOBRAD (MJ/m2/day): "))
     println(io, show_avg_and_range(model.forcing.meteo["p_PREC"].itp.itp.coefs,        "PREC       (mm/day): "))
-    println(io, show_avg_and_range(model.forcing.meteo["p_IRRIG"].itp.itp.coefs,       "IRRIG       (mm/day): "))
+    println(io, show_avg_and_range(model.forcing.meteo["p_IRRIG"].itp.itp.coefs,       "IRRIG      (mm/day): "))
     println(io, show_avg_and_range(model.forcing.meteo["p_TMAX"].itp.itp.coefs,        "TMAX           (°C): "))
     println(io, show_avg_and_range(model.forcing.meteo["p_TMIN"].itp.itp.coefs,        "TMIN           (°C): "))
     println(io, show_avg_and_range(model.forcing.meteo["p_VAPPRES"].itp.itp.coefs,     "VAPPRES       (kPa): "))
@@ -342,7 +349,7 @@ function Base.show(io::IO, mime::MIME"text/plain", model::SPAC; show_SPAC_title=
 
     println(io, "\n===== CANOPY EVOLUTION:===============")
     if model.pars.canopy_evolution isa DataFrame
-        println(io, "model.pars.canopy_evolution was loaded form meteoveg.csv")
+        println(io, "model.pars.canopy_evolution was loaded from meteoveg.csv")
         # println(io, show_avg_and_range(model.pars.canopy_evolution.DENSEF_rel,"DENSEF            (%): "))
         # println(io, show_avg_and_range(model.pars.canopy_evolution.HEIGHT_rel,"HEIGHT            (%): "))
         # println(io, show_avg_and_range(model.pars.canopy_evolution.LAI_rel,"LAI            (%): "))
