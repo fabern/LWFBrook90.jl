@@ -327,6 +327,7 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         # @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC, p_IRRIG,
         #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_RELDEN,
         #     p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, REFERENCE_DATE = integrator.p
+        @unpack p_IRRIG = integrator.p
         @unpack p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG = integrator.p
 
         ## C) state dependent parameters or intermediate results:
@@ -386,6 +387,21 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         u_δ18O_INTR         = p_δ18O_PREC(integrator.t)
         u_δ18O_SNOW         = p_δ18O_PREC(integrator.t)
         # # END variant 2
+
+        # Compromise: need mixing with irrigation water for SLFL
+        if p_IRRIG(integrator.t) > 0
+            # local variables to simplify formula
+            u_δ18O_PREC = p_δ18O_PREC(integrator.t)
+            u_δ2H_PREC = p_δ2H_PREC(integrator.t)
+            u_δ18O_IRRIG = p_δ18O_IRRIG(integrator.t)
+            u_δ2H_IRRIG = p_δ2H_IRRIG(integrator.t)
+            p_u_IRRIG = p_IRRIG(integrator.t)
+
+            # mixing model between snowmelt, infiltrating rainfall and irrigation water
+            p_fu_δ18O_SLFL[1] = (u_δ18O_SNOW * aux_du_SMLT[1] + u_δ18O_PREC * p_fu_RNET[1] + u_δ18O_IRRIG * p_u_IRRIG) / (aux_du_SMLT[1] + p_fu_RNET[1] + p_u_IRRIG)
+            p_fu_δ2H_SLFL[1]  = (u_δ2H_SNOW * aux_du_SMLT[1]  + u_δ2H_PREC * p_fu_RNET[1] + u_δ2H_IRRIG * p_u_IRRIG)  / (aux_du_SMLT[1] + p_fu_RNET[1] + p_u_IRRIG)
+        end
+    
 
             # # Variant 3) trying to unwrap variant 1) by reducing allocations. Currently not working and also not faster than 1)
             # R_std_2H  = LWFBrook90.ISO.R_VSMOW²H

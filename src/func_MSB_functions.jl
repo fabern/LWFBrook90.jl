@@ -571,7 +571,7 @@ function MSBITERATE!(
                     # for SRFLFR:
                     u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC,
                     #
-                    p_IMPERV, p_fu_RNET, aux_du_SMLT,
+                    p_IMPERV, p_IRRIG, p_fu_RNET, aux_du_SMLT,
                     p_LENGTH_SLOPE, p_DSLOPE,
                     # for DSLOP:
                     p_RHOWG, u_aux_PSIM, p_fu_KK,
@@ -588,6 +588,7 @@ function MSBITERATE!(
 
     ##########################
     ## On soil surface, partition incoming rain (RNET) and melt water (SMLT)
+    # (and irrigation, if provided)
     # into either above ground source area flow (streamflow, SRFL) or
     # below ground ("infiltrated") input to soil (SLFL)
     # source area flow rate
@@ -596,10 +597,10 @@ function MSBITERATE!(
     else
         SAFRAC = 0.
     end
-    p_fu_SRFL[1] = min(1., (p_IMPERV + SAFRAC)) * (p_fu_RNET[1] + aux_du_SMLT[1])
+    p_fu_SRFL[1] = min(1., (p_IMPERV + SAFRAC)) * (p_fu_RNET[1] + aux_du_SMLT[1] + p_IRRIG)
 
     # Derive water supply rate to soil surface:
-    p_fu_SLFL[1] = p_fu_RNET[1] + aux_du_SMLT[1] - p_fu_SRFL[1]
+    p_fu_SLFL[1] = p_fu_RNET[1] + aux_du_SMLT[1] + p_IRRIG - p_fu_SRFL[1]
 
     ##########################
     ## Within soil compute flows from layers:

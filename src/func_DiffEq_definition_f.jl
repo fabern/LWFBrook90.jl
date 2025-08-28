@@ -98,7 +98,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
                     # for SRFLFR:
                     u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC,
                     #
-                    p_IMPERV, p_fu_RNET, aux_du_SMLT,
+                    p_IMPERV, p_IRRIG(t), p_fu_RNET, aux_du_SMLT,
                     p_LENGTH_SLOPE, p_DSLOPE,
                     # for DSLOP:
                     p_RHOWG, u_aux_PSIM, p_fu_KK,
