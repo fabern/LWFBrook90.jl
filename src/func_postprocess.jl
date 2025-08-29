@@ -925,6 +925,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
             tran  = [solu(t).accum.cum_d_tran for t in days],
             slvp  = [solu(t).accum.cum_d_slvp for t in days],
             prec  = [solu(t).accum.cum_d_prec for t in days],
+            irrig = [solu(t).accum.cum_d_irrig for t in days],
             evap  = [solu(t).accum.evap for t in days], # evap is sum of irvp, isvp, snvp, slvp, sum(trani)
             flow  = [solu(t).accum.flow for t in days], # flow is sum of byfli, dsfli, gwfl
             seep  = [solu(t).accum.seep for t in days],
@@ -941,7 +942,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
             return cumInflow_mm, cumOutflow_mm, df.swat, error_mm
         end
         function compute_error_ModelDomain(df) #
-            cumInflow_mm  = cumsum(df.prec)                     # corresponds to q(t,0)  in Ireson 2023 eq 16 with additionally sources and sinks
+            cumInflow_mm  = cumsum(df.prec + df.irrig)          # corresponds to q(t,0)  in Ireson 2023 eq 16 with additionally sources and sinks
             cumOutflow_mm = cumsum(df.evap + df.flow + df.seep) # corresponds to q(t,zN) in Ireson 2023 eq 16 with additionally sources and sinks
             storage = df.swat .+ df.gwat + df.snow + df.intr + df.ints
             error_mm = (cumInflow_mm .- cumOutflow_mm) .- (storage .- storage[1])

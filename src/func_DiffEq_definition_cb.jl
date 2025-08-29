@@ -287,6 +287,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         integrator.u.accum.vrfln            = 0 # vrfln, is computed in ODE
         integrator.u.accum.cum_d_rthr     = p_DTP*(p_fT_RFAL - aux_du_RINT[1]) # cum_d_rthr
         integrator.u.accum.cum_d_sthr     = p_DTP*(p_fT_SFAL - aux_du_SINT[1]) # cum_d_sthr
+        integrator.u.accum.cum_d_irrig      = p_DTP * (p_IRRIG(integrator.t)) # cum_d_irrig
         # integrator.u.accum.ε_prev_t          = t              # Update in separate daily callback
         # integrator.u.accum.ε_prev_StorageSWAT  = StorageSWAT  # Update in separate daily callback
         # integrator.u.accum.ε_prev_StorageWATER = StorageWATER # Update in separate daily callback
@@ -1298,13 +1299,13 @@ function LWFBrook90R_check_balance_errors!(integrator)
             integrator.u.accum.cum_d_tran +
             integrator.u.accum.cum_d_slvp
 
-        # b2) BALERD_total = old_StorageWATER - StorageWATER + PRECD - EVAPD - FLOWD - SEEPD
-        accum_qin_total  = integrator.u.accum.cum_d_prec
+        # b2) BALERD_total = old_StorageWATER - StorageWATER + PRECD + IRRIG - EVAPD - FLOWD - SEEPD
+        accum_qin_total  = integrator.u.accum.cum_d_prec + integrator.u.accum.cum_d_irrig
         accum_qout_total = integrator.u.accum.evap + integrator.u.accum.flow + integrator.u.accum.seep
 
         # c) Compute balance error
         # d) Store balance errors into state vector
-        # BALERD_total = old_StorageWATER - StorageWATER + PRECD - EVAPD - FLOWD - SEEPD
+        # BALERD_total = old_StorageWATER - StorageWATER + PRECD + IRRIG - EVAPD - FLOWD - SEEPD
 
         integrator.u.accum.BALERD_SWAT  = (accum_qin - accum_qout)             - (StorageSWAT  - old_SWAT)       # implicitly assume accum.XXX are reset to zero daily AND this callback is called daily
         integrator.u.accum.BALERD_total = (accum_qin_total - accum_qout_total) - (StorageWATER - old_StorageWATER) # implicitly assume accum.XXX are reset to zero daily AND this callback is called daily
