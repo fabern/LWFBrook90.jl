@@ -463,6 +463,7 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
 
         # formerly p_cst4:
         simulate_isotopes = parametrizedSPAC.solver_options.simulate_isotopes,
+        simulate_irrigation = parametrizedSPAC.solver_options.simulate_irrigation,
         # row_idx_scalars = [], # TODO(bernharf): replace with keys(states) or states[:accum]
         row_idx_scalars = (GWAT = nothing,#findfirst(isequal(:GWAT),  u0_field_names),#:GWAT,
                             INTS = nothing,#findfirst(isequal(:INTS),  u0_field_names),#:INTS,
