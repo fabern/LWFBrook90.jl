@@ -427,7 +427,11 @@ function setup(parametrizedSPAC::SPAC;
         # keep as is
     elseif (modifiedSPAC.pars.root_distribution isa NamedTuple)
         overwrite_rootden!(refined_soil_discretizationDF, modifiedSPAC.pars.root_distribution, Δz_refined)
-        overwrite_IC!(     refined_soil_discretizationDF, modifiedSPAC.pars.IC_soil, modifiedSPAC.solver_options.simulate_isotopes)
+        #overwrite_IC!(     refined_soil_discretizationDF, modifiedSPAC.pars.IC_soil, modifiedSPAC.solver_options.simulate_isotopes)
+    end
+
+    if (modifiedSPAC.pars.IC_soil isa NamedTuple)
+        overwrite_IC!(refined_soil_discretizationDF, modifiedSPAC.pars.IC_soil, modifiedSPAC.solver_options.simulate_isotopes)
     end
 
     # Discretize the model in space as `soil_discretization`
