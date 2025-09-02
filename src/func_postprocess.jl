@@ -181,7 +181,7 @@ function get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
     return select(df_all_fluxes,
         :dates,
         # i) internal fluxes:
-        :cum_d_prec,:cum_d_sfal,:cum_d_sthr,:cum_d_sint,
+        :cum_d_prec,:cum_d_sfal,:cum_d_sthr,:cum_d_sint,:cum_d_irrig,
         :cum_d_rfal,:cum_d_rint,:cum_d_rthr,:cum_d_rsno,:cum_d_rnet,:cum_d_smlt,
         :cum_d_irvp,:cum_d_isvp,:cum_d_snvp,:cum_d_slvp,
         :cum_d_tran, # TODO: :accum.cum_d_tran, # delete. we can use u[1].RWU.mmday # all([(simulation.ODESolution.u[idx].accum.cum_d_tran == simulation.ODESolution.u[idx].RWU.mmday) for idx in eachindex(simulation.ODESolution.u)])
@@ -269,9 +269,9 @@ function get_forcing(simulation::DiscretizedSPAC) # returns forcing [..., ..., .
         :prec_mmDay              => p_fT.p_PREC.(timepoints),
         :precdelta18O_permil     => p_fT.p_δ18O_PREC.(timepoints),
         :precdelta2H_permil      => p_fT.p_δ2H_PREC.(timepoints),
-        # :irrig_mmDay             => p_fT.p_IRRIG.(timepoints),
-        # :irrigdelta18O_permil    => p_fT.p_δ18O_IRRIG.(timepoints),
-        # :irrigdelta2H_permil     => p_fT.p_δ2H_IRRIG.(timepoints),
+        :irrig_mmDay             => p_fT.p_IRRIG.(timepoints),
+        :irrigdelta18O_permil    => p_fT.p_δ18O_IRRIG.(timepoints),
+        :irrigdelta2H_permil     => p_fT.p_δ2H_IRRIG.(timepoints),
         :densef_percent          => p_fT.p_DENSEF.(timepoints)*100,
         :height_m                => p_fT.p_HEIGHT.(timepoints),
         :lai_m2m2                => p_fT.p_LAI.(timepoints),
@@ -436,6 +436,7 @@ function get_water_partitioning(simulation::DiscretizedSPAC;)
             :Einterception = :cum_d_irvp + :cum_d_isvp
             :Ta            = :cum_d_tran
             :Precip        = :cum_d_prec
+            :Irrig         = :cum_d_irrig
             :Td            = :cum_d_ptran - :cum_d_tran
             :D             = - :vrfln
             # :R1          = -(:flow - :vrfln)    # flow = srfl+byfl+dsfli+gwfl, gwfl, vrfln
@@ -444,7 +445,7 @@ function get_water_partitioning(simulation::DiscretizedSPAC;)
         end
         @transform :year = year.(:date)
         @transform :month = month.(:date)
-        @select(:date, :year, :month, :ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Td,:D,:R,:Swat)
+        @select(:date, :year, :month, :ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Irrig,:Td,:D,:R,:Swat)
     end
 
     # Aggregate to monghly and yearly
@@ -452,7 +453,7 @@ function get_water_partitioning(simulation::DiscretizedSPAC;)
         groupby([:year, :month])
         combine(
             nrow,
-            [:ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Td,:D,:R] .=> sum,
+            [:ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Irrig,:Td,:D,:R] .=> sum,
             [:Swat] .=> mean, renamecols=false)
         @rtransform :date = Date(:year, :month)
         select(Between(:year, :nrow), :date, All()) # Bring date to beginning
@@ -461,7 +462,7 @@ function get_water_partitioning(simulation::DiscretizedSPAC;)
         groupby([:year])
         combine(
             nrow,
-            [:ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Td,:D,:R] .=> sum,
+            [:ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Irrig,:Td,:D,:R] .=> sum,
             [:Swat] .=> mean, renamecols=false)
         @rtransform :date = Date(:year)
         select(Between(:year, :nrow), :date, All()) # Bring date to beginning
@@ -650,11 +651,11 @@ function intern___get_data_for_isotopePlot(simulation)
         col_PREC_d2H_dense  = solu.prob.p.p_δ2H_PREC.(t1),
         col_PREC_d18O = solu.prob.p.p_δ18O_PREC.(days_to_read_out_d),
         col_PREC_d2H  = solu.prob.p.p_δ2H_PREC.(days_to_read_out_d),
-        # col_IRRIG_amt_dense  = solu.prob.p.p_IRRIG.(t1),
-        # col_IRRIG_d18O_dense = solu.prob.p.p_δ18O_IRRIG.(t1),
-        # col_IRRIG_d2H_dense  = solu.prob.p.p_δ2H_IRRIG.(t1),
-        # col_IRRIG_d18O = solu.prob.p.p_δ18O_IRRIG.(days_to_read_out_d),
-        # col_IRRIG_d2H  = solu.prob.p.p_δ2H_IRRIG.(days_to_read_out_d),
+        col_IRRIG_amt_dense  = solu.prob.p.p_IRRIG.(t1),
+        col_IRRIG_d18O_dense = solu.prob.p.p_δ18O_IRRIG.(t1),
+        col_IRRIG_d2H_dense  = solu.prob.p.p_δ2H_IRRIG.(t1),
+        col_IRRIG_d18O = solu.prob.p.p_δ18O_IRRIG.(days_to_read_out_d),
+        col_IRRIG_d2H  = solu.prob.p.p_δ2H_IRRIG.(days_to_read_out_d),
         col_INTS_d18O = [solu(t).INTS.d18O for t in days_to_read_out_d],
         col_INTR_d18O = [solu(t).INTR.d18O for t in days_to_read_out_d],
         col_SNOW_d18O = [solu(t).SNOW.d18O for t in days_to_read_out_d],
@@ -1365,6 +1366,8 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     simulate_isotopes = solu.prob.p.simulate_isotopes
     @assert simulate_isotopes "Provided DiscretizedSPAC() did not simulate isotopes"
 
+    simulate_irrigation = solu.prob.p.simulate_irrigation
+    
     # Some hardcoded options:
     xlimits = RelativeDaysFloat2DateTime.(solu.prob.tspan, t_ref)
     tick_function = (x1, x2) -> PlotUtils.optimize_ticks(x1, x2; k_min = 4)
@@ -1391,12 +1394,14 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     row_INTS_d18O = reduce(hcat, df.col_INTS_d18O)
     row_INTR_d18O = reduce(hcat, df.col_INTR_d18O)
     row_SNOW_d18O = reduce(hcat, df.col_SNOW_d18O)
+    row_IRRIG_d18O = reduce(hcat, df.col_IRRIG_d18O)
     row_GWAT_d18O = reduce(hcat, df.col_GWAT_d18O)
     row_RWU_d18O = reduce(hcat, df.col_RWU_d18O)
     row_XYL_d18O = reduce(hcat, df.col_XYL_d18O)
     row_INTS_d2H = reduce(hcat, df.col_INTS_d2H)
     row_INTR_d2H = reduce(hcat, df.col_INTR_d2H)
     row_SNOW_d2H = reduce(hcat, df.col_SNOW_d2H)
+    row_IRRIG_d2H = reduce(hcat, df.col_IRRIG_d2H)
     row_GWAT_d2H = reduce(hcat, df.col_GWAT_d2H)
     row_RWU_d2H = reduce(hcat, df.col_RWU_d2H)
     row_XYL_d2H = reduce(hcat, df.col_XYL_d2H)
@@ -1494,9 +1499,16 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     y_extended = [-500; -350; -300; -250; -200; -150; -100; -50;         y_center;             (maxdepth .+ [50; 100; 150; 250; 300;400])]
     y_soil_ticks = tick_function(0., round(maxdepth))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
     y_ticks    = [-500;       -300;       -200;       -100;          y_soil_ticks;             (maxdepth .+ [    100;      250;     400])]
-    y_labels   = ["PREC";   "INTS";     "INTR";     "SNOW";     round.(y_soil_ticks; digits=0);                                                "GWAT";    "RWU";     "XYLEM"]
-    z2_extended = [row_PREC_d18O; row_NaN; row_INTS_d18O; row_NaN; row_INTR_d18O; row_NaN; row_SNOW_d18O; row_NaN; rows_SWAT_d18O; row_NaN; row_GWAT_d18O; row_NaN; row_RWU_d18O; row_NaN; row_XYL_d18O]
-    z3_extended = [row_PREC_d2H;  row_NaN; row_INTS_d2H;  row_NaN; row_INTR_d2H;  row_NaN; row_SNOW_d2H;  row_NaN; rows_SWAT_d2H;  row_NaN; row_GWAT_d2H;  row_NaN; row_RWU_d2H;  row_NaN; row_XYL_d2H ]
+    
+    if simulate_irrigation # replace snow isotopic signature with irrigation input
+        y_labels   = ["PREC";   "INTS";     "INTR";     "IRRIG";     round.(y_soil_ticks; digits=0);                                                "GWAT";    "RWU";     "XYLEM"]
+        z2_extended = [row_PREC_d18O; row_NaN; row_INTS_d18O; row_NaN; row_INTR_d18O; row_NaN; row_IRRIG_d18O; row_NaN; rows_SWAT_d18O; row_NaN; row_GWAT_d18O; row_NaN; row_RWU_d18O; row_NaN; row_XYL_d18O]
+        z3_extended = [row_PREC_d2H;  row_NaN; row_INTS_d2H;  row_NaN; row_INTR_d2H;  row_NaN; row_IRRIG_d2H;  row_NaN; rows_SWAT_d2H;  row_NaN; row_GWAT_d2H;  row_NaN; row_RWU_d2H;  row_NaN; row_XYL_d2H ]
+    else
+        y_labels   = ["PREC";   "INTS";     "INTR";     "SNOW";     round.(y_soil_ticks; digits=0);                                                "GWAT";    "RWU";     "XYLEM"]
+        z2_extended = [row_PREC_d18O; row_NaN; row_INTS_d18O; row_NaN; row_INTR_d18O; row_NaN; row_SNOW_d18O; row_NaN; rows_SWAT_d18O; row_NaN; row_GWAT_d18O; row_NaN; row_RWU_d18O; row_NaN; row_XYL_d18O]
+        z3_extended = [row_PREC_d2H;  row_NaN; row_INTS_d2H;  row_NaN; row_INTR_d2H;  row_NaN; row_SNOW_d2H;  row_NaN; rows_SWAT_d2H;  row_NaN; row_GWAT_d2H;  row_NaN; row_RWU_d2H;  row_NaN; row_XYL_d2H ]
+    end
 
     if (isotope == :d18O || isotope == :d18O_and_d2H)
         @series begin # pl_δ18O
