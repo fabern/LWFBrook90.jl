@@ -779,8 +779,17 @@ end
                                u_SNOW_init_permil = -95.444)));
 
     simulation = setup(parametrizedSPAC, soil_output_depths_m = [-1.0755, -1.096], ε = 0.005);
-    # TODO add tests for irrigation
     simulate!(simulation)
-    # TODO add tests for irrigation
+    
+    forcing = get_forcing(simulation)
+    fluxes = get_fluxes(simulation)
 
+    # check that irrigation is contributing to daily flux
+    @test sum(fluxes.cum_d_irrig) > 0
+
+    # check that irrigation flux is same as forcing
+    @test all(abs.(forcing.irrig_mmDay[1:(end-1)] .- fluxes.cum_d_irrig[2:end]) .< 1e-10)
+
+    # check that irrigation isotopes have values
+    @test all((!isnothing).(forcing.irrigdelta18O_permil))
 end
