@@ -33,7 +33,6 @@ export prepare_for_LWFBrook90R
 An instance of a soil-plant-atmopsheric continuum model with the following fields:
 
 - `reference_date`: DateTime to relate internal use of numerical days to real-world dates
-- `tspan`: Tuple `(0, Int)` Time span of available input data in days since reference date
 - `solver_options`: `NamedTuple`: (compute_intermediate_quantities, simulate_isotopes, DTIMAX, DSWMAX, DPSIMAX), containing some solver options for the model
 
 - `soil_discretization`: `DataFrame` with contents from `soil_discretizations.csv`, i.e. containing columns:
@@ -66,7 +65,6 @@ Base.@kwdef mutable struct SPAC
     # A) Assumed known: will not be estimated
     # A1) Simulation related (non-physical)
     reference_date
-    tspan               # this is available_forcing_tspan
     solver_options
     soil_discretization
     # A2) Physical forcing
@@ -76,7 +74,6 @@ Base.@kwdef mutable struct SPAC
         # pars.params:            e.g. (VXYLEM_mm = 20.0, DISPERSIVITY_mm = 10, Str = "oh")
         # pars.root_distribution: e.g. (beta = 0.97, z_rootMax_m = nothing)
         # pars.IC:                e.g. .soil = PSIM, δ2H, δ18O, but also .scalar = SNOW,INTR,INTS
-        # pars.root_distribution = (beta = 0.97, z_rootMax_m = nothing)
         # pars.canopy_evolution:  e.g. LAI(t), ...
         # pars.soil_horizons
 end
@@ -94,6 +91,115 @@ Base.@kwdef mutable struct DiscretizedSPAC
 	ODEProblem
 	ODESolution
     ODESolution_datetime
+end
+
+function Base.show(io::IO, ::MIME"text/plain", models::Vector{DiscretizedSPAC}) print(io, "Array of $(length(models)) DiscretizedSPAC. Not showing details...") end # https://discourse.julialang.org/t/9589
+function Base.show(io::IO, mime::MIME"text/plain", model::SPAC; show_SPAC_title=true)
+    if (show_SPAC_title) println(io, "SPAC model:") end
+
+    println(io, "===== DATES:===============")
+    available_forcing_tspan_dates = LWFBrook90.RelativeDaysFloat2DateTime.(
+        extrema(model.forcing.meteo["p_days"]), model.reference_date)
+    println("Available forcing period:              ", format.(available_forcing_tspan_dates, "YYYY-mm-dd"),
+            " (reference datum: "       , format.(model.reference_date,          "YYYY-mm-dd"),")")
+    println(io, "\n===== METEO FORCING:===============")
+    show_avg_and_range = function(vector, title)
+        # "$(title)avg:$(round(Statistics.mean(vector); digits=2)), range:$(extrema(vector))"
+        @sprintf("%savg:%7.2f, range:%7.2f to%7.2f",
+                 title, mean(vector), extrema(vector)[1], extrema(vector)[2])
+    end
+    println(io, show_avg_and_range(model.forcing.meteo["p_GLOBRAD"].itp.itp.coefs,     "GLOBRAD (MJ/m2/day): "))
+    println(io, show_avg_and_range(model.forcing.meteo["p_PREC"].itp.itp.coefs,        "PREC       (mm/day): "))
+    println(io, show_avg_and_range(model.forcing.meteo["p_TMAX"].itp.itp.coefs,        "TMAX           (°C): "))
+    println(io, show_avg_and_range(model.forcing.meteo["p_TMIN"].itp.itp.coefs,        "TMIN           (°C): "))
+    println(io, show_avg_and_range(model.forcing.meteo["p_VAPPRES"].itp.itp.coefs,     "VAPPRES       (kPa): "))
+    println(io, show_avg_and_range(model.forcing.meteo["p_WIND"].itp.itp.coefs,        "WIND          (m/s): "))
+    if (model.solver_options.simulate_isotopes)
+        println(io, show_avg_and_range(model.forcing.meteo_iso["p_d18OPREC"].itp.coefs,"δ18O            (‰): "))
+        println(io, show_avg_and_range(model.forcing.meteo_iso["p_d2HPREC"].itp.coefs, "δ2H             (‰): "))
+    end
+    # println(io, model.forcing.storm_durations)
+
+    println(io, "\n===== CANOPY EVOLUTION:===============")
+    if model.pars.canopy_evolution isa DataFrame
+        println(io, "model.pars.canopy_evolution was loaded form meteoveg.csv")
+        # println(io, show_avg_and_range(model.pars.canopy_evolution.DENSEF_rel,"DENSEF            (%): "))
+        # println(io, show_avg_and_range(model.pars.canopy_evolution.HEIGHT_rel,"HEIGHT            (%): "))
+        # println(io, show_avg_and_range(model.pars.canopy_evolution.LAI_rel,"LAI            (%): "))
+        # println(io, show_avg_and_range(model.pars.canopy_evolution.SAI_rel,"SAI            (%): "))
+    else
+        println(io, model.pars.canopy_evolution)
+    end
+
+    println(io, "\n===== INITIAL CONDITIONS:===============")
+    println(io, "Soil   IC: $(model.pars.IC_soil)")
+    print(  io, "Scalar IC: ")
+    println(io, model.pars.IC_scalar)
+
+    println(io, "\n===== MODEL PARAMETRIZATION:===============")
+    # println(io, model.params)
+    #display(io, model.params) # dump(model.params); using PrettyPrinting; pprintln(model.params)
+    # maxlengthname = maximum(length.(string.(keys(model.pars.params)))) == 17 -> 18 is safe:
+    string_vec = [@sprintf("%18s => % 8.1f",k,v) for (k,v) in pairs(model.pars.params)];
+
+    ncols = 3
+    # what's needed to allow a rectangular form for reshape:
+    nrows, n_last_row   = divrem(length(string_vec), ncols)
+    n_fillup            = ncols - n_last_row
+    # string_vec_to_print = [string_vec; fill("", n_fillup)]
+    string_vec_to_print = [string_vec; fill(repeat(" ", 18+4+8), n_fillup)]
+    # show(IOContext(io, :limit => true), "text/plain",
+    #      reshape(vcat(string_vec, fill("", 21*4-length(string_vec))), 21, 4))
+    # display.(join.(eachrow(reshape(string_vec_to_print, :, ncols))));
+    # show(IOContext(io, :limit => false), "text/plain",
+    #     join.(eachrow(reshape(string_vec_to_print, :, ncols)), "|"))
+    println(io, join(join.(eachrow(reshape(string_vec_to_print, :, ncols)), " |")," |\n"))
+
+    println(io, "\n===== SOIL DOMAIN:===============")
+    print(  io, "Root distribution:       "); println(io, model.pars.root_distribution)
+    print(  io, "Soil layer properties:   ")
+    # println(io, model.pars.soil_horizons)
+    # for shp in model.pars.soil_horizons.shp println(io, shp) end
+    # show(IOContext(io, :limit => false), "text/plain", model.pars.soil_horizons)
+    show(IOContext(io, :limit => false), mime, model.pars.soil_horizons[:,Not(:HorizonNr)]; truncate = 100);
+    println(io, "")
+    Δz = model.soil_discretization.Δz
+    println(io, "Soil discretized into N=$(length(model.soil_discretization.df.Lower_m)) layers, "*
+                "$(@sprintf("Δz layers: (avg, min, max) = (%.3f,%.3f,%.3f)m.", mean(Δz),minimum(Δz),maximum(Δz)))")
+    println(io, round.(model.soil_discretization.df.Lower_m; digits=3))
+
+    println(io, "\n===== SOLVER OPTIONS:===============")
+    println(io, model.solver_options)
+end
+
+function Base.show(io::IO, mime::MIME"text/plain", discSPAC::DiscretizedSPAC)
+    # Print discretization:
+    println(io, "Discretized SPAC model: =============== solution was computed: $(!isnothing(discSPAC.ODESolution))")
+    println(io, "\n===== SIMULATION PERIOD:===============")
+    available_tspan_dates = LWFBrook90.RelativeDaysFloat2DateTime.(discSPAC.ODEProblem.tspan,
+                                                                   discSPAC.parametrizedSPAC.reference_date)
+    available_tspan_duration = discSPAC.ODEProblem.tspan[2] - discSPAC.ODEProblem.tspan[1]
+    println("Available simulation period: ", format.(available_tspan_dates, "YYYY-mm-dd"),
+            " (duration of $(available_tspan_duration) days)")
+    if (!isnothing(discSPAC.ODESolution))
+        simulated_tspan_dates = LWFBrook90.RelativeDaysFloat2DateTime.(discSPAC.ODESolution.tspan,
+                                                                    discSPAC.parametrizedSPAC.reference_date)
+        simulated_tspan_duration = discSPAC.ODEProblem.tspan[2] - discSPAC.ODEProblem.tspan[1]
+        println("Simulated simulation period: ", format.(simulated_tspan_dates, "YYYY-mm-dd"),
+                " (duration of $(simulated_tspan_duration) days)")
+    end
+
+    # Print parametrization
+    println(io, "")
+    Base.show(io, mime, discSPAC.parametrizedSPAC; show_SPAC_title=false)
+
+    # DO WE NEED BELOW EXPLICIT CANOPY EVOLUTION? NO.
+    # println(io, "\n===== CANOPY EVOLUTION:===============")
+    # println(io, show_avg_and_range(model.canopy_evolution.p_AGE.(extrema(model.forcing.meteo["p_days"])),    "AGE         (years): "))
+    # println(io, show_avg_and_range(model.canopy_evolution.p_DENSEF.itp.itp.coefs, "DENSEF         (°C): "))
+    # println(io, show_avg_and_range(model.canopy_evolution.p_HEIGHT.itp.itp.coefs, "HEIGHT          (m): "))
+    # println(io, show_avg_and_range(model.canopy_evolution.p_LAI.itp.itp.coefs,    "LAI         (m2/m2): "))
+    # println(io, show_avg_and_range(model.canopy_evolution.p_SAI.itp.itp.coefs,    "SAI         (m2/m2): "))
 end
 
 # input_prefix = "isoBEAdense2010-18-reset-FALSE";
@@ -180,20 +286,11 @@ include("../examples/func_run_example.jl")
 # end
 
 """
-    remakeSPAC(discrSPAC::DiscretizedSPAC;
-                requested_tspan = nothing,
-                soil_output_depths_m::Vector = zeros(Float64, 0),
-                kwargs...)
-or
+    remakeSPAC(parametrizedSPAC::SPAC; kwargs...)
 
-    remakeSPAC(parametrizedSPAC::SPAC;
-                requested_tspan = nothing,
-                soil_output_depths_m::Vector = zeros(Float64, 0),
-                kwargs...)
-
-Generates a copy of the provided SPAC or DiscretizedSPAC and modifies all the parameter
+Generates a copy of the provided SPAC and modifies all the parameter
 that are provided as kwargs. This is useful running the same model with a range of different
-parameter.
+parameter. Returns a SPAC.
 
 Possible kwargs are:
 - `soil_horizons = (ths_ = 0.4, Ksat_mmday = 3854.9, alpha_per_m = 7.11, gravel_volFrac = 0.1)`
@@ -211,19 +308,7 @@ the argument `soil_horizons` can be provided with a vector or vectors with a val
 horizon. A mix of vectors and scalars is also possible.
 
 """
-function remakeSPAC(discrSPAC::DiscretizedSPAC;
-                requested_tspan = nothing,
-                soil_output_depths_m::Vector = zeros(Float64, 0),
-                kwargs...)
-    return remakeSPAC(discrSPAC.parametrizedSPAC;
-                requested_tspan = requested_tspan,
-                soil_output_depths_m = soil_output_depths_m,
-                kwargs...)
-end
-function remakeSPAC(parametrizedSPAC::SPAC;
-                requested_tspan = nothing,
-                soil_output_depths_m::Vector = zeros(Float64, 0),
-                kwargs...) # kwargs collects all others
+function remakeSPAC(parametrizedSPAC::SPAC; kwargs...) # kwargs collects all others
     # dump(kwargs) # kwargs contains NamedTuples to be modified
     modifiedSPAC = deepcopy(parametrizedSPAC)
     for curr_change in keys(kwargs)
@@ -248,9 +333,7 @@ function remakeSPAC(parametrizedSPAC::SPAC;
             error("Unknown argument provided to remake(): $curr_change")
         end
     end
-    return setup(modifiedSPAC;
-                requested_tspan = requested_tspan,
-                soil_output_depths_m = soil_output_depths_m)
+    return modifiedSPAC
 end
 function remake_soil_horizons(spac, changesNT)
     shp_names = Dict(:ths_           => :p_THSAT,
@@ -346,7 +429,6 @@ end
 
 """
     setup(parametrizedSPAC::SPAC;
-        requested_tspan = nothing,
         soil_output_depths_m::Vector = zeros(Float64, 0))
 
 Takes the definition of SPAC model and discretize to a system of ODEs that can be solved by
@@ -354,16 +436,8 @@ the package DifferentialEquations.jl
 
 If needed, the computational grid of the soil is refined to output values at specific depths,
 e.g. by doing `setup(SPAC; soil_output_depths_m = [-0.35, -0.42, -0.48, -1.05])`.
-
-The argument `requested_tspan` is a tuple defining the duration of the simulation either
-with a start- and an end-day relative to the reference date: `setup(SPAC; requested_tspan = (0,150))`.
-or alternatively as a tuple of 2 DataTime's.
-Note that the reference date given by the `SPAC.reference_date` refers to the day 0.
-Further note that it is possible to provide a tspan not starting at 0, e.g. (120,150).
-In that case, initial conditions are applied tspan[1], but atmospheric forcing is correctly taken into account.
 """
 function setup(parametrizedSPAC::SPAC;
-                requested_tspan = nothing,
                 soil_output_depths_m::Vector = zeros(Float64, 0), # e.g. # soil_output_depths_m = [-0.35, -0.42, -0.48, -1.05]
                 # Define what is close enough for soil_output_depths_m
                 ε = 0.050   # thickness of layer to be inserted, [m]
@@ -371,25 +445,12 @@ function setup(parametrizedSPAC::SPAC;
 
     @assert all(soil_output_depths_m .< 0)
 
-    if !isnothing(requested_tspan) # if argument requested_tspan provided, check its value:
-        if requested_tspan[1] isa DateTime
-            requested_tspan = LWFBrook90.DateTime2RelativeDaysFloat.(
-                requested_tspan, parametrizedSPAC.reference_date)
-        end
-        available_forcing_data = extrema(parametrizedSPAC.forcing.meteo["p_days"])
-        if ((requested_tspan[1] < available_forcing_data[1]) |  (requested_tspan[2] > available_forcing_data[2]))
-            error("Requested simulation tspan $requested_tspan goes beyond input forcing data: $(available_forcing_data)")
-        end
-        if !(requested_tspan[1] ≈ 0)
-            @warn    "Requested time span doesn't start at 0. This is supported and correctly takes into account atmospheric forcing." * "\n" *
-            "         Note, however, that initial conditions are applied at $(parametrizedSPAC.reference_date + Second(floor(requested_tspan[1] * 24*3600))), i.e. at t=$(requested_tspan[1])."
-        end
-    end
     # This function prepares a discretizedSPAC, which is a container for a DifferentialEquations::ODEProblem.
     # A discretizedSPAC stores:
         # Its needed input:
-            # - SPAC (that contains arguments `requested_tspan` and `soil_output_depths_m`)
-            #        (hence setup(discreteSPAC.parametrizedSPAC) works as expected)
+            # - SPAC (that was modified according to argument `soil_output_depths_m`)
+            #        (hence we have the inequality model !=        setup(model, soil_output_depths_m=0.017).parametrizedSPAC)
+            #        (but the             equality setup(model) == setup(setup(model).parametrizedSPAC))
         # And derived fields:
             # - ODEProblem
             # - ODESolution
@@ -421,7 +482,19 @@ function setup(parametrizedSPAC::SPAC;
             modifiedSPAC.pars.params[:QDEPTH_m];
             ε = ε)
     Δz_refined = refined_soil_discretizationDF.Upper_m - refined_soil_discretizationDF.Lower_m
-    # if rootden (and initial conditions were given parametrically redo them):
+    # redo rootden
+        # TODO: replace further below with directly below
+    # if ()
+    #     modifiedSPAC.pars.root_distribution = -1234567890 # TODO: interpolate the dataframe
+    #     # modifiedSPAC.pars.IC_soil = -1234567890         # TODO: interpolate the dataframe
+    #     # TODO: do this interpolation not here, but already after initial loadSPAC(). Then here we could simply use overwrite_X!()
+    #     # TODO: also include these cases in overwrite_rootden!() and overwrite_IC!()
+    # end
+    # overwrite_rootden!(refined_soil_discretizationDF, modifiedSPAC.pars.root_distribution, Δz_refined)
+    # overwrite_IC!(     refined_soil_discretizationDF, modifiedSPAC.pars.IC_soil, modifiedSPAC.solver_options.simulate_isotopes)
+    # TODO: replace below with above
+    # TODO: remove below
+    # if rootden (and initial conditions) were given parametrically redo them:
     modifiedSPAC.pars.root_distribution
     if (modifiedSPAC.pars.root_distribution isa DataFrame)
         # keep as is
@@ -429,6 +502,7 @@ function setup(parametrizedSPAC::SPAC;
         overwrite_rootden!(refined_soil_discretizationDF, modifiedSPAC.pars.root_distribution, Δz_refined)
         overwrite_IC!(     refined_soil_discretizationDF, modifiedSPAC.pars.IC_soil, modifiedSPAC.solver_options.simulate_isotopes)
     end
+    # TODO: remove above
 
     # Discretize the model in space as `soil_discretization`
     final_soil_discretizationDF = map_soil_horizons_to_discretization(modifiedSPAC.pars.soil_horizons, refined_soil_discretizationDF)#computational_grid)
@@ -442,19 +516,21 @@ function setup(parametrizedSPAC::SPAC;
         # 1) define a grid resolution Δz (either a) reading in from soil_discretization or b) manually defined vector)
         # 2) get info about initial conditions (either a) reading in from soil_discretization or then or b) manually defined mathematical function  )
         # 2) get info about root distribution (either a) reading in from soil_discretization or then or b) manually defined mathematical function  )
-        # 3) map initial condition to discretized grid resolution Δz
-        # 3) map root distribution to discretized grid resolution Δz (and interpolate in time giving us a function rootden(z, t))
-        # 4) include additional interfaces for observation_nodes and other needed interfaces (such as soil layers)...
+        # 1b) refine grid: include additional interfaces for observation_nodes and other needed interfaces (such as soil layers)...
             # TODO(bernhard): combine step 4) with 1). -> Requires mapping in 3) regardless of whether we have a) or b)
-        # 5) map soil physical properties from soil layers to discretized grid resolution Δz
+        # 3) map initial condition to refined, discretized grid resolution Δz
+        # 3) map root distribution to refined, discretized grid resolution Δz (and interpolate in time giving us a function rootden(z, t))
+        # 5) map soil physical properties from soil layers to refined, discretized grid resolution Δz
     ####################
 
     ####################
     ## c) Derive time evolution of aboveground vegetation based on parameter from SPAC
+    # TODO: move to loadSPAC()
     canopy_evolution_relative = generate_canopy_timeseries_relative(
         modifiedSPAC.pars.canopy_evolution,
         days = modifiedSPAC.forcing.meteo["p_days"],
         reference_date = modifiedSPAC.reference_date)
+    # TODO: move to loadSPAC()
     canopy_evolutionDF = make_absolute_from_relative(
                 aboveground_relative          = canopy_evolution_relative,
                 p_MAXLAI                      = modifiedSPAC.pars.params[:MAXLAI],
@@ -519,16 +595,6 @@ function setup(parametrizedSPAC::SPAC;
     # tspan = (LWFBrook90.DateTime2RelativeDaysFloat(DateTime(1980,1,1), reference_date),
     #          LWFBrook90.DateTime2RelativeDaysFloat(DateTime(1985,1,1), reference_date)) # simulates selected period
 
-    if isnothing(requested_tspan)
-        tspan_to_use = modifiedSPAC.tspan
-    else
-        @warn "Overwriting tspan defined in SPAC $(modifiedSPAC.tspan) with provided value of $requested_tspan"
-        tspan_to_use = requested_tspan
-
-        # Update tspan in underlying SPAC model
-        modifiedSPAC.tspan = requested_tspan
-    end
-
     # Seperate updating of different states (INTS, INTR, SNOW, CC, SNOWLQ are updated once per
     # day while GWAT and SWATI are updated continuously) is implemented by means of operator
     # splitting using a callback function for the daily updates and a ODE RHS (right hand
@@ -549,6 +615,8 @@ function setup(parametrizedSPAC::SPAC;
     # Note that documentation for solve()-arguments can be found at:
     # `https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/#solver_options`
     # `https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/`
+    tspan_to_use = extrema(parametrizedSPAC.forcing.meteo["p_days"]) # by default use available_forcing_tspan
+                                                                   # can be overriden in simulate!(..., requested_tspan)
     ode_LWFBrook90 =
         ODEProblem(LWFBrook90.f_LWFBrook90!, u0, tspan_to_use, p;
                     callback = cb_func,
@@ -594,27 +662,6 @@ function is_setup(parametrizedSPAC::SPAC)
     "shp" ∈ names(parametrizedSPAC.soil_discretization.df)
 end
 
-function Base.show(io::IO, mime::MIME"text/plain", discSPAC::DiscretizedSPAC)
-    # Print discretization:
-    println(io, "Discretized SPAC model: =============== solution was computed: $(!isnothing(discSPAC.ODESolution))")
-    println(io, "\n===== SIMULATION PERIOD:===============")
-    requested_tspan_dates = LWFBrook90.RelativeDaysFloat2DateTime.(discSPAC.ODEProblem.tspan, discSPAC.parametrizedSPAC.reference_date)
-    requested_tspan_duration = discSPAC.ODEProblem.tspan[2] - discSPAC.ODEProblem.tspan[1]
-    println("Requested/simulated simulation period: ", format.(requested_tspan_dates, "YYYY-mm-dd"),
-            " (duration of $(requested_tspan_duration) days)")
-
-    # Print parametrization
-    println(io, "")
-    Base.show(io, mime, discSPAC.parametrizedSPAC; show_SPAC_title=false)
-
-    # DO WE NEED BELOW EXPLICIT CANOPY EVOLUTION? NO.
-    # println(io, "\n===== CANOPY EVOLUTION:===============")
-    # println(io, show_avg_and_range(model.canopy_evolution.p_AGE.(model.tspan),    "AGE         (years): "))
-    # println(io, show_avg_and_range(model.canopy_evolution.p_DENSEF.itp.itp.coefs, "DENSEF         (°C): "))
-    # println(io, show_avg_and_range(model.canopy_evolution.p_HEIGHT.itp.itp.coefs, "HEIGHT          (m): "))
-    # println(io, show_avg_and_range(model.canopy_evolution.p_LAI.itp.itp.coefs,    "LAI         (m2/m2): "))
-    # println(io, show_avg_and_range(model.canopy_evolution.p_SAI.itp.itp.coefs,    "SAI         (m2/m2): "))
-end
 
 
 """
@@ -622,10 +669,41 @@ end
 
 Simulates a SPAC model and stores the solution in s.ODESolution.
 
+The argument `requested_tspan` is a tuple defining the duration of the simulation either
+with a start- and an end-day relative to the reference date: `simulate!(DiscrSPAC; requested_tspan = (0,150))`.
+or alternatively as a tuple of 2 DataTime's.
+Note that the reference date given by the `SPAC.reference_date` refers to the day 0.
+Further note that it is possible to provide a tspan not starting at 0, e.g. (120,150).
+In that case, initial conditions are applied at tspan[1] and atmospheric forcing is correctly taken into account.
+
 `kwargs...` are passed through to solve(SciML::ODEProblem; ...) and are
 documented under `https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/#solver_options`
 """
-function simulate!(s::DiscretizedSPAC; assert_retcode = true, description = "", kwargs...)
+function simulate!(s::DiscretizedSPAC;
+    requested_tspan = nothing,
+    assert_retcode = true,
+    description = "",
+    kwargs...)
+
+    # if argument requested_tspan provided
+    if !isnothing(requested_tspan)
+        # a) check its value:
+        if requested_tspan[1] isa DateTime
+            requested_tspan = LWFBrook90.DateTime2RelativeDaysFloat.(
+                requested_tspan, s.parametrizedSPAC.reference_date)
+        end
+        available_forcing_data = extrema(s.parametrizedSPAC.forcing.meteo["p_days"])
+        if ((requested_tspan[1] < available_forcing_data[1]) |  (requested_tspan[2] > available_forcing_data[2]))
+            error("Requested simulation tspan $requested_tspan goes beyond input forcing data: $(available_forcing_data)")
+        end
+        if !(requested_tspan[1] ≈ 0)
+            @warn    "Requested time span doesn't start at 0. This is supported and correctly takes into account atmospheric forcing." * "\n" *
+            "         Note, however, that initial conditions are applied at $(s.parametrizedSPAC.reference_date + Second(floor(requested_tspan[1] * 24*3600))), i.e. at t=$(requested_tspan[1])."
+        end
+        # b) and modify underlying ODEProblem
+        s.ODEProblem = remake(s.ODEProblem, tspan = requested_tspan) # remake(s.ODEProblem, tspan = (0,300))
+    end
+
     if (:saveat ∈ keys(kwargs))
         @info description * """
           Start of simulation at $(now()).

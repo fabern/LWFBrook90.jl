@@ -92,10 +92,10 @@ function run_example(;kwargs...)
 
     ####################
     # Prepare simulation by discretizing spatial domain
-    simulation = LWFBrook90.setup(model; requested_tspan = (0,300));
+    simulation = LWFBrook90.setup(model);
 
     # Solve ODE:
-    LWFBrook90.simulate!(simulation)
+    LWFBrook90.simulate!(simulation; requested_tspan = (0,300))
     # plot(simulation.ODESolution)
     sol_LWFBrook90 = simulation.ODESolution
     ####################

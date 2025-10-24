@@ -20,9 +20,9 @@ using LWFBrook90
 
 ## `using LWFBrook90` brings the following exported functions into scope:
 ## - `loadSPAC()`                   # to define and run a simulation
+## - `remakeSPAC()`                 # to define and run a simulation
 ## - `setup()`                      # to define and run a simulation
 ## - `simulate!()`                  # to define and run a simulation
-## - `remakeSPAC()`                 # to define and run a simulation
 ## - `SPAC()`                       # to define and run a simulation
 ## - `DiscretizedSPAC()`            # to define and run a simulation
 ## - `get_states()`                 # to postprocess a simulation

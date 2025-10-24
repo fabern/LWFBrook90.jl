@@ -218,7 +218,7 @@ function prepare_for_LWFBrook90R(spac_; return_value = "inputs", out_dir = ".", 
                     ###############
 
     # A) opts:
-    startdate, enddate = parSPAC.reference_date .+ Day.(parSPAC.tspan)
+    startdate, enddate = parSPAC.reference_date .+ Day.(extrema(parSPAC.forcing.meteo["p_days"]))
     enddate = enddate - Day(1)
 
     fornetrad        = "globrad"
@@ -479,7 +479,7 @@ end
         # input_prefix = "DAV2020-full";
         # input_path   = "examples/"*input_prefix;
         # model        = loadSPAC(input_path, input_prefix; simulate_isotopes = true);
-        # base_simulation   = LWFBrook90.setup(model; requested_tspan = (0,300));
+        # base_simulation   = LWFBrook90.setup(model);
 
         # Δz = [fill(0.05, 4);  fill(0.10, 14)]
         # mod_model = loadSPAC(input_path, input_prefix;
@@ -539,11 +539,11 @@ end
         # #     loadSPAC_args[:input_path],
         # #     loadSPAC_args[:input_prefix];
         # #     loadSPAC_args[Not([:input_path, :input_prefix])]...);
-        # # base_model_tspan_dates = LWFBrook90.RelativeDaysFloat2DateTime.(base_model.tspan, base_model.reference_date)
+        # # base_model_tspan_dates = LWFBrook90.RelativeDaysFloat2DateTime.(extrema(base_model.forcing.meteo["p_days"]), base_model.reference_date)
 
-        # # base_simulation = setup(base_model)#, requested_tspan = simulation_tspan_dates);
+        # # base_simulation = setup(base_model)
         # # # simulation_tspan       = LWFBrook90.DateTime2RelativeDaysFloat.(simulation_tspan_dates, base_model.reference_date)
-        # # # remakeSPAC(base_simulation; NamedTuple(k => v for (k, v) in pairs(opt_pars[sim_id]))...)
+        # # # remakeSPAC(base_simulation.parametrizedSPAC; NamedTuple(k => v for (k, v) in pairs(opt_pars[sim_id]))...)
         # # base_simulation
 
         # curr_simulation = base_simulation
