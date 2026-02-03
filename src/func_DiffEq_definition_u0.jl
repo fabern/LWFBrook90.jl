@@ -33,6 +33,7 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             RWU    = u_totalRWUinit_mmday,
             XYLEM  = u_Xyleminit_mm,
             TRANI  = u_TRANIinit_mmday,
+            PLSTOR = u_Xyleminit_mm,
             # Further structures for auxiliary soil variables (θ,ψ,K) and accumulation variables
             aux    = zeros(NLAYER, 3), # TODO: where to store θ, ψ and K(θ) ?
             accum  = zeros(N_accum_var,1))
@@ -47,6 +48,7 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             SNOW   = NamedTuple{name_states,      NTuple{3, Float64}}(u0_NamedTuple[:SNOW][:,:,1]),
             RWU    = NamedTuple{name_fluxes,      NTuple{3, Float64}}(u0_NamedTuple[:RWU]        ),
             XYLEM  = NamedTuple{name_states,      NTuple{3, Float64}}(u0_NamedTuple[:XYLEM]      ),
+            PLSTOR = NamedTuple{name_states,      NTuple{3, Float64}}(u0_NamedTuple[:PLSTOR]    ),
             CC     = NamedTuple{(:MJm2,),         NTuple{1, Float64}}(u0_NamedTuple[:CC][:,:,1]),
             SNOWLQ = NamedTuple{name_states[[1]], NTuple{1, Float64}}(u0_NamedTuple[:SNOWLQ][:,:,1]),
 
@@ -64,6 +66,7 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             SNOW   = NamedTuple{name_states,      NTuple{1, Float64}}(u0_NamedTuple[:SNOW][:,:,1]),
             RWU    = NamedTuple{name_fluxes,      NTuple{1, Float64}}(u0_NamedTuple[:RWU]        ),
             XYLEM  = NamedTuple{name_states,      NTuple{1, Float64}}(u0_NamedTuple[:XYLEM]      ),
+            PLSTOR = NamedTuple{name_states,      NTuple{1, Float64}}(u0_NamedTuple[:PLSTOR]    ),
             CC     = NamedTuple{(:MJm2,),         NTuple{1, Float64}}(u0_NamedTuple[:CC][:,:,1]),
             SNOWLQ = NamedTuple{name_states[[1]], NTuple{1, Float64}}(u0_NamedTuple[:SNOWLQ][:,:,1]),
 
@@ -107,6 +110,7 @@ function init_LWFB90_u0!(;u0::ComponentArray, parametrizedSPAC, p_soil)
 
     u0.RWU.mmday   = 0
     u0.XYLEM.mm    = 5
+    u0.PLSTOR.mm   = 5 # probably should use capacitance to derive plant volume based on initial water potential
     u0.TRANI.mmday = zeros(nrow(parametrizedSPAC.soil_discretization.df))
     if (N_iso == 2)
         u0.RWU.d18O   = soil_d18O_init[1] # start out with same concentration as in first soil layer
@@ -115,6 +119,8 @@ function init_LWFB90_u0!(;u0::ComponentArray, parametrizedSPAC, p_soil)
         u0.XYLEM.d2H  = soil_d2H_init[1]  # start out with same concentration as in first soil layer
         u0.TRANI.d18O .= soil_d18O_init    # start out with same concentration as in       soil layer
         u0.TRANI.d2H  .= soil_d2H_init     # start out with same concentration as in       soil layer
+        u0.PLSTOR.d18O = soil_d18O_init[1] # start out with same concentration as in first soil layer
+        u0.PLSTOR.d2H  = soil_d2H_init[1]  # start out with same concentration as in first soil layer
     end
     # # TODO(bernhard): if species-specific uptakes add here a totalRWU *PER SPECIES*
     # # TODO(bernhard): if species-specific uptakes add here a Xylem value *PER SPECIES*
