@@ -12,7 +12,7 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
                     :cum_d_slvp, :cum_d_snvp, :cum_d_pint, :cum_d_ptran, :cum_d_pslvp, 
                     :cum_d_plfl, :cum_d_plrf, :cum_pd_plpsi, :cum_md_plpsi,
                     :flow, :seep, :srfl, :slfl, :byfl, :dsfl, :gwfl, :vrfln,
-                    :cum_d_rthr, :cum_d_sthr, :cum_d_irrig,
+                    :cum_d_rthr, :cum_d_sthr, :cum_d_irrig, :cum_d_plfl,
                     :StorageSWAT,  :StorageWATER,  :BALERD_SWAT,  :BALERD_total)
 
     variable_names = simulate_isotopes ? (d18O = 2, d2H = 3) : ()
