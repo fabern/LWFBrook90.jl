@@ -479,7 +479,8 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
                             CC   = nothing,#findfirst(isequal(:CC),    u0_field_names),#:CC,
                             SNOWLQ=nothing,#findfirst(isequal(:SNOWLQ),u0_field_names),#:SNOWLQ,
                             RWU  = nothing,#findfirst(isequal(:RWU),   u0_field_names),#:RWU,
-                            XYLEM= nothing),#findfirst(isequal(:XYLEM), u0_field_names)),#:XYLEM],
+                            XYLEM= nothing,#findfirst(isequal(:XYLEM), u0_field_names)),#:XYLEM],
+                            PLSTOR= nothing),#findfirst(isequal(:PLSTOR), u0_field_names)),#:PLSTOR],
         row_idx_SWATI   = nothing,#findfirst(isequal(:SWATI), u0_field_names),#:SWATI],
         row_idx_TRANI   = nothing,#findfirst(isequal(:TRANI), u0_field_names),#[:TRANI],
                         # findfirst(isequal(:aux),   u0_field_names)
@@ -528,6 +529,7 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
         aux_du_ISVP    = [NaN],
         aux_du_RINT    = [NaN],
         aux_du_IRVP    = [NaN],
+        aux_du_PLFL    = [NaN],
         u_SNOW_old     = [NaN],
 
         du_GWFL        = [NaN],
