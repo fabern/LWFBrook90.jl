@@ -7,7 +7,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
     function f_LWFBrook90!(du,u,p,t)
         # computes right hand side (du) of states: u_GWAT, u_SWATI
 
-        # NOTE: Within the ufnction we can make use of:
+        # NOTE: Within the function we can make use of:
         # t
         # p
         # u
@@ -218,6 +218,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
             # du.accum.cum_d_rthr   = 0 # was computed in callback
             # du.accum.cum_d_sthr   = 0 # was computed in callback
             du.accum.cum_d_irrig    = 0 # was computed in callback
+            du.accum.cum_d_plfl     = 0 # was computed in callback
 
             du.accum.StorageSWAT    = 0 # is computed in callback
             du.accum.StorageWATER   = 0 # is computed in callback
