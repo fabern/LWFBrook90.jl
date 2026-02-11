@@ -12,7 +12,7 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
                     :cum_d_slvp, :cum_d_snvp, :cum_d_pint, :cum_d_ptran, :cum_d_pslvp, 
                     :cum_d_plfl, :cum_d_plrf, :cum_pd_plpsi, :cum_md_plpsi,
                     :flow, :seep, :srfl, :slfl, :byfl, :dsfl, :gwfl, :vrfln,
-                    :cum_d_rthr, :cum_d_sthr, :cum_d_irrig, :cum_d_plfl,
+                    :cum_d_rthr, :cum_d_sthr, :cum_d_irrig,
                     :StorageSWAT,  :StorageWATER,  :BALERD_SWAT,  :BALERD_total)
 
     variable_names = simulate_isotopes ? (d18O = 2, d2H = 3) : ()
@@ -59,6 +59,7 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             TRANI = NamedTuple{name_fluxes, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:TRANI][:,:,1])...)),
             PLRFI = NamedTuple{name_fluxes, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:PLRFI][:,:,1])...)),
 
+            plaux = NamedTuple{name_aux,   NTuple{3, Float64}}(u0_NamedTuple[:plaux]),
             aux   = NamedTuple{name_aux,   NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:aux])...)),
             accum = NamedTuple{name_accum, NTuple{N_accum_var, Float64}}((0. for i in eachindex(name_accum))))
     else
@@ -79,6 +80,7 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             TRANI = NamedTuple{name_fluxes, NTuple{1, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:TRANI][:,:,1])...)),
             PLRFI = NamedTuple{name_fluxes, NTuple{1, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:PLRFI][:,:,1])...)),
 
+            plaux = NamedTuple{name_aux,   NTuple{3, Float64}}(u0_NamedTuple[:plaux]),
             aux   = NamedTuple{name_aux, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:aux])...)),
             accum = NamedTuple{name_accum, NTuple{N_accum_var, Float64}}((0. for i in eachindex(name_accum))))
     end
