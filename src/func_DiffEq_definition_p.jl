@@ -572,6 +572,7 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
         u_aux_PSITI             = fill(NaN, NLAYER),
         u_aux_θ                 = fill(NaN, NLAYER),
         u_aux_θ_tminus1         = fill(NaN, NLAYER),
+        u_aux_PLPSI             = fill(NaN, 1),
         p_fu_KK                 = fill(NaN, NLAYER),
         aux_du_VRFLI_1st_approx = fill(NaN, NLAYER),
         aux_du_BYFLI            = fill(NaN, NLAYER),
