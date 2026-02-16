@@ -219,7 +219,7 @@ function MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM
                      # for SWPE:
                      p_fu_RSS,
                      # for TBYLAYER:
-                     p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, NLAYER, p_PSICR, NOOUTF)
+                     p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, u_aux_PLPSI, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
     # MSBDAYNIGHT() computes the five components of evaporation:
     # - aux_du_ISVP: evaporation of intercepted snow
     # - aux_du_IRVP: evaporation of intercepted rain
@@ -229,10 +229,11 @@ function MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM
 
     p_fu_PTR = fill(NaN, 2)
     p_fu_GER = fill(NaN, 2)
-    p_fu_PGER = fill(NaN, 2) # potential ground evaporation (not needed for model computations, just for comparison with LWFBrook90R)
+    p_fu_PGER= fill(NaN, 2) # potential ground evaporation (not needed for model computations, just for comparison with LWFBrook90R)
     p_fu_PIR = fill(NaN, 2)
     p_fu_GIR = fill(NaN, 2)
-    p_fu_ATRI=fill(NaN,2,NLAYER)
+    p_fu_ATRI= fill(NaN, 2, NLAYER)
+    p_fu_PLFL= fill(NaN, 2)
 
     ATR = fill(NaN, 2)
     SLRAD=fill(NaN,2)
@@ -285,7 +286,7 @@ function MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM
 
         # actual transpiration and ground evaporation rates
         if (p_fu_PTR[J] > 0.001)
-            ATR[J], ATRANI = LWFBrook90.EVP.TBYLAYER(J, p_fu_PTR[J], p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, NLAYER, p_PSICR, NOOUTF)
+            ATR[J], ATRANI, p_fu_PLFL[J] = LWFBrook90.EVP.TBYLAYER(J, p_fu_PTR[J], p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, u_aux_PLPSI, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
             for i = 1:NLAYER
                 p_fu_ATRI[J,i] = ATRANI[i]
             end
@@ -300,6 +301,7 @@ function MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM
             for i = 1:NLAYER
                 p_fu_ATRI[J,i] = 0
             end
+            p_fu_PLFL[J] = 0
             p_fu_GER[J]=LWFBrook90.PET.SWGE(AA, ASUBS, VPD, RAA, RAS, p_fu_RSS, DELTA, 0)
         end
     end
@@ -314,7 +316,8 @@ function MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM
             p_fu_PIR, # potential interception rate for daytime or night (mm/d)
             p_fu_GIR, # ground evap. rate with intercep. for daytime or night (mm/d)
             p_fu_ATRI,# actual transp.rate from layer for daytime and night (mm/d)
-            p_fu_PGER)# hypothetical, potential ground evaporation (not needed for model computations, just for comparison with LWFBrook90R)
+            p_fu_PGER,# hypothetical, potential ground evaporation (not needed for model computations, just for comparison with LWFBrook90R)
+            p_fu_PLFL)# contribution of plant storage to transpiration flux for daytime and night (mm/d)
 
     # return (#SLRAD[2],SLRAD[1],TAJ,UAJ, SOVERI, AA, ASUBS
     #         #ES, DELTA, VPD, RAA, RAC, RAS, RSC,
@@ -341,6 +344,7 @@ function MSBDAYNIGHT_postprocess(NLAYER,
                                  p_fu_PIR, # potential   evaporation rate of   interception storage for daytime or night (mm/d)
                                  p_fu_GIR, # ground evaporation      rate with interception storage for daytime or night (mm/d)
                                  p_fu_ATRI,# actual transp.rate from layer for daytime and night (mm/d)
+                                 p_fu_PLFL,# contribution of plant storage to transpiration flux for daytime and night (mm/d)
                                  p_fT_DAYLEN)
 
     # average rates over day (mm/day)
@@ -349,6 +353,7 @@ function MSBDAYNIGHT_postprocess(NLAYER,
     p_fu_GEVP  = (p_fu_GER[1] * p_fT_DAYLEN + p_fu_GER[2] * (1 - p_fT_DAYLEN))
     p_fu_PINT  = (p_fu_PIR[1] * p_fT_DAYLEN + p_fu_PIR[2] * (1 - p_fT_DAYLEN))
     p_fu_GIVP  = (p_fu_GIR[1] * p_fT_DAYLEN + p_fu_GIR[2] * (1 - p_fT_DAYLEN))
+    aux_du_PLFL  = (p_fu_PLFL[1]*p_fT_DAYLEN + p_fu_PLFL[2]*(1 - p_fT_DAYLEN))
 
     aux_du_TRANI=zeros(NLAYER)
 
@@ -360,7 +365,8 @@ function MSBDAYNIGHT_postprocess(NLAYER,
             p_fu_GEVP,  # average      ground evaporation rate for day (mm/d)
             p_fu_PINT,  # average potential   evaporation rate of   interception storage for day (mm/d)
             p_fu_GIVP,  # average ground evaporation      rate with interception storage for day (mm/d)
-            aux_du_TRANI) # average transpiration rate for day from layer (mm/d)
+            aux_du_TRANI, # average transpiration rate for day from layer (mm/d)
+            aux_du_PLFL)  # average contribution of plant storage to transpiration flux for day (mm/d)
 end
 
 """
@@ -388,7 +394,7 @@ function MSBPREINT(#arguments:
                    # for INTER24 (snow + rain)
                    p_DURATN, MONTHN,
                    #
-                   u_SNOW, p_fu_PTRAN, NLAYER, aux_du_TRANI, p_fu_GIVP, p_fu_GEVP,
+                   u_SNOW, p_fu_PTRAN, NLAYER, aux_du_TRANI, aux_du_PLFL, p_fu_GIVP, p_fu_GEVP,
                    # for SNOWPACK
                    u_CC, u_SNOWLQ, p_fu_PSNVP, p_fu_SNOEN, p_MAXLQF, p_GRDMLT,
                    p_CVICE, p_LF, p_CVLQ)
@@ -444,6 +450,7 @@ function MSBPREINT(#arguments:
         aux_du_TRANI[i] = (1.0 - p_fu_WETFR) * aux_du_TRANI[i]
         # LWFBrook90 additionally: if(u_aux_PSIM[i] < PsiCrit[i]) FRSS=1.e+20 end # where PsiCrit (! not PSICR) is a cutoff pressure for evaporation but also transpiration
     end
+    aux_du_PLFL = (1.0 - p_fu_WETFR) * aux_du_PLFL
     # end B) Effect of wet/snow-covered canopy on fluxes ################
 
     # C) Effect of snowpack on fluxes ################
@@ -497,7 +504,7 @@ function MSBPREINT(#arguments:
     return (# compute some fluxes as intermediate results:
             p_fT_SFAL, p_fT_RFAL, p_fu_RNET, p_fu_PTRAN,
             # compute changes in soil water storage:
-            aux_du_TRANI, aux_du_SLVP,
+            aux_du_TRANI, aux_du_SLVP, aux_du_PLFL,
             # compute change in interception storage:
             aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP,
             # compute change in snow storage:

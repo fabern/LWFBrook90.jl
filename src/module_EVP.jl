@@ -298,7 +298,7 @@ eliminated and new values of rt , ψt , T, and Ti are obtained. If any Ti are st
 the elimination process is repeated. This elimination procedure causes transpiration from a
 layer to cease when its potential is still greater than PSICR.
 """
-function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, NLAYER, p_PSICR, NOOUTF)
+function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, u_aux_PLPSI, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
 
     FLAG = zeros(NLAYER)
     for i = 1:NLAYER
@@ -314,11 +314,12 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
         end
     end
 
-    # Compute ATR and ATRANI
+    # Compute ATR, ATRANI and PLFL
     # top of loop for recalculation of transpiration if more layers get flagged
     RI = zeros(NLAYER)
     ATRANI=zeros(NLAYER)
     ATR = 0.0
+    PLFL = 0.0
     while true
         # start loop with NEGFLAG = 0
         NEGFLAG = false
@@ -334,6 +335,7 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
                 ATRANI[i] = 0.0
             end
         end
+        SUM = SUM + p_STORAGEK; # plant storage conductance
         if SUM < 1E-20
                 ATR = 0.
                 PSIT = -1e10
@@ -351,6 +353,7 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
                     PSIT = PSIT + RT * u_aux_PSITI[i] / RI[i]
                 end
         end
+        PSIT = PSIT + RT * u_aux_PLPSI * p_STORAGEK # add plant storage water potential weighted by storage conductance
 
         # 1) compute available SUPPLY
         # soil water supply rate, assumed constant over day
@@ -396,6 +399,7 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
                 end
             end
         end
+        PLFL = ((u_aux_PLPSI - PSIT) / 1000 + RT * ATR) * p_STORAGEK # plant storage flux
 
         ###
         if NOOUTF && NEGFLAG
@@ -415,7 +419,7 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
         end
     end
 
-    return (ATR, ATRANI)
+    return (ATR, ATRANI, PLFL)
 end
 
 
