@@ -34,6 +34,16 @@ function define_LWFB90_cb()
                                 func_everystep = true,
                                 func_start = false);
 
+    cb_CAPACITANCE_pd = PeriodicCallback(
+                                updatePredawnFlux_PLSTOR!,  0.25;
+                                initial_affect = true,
+                                save_positions=(false,false));
+
+    #= cb_CAPACITANCE_md = PeriodicCallback(
+                                updateMiddayFlux_PLSTOR!,  0.75;
+                                initial_affect = true,
+                                save_positions=(false,false)); =#
+
     #TODO(bernhard) Implement swchek from LWFBrook90 as ContinuousCallback
     # swcheck_cb = ContinuousCallback()
 
@@ -51,7 +61,10 @@ function define_LWFB90_cb()
         # 2) Aboveground
         # Daily update of aboveground storages and concentrations
         cb_INTS_INTR_SNOW_amounts,
-        cb_INTS_INTR_SNOW_deltas
+        cb_INTS_INTR_SNOW_deltas,
+        # Predawn and midday update of plant capacitance
+        cb_CAPACITANCE_pd,
+        #cb_CAPACITANCE_md
         )
     return cb_set
 end
@@ -90,7 +103,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS,
         p_DURATN, p_MAXLQF, p_GRDMLT,
 
-        p_VXYLEM, p_DISPERSIVITY = integrator.p;
+        p_VXYLEM, p_DISPERSIVITY, p_STORAGEK = integrator.p;
 
     ## B) time dependent parameters
     @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC, p_IRRIG,
@@ -109,12 +122,12 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     @unpack p_fT_TADTM, p_fT_TA, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
         p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
         aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old,
-        aux_du_TRANI = integrator.p;
+        aux_du_TRANI, aux_du_PLFL = integrator.p;
     @unpack p_fu_δ18O_SLFL, p_fu_δ2H_SLFL = integrator.p;
 
             # Pre-allocated caches to save memory allocations
             @unpack du_GWFL, du_SEEP, du_NTFLI, aux_du_VRFLI, aux_du_DSFLI, aux_du_INFLI, u_aux_WETNES = integrator.p;
-            @unpack u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
+            @unpack u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,u_aux_PLPSI,p_fu_KK,
                 aux_du_VRFLI_1st_approx, aux_du_BYFLI, p_fu_BYFRAC,
                 p_fu_SRFL, p_fu_SLFL, DPSIDW = integrator.p;
             @unpack cache1, cache2 = integrator.p # cache vectors of length N
@@ -174,7 +187,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     # during day and rate during night:
     #* * * * *  B E G I N   D A Y - N I G H T   E T   L O O P  * * * * * * * * *
     # Compute day and night rates
-    (p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR, p_fu_ATRI, p_fu_PGER) =
+    (p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR, p_fu_ATRI, p_fu_PGER, p_fu_PLFL) =
         MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM[1], p_fu_UADTM, p_fT_TANTM, p_fu_UANTM,
                     p_fT_I0HDAY,
                     # for AVAILEN:
@@ -186,11 +199,11 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
                     # for SWPE:
                     p_fu_RSS,
                     # for TBYLAYER:
-                    p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, NLAYER, p_PSICR, NOOUTF)
+                    p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, u_aux_PLPSI[1], p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
                     # 0.000012 seconds (28 allocations: 1.938 KiB)
     # Combine day and night rates to average daily rate
-    (p_fu_PTRAN, p_fu_GEVP, p_fu_PINT, p_fu_GIVP, aux_du_TRANI[:]) =
-        MSBDAYNIGHT_postprocess(NLAYER, p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR, p_fu_ATRI, p_fT_DAYLEN)
+    (p_fu_PTRAN, p_fu_GEVP, p_fu_PINT, p_fu_GIVP, aux_du_TRANI[:], aux_du_PLFL[1]) =
+        MSBDAYNIGHT_postprocess(NLAYER, p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR, p_fu_ATRI, p_fu_PLFL, p_fT_DAYLEN)
     #* * * * * * * *  E N D   D A Y - N I G H T   L O O P  * * * * * * * * * *
     ####################################################################
     # 1) Update snow accumulation/melt: u_SNOW, u_CC, u_SNOWLQ
@@ -199,7 +212,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     (# compute some fluxes as intermediate results to be used in RHS function f:
     p_fT_SFAL, p_fT_RFAL, p_fu_RNET[1], p_fu_PTRAN,
     # compute changes in soil water storage:
-    aux_du_TRANI[:], aux_du_SLVP[1],
+    aux_du_TRANI[:], aux_du_SLVP[1], aux_du_PLFL[1],
     # compute change in interception storage:
     aux_du_SINT[1], aux_du_ISVP[1], aux_du_RINT[1], aux_du_IRVP[1],
     # compute change in snow storage:
@@ -214,7 +227,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
                # for INTER24 (snow + rain)
                p_DURATN, p_MONTHN(integrator.t),
                #
-               u_SNOW, p_fu_PTRAN, NLAYER, aux_du_TRANI, p_fu_GIVP, p_fu_GEVP,
+               u_SNOW, p_fu_PTRAN, NLAYER, aux_du_TRANI, aux_du_PLFL, p_fu_GIVP, p_fu_GEVP,
                # for SNOWPACK
                u_CC, u_SNOWLQ, p_fu_PSNVP, p_fu_SNOEN, p_MAXLQF, p_GRDMLT,
                # Constants
@@ -277,6 +290,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         integrator.u.accum.cum_d_ptran      = p_DTP * (p_fu_PTRAN)                                                                 # cum_d_ptran
         p_fu_PSLVP = (p_fu_PGER[1] * p_fT_DAYLEN + p_fu_PGER[2] * (1 - p_fT_DAYLEN)) # (not needed for model computations, just for comparison with LWFBrook90R)
         integrator.u.accum.cum_d_pslvp      = p_DTP * (p_fu_PSLVP)                                                             # cum_d_pslvp # Deactivated as p_fu_PSLVP is never used
+        integrator.u.accum.cum_d_plfl       = p_DTP * (aux_du_PLFL[1])                                                                # cum_d_plfl
         integrator.u.accum.flow             = 0 # flow,  is computed in ODE
         integrator.u.accum.seep             = 0 # seep,  is computed in ODE
         integrator.u.accum.srfl             = 0 # srfl,  is computed in ODE
@@ -285,8 +299,8 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         integrator.u.accum.dsfl             = 0 # dsfl,  is computed in ODE
         integrator.u.accum.gwfl             = 0 # gwfl,  is computed in ODE
         integrator.u.accum.vrfln            = 0 # vrfln, is computed in ODE
-        integrator.u.accum.cum_d_rthr     = p_DTP*(p_fT_RFAL - aux_du_RINT[1]) # cum_d_rthr
-        integrator.u.accum.cum_d_sthr     = p_DTP*(p_fT_SFAL - aux_du_SINT[1]) # cum_d_sthr
+        integrator.u.accum.cum_d_rthr       = p_DTP*(p_fT_RFAL - aux_du_RINT[1]) # cum_d_rthr
+        integrator.u.accum.cum_d_sthr       = p_DTP*(p_fT_SFAL - aux_du_SINT[1]) # cum_d_sthr
         integrator.u.accum.cum_d_irrig      = p_DTP * (p_IRRIG(integrator.t)) # cum_d_irrig
         # integrator.u.accum.ε_prev_t          = t              # Update in separate daily callback
         # integrator.u.accum.ε_prev_StorageSWAT  = StorageSWAT  # Update in separate daily callback
@@ -301,6 +315,142 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     return nothing
     ##########################################
 end
+
+function updatePredawnFlux_PLSTOR!(integrator)
+
+    ############
+    ### Compute parameters
+    ## A) constant parameters:
+    @unpack p_soil = integrator.p;
+    @unpack NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, Reset, p_DTP, p_NPINT = integrator.p;
+    @unpack p_LAT, p_ESLOPE, p_L1, p_L2,
+        p_SNODEN, p_MXRTLN, p_MXKPL,
+        p_Z0S, p_Z0G,
+        p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC,
+        p_RTRAD, p_FXYLEM,
+        p_WNDRAT, p_FETCH, p_Z0W, p_ZW,
+        p_RSTEMP,
+        p_CVICE,
+        p_LWIDTH, p_RHOTP, p_NN, p_KSNVP,
+        p_ALBSN, p_ALB,
+        p_RSSA, p_RSSB,
+        p_CCFAC, p_MELFAC, p_LAIMLT, p_SAIMLT,
+
+        p_WTOMJ, p_C1, p_C2, p_C3, p_CR,
+        p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_TL, p_T1, p_T2, p_TH,
+        p_PSICR, NOOUTF,
+
+        # for MSBPREINT:
+        p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS,
+        p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS,
+        p_DURATN, p_MAXLQF, p_GRDMLT,
+
+        p_VXYLEM, p_DISPERSIVITY, 
+        p_CAPACITANCE, p_VSTORAGE, p_STORAGEK = integrator.p;
+
+    ## B) time dependent parameters
+    @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC, p_IRRIG,
+        p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_RELDEN,
+        p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, REFERENCE_DATE = integrator.p;
+
+    ## C) state dependent parameters:
+    # Calculate parameters:
+    #  - solar parameters depending on DOY
+    #  - canopy parameters depending on DOY and u_SNOW
+    #  - roughness parameters depending on u_SNOW
+    #  - plant resistance components depending on u_SNOW
+    #  - weather data depending on DOY and u_SNOW
+    #  - fraction of precipitation as snowfall depending on DOY
+    #  - snowpack temperature, potential snow evaporation and soil evaporation resistance depending on u_SNOW
+    @unpack p_fT_TADTM, p_fT_TA, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
+        p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
+        aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old,
+        aux_du_TRANI, aux_du_PLFL = integrator.p;
+    @unpack p_fu_δ18O_SLFL, p_fu_δ2H_SLFL = integrator.p;
+
+            # Pre-allocated caches to save memory allocations
+            @unpack du_GWFL, du_SEEP, du_NTFLI, aux_du_VRFLI, aux_du_DSFLI, aux_du_INFLI, u_aux_WETNES = integrator.p;
+            @unpack u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,u_aux_PLPSI,p_fu_KK,
+                aux_du_VRFLI_1st_approx, aux_du_BYFLI, p_fu_BYFRAC,
+                p_fu_SRFL, p_fu_SLFL, DPSIDW = integrator.p;
+            @unpack cache1, cache2 = integrator.p # cache vectors of length N
+
+    # Parse states
+    u_SWATI    = integrator.u.SWATI.mm
+
+    LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, integrator.t)
+
+    # Derive (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) from u_SWATI
+    (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
+        LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil)
+
+
+    # MSBSETVARS: A) get: 1) sunshine durations, 2) SFAL, 3) plant resistance (TODO: could be done before simulation)
+    # MSBSETVARS: B) get_windspeed_from_canopy_and_snowpack: (p_fu_UADTM, p_fu_UANTM) = f(...)
+    # MSBSETVARS: C) get_snowpack_evaporation_from_canopy,snowpack,atmosphere,: (p_fu_UADTM, p_fu_UANTM) = f(...)
+    p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY, p_fu_HEIGHT, p_fu_LAI, p_fu_SAI,
+        p_fu_Z0GS, p_fu_Z0C, p_fu_DISPC, p_fu_Z0, p_fu_DISP, p_fu_ZA,
+        p_fT_RXYLEM, p_fT_RROOTI, p_fT_ALPHA,
+        p_fu_SHEAT, p_fT_SOLRADC, p_fT_TA[1], p_fT_TADTM[1], p_fT_TANTM, p_fu_UADTM, p_fu_UANTM,
+        p_fT_SNOFRC, p_fu_TSNOW, p_fu_PSNVP, p_fu_ALBEDO,p_fu_RSS, p_fu_SNOEN =
+            MSBSETVARS(FLAG_MualVanGen, NLAYER, p_soil,
+                       # for SUNDS:
+                       p_LAT, p_ESLOPE, p_DOY(integrator.t), p_L1, p_L2,
+                       # for CANOPY:
+                       p_HEIGHT(integrator.t), p_LAI(integrator.t), p_SAI(integrator.t), u_SNOW, p_SNODEN, p_MXRTLN, p_MXKPL, p_DENSEF(integrator.t),
+                       #
+                       p_Z0S, p_Z0G,
+                       # for ROUGH:
+                       p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC,
+                       # for PLNTRES:
+                       p_RELDEN.(integrator.t, 1:NLAYER), p_RTRAD, p_FXYLEM,
+                       # for WEATHER:
+                       p_TMAX(integrator.t), p_TMIN(integrator.t), p_VAPPRES(integrator.t), p_WIND(integrator.t), p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_GLOBRAD(integrator.t),
+                       # for SNOFRAC:
+                       p_RSTEMP,
+                       #
+                       u_CC, p_CVICE,
+                       # for SNOVAP:
+                       p_LWIDTH, p_RHOTP, p_NN, p_KSNVP,
+                       #
+                       p_ALBSN, p_ALB,
+                       # for FRSS:
+                       p_RSSA, p_RSSB, u_aux_PSIM, #u_aux_PSIM[1]
+                       # for SNOENRGY:
+                       p_CCFAC, p_MELFAC, p_LAIMLT, p_SAIMLT)
+    
+    # compute day and night rates
+    (p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR, p_fu_ATRI, p_fu_PGER, p_fu_PLFL) =
+        MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM[1], p_fu_UADTM, p_fT_TANTM, p_fu_UANTM,
+                    p_fT_I0HDAY,
+                    # for AVAILEN:
+                    p_fu_ALBEDO, p_C1, p_C2, p_C3, p_VAPPRES(integrator.t), p_fu_SHEAT, p_CR, p_fu_LAI, p_fu_SAI,
+                    # for SWGRA:
+                    p_fu_ZA, p_fu_HEIGHT, p_fu_Z0, p_fu_DISP, p_fu_Z0C, p_fu_DISPC, p_fu_Z0GS, p_LWIDTH, p_RHOTP, p_NN,
+                    # for SRSC:
+                    p_fT_TA[1], p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_TL, p_T1, p_T2, p_TH,
+                    # for SWPE:
+                    p_fu_RSS,
+                    # for TBYLAYER:
+                    p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, u_aux_PLPSI, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
+    
+    # use nighttime rates to compute predawn fluxes
+    aux_du_PLFL = p_fu_PLFL[2]
+
+    aux_du_PLPSI = aux_du_PLFL / p_CAPACITANCE
+    u_aux_PLPSI = integrator.u.plaux.ψ + aux_du_PLPSI
+
+    # update plant storage values
+    integrator.du.PLSTOR.mm = aux_du_PLFL
+    integrator.du.plaux.ψ = aux_du_PLPSI
+    integrator.du.plaux.θ = aux_du_PLFL / p_VSTORAGE
+
+    if compute_intermediate_quantities
+        integrator.u.accum.cum_pd_plpsi = u_aux_PLPSI
+    end
+
+end
+
 
 function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
 
