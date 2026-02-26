@@ -148,7 +148,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
 
             # Pre-allocated caches to save memory allocations
             @unpack du_GWFL, du_SEEP, du_NTFLI, aux_du_VRFLI, aux_du_DSFLI, aux_du_INFLI, u_aux_WETNES = integrator.p;
-            @unpack u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,u_aux_PLPSI,p_fu_KK,
+            @unpack u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
                 aux_du_VRFLI_1st_approx, aux_du_BYFLI, p_fu_BYFRAC,
                 p_fu_SRFL, p_fu_SLFL, DPSIDW = integrator.p;
             @unpack cache1, cache2 = integrator.p # cache vectors of length N
