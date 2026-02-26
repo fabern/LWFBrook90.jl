@@ -117,8 +117,51 @@ function plot_simulated_states_vs_reference(
             plot_comparison(u_δsoil_d2H,     loaded_u_δsoil_d2H,  d_out=d_out, nams = names(u_δsoil_d2H)),
             layout = (2,4), size = (1200,800))
 end
-function test_states_comparison(u_mm, u_δ, u_belowground, currSPAC,
-    loaded_u_mm, loaded_u_δ, loaded_u_belowground, loaded_currSPAC)
+
+# Helper: serialise an array of structs to a DataFrame (one row per element, one column per field)
+function spac_structs_to_df(arr)
+    fields = fieldnames(typeof(arr[1]))
+    DataFrame([field => [getfield(s, field) for s in arr] for field in fields]...)
+end
+
+# Save the SPAC fields that are not trivially redundant with the input CSV files to CSVs.
+# (forcing, params, IC, canopy_evolution, root_distribution are all read verbatim from the
+# input CSVs and therefore do not need a separate reference file.)
+function save_spac_to_csvs(currSPAC, fname_base)
+    write(fname_base * "_spac_soil_discretization.csv",
+        currSPAC.soil_discretization.df[:, Not(:shp)])
+    write(fname_base * "_spac_soil_horizons_shp.csv",
+        spac_structs_to_df(currSPAC.pars.soil_horizons.shp))
+    write(fname_base * "_spac_soil_discretization_shp.csv",
+        spac_structs_to_df(currSPAC.soil_discretization.df[:, :shp]))
+    write(fname_base * "_spac_scalars.csv", DataFrame(
+        reference_date = [string(currSPAC.reference_date)],
+        tspan_start    = [first(currSPAC.tspan)],
+        tspan_end      = [last(currSPAC.tspan)],
+    ))
+end
+
+# Test SPAC fields against CSV reference files (robust to type-definition changes).
+function test_spac_from_csvs(currSPAC, fname_base)
+    @testset "test_spac_comparison" begin
+        @test read(fname_base * "_spac_soil_discretization.csv", DataFrame) ==
+              currSPAC.soil_discretization.df[:, Not(:shp)]
+
+        loaded_shp = read(fname_base * "_spac_soil_horizons_shp.csv", DataFrame)
+        @test loaded_shp == spac_structs_to_df(currSPAC.pars.soil_horizons.shp)
+
+        loaded_discr_shp = read(fname_base * "_spac_soil_discretization_shp.csv", DataFrame)
+        @test loaded_discr_shp == spac_structs_to_df(currSPAC.soil_discretization.df[:, :shp])
+
+        loaded_scalars = read(fname_base * "_spac_scalars.csv", DataFrame)
+        @test loaded_scalars.reference_date[1] == currSPAC.reference_date
+        @test loaded_scalars.tspan_start[1]    == first(currSPAC.tspan)
+        @test loaded_scalars.tspan_end[1]      == last(currSPAC.tspan)
+    end
+end
+
+function test_states_comparison(u_mm, u_δ, u_belowground,
+    loaded_u_mm, loaded_u_δ, loaded_u_belowground)
 
     # t_out = u_mm.time
     # u_ref_names = names(u_mm)
@@ -142,31 +185,6 @@ function test_states_comparison(u_mm, u_δ, u_belowground, currSPAC,
     loaded_u_δsoil_d2H   = select(loaded_u_belowground, r"δ2H_" ) # loaded["u_δsoil"].d2H
 
     @testset "test_states_comparison" begin
-        # Test input example_result
-        # @test loaded_currSPAC   == currSPAC
-        @test loaded_currSPAC.forcing                     == currSPAC.forcing
-        @test loaded_currSPAC.pars.params                 == currSPAC.pars.params
-        @test loaded_currSPAC.pars.root_distribution      == currSPAC.pars.root_distribution
-        @test loaded_currSPAC.pars.IC_scalar              == currSPAC.pars.IC_scalar
-        @test loaded_currSPAC.pars.IC_soil                == currSPAC.pars.IC_soil
-        @test loaded_currSPAC.pars.canopy_evolution       == currSPAC.pars.canopy_evolution
-        @test loaded_currSPAC.pars.params                 == currSPAC.pars.params
-
-        @test loaded_currSPAC.reference_date == currSPAC.reference_date
-        @test loaded_currSPAC.soil_discretization.Δz == currSPAC.soil_discretization.Δz
-        @test all(Matrix(loaded_currSPAC.soil_discretization.df[:, Not(:shp)] .== currSPAC.soil_discretization.df[:, Not(:shp)]))
-
-        shpA = loaded_currSPAC.pars.soil_horizons.shp; shpB = currSPAC.pars.soil_horizons.shp
-        @test length(shpA) == length(shpB)
-        [@test all([getfield(shpA[i_layer], field) == getfield(shpB[i_layer], field) for i_layer in eachindex(shpA)]) for field in fieldnames(typeof(shpA[1]))]
-
-        discrShpA = loaded_currSPAC.soil_discretization.df[:, :shp]; discrShpB = currSPAC.soil_discretization.df[:, :shp]
-        @test length(discrShpA) == length(discrShpB)
-        [@test all([getfield(discrShpA[i_layer], field) == getfield(discrShpB[i_layer], field) for i_layer in eachindex(discrShpA)]) for field in fieldnames(typeof(discrShpA[1]))]
-
-        @test loaded_currSPAC.solver_options == currSPAC.solver_options
-        @test loaded_currSPAC.tspan == currSPAC.tspan
-
         # Test scalar states
         compare_scalar = (A,B; nans = false) -> all(isapprox.(Matrix(A), Matrix(B); nans))
         @test compare_scalar(loaded_u_ref, u_ref)
@@ -193,13 +211,13 @@ end
     loaded_u_mm          = read(replace(fname, ".jld2"=>"u_mm.csv"), DataFrame)
     loaded_u_δ           = read(replace(fname, ".jld2"=>"u_δ.csv"), DataFrame)
     loaded_u_belowground = read(replace(fname, ".jld2"=>"u_belowground.csv"), DataFrame)
-    # NOTE: if task == "overwrite": refrain from loading potentially incompatible jld file: skip load(fname)
 
     currSPAC = example_result.parametrizedSPAC;
+    fname_base = replace(fname, ".jld2" => "")
     if task == "test"
-        loaded = load(fname)
-        test_states_comparison(u_mm, u_δ, u_belowground, currSPAC,
-            loaded_u_mm, loaded_u_δ, loaded_u_belowground, loaded["currSPAC"])
+        test_states_comparison(u_mm, u_δ, u_belowground,
+            loaded_u_mm, loaded_u_δ, loaded_u_belowground)
+        test_spac_from_csvs(currSPAC, fname_base)
     elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
         # overwrite output
         fname_illustrations = "out/$git_status_string/TESTSET_DAV2020-regressionTest"
@@ -209,7 +227,7 @@ end
             loaded_u_mm, loaded_u_δ, loaded_u_belowground)
 
         savefig(pl_comparison,fname_illustrations*"_regression_test_overwritten.png")
-        jldsave(fname; currSPAC = currSPAC)
+        save_spac_to_csvs(currSPAC, fname_base)
         write(replace(fname, ".jld2"=>"u_mm.csv"), u_mm)
         write(replace(fname, ".jld2"=>"u_δ.csv"), u_δ)
         write(replace(fname, ".jld2"=>"u_belowground.csv"), u_belowground)

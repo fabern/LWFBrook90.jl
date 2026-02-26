@@ -1,5 +1,6 @@
 using LWFBrook90
 using SciMLBase
+using DiffEqBase
 using DataFrames
 using DataFramesMeta
 using Test: @testset, @test, @test_throws, @test_broken, @test_skip, @test_logs
@@ -8,7 +9,7 @@ using Random
 using Printf
 using Logging
 using Dates: today, DateTime, Date
-using JLD2: jldsave, load
+# JLD2 removed: SPAC reference data is now stored as CSV files (more robust to type changes)
 # using FileIO
 import FileIO
 
