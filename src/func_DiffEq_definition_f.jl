@@ -5,7 +5,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 """
 # function define_LWFB90_f()
     function f_LWFBrook90!(du,u,p,t)
-        # computes right hand side (du) of states: u_GWAT, u_SWATI
+        # computes right hand side (du) of states: u_GWAT, u_SWATI, u_PLHYD
 
         # NOTE: Within the function we can make use of:
         # t
@@ -57,6 +57,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # u_CC        = u.CC.MJm2
         # u_SNOWLQ    = u.SNOWLQ.mm
         u_SWATI     = u.SWATI.mm
+        u_PLPSI     = u.PLHYD.ψ
 
         LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, t)
 
