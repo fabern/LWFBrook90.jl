@@ -189,15 +189,15 @@ end
     u_mm, u_δ, u_belowground = get_some_states_to_compare(example_result);
 
     # test or overwrite
-    # fname = input_path*input_prefix
     fname = "../examples/DAV2020-full_u_sol_reference.jld2"
-    loaded = load(fname)
     loaded_u_mm          = read(replace(fname, ".jld2"=>"u_mm.csv"), DataFrame)
     loaded_u_δ           = read(replace(fname, ".jld2"=>"u_δ.csv"), DataFrame)
     loaded_u_belowground = read(replace(fname, ".jld2"=>"u_belowground.csv"), DataFrame)
+    # NOTE: if task == "overwrite": refrain from loading potentially incompatible jld file: skip load(fname)
 
     currSPAC = example_result.parametrizedSPAC;
     if task == "test"
+        loaded = load(fname)
         test_states_comparison(u_mm, u_δ, u_belowground, currSPAC,
             loaded_u_mm, loaded_u_δ, loaded_u_belowground, loaded["currSPAC"])
     elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
@@ -467,7 +467,6 @@ end
     df_simulatedFluxes = get_daily_soilFluxes(example_result3);
 
     # test or overwrite
-    # fname = input_path*input_prefix
     fname = "../examples/DAV2020-full-modified_fluxes_referencedf.csv"
     loadeddf = read(fname, DataFrame)
     if task == "test"
