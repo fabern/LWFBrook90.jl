@@ -35,8 +35,8 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             XYLEM  = u_Xyleminit_mm,
             TRANI  = u_TRANIinit_mmday,
             PLSTOR = u_Xyleminit_mm,
-            # Further structures for auxiliary plant and soil variables (θ,ψ,K) and accumulation variables
-            plaux  = zeros(1, 3),
+            PLHYD  = zeros(1, 3),
+            # Further structures for auxiliary soil variables (θ,ψ,K) and accumulation variables
             aux    = zeros(NLAYER, 3), # TODO: where to store θ, ψ and K(θ) ?
             accum  = zeros(N_accum_var,1))
 
@@ -50,13 +50,13 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             SNOW   = NamedTuple{name_states,      NTuple{3, Float64}}(u0_NamedTuple[:SNOW][:,:,1]),
             RWU    = NamedTuple{name_fluxes,      NTuple{3, Float64}}(u0_NamedTuple[:RWU]        ),
             XYLEM  = NamedTuple{name_states,      NTuple{3, Float64}}(u0_NamedTuple[:XYLEM]      ),
-            PLSTOR = NamedTuple{name_states,      NTuple{3, Float64}}(u0_NamedTuple[:PLSTOR]    ),
+            PLSTOR = NamedTuple{name_states,      NTuple{3, Float64}}(u0_NamedTuple[:PLSTOR]),
+            PLHYD  = NamedTuple{name_aux,         NTuple{3, Float64}}(u0_NamedTuple[:PLHYD]),
             CC     = NamedTuple{(:MJm2,),         NTuple{1, Float64}}(u0_NamedTuple[:CC][:,:,1]),
             SNOWLQ = NamedTuple{name_states[[1]], NTuple{1, Float64}}(u0_NamedTuple[:SNOWLQ][:,:,1]),
 
             TRANI = NamedTuple{name_fluxes, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:TRANI][:,:,1])...)),
 
-            plaux = NamedTuple{name_aux,   NTuple{3, Float64}}(u0_NamedTuple[:plaux]),
             aux   = NamedTuple{name_aux,   NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:aux])...)),
             accum = NamedTuple{name_accum, NTuple{35, Float64}}((0. for i in eachindex(name_accum))))
     else
@@ -69,13 +69,13 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             SNOW   = NamedTuple{name_states,      NTuple{1, Float64}}(u0_NamedTuple[:SNOW][:,:,1]),
             RWU    = NamedTuple{name_fluxes,      NTuple{1, Float64}}(u0_NamedTuple[:RWU]        ),
             XYLEM  = NamedTuple{name_states,      NTuple{1, Float64}}(u0_NamedTuple[:XYLEM]      ),
-            PLSTOR = NamedTuple{name_states,      NTuple{1, Float64}}(u0_NamedTuple[:PLSTOR]    ),
+            PLSTOR = NamedTuple{name_states,      NTuple{1, Float64}}(u0_NamedTuple[:PLSTOR]),
+            PLHYD  = NamedTuple{name_aux,         NTuple{3, Float64}}(u0_NamedTuple[:PLHYD]),
             CC     = NamedTuple{(:MJm2,),         NTuple{1, Float64}}(u0_NamedTuple[:CC][:,:,1]),
             SNOWLQ = NamedTuple{name_states[[1]], NTuple{1, Float64}}(u0_NamedTuple[:SNOWLQ][:,:,1]),
 
             TRANI = NamedTuple{name_fluxes, NTuple{1, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:TRANI][:,:,1])...)),
 
-            plaux = NamedTuple{name_aux,   NTuple{3, Float64}}(u0_NamedTuple[:plaux]),
             aux   = NamedTuple{name_aux, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:aux])...)),
             accum = NamedTuple{name_accum, NTuple{35, Float64}}((0. for i in eachindex(name_accum))))
     end
@@ -118,6 +118,7 @@ function init_LWFB90_u0!(;u0::ComponentArray, parametrizedSPAC, p_soil)
     u0.RWU.mmday   = 0
     u0.XYLEM.mm    = 5
     u0.PLSTOR.mm   = p_VSTORAGE
+    u0.PLHYD       = [1.0, soil_PSIM_init[1], p_STORAGEK] # θ, ψ, K
     u0.TRANI.mmday = zeros(nrow(parametrizedSPAC.soil_discretization.df))
     if (N_iso == 2)
         u0.RWU.d18O   = soil_d18O_init[1] # start out with same concentration as in first soil layer
@@ -133,8 +134,7 @@ function init_LWFB90_u0!(;u0::ComponentArray, parametrizedSPAC, p_soil)
     # # TODO(bernhard): if species-specific uptakes add here a Xylem value *PER SPECIES*
     # # TODO(bernhard): if species-specific uptakes add here an uptake vector *PER SPECIES*
 
-    # B) Define initial conditions of auxiliary plant and soil states
-    u0.plaux = [1.0, soil_PSIM_init[1], p_STORAGEK] # θ, ψ, K
+    # B) Define initial conditions of auxiliary states
     u0.aux # TODO: θ, ψ, K
 
     # C) Define initial conditions of accumulation variables

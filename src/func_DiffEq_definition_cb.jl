@@ -127,11 +127,11 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
 
             # Pre-allocated caches to save memory allocations
             @unpack du_GWFL, du_SEEP, du_NTFLI, aux_du_VRFLI, aux_du_DSFLI, aux_du_INFLI, u_aux_WETNES = integrator.p;
-            @unpack u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,u_aux_PLPSI,p_fu_KK,
+            @unpack u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
                 aux_du_VRFLI_1st_approx, aux_du_BYFLI, p_fu_BYFRAC,
                 p_fu_SRFL, p_fu_SLFL, DPSIDW = integrator.p;
             @unpack cache1, cache2 = integrator.p # cache vectors of length N
-
+    
     # integrator.p.aux_du_TRANI
     # Parse states
     u_INTS     = integrator.u.INTS.mm
@@ -140,6 +140,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     u_CC       = integrator.u.CC.MJm2
     u_SNOWLQ   = integrator.u.SNOWLQ.mm
     u_SWATI    = integrator.u.SWATI.mm
+    u_PLPSI    = integrator.u.PLHYD.ψ
 
     LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, integrator.t)
 
@@ -199,7 +200,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
                     # for SWPE:
                     p_fu_RSS,
                     # for TBYLAYER:
-                    p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, u_aux_PLPSI[1], p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
+                    p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, u_PLPSI, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
                     # 0.000012 seconds (28 allocations: 1.938 KiB)
     # Combine day and night rates to average daily rate
     (p_fu_PTRAN, p_fu_GEVP, p_fu_PINT, p_fu_GIVP, aux_du_TRANI[:], aux_du_PLFL[1]) =
@@ -227,7 +228,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
                # for INTER24 (snow + rain)
                p_DURATN, p_MONTHN(integrator.t),
                #
-               u_SNOW, p_fu_PTRAN, NLAYER, aux_du_TRANI, aux_du_PLFL, p_fu_GIVP, p_fu_GEVP,
+               u_SNOW, p_fu_PTRAN, NLAYER, aux_du_TRANI, aux_du_PLFL[1], p_fu_GIVP, p_fu_GEVP,
                # for SNOWPACK
                u_CC, u_SNOWLQ, p_fu_PSNVP, p_fu_SNOEN, p_MAXLQF, p_GRDMLT,
                # Constants
@@ -370,13 +371,19 @@ function updatePredawnFlux_PLSTOR!(integrator)
 
             # Pre-allocated caches to save memory allocations
             @unpack du_GWFL, du_SEEP, du_NTFLI, aux_du_VRFLI, aux_du_DSFLI, aux_du_INFLI, u_aux_WETNES = integrator.p;
-            @unpack u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,u_aux_PLPSI,p_fu_KK,
+            @unpack u_aux_WETNES,u_aux_PSIM,u_aux_PSITI,u_aux_θ,u_aux_θ_tminus1,p_fu_KK,
                 aux_du_VRFLI_1st_approx, aux_du_BYFLI, p_fu_BYFRAC,
                 p_fu_SRFL, p_fu_SLFL, DPSIDW = integrator.p;
             @unpack cache1, cache2 = integrator.p # cache vectors of length N
-
+    println("Time in predawn callback: ", integrator.t)
     # Parse states
+    u_INTS     = integrator.u.INTS.mm
+    u_INTR     = integrator.u.INTR.mm
+    u_SNOW     = integrator.u.SNOW.mm
+    u_CC       = integrator.u.CC.MJm2
+    u_SNOWLQ   = integrator.u.SNOWLQ.mm
     u_SWATI    = integrator.u.SWATI.mm
+    u_PLPSI    = integrator.u.PLHYD.ψ
 
     LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, integrator.t)
 
@@ -432,18 +439,18 @@ function updatePredawnFlux_PLSTOR!(integrator)
                     # for SWPE:
                     p_fu_RSS,
                     # for TBYLAYER:
-                    p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, u_aux_PLPSI, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
+                    p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, u_PLPSI, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
     
     # use nighttime rates to compute predawn fluxes
     aux_du_PLFL = p_fu_PLFL[2]
 
     aux_du_PLPSI = aux_du_PLFL / p_CAPACITANCE
-    u_aux_PLPSI = integrator.u.plaux.ψ + aux_du_PLPSI
+    u_aux_PLPSI = u_PLPSI + aux_du_PLPSI
 
     # update plant storage values
     integrator.du.PLSTOR.mm = aux_du_PLFL
-    integrator.du.plaux.ψ = aux_du_PLPSI
-    integrator.du.plaux.θ = aux_du_PLFL / p_VSTORAGE
+    integrator.du.PLHYD.ψ = aux_du_PLPSI
+    integrator.du.PLHYD.θ = aux_du_PLFL / p_VSTORAGE
 
     if compute_intermediate_quantities
         integrator.u.accum.cum_pd_plpsi = u_aux_PLPSI
