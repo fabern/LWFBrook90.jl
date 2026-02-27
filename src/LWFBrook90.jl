@@ -1,6 +1,7 @@
 module LWFBrook90
 
 using SciMLBase       # instead of loading the full DifferentialEquations
+using DiffEqBase      # instead of loading the full DifferentialEquations
 using OrdinaryDiffEq  # instead of loading the full DifferentialEquations
 using DiffEqCallbacks # instead of loading the full DifferentialEquations
 using ProgressLogging
