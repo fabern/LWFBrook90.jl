@@ -1,6 +1,5 @@
 using LWFBrook90
 using SciMLBase
-using DiffEqBase
 using DataFrames
 using DataFramesMeta
 using Test: @testset, @test, @test_throws, @test_broken, @test_skip, @test_logs
