@@ -137,7 +137,7 @@ function save_spac_to_csvs(currSPAC, fname_base)
         reference_date   = [string(currSPAC.reference_date)],
         tspan_start      = [first(currSPAC.tspan)],
         tspan_end        = [last(currSPAC.tspan)],
-        root_distribution = [(beta = 0.97, z_rootMax_m = nothing)],
+        root_distribution = [string(currSPAC.pars.root_distribution)],
         IC_soil          = [currSPAC.pars.IC_soil],
     ))
     # NamedTuples of scalar parameters → single-row DataFrames
