@@ -124,39 +124,67 @@ function spac_structs_to_df(arr)
     DataFrame([field => [getfield(s, field) for s in arr] for field in fields]...)
 end
 
-# Save the SPAC fields that are not trivially redundant with the input CSV files to CSVs.
-# (forcing, params, IC, canopy_evolution, root_distribution are all read verbatim from the
-# input CSVs and therefore do not need a separate reference file.)
+# Helper: convert a flat NamedTuple of scalars to a single-row DataFrame.
+function nt_to_df(nt::NamedTuple)
+    DataFrame([k => [v] for (k, v) in pairs(nt)]...)
+end
+
+# Save all SPAC fields (except forcing) to CSV files for regression testing.
+# Using CSV removes the JLD2 brittleness when type definitions change.
 function save_spac_to_csvs(currSPAC, fname_base)
+    # Scalars and strings
+    write(fname_base * "_spac_scalars.csv", DataFrame(
+        reference_date   = [string(currSPAC.reference_date)],
+        tspan_start      = [first(currSPAC.tspan)],
+        tspan_end        = [last(currSPAC.tspan)],
+        root_distribution = [(beta = 0.97, z_rootMax_m = nothing)],
+        IC_soil          = [currSPAC.pars.IC_soil],
+    ))
+    # NamedTuples of scalar parameters → single-row DataFrames
+    write(fname_base * "_spac_params.csv",         nt_to_df(currSPAC.pars.params))
+    write(fname_base * "_spac_solver_options.csv", nt_to_df(currSPAC.solver_options))
+    # Fields that are already DataFrames → write directly
+    write(fname_base * "_spac_IC_scalar.csv",        currSPAC.pars.IC_scalar)
+    write(fname_base * "_spac_canopy_evolution.csv", currSPAC.pars.canopy_evolution)
+    # Soil discretization
     write(fname_base * "_spac_soil_discretization.csv",
         currSPAC.soil_discretization.df[:, Not(:shp)])
+    write(fname_base * "_spac_Δz.csv", DataFrame(Δz = currSPAC.soil_discretization.Δz))
     write(fname_base * "_spac_soil_horizons_shp.csv",
         spac_structs_to_df(currSPAC.pars.soil_horizons.shp))
     write(fname_base * "_spac_soil_discretization_shp.csv",
         spac_structs_to_df(currSPAC.soil_discretization.df[:, :shp]))
-    write(fname_base * "_spac_scalars.csv", DataFrame(
-        reference_date = [string(currSPAC.reference_date)],
-        tspan_start    = [first(currSPAC.tspan)],
-        tspan_end      = [last(currSPAC.tspan)],
-    ))
 end
 
-# Test SPAC fields against CSV reference files (robust to type-definition changes).
+# Test all SPAC fields against CSV reference files (robust to type-definition changes).
 function test_spac_from_csvs(currSPAC, fname_base)
     @testset "test_spac_comparison" begin
+        # Scalars and strings
+        loaded_scalars = read(fname_base * "_spac_scalars.csv", DataFrame)
+        @test loaded_scalars.reference_date[1]    == string(currSPAC.reference_date)
+        @test loaded_scalars.tspan_start[1]       == first(currSPAC.tspan)
+        @test loaded_scalars.tspan_end[1]         == last(currSPAC.tspan)
+        @test loaded_scalars.root_distribution[1] == string(currSPAC.pars.root_distribution) # e.g. string((beta = 0.97, z_rootMax_m = nothing))
+        @test loaded_scalars.IC_soil[1]           == currSPAC.pars.IC_soil
+
+        # NamedTuples of scalar parameters
+        @test read(fname_base * "_spac_params.csv",         DataFrame) == nt_to_df(currSPAC.pars.params)
+        @test read(fname_base * "_spac_solver_options.csv", DataFrame) == nt_to_df(currSPAC.solver_options)
+
+        # DataFrame fields
+        @test read(fname_base * "_spac_IC_scalar.csv",        DataFrame) == currSPAC.pars.IC_scalar
+        @test read(fname_base * "_spac_canopy_evolution.csv", DataFrame) == currSPAC.pars.canopy_evolution
+
+        # Soil discretization
         @test read(fname_base * "_spac_soil_discretization.csv", DataFrame) ==
               currSPAC.soil_discretization.df[:, Not(:shp)]
+        @test read(fname_base * "_spac_Δz.csv", DataFrame).Δz == currSPAC.soil_discretization.Δz
 
         loaded_shp = read(fname_base * "_spac_soil_horizons_shp.csv", DataFrame)
         @test loaded_shp == spac_structs_to_df(currSPAC.pars.soil_horizons.shp)
 
         loaded_discr_shp = read(fname_base * "_spac_soil_discretization_shp.csv", DataFrame)
         @test loaded_discr_shp == spac_structs_to_df(currSPAC.soil_discretization.df[:, :shp])
-
-        loaded_scalars = read(fname_base * "_spac_scalars.csv", DataFrame)
-        @test loaded_scalars.reference_date[1] == currSPAC.reference_date
-        @test loaded_scalars.tspan_start[1]    == first(currSPAC.tspan)
-        @test loaded_scalars.tspan_end[1]      == last(currSPAC.tspan)
     end
 end
 
