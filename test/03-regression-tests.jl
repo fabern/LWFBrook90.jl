@@ -161,7 +161,7 @@ function test_spac_from_csvs(currSPAC, fname_base)
     @testset "test_spac_comparison" begin
         # Scalars and strings
         loaded_scalars = read(fname_base * "_spac_scalars.csv", DataFrame)
-        @test loaded_scalars.reference_date[1]    == string(currSPAC.reference_date)
+        @test loaded_scalars.reference_date[1]    == currSPAC.reference_date
         @test loaded_scalars.tspan_start[1]       == first(currSPAC.tspan)
         @test loaded_scalars.tspan_end[1]         == last(currSPAC.tspan)
         @test loaded_scalars.root_distribution[1] == string(currSPAC.pars.root_distribution) # e.g. string((beta = 0.97, z_rootMax_m = nothing))
