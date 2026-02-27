@@ -643,8 +643,8 @@ Take meteorologic parameters in `input_meteoveg` and `input_meteoiso` and genera
 """
 function interpolate_meteo(;
     meteo_forcing::DataFrame,
-    meteo_iso_forcing::Union{DataFrame,Nothing},
-    irrig_iso_forcing::Union{DataFrame,Nothing})
+    meteo_iso_forcing::Union{DataFrame,Nothing}, # TODO: do we really want to output nothing? Or simply NaN? (Prevents Union type: Union{Nothing, FLoat64})
+    irrig_iso_forcing::Union{DataFrame,Nothing}) # TODO: do we really want to output nothing? Or simply NaN? (Prevents Union type: Union{Nothing, FLoat64})
 
     # @assert meteo_iso_forcing.days # NOTE: DataFrame `meteo_iso_forcing` can be on a different spacing
 
