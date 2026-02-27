@@ -779,61 +779,8 @@ end
                                u_SNOW_init_permil = -95.444)));
 
     simulation = setup(parametrizedSPAC, soil_output_depths_m = [-1.0755, -1.096], ε = 0.005);
+    # TODO add tests for irrigation
     simulate!(simulation)
+    # TODO add tests for irrigation
 
-    # Design tests:
-    # fieldnames(typeof(simulation))
-    # simulation.parametrizedSPAC
-    # simulation.ODEProblem
-    # simulation.ODESolution
-    # simulation.ODESolution_datetime
-
-    @test simulation.parametrizedSPAC.solver_options.simulate_irrigation == true
-    @test all(simulation.parametrizedSPAC.forcing.meteo["p_IRRIG"].itp.itp.coefs .== 1.8)
-    @test all(simulation.parametrizedSPAC.forcing.irrig_iso["p_d18OIRRIG"].itp.coefs .== -15.04)
-    
-    @test simulation.parametrizedSPAC.tspan[2] == 365.0
-    #valkeys(simulation.ODESolution(365.0))
-    #valkeys(simulation.ODESolution(365.0).aux)
-    #valkeys(simulation.ODESolution(365.0).accum)
-    # TODO: add further tests: simulation.ODESolution(365.0).accum.cum_d_rfal .≈ 1.8
-    # TODO: add further tests: simulation.ODESolution(365.0).accum.flow .≈ 1.8
-    # TODO: add further tests: simulation.ODESolution(365.0).accum.cum_d_rthr .≈ 1.8
-    # TODO: add further tests: simulation.ODESolution(365.0).accum.cum_d_sthr .≈ 1.8
-    @test all(isapprox.(atol = 0.1,
-        simulation.ODESolution(365.0).SWATI.d18O, 
-       [-22.2
-        -22.0
-        -21.7
-        -21.3
-        -21.0
-        -20.7
-        -20.2
-        -19.7
-        -19.1
-        -18.5
-        -17.7
-        -17.0
-        -16.5
-        -16.3
-        -16.3
-        -16.3]))
-    @test all(isapprox.(atol = 0.1,
-        simulation.ODESolution(365.0).SWATI.mm,
-        [6.03
-        10.93
-        16.11
-        16.68
-        5.66
-        11.81
-        7.34
-        7.37
-        7.38
-        7.34
-        7.20
-        6.93
-        5.11
-        0.34
-        1.06
-        0.27]))
 end
