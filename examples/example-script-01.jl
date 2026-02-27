@@ -123,7 +123,7 @@ propertynames(simulation_mod.ODESolution)
 # simulation_mod.ODESolution.t
 # simulation_mod.ODESolution.u
 # simulation_mod.ODESolution.retcode
-# simulation_mod.ODESolution.destats
+# simulation_mod.ODESolution.stats
 
 # Note that it is possible to use R Code from within Julia, e.g ggplot: https://stackoverflow.com/a/70073193/3915004
 

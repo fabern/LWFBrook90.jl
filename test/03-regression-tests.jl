@@ -46,9 +46,9 @@ function get_some_states_to_compare(example_result)
         reduce(hcat, [example_result.ODESolution(t_days).SNOWLQ.mm for t_days = t_out]),
         reduce(hcat, [example_result.ODESolution(t_days).RWU.mmday for t_days = t_out]),
         reduce(hcat, [example_result.ODESolution(t_days).XYLEM.mm  for t_days = t_out]),
-        # reduce(hcat, [example_result.ODESolution[t_idx].TRANI.mmday for t_idx = eachindex(example_result.ODESolution)]),
-        # reduce(hcat, [example_result.ODESolution[t_idx].aux.θ       for t_idx = eachindex(example_result.ODESolution)]),
-        # reduce(hcat, [example_result.ODESolution[t_idx].accum       for t_idx = eachindex(example_result.ODESolution)])
+        # reduce(hcat, [example_result.ODESolution.u[t_idx].TRANI.mmday for t_idx = eachindex(example_result.ODESolution)]),
+        # reduce(hcat, [example_result.ODESolution.u[t_idx].aux.θ       for t_idx = eachindex(example_result.ODESolution)]),
+        # reduce(hcat, [example_result.ODESolution.u[t_idx].accum       for t_idx = eachindex(example_result.ODESolution)])
     )
     u_mm = hcat(DataFrame(time = t_out), DataFrame(permutedims(mat_aboveground), df_aboveground_names[:]))
     u_δ     = innerjoin(

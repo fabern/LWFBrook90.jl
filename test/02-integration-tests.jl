@@ -267,7 +267,7 @@ function plot_Hammel_Dense(sim, ref, hyd, depth_to_read_out_mm, title; subtitle 
     ODE_method = replace(String(Symbol(sim.ODEsolution.alg)), r"(.*?)(\(|{).*"=>s"\1")
     final_title = title
     final_subtitle = Printf.@sprintf("%d time steps with method: %s %s",
-            sim.ODEsolution.destats.naccept,
+            sim.ODEsolution.stats.naccept,
             ODE_method,
             ifelse(subtitle=="","","\n"*subtitle))
 

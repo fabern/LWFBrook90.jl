@@ -503,7 +503,7 @@ function intern___get_SWATI_derivatives(simulation::DiscretizedSPAC; days_to_rea
     p_soil = solution.prob.p.p_soil
     NLAYER = p_soil.NLAYER
     if isnothing(days_to_read_out_d)
-        u_SWATI = reduce(hcat, [solution[t_idx].SWATI.mm  for t_idx = eachindex(solution)])
+        u_SWATI = reduce(hcat, [solution.u[t_idx].SWATI.mm  for t_idx = eachindex(solution)])
     else
         u_SWATI = reduce(hcat, [solution(t_days).SWATI.mm for t_days = days_to_read_out_d])
     end

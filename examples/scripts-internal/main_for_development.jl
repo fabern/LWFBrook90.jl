@@ -213,7 +213,7 @@ function run_main_with_isotopes(;input_prefix, input_path)
     # # simulation.ODESolution.t
     # # simulation.ODESolution.u
     # # simulation.ODESolution.retcode
-    # # simulation.ODESolution.destats
+    # # simulation.ODESolution.stats
     # ####################
 
 
@@ -277,8 +277,8 @@ function run_main_with_isotopes(;input_prefix, input_path)
         # reduce(hcat, [simulation.ODESolution[t].x[2][:,1] for t = eachindex(simulation.ODESolution)])
         # row_RWU_d18O = reduce(hcat, [simulation.ODESolution[t].x[simulation.ODESolution.prob.p.row_idx_scalars.RWU][:,simulation.ODESolution.prob.p.col_idx_d18O] for t = eachindex(simulation.ODESolution)])
         # row_XYL_d18O = reduce(hcat, [simulation.ODESolution[t].x[simulation.ODESolution.prob.p.row_idx_scalars.XYLEM][:,simulation.ODESolution.prob.p.col_idx_d18O] for t = eachindex(simulation.ODESolution)])
-        row_RWU_d18O  = reduce(hcat, [simulation.ODESolution[t_idx].RWU.d18O   for t_idx = eachindex(simulation.ODESolution)])
-        row_XYL_d18O  = reduce(hcat, [simulation.ODESolution[t_idx].XYLEM.d18O for t_idx = eachindex(simulation.ODESolution)])
+        row_RWU_d18O  = reduce(hcat, [simulation.ODESolution.u[t_idx].RWU.d18O   for t_idx = eachindex(simulation.ODESolution)])
+        row_XYL_d18O  = reduce(hcat, [simulation.ODESolution.u[t_idx].XYLEM.d18O for t_idx = eachindex(simulation.ODESolution)])
         plot([transpose(row_RWU_d18O) transpose(row_XYL_d18O)], labels = ["δ_RWU" "δ_XylemV"])
     end
 
@@ -380,8 +380,8 @@ function run_main_with_isotopes(;input_prefix, input_path)
         savefig(fname*"_plot-θ-ψ-δ.png")
     end
 
-    # BALERD_SWAT  = [simulation.ODESolution[idx].accum.BALERD_SWAT for idx in eachindex(simulation.ODESolution)]
-    # BALERD_total = [simulation.ODESolution[idx].accum.BALERD_total for idx in eachindex(simulation.ODESolution)]
+    # BALERD_SWAT  = [simulation.ODESolution.u[idx].accum.BALERD_SWAT for idx in eachindex(simulation.ODESolution)]
+    # BALERD_total = [simulation.ODESolution.u[idx].accum.BALERD_total for idx in eachindex(simulation.ODESolution)]
 
     # plot(simulation.ODESolution_datetime,
     #             [BALERD_SWAT BALERD_total],
