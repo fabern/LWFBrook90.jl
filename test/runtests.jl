@@ -8,8 +8,6 @@ using Random
 using Printf
 using Logging
 using Dates: today, DateTime, Date
-# JLD2 removed: SPAC reference data is now stored as CSV files (more robust to type changes)
-# using FileIO
 import FileIO
 
 # A flag that determines if tests are run on a CI system
