@@ -58,7 +58,6 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # u_CC        = u.CC.MJm2
         # u_SNOWLQ    = u.SNOWLQ.mm
         u_SWATI     = u.SWATI.mm
-        u_PLPSI     = u.PLHYD.ψ
 
         LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, t)
 
