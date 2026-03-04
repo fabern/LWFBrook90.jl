@@ -587,7 +587,7 @@ function MSBITERATE!(
                     #
                     p_DRAIN, p_DTP, t, p_DTIMAX,
                     # for INFLOW:
-                    p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP,
+                    p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_PLRFI, aux_du_SLVP,
                     # for FDPSIDW:
                     u_aux_WETNES,
                     # for ITER:
@@ -656,7 +656,7 @@ function MSBITERATE!(
     # net inflow to each layer including E and T withdrawal adjusted for interception
     # aux_du_VRFLI[:], aux_du_INFLI[:], aux_du_BYFLI[:] =
     LWFBrook90.WAT.INFLOW!(aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, # modified in place
-                            NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL[1], aux_du_DSFLI, aux_du_TRANI,
+                            NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL[1], aux_du_DSFLI, aux_du_TRANI, aux_du_PLRFI,
                             aux_du_SLVP, p_soil.p_SWATMAX, u_SWATI,
                             aux_du_VRFLI_1st_approx)
 
@@ -683,7 +683,7 @@ function MSBITERATE!(
             DTI = DTINEW
             # aux_du_VRFLI[:], aux_du_INFLI[:], aux_du_BYFLI[:] =
             LWFBrook90.WAT.INFLOW!(aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, # modified in place
-                                    NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL[1], aux_du_DSFLI, aux_du_TRANI,
+                                    NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL[1], aux_du_DSFLI, aux_du_TRANI, aux_du_PLRFI,
                                     aux_du_SLVP, p_soil.p_SWATMAX, u_SWATI,
                                     aux_du_VRFLI_1st_approx)
         end
@@ -692,9 +692,9 @@ function MSBITERATE!(
     # Compute net flows du_NTFLI based on corrected flows
     for i = NLAYER:-1:1
         if (i == 1)
-            du_NTFLI[i] =                     aux_du_INFLI[i] - aux_du_VRFLI[i] - aux_du_DSFLI[i] - aux_du_TRANI[i] - aux_du_SLVP
+            du_NTFLI[i] =                     aux_du_INFLI[i] - aux_du_VRFLI[i] - aux_du_DSFLI[i] - aux_du_TRANI[i] - aux_du_PLRFI[i] - aux_du_SLVP
         elseif (i > 1)
-            du_NTFLI[i] = aux_du_VRFLI[i-1] + aux_du_INFLI[i] - aux_du_VRFLI[i] - aux_du_DSFLI[i] - aux_du_TRANI[i]
+            du_NTFLI[i] = aux_du_VRFLI[i-1] + aux_du_INFLI[i] - aux_du_VRFLI[i] - aux_du_DSFLI[i] - aux_du_TRANI[i] - aux_du_PLRFI[i]
         else
             error("Unexpected value of i.")
         end

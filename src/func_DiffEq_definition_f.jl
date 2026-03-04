@@ -21,7 +21,8 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
             # FOR MSBITERATE:
             p_QLAYER, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC, p_IMPERV,
             p_LENGTH_SLOPE, p_DSLOPE, p_RHOWG, p_DPSIMAX, #TODO(bernhard) p_RHOWG is a global constant
-            p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX, p_GSC, p_GSP, p_BYPAR = p;
+            p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX, p_GSC, p_GSP, p_BYPAR,
+            p_CAPACITANCE, p_VSTORAGE = p;
 
         ## B) time dependent parameters
         @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC, p_IRRIG,
@@ -39,7 +40,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         #  - snowpack temperature, potential snow evaporation and soil evaporation resistance depending on u_SNOW
 
         # These were computed in the callback and are kept constant in between two callbacks.
-        @unpack p_fu_RNET, aux_du_SMLT, aux_du_SLVP, aux_du_TRANI = p
+        @unpack p_fu_RNET, aux_du_SMLT, aux_du_SLVP, aux_du_TRANI, aux_du_PLRFI = p
 
         # Pre-allocated caches to save memory allocations
         @unpack du_GWFL, du_SEEP, du_NTFLI, aux_du_VRFLI, aux_du_DSFLI, aux_du_INFLI, u_aux_WETNES = p;
@@ -57,7 +58,6 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         # u_CC        = u.CC.MJm2
         # u_SNOWLQ    = u.SNOWLQ.mm
         u_SWATI     = u.SWATI.mm
-        u_PLPSI     = u.PLHYD.ψ
 
         LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, t)
 
@@ -108,7 +108,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
                     #
                     p_DRAIN, p_DTP, t, p_DTIMAX,
                     # for INFLOW:
-                    p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP[1],
+                    p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_PLRFI, aux_du_SLVP[1],
                     # for FDPSIDW:
                     u_aux_WETNES,
                     # for ITER:
@@ -116,6 +116,12 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
         # groundwater flow and seepage loss
         du_GWFL[1], du_SEEP[1] = LWFBrook90.WAT.GWATER(u_GWAT, p_GSC, p_GSP, aux_du_VRFLI[p_soil.NLAYER]) # [1] so that this doesn't allocate
+
+        # water movement through plant
+        #= du.PLSTOR.mm = -1 * aux_du_PLFL[1]
+        du.PLHYD.ψ = du.PLSTOR.mm / p_CAPACITANCE
+        du.PLHYD.θ = du.PLSTOR.mm / p_VSTORAGE
+        du.PLHYD.K = 0 # assume constant plant hydraulic conductivity for now =#
 
         # Transport flow (heat, solutes, isotopes, ...)
         # If we compute scalar transport as ODEs, the du's need to be computed here in the f-function

@@ -21,7 +21,7 @@ module EVP # Interception and transpiration
 
 using ..CONSTANTS: p_RHOWG, p_PI # https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
 
-export PLNTRES, TBYLAYER, INTER, INTER24
+export PLNTRES, TBYLAYER, PLRFBYLAYER, INTER, INTER24
 
 """
     PLNTRES()
@@ -422,6 +422,85 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
     return (ATR, ATRANI, PLFL)
 end
 
+"""
+    PLRFBYLAYER()
+
+    Allocate root water uptake for plant storage refill among soil layers.
+    Code modified from TBYLAYER for PLRF
+"""
+
+function PLRFBYLAYER(p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, u_PLPSI, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
+    
+    FLAG = zeros(NLAYER)
+    for i = 1:NLAYER
+        if p_fT_RROOTI[i] > 1E+15
+            # This layer has no roots
+            FLAG[i] = 1
+        elseif (NOOUTF && u_aux_PSITI[i] / 1000. <= p_PSICR)
+            # This layer has no outflow from roots to soil
+            FLAG[i] = 1
+        else
+            # This layer has roots connected to soil
+            FLAG[i]= 0
+        end
+    end
+
+    # top of loop for recalculation of root water uptake if more layers get flagged
+    RI = zeros(NLAYER)
+    RWU = zeros(NLAYER)
+    while true
+        # start loop with NEGFLAG = 0
+        NEGFLAG = false
+
+        ###
+        SUM = 0
+        for i = 1:NLAYER
+            if (FLAG[i] == 0)
+                RI[i] = p_fT_RROOTI[i] + p_fT_ALPHA[i] / p_fu_KK[i]
+                SUM = SUM + 1.0 / RI[i]
+            else
+                RWU[i] = 0.0
+            end
+        end
+
+        if SUM < 1E-20
+            break
+        end
+
+        # distribute total plant refill to layers
+        for  i = 1:NLAYER
+            if FLAG[i] == 1
+                RWU[i] = 0
+            else
+                RWU[i] = ((u_aux_PSITI[i] - u_PLPSI) / 1000 - 0.5 * p_RHOWG * p_fu_DISPC[1]) / (RI[i] + (1/p_STORAGEK))
+
+                # check for any negative root water uptake
+                if RWU[i] < -0.000001
+                    NEGFLAG = true
+                end
+            end
+        end
+
+        ###
+        if NOOUTF && NEGFLAG
+            # find layer with most negative root water uptake and omit it
+            IDEL = 0
+            RWUMIN = 0
+            for i = 1:NLAYER
+                if (RWU[i] < RWUMIN)
+                    RWUMIN = RWU[i]
+                    IDEL = i
+                end
+            end
+            FLAG[IDEL] = 1
+        # repeat main loop with flagged layers excluded
+        else
+            break
+        end
+    end
+
+    return (RWU)
+end
 
 """
     INTER(p_fT_RFAL, p_fu_PINT, p_fu_LAI, p_fu_SAI, p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS, p_DTP, u_INTR)
