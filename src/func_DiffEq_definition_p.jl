@@ -534,6 +534,7 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
 
         du_GWFL        = [NaN],
         du_SEEP        = [NaN],
+        aux_du_PLRFI   = fill(NaN, NLAYER),
         aux_du_TRANI   = fill(NaN, NLAYER), # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto
         du_NTFLI       = fill(NaN, NLAYER), # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto
         aux_du_VRFLI   = fill(NaN, NLAYER), # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto

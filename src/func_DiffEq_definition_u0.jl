@@ -10,7 +10,7 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
     name_accum     = (:cum_d_prec, :cum_d_rfal, :cum_d_sfal, :cum_d_rint,  :cum_d_sint, :cum_d_rsno,
                     :cum_d_rnet, :cum_d_smlt, :evap, :cum_d_tran, :cum_d_irvp, :cum_d_isvp,
                     :cum_d_slvp, :cum_d_snvp, :cum_d_pint, :cum_d_ptran, :cum_d_pslvp, 
-                    :cum_d_plfl, :cum_pd_plpsi, :cum_md_plpsi,
+                    :cum_d_plfl, :cum_d_plrf, :cum_pd_plpsi, :cum_md_plpsi,
                     :flow, :seep, :srfl, :slfl, :byfl, :dsfl, :gwfl, :vrfln,
                     :cum_d_rthr, :cum_d_sthr, :cum_d_irrig,
                     :StorageSWAT,  :StorageWATER,  :BALERD_SWAT,  :BALERD_total)
@@ -58,7 +58,7 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             TRANI = NamedTuple{name_fluxes, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:TRANI][:,:,1])...)),
 
             aux   = NamedTuple{name_aux,   NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:aux])...)),
-            accum = NamedTuple{name_accum, NTuple{35, Float64}}((0. for i in eachindex(name_accum))))
+            accum = NamedTuple{name_accum, NTuple{N_accum_var, Float64}}((0. for i in eachindex(name_accum))))
     else
         # TODO(bernhard): check if this is bad programming if NTuple{1, ...} depends on runtime variable simulate_isotopes...
         u0 = ComponentArray(
@@ -77,7 +77,7 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             TRANI = NamedTuple{name_fluxes, NTuple{1, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:TRANI][:,:,1])...)),
 
             aux   = NamedTuple{name_aux, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:aux])...)),
-            accum = NamedTuple{name_accum, NTuple{35, Float64}}((0. for i in eachindex(name_accum))))
+            accum = NamedTuple{name_accum, NTuple{N_accum_var, Float64}}((0. for i in eachindex(name_accum))))
     end
 
     # # Give ArrayPartition as u0 to DiffEq.jl
@@ -96,6 +96,7 @@ function init_LWFB90_u0!(;u0::ComponentArray, parametrizedSPAC, p_soil)
     soil_d18O_init = parametrizedSPAC.soil_discretization.df.u_delta18O_init_permil
     soil_d2H_init  = parametrizedSPAC.soil_discretization.df.u_delta2H_init_permil
     
+    p_CAPACITANCE = parametrizedSPAC.pars.params.CAPACITANCE
     p_VSTORAGE  = parametrizedSPAC.pars.params.VSTORAGE
     p_STORAGEK  = parametrizedSPAC.pars.params.STORAGEK
 
@@ -117,7 +118,7 @@ function init_LWFB90_u0!(;u0::ComponentArray, parametrizedSPAC, p_soil)
 
     u0.RWU.mmday   = 0
     u0.XYLEM.mm    = 5
-    u0.PLSTOR.mm   = p_VSTORAGE
+    u0.PLSTOR.mm   = p_VSTORAGE + soil_PSIM_init[1] / 1000 * p_CAPACITANCE # reduce initial plant storage by initial water potential
     u0.PLHYD       = [1.0, soil_PSIM_init[1], p_STORAGEK] # θ, ψ, K
     u0.TRANI.mmday = zeros(nrow(parametrizedSPAC.soil_discretization.df))
     if (N_iso == 2)

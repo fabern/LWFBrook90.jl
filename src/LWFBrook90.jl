@@ -1,9 +1,9 @@
 module LWFBrook90
 
 using SciMLBase       # instead of loading the full DifferentialEquations
+using DiffEqBase      # instead of loading the full DifferentialEquations
 using OrdinaryDiffEq  # instead of loading the full DifferentialEquations
 using DiffEqCallbacks # instead of loading the full DifferentialEquations
-using DiffEqBase # remove later
 using ProgressLogging
 using RecipesBase, PlotUtils, Measures
 using LinearAlgebra
@@ -114,7 +114,7 @@ include("func_read_inputData.jl") # defines RelativeDaysFloat2DateTime which is 
 
 # Define modules
 # on modules: `https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5`
-include("module_CONSTANTS.jl");  # to bring into scope: using .CONSTANTS
+include("module_CONSTANTS.jl");  using .CONSTANTS # to bring into scope: using .CONSTANTS
 include("module_KPT.jl");        using .KPT # using to bring exports into scope here
 include("module_WAT.jl");        using .WAT # using to bring exports into scope
 include("module_SUN.jl");        # to bring into scope: using .SUN
