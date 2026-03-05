@@ -300,7 +300,7 @@ layer to cease when its potential is still greater than PSICR.
 """
 function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, u_PLPSI, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
 
-    FLAG = zeros(NLAYER)
+    FLAG = zeros(NLAYER+1) # add one for plant storage
     for i = 1:NLAYER
         if p_fT_RROOTI[i] > 1E+15
             # This layer has no roots
@@ -335,7 +335,14 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
                 ATRANI[i] = 0.0
             end
         end
-        SUM = SUM + p_STORAGEK; # plant storage conductance
+
+        # check whether to include plant storage in transpiration
+        if (FLAG[NLAYER+1] == 0)
+            SUM = SUM + p_STORAGEK; # plant storage conductance
+        else
+            PLFL = 0.0
+        end
+
         if SUM < 1E-20
                 ATR = 0.
                 PSIT = -1e10
@@ -353,7 +360,10 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
                     PSIT = PSIT + RT * u_aux_PSITI[i] / RI[i]
                 end
         end
-        PSIT = PSIT + RT * u_PLPSI * p_STORAGEK # add plant storage water potential weighted by storage conductance
+
+        if (FLAG[NLAYER+1] == 0)
+            PSIT = PSIT + RT * u_PLPSI * p_STORAGEK # add plant storage water potential weighted by storage conductance
+        end
 
         # 1) compute available SUPPLY
         # soil water supply rate, assumed constant over day
@@ -399,7 +409,18 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
                 end
             end
         end
-        PLFL = ((u_PLPSI - PSIT) / 1000 + RT * ATR) * p_STORAGEK # plant storage flux
+        
+        # plant storage contribution to transpiration
+        if FLAG[NLAYER+1] == 0
+            PLFL = ((u_PLPSI - PSIT) / 1000 + RT * ATR) * p_STORAGEK # plant storage flux
+
+            # prevent negative plant storage flux (downwards flux)
+            if PLFL < -0.000001
+                NEGFLAG = true
+            end
+        else
+            PLFL = 0.0
+        end
 
         ###
         if NOOUTF && NEGFLAG
@@ -411,6 +432,9 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
                     TRMIN = ATRANI[i]
                     IDEL = i
                 end
+            end
+            if (IDEL == 0) # then must be negative plant storage that is causing NEGFLAG
+                IDEL = NLAYER + 1 # omit plant storage
             end
             FLAG[IDEL] = 1
         # repeat main loop with flagged layers excluded
@@ -472,7 +496,8 @@ function PLRFBYLAYER(p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, 
             if FLAG[i] == 1
                 RWU[i] = 0
             else
-                RWU[i] = ((u_aux_PSITI[i] - u_PLPSI) / 1000 - 0.5 * p_RHOWG * p_fu_DISPC[1]) / (RI[i] + (1/p_STORAGEK))
+                #RWU[i] = ((u_aux_PSITI[i] - u_PLPSI) / 1000 - 0.5 * p_RHOWG * p_fu_DISPC[1]) / (RI[i] + (1/p_STORAGEK))
+                RWU[i] = ((u_aux_PSITI[i] - u_PLPSI) / 1000) / (RI[i] + (1/p_STORAGEK))
 
                 # check for any negative root water uptake
                 if RWU[i] < -0.000001

@@ -208,15 +208,15 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     
     # update plant storage amount
     u_PLSTOR = u_PLSTOR + PLRF
-    println("Predawn PLSTOR: ", u_PLSTOR)
+    #println("Predawn PLSTOR: ", u_PLSTOR)
 
     # convert to change in water potential with capacitance (in MPa)
     aux_du_PLPSI = PLRF / p_CAPACITANCE
 
     aux_pd_PLPSI = u_PLPSI + aux_du_PLPSI * 1000 # convert from MPa to kPa
-    println("Predawn PLPSI: ", aux_pd_PLPSI)
-    println("Predawn PLRF: ", PLRF)
-    println("Predawn PLRFI: ", aux_du_PLRFI)
+    #println("Predawn PLPSI: ", aux_pd_PLPSI)
+    #println("Predawn PLRF: ", PLRF)
+    #println("Predawn PLRFI: ", aux_du_PLRFI)
 
     # Calculate average daily rate of potential and actual interception,
     # evaporation, and transpiration by considering weighted average of rate
@@ -279,7 +279,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
 
     ####################################################################
     # 3) Update midday plant storage water potential
-    println("Daily PLFL: ", aux_du_PLFL)
+    #println("Daily PLFL: ", aux_du_PLFL)
 
     # ensure that plant storage discharge is not more than remaining storage amount
     aux_du_PLFL[1] = min(aux_du_PLFL[1], u_PLSTOR)
@@ -288,11 +288,11 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     aux_du_PLPSI = aux_du_PLFL[1] / p_CAPACITANCE
 
     aux_md_PLPSI = aux_pd_PLPSI - aux_du_PLPSI * 1000 # convert from MPa to kPa
-    println("Midday PLPSI: ", aux_md_PLPSI)
+    #println("Midday PLPSI: ", aux_md_PLPSI)
 
     # update plant storage amount
     u_PLSTOR = u_PLSTOR - aux_du_PLFL[1]
-    println("PLSTOR: ", u_PLSTOR, ", dSTOR: ", PLRF - aux_du_PLFL[1])
+    #println("PLSTOR: ", u_PLSTOR, ", dSTOR: ", PLRF - aux_du_PLFL[1])
 
     u_PLPSI = aux_md_PLPSI
 
