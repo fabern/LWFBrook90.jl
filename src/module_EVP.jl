@@ -360,7 +360,6 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
                     PSIT = PSIT + RT * u_aux_PSITI[i] / RI[i]
                 end
         end
-        PSIT = PSIT + RT * u_PLPSI * p_STORAGEK # add plant storage water potential weighted by storage conductance
 
         if (FLAG[NLAYER+1] == 0)
             PSIT = PSIT + RT * u_aux_PLPSIT * p_STORAGEK # add plant storage water potential weighted by storage conductance
