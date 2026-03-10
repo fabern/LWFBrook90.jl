@@ -34,6 +34,7 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             RWU    = u_totalRWUinit_mmday,
             XYLEM  = u_Xyleminit_mm,
             TRANI  = u_TRANIinit_mmday,
+            PLRFI  = u_TRANIinit_mmday,
             PLSTOR = u_Xyleminit_mm,
             PLHYD  = zeros(1, 3),
             # Further structures for auxiliary soil variables (θ,ψ,K) and accumulation variables
@@ -56,6 +57,7 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             SNOWLQ = NamedTuple{name_states[[1]], NTuple{1, Float64}}(u0_NamedTuple[:SNOWLQ][:,:,1]),
 
             TRANI = NamedTuple{name_fluxes, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:TRANI][:,:,1])...)),
+            PLRFI = NamedTuple{name_fluxes, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:PLRFI][:,:,1])...)),
 
             aux   = NamedTuple{name_aux,   NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:aux])...)),
             accum = NamedTuple{name_accum, NTuple{N_accum_var, Float64}}((0. for i in eachindex(name_accum))))
@@ -75,6 +77,7 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             SNOWLQ = NamedTuple{name_states[[1]], NTuple{1, Float64}}(u0_NamedTuple[:SNOWLQ][:,:,1]),
 
             TRANI = NamedTuple{name_fluxes, NTuple{1, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:TRANI][:,:,1])...)),
+            PLRFI = NamedTuple{name_fluxes, NTuple{1, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:PLRFI][:,:,1])...)),
 
             aux   = NamedTuple{name_aux, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:aux])...)),
             accum = NamedTuple{name_accum, NTuple{N_accum_var, Float64}}((0. for i in eachindex(name_accum))))
@@ -121,6 +124,7 @@ function init_LWFB90_u0!(;u0::ComponentArray, parametrizedSPAC, p_soil)
     u0.PLSTOR.mm   = p_VSTORAGE + soil_PSIM_init[1] / 1000 * p_CAPACITANCE # reduce initial plant storage by initial water potential
     u0.PLHYD       = [1.0, soil_PSIM_init[1], p_STORAGEK] # θ, ψ, K
     u0.TRANI.mmday = zeros(nrow(parametrizedSPAC.soil_discretization.df))
+    u0.PLRFI.mmday = zeros(nrow(parametrizedSPAC.soil_discretization.df))
     if (N_iso == 2)
         u0.RWU.d18O   = soil_d18O_init[1] # start out with same concentration as in first soil layer
         u0.RWU.d2H    = soil_d2H_init[1]   # start out with same concentration as in first soil layer
@@ -128,6 +132,8 @@ function init_LWFB90_u0!(;u0::ComponentArray, parametrizedSPAC, p_soil)
         u0.XYLEM.d2H  = soil_d2H_init[1]  # start out with same concentration as in first soil layer
         u0.TRANI.d18O .= soil_d18O_init    # start out with same concentration as in       soil layer
         u0.TRANI.d2H  .= soil_d2H_init     # start out with same concentration as in       soil layer
+        u0.PLRFI.d18O .= soil_d18O_init    # start out with same concentration as in       soil layer
+        u0.PLRFI.d2H  .= soil_d2H_init     # start out with same concentration as in       soil layer
         u0.PLSTOR.d18O = soil_d18O_init[1] # start out with same concentration as in first soil layer
         u0.PLSTOR.d2H  = soil_d2H_init[1]  # start out with same concentration as in first soil layer
     end

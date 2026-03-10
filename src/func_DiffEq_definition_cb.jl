@@ -318,6 +318,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     integrator.u.PLSTOR.mm = u_PLSTOR
     integrator.u.PLHYD.ψ = u_PLPSI
     integrator.u.PLHYD.θ = u_PLSTOR / p_VSTORAGE
+    integrator.u.PLRFI.mmday .= aux_du_PLRFI
 
     p_fu_δ18O_SLFL .= NaN # NOTE: safety check to assert NaNs are directly after overwritten by callback for isotopes
     p_fu_δ2H_SLFL  .= NaN # NOTE: safety check to assert NaNs are directly after overwritten by callback for isotopes

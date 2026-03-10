@@ -429,6 +429,7 @@ function get_soil_(
     end
     # 2) get fluxes
     u_TRANI = reduce(hcat, [solution(t_days).TRANI.mmday for t_days = timepoints])
+    u_PLRFI = reduce(hcat, [solution(t_days).PLRFI.mmday for t_days = timepoints])
     # TODO: possibly add BYFLI, INFLI, DSFLI
 
     # Setup DataFrame to fill
@@ -454,6 +455,7 @@ function get_soil_(
             symbol in [:SWATI                  ] ? (u_SWATI,      "mm"     ) :
             symbol in [:K                      ] ? (p_fu_KK,      "mmday"  ) :
             symbol in [:TRANI, :RWU            ] ? (u_TRANI,      "mmday"  ) :
+            symbol in [:PLRFI                  ] ? (u_PLRFI,      "mmday"  ) :
             # TODO: possibly add BYFLI, INFLI, DSFLI
             error("Unknown symobl $(symbol) requested in `get_soil_()`"))
 
