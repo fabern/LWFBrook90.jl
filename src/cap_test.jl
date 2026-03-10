@@ -4,7 +4,7 @@ include("LWFBrook90.jl")
 input_prefix="pfynwald";
 input_path="./examples/PFY2024-capacitance/";
 
-model = LWFBrook90.loadSPAC(input_path, input_prefix; simulate_isotopes = true);
+model = LWFBrook90.loadSPAC(input_path, input_prefix; simulate_isotopes = false);
 
 simulation = LWFBrook90.setup(model);
 
