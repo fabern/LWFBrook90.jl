@@ -21,7 +21,8 @@ PLPSI_pd = [sol(t).accum.cum_pd_plpsi for t in timesteps];
 PLPSI_md = [sol(t).accum.cum_md_plpsi for t in timesteps];
 PLFL = [sol(t).accum.cum_d_plfl for t in timesteps];
 RWU = [sol(t).RWU.mmday for t in timesteps];
-TRANI = [sol(t).TRANI.mmday for t in timesteps];
+TRANI = reduce(hcat, [sol(t).TRANI.mmday for t in timesteps]);
+PLRFI = reduce(hcat, [sol(t).PLRFI.mmday for t in timesteps]);
 
 soil = LWFBrook90.get_soil_(:ψ, simulation);
 flux = LWFBrook90.get_fluxes(simulation);
