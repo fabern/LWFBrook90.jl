@@ -102,6 +102,7 @@ function init_LWFB90_u0!(;u0::ComponentArray, parametrizedSPAC, p_soil)
     p_CAPACITANCE = parametrizedSPAC.pars.params.CAPACITANCE
     p_VSTORAGE  = parametrizedSPAC.pars.params.VSTORAGE
     p_STORAGEK  = parametrizedSPAC.pars.params.STORAGEK
+    p_HEIGHT = parametrizedSPAC.pars.params.HEIGHT_baseline_m
 
     # A) Define initial conditions of states
     u_SWATIinit_mm      = LWFBrook90.KPT.FTheta(LWFBrook90.KPT.FWETNES(soil_PSIM_init, p_soil), p_soil) .*
@@ -119,10 +120,12 @@ function init_LWFB90_u0!(;u0::ComponentArray, parametrizedSPAC, p_soil)
         u0.SWATI.d2H  .= soil_d2H_init
     end
 
+    u_PLPSI_init    = soil_PSIM_init[1] - 0.5 * p_HEIGHT * p_RHOWG * 1000 # initial plant matric potential has to account for gravitational potential
+
     u0.RWU.mmday   = 0
     u0.XYLEM.mm    = 5
-    u0.PLSTOR.mm   = p_VSTORAGE + soil_PSIM_init[1] / 1000 * p_CAPACITANCE # reduce initial plant storage by initial water potential
-    u0.PLHYD       = [1.0, soil_PSIM_init[1], p_STORAGEK] # θ, ψ, K
+    u0.PLSTOR.mm   = p_VSTORAGE + u_PLPSI_init / 1000 * p_CAPACITANCE # reduce initial plant storage by initial water potential
+    u0.PLHYD       = [u0.PLSTOR.mm / p_VSTORAGE, u_PLPSI_init, p_STORAGEK] # θ, ψ, K
     u0.TRANI.mmday = zeros(nrow(parametrizedSPAC.soil_discretization.df))
     u0.PLRFI.mmday = zeros(nrow(parametrizedSPAC.soil_discretization.df))
     if (N_iso == 2)

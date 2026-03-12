@@ -191,29 +191,35 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     #println("Scalar states: u_PLPSI = ", u_PLPSI, ", u_PLSTOR = ", u_PLSTOR)
     #println("Vector states: u_aux_PSITI = ", u_aux_PSITI)
     
-    # calculate pre-dawn plant storage water potential
-    PLRFI = LWFBrook90.EVP.PLRFBYLAYER(p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, u_PLPSI, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
+    # total plant potential including matric and gravity potential assumes plant storage is located halfway up stem
+    p_fu_PLPSIG = 0.5 * p_RHOWG * p_fu_DISPC * 1000 # plant gravity potential in kPa
+    u_aux_PLPSIT = u_PLPSI + p_fu_PLPSIG # total plant water potential
+    
+    # calculate plant storage refill based on previous day's midday plant water potential
+    aux_PLRFI = LWFBrook90.EVP.PLRFBYLAYER(p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, u_aux_PSITI, u_aux_PLPSIT, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
     
     # accounting for daylength fraction since refill only occurs during night
-    aux_du_PLRFI .= (p_DTP * (1.0 - p_fT_DAYLEN)) .* PLRFI
-    PLRF = sum(aux_du_PLRFI)
+    aux_du_PLRFI .= (p_DTP * (1.0 - p_fT_DAYLEN)) .* aux_PLRFI
+    u_aux_PLRF = sum(aux_du_PLRFI)
 
     # check that plant storage refill does not exceed max storage capacity
-    if PLRF > (p_VSTORAGE - u_PLSTOR)
+    if u_aux_PLRF > (p_VSTORAGE - u_PLSTOR)
         MAXRF = p_VSTORAGE - u_PLSTOR
-        corr_factor = MAXRF / PLRF
+        corr_factor = MAXRF / u_aux_PLRF
         aux_du_PLRFI .= aux_du_PLRFI .* corr_factor
-        PLRF = sum(aux_du_PLRFI)
+        u_aux_PLRF = sum(aux_du_PLRFI)
     end
     
     # update plant storage amount
-    u_PLSTOR = u_PLSTOR + PLRF
+    u_PLSTOR = u_PLSTOR + u_aux_PLRF
     #println("Predawn PLSTOR: ", u_PLSTOR)
 
     # convert to change in water potential with capacitance (in MPa)
-    aux_du_PLPSI = PLRF / p_CAPACITANCE
+    aux_du_PLPSI = u_aux_PLRF / p_CAPACITANCE
 
-    aux_pd_PLPSI = u_PLPSI + aux_du_PLPSI * 1000 # convert from MPa to kPa
+    # update predawn plant water potential in kPa
+    aux_pd_PLPSI = u_PLPSI + aux_du_PLPSI * 1000 # matric potential
+    aux_pd_PLPSIT = aux_pd_PLPSI + p_fu_PLPSIG # including gravitational potential
     #println("Predawn PLPSI: ", aux_pd_PLPSI)
     #println("Predawn PLRF: ", PLRF)
     #println("Predawn PLRFI: ", aux_du_PLRFI)
@@ -235,7 +241,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
                     # for SWPE:
                     p_fu_RSS,
                     # for TBYLAYER:
-                    p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, aux_pd_PLPSI, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
+                    p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, aux_pd_PLPSIT, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
                     # 0.000012 seconds (28 allocations: 1.938 KiB)
     # Combine day and night rates to average daily rate
     (p_fu_PTRAN, p_fu_GEVP, p_fu_PINT, p_fu_GIVP, aux_du_TRANI[:], aux_du_PLFL[1]) =
@@ -287,6 +293,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     # change in plant water potential (in MPa)
     aux_du_PLPSI = aux_du_PLFL[1] / p_CAPACITANCE
 
+    # midday plant storage matric potential
     aux_md_PLPSI = aux_pd_PLPSI - aux_du_PLPSI * 1000 # convert from MPa to kPa
     #println("Midday PLPSI: ", aux_md_PLPSI)
 
@@ -304,7 +311,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     ####################################################################
     # Return results from callback
     # update INTS
-    integrator.u.INTS.mm = u_INTS
+    integrator.u.INTS.mm   = u_INTS
 
     # update INTR
     integrator.u.INTR.mm   = u_INTR
@@ -315,9 +322,9 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     integrator.u.SNOWLQ.mm = u_SNOWLQ
 
     # update plant storage values
-    integrator.u.PLSTOR.mm = u_PLSTOR
-    integrator.u.PLHYD.ψ = u_PLPSI
-    integrator.u.PLHYD.θ = u_PLSTOR / p_VSTORAGE
+    integrator.u.PLSTOR.mm    = u_PLSTOR
+    integrator.u.PLHYD.θ      = u_PLSTOR / p_VSTORAGE
+    integrator.u.PLHYD.ψ      = u_PLPSI
     integrator.u.PLRFI.mmday .= aux_du_PLRFI
 
     p_fu_δ18O_SLFL .= NaN # NOTE: safety check to assert NaNs are directly after overwritten by callback for isotopes
@@ -352,7 +359,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         p_fu_PSLVP = (p_fu_PGER[1] * p_fT_DAYLEN + p_fu_PGER[2] * (1 - p_fT_DAYLEN)) # (not needed for model computations, just for comparison with LWFBrook90R)
         integrator.u.accum.cum_d_pslvp      = p_DTP * (p_fu_PSLVP)                                                             # cum_d_pslvp # Deactivated as p_fu_PSLVP is never used
         integrator.u.accum.cum_d_plfl       = p_DTP * (aux_du_PLFL[1])                                                  # cum_d_plfl
-        integrator.u.accum.cum_d_plrf       = PLRF                                                                      # cum_d_plrf
+        integrator.u.accum.cum_d_plrf       = u_aux_PLRF                                                                # cum_d_plrf
         integrator.u.accum.cum_pd_plpsi     = aux_pd_PLPSI                                                              # cum_pd_plpsi
         integrator.u.accum.cum_md_plpsi     = aux_md_PLPSI                                                              # cum_md_plpsi
         integrator.u.accum.flow             = 0 # flow,  is computed in ODE

@@ -298,7 +298,7 @@ eliminated and new values of rt , ψt , T, and Ti are obtained. If any Ti are st
 the elimination process is repeated. This elimination procedure causes transpiration from a
 layer to cease when its potential is still greater than PSICR.
 """
-function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, u_PLPSI, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
+function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, u_aux_PLPSIT, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
 
     FLAG = zeros(NLAYER+1) # add one for plant storage
     for i = 1:NLAYER
@@ -362,7 +362,7 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
         end
 
         if (FLAG[NLAYER+1] == 0)
-            PSIT = PSIT + RT * u_PLPSI * p_STORAGEK # add plant storage water potential weighted by storage conductance
+            PSIT = PSIT + RT * u_aux_PLPSIT * p_STORAGEK # add plant storage water potential weighted by storage conductance
         end
 
         # 1) compute available SUPPLY
@@ -412,10 +412,10 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
         
         # plant storage contribution to transpiration
         if FLAG[NLAYER+1] == 0
-            PLFL = ((u_PLPSI - PSIT) / 1000 + RT * ATR) * p_STORAGEK # plant storage flux
+            PLFL = ((u_aux_PLPSIT - PSIT) / 1000 + RT * ATR) * p_STORAGEK # plant storage flux
 
             # prevent negative plant storage flux (downwards flux)
-            if PLFL < -0.000001
+            if PLFL < -0.0000001
                 NEGFLAG = true
             end
         else
@@ -453,7 +453,7 @@ end
     Code modified from TBYLAYER for PLRF
 """
 
-function PLRFBYLAYER(p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, u_PLPSI, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
+function PLRFBYLAYER(p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, u_aux_PSITI, u_aux_PLPSIT, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
     
     FLAG = zeros(NLAYER)
     for i = 1:NLAYER
@@ -496,11 +496,10 @@ function PLRFBYLAYER(p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, 
             if FLAG[i] == 1
                 RWU[i] = 0
             else
-                #RWU[i] = ((u_aux_PSITI[i] - u_PLPSI) / 1000 - 0.5 * p_RHOWG * p_fu_DISPC[1]) / (RI[i] + (1/p_STORAGEK))
-                RWU[i] = ((u_aux_PSITI[i] - u_PLPSI) / 1000) / (RI[i] + (1/p_STORAGEK))
+                RWU[i] = ((u_aux_PSITI[i] - u_aux_PLPSIT) / 1000) / (RI[i] + (1/p_STORAGEK))
 
                 # check for any negative root water uptake
-                if RWU[i] < -0.000001
+                if RWU[i] < -0.0000001
                     NEGFLAG = true
                 end
             end
