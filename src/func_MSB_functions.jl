@@ -219,7 +219,7 @@ function MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM
                      # for SWPE:
                      p_fu_RSS,
                      # for TBYLAYER:
-                     p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, u_PLPSI, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
+                     p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, u_aux_PLPSIT, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
     # MSBDAYNIGHT() computes the five components of evaporation:
     # - aux_du_ISVP: evaporation of intercepted snow
     # - aux_du_IRVP: evaporation of intercepted rain
@@ -286,7 +286,7 @@ function MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM
 
         # actual transpiration and ground evaporation rates
         if (p_fu_PTR[J] > 0.001)
-            ATR[J], ATRANI, p_fu_PLFL[J] = LWFBrook90.EVP.TBYLAYER(J, p_fu_PTR[J], p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, u_PLPSI, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
+            ATR[J], ATRANI, p_fu_PLFL[J] = LWFBrook90.EVP.TBYLAYER(J, p_fu_PTR[J], p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, u_aux_PLPSIT, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
             for i = 1:NLAYER
                 p_fu_ATRI[J,i] = ATRANI[i]
             end
