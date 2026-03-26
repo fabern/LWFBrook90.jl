@@ -306,7 +306,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
 
     ####################################################################
     # 3) Update midday plant storage water potential
-    #println("Daily PLFL: ", aux_du_PLFL)
+    println("Daily PLFL: ", aux_du_PLFL)
 
     # ensure that plant storage discharge is not more than remaining storage amount
     aux_du_PLFL[1] = min(aux_du_PLFL[1], u_PLSTOR)
@@ -316,7 +316,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
 
     # midday plant storage matric potential
     aux_md_PLPSI = aux_pd_PLPSI - aux_du_PLPSI * 1000 # convert from MPa to kPa
-    #println("Midday PLPSI: ", aux_md_PLPSI)
+    println("Midday PLPSI: ", aux_md_PLPSI)
 
     # update plant storage amount
     u_PLSTOR = u_PLSTOR - aux_du_PLFL[1]
