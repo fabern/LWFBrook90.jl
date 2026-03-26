@@ -4,9 +4,10 @@ include("LWFBrook90.jl")
 input_prefix="pfynwald";
 input_path="./examples/PFY2024-capacitance/";
 
-model = LWFBrook90.loadSPAC(input_path, input_prefix; simulate_isotopes = false);
+model = LWFBrook90.loadSPAC(input_path, input_prefix; simulate_isotopes = false,
+    root_distribution = (beta = 0.97091, z_rootMax_m=-1.35462));
 
-simulation = LWFBrook90.setup(model);
+simulation = LWFBrook90.setup(model, requested_tspan = (0, 230));
 
 LWFBrook90.simulate!(simulation)
 
@@ -26,7 +27,7 @@ PLRFI = reduce(hcat, [sol(t).PLRFI.mmday for t in timesteps]);
 
 soil = LWFBrook90.get_soil_(:ψ, simulation);
 flux = LWFBrook90.get_fluxes(simulation);
-flux[153:158, :]
+flux[225:230, :]
 
 #=
 using Dates, DataFrames, Plots; gr()
