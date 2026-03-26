@@ -177,9 +177,8 @@ function get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
     df_all_fluxes = innerjoin(df_scalar_fluxes, df_vector_fluxes, on = [:dates])
     df_all_fluxes = hcat(df_all_fluxes, df_scalar_signatures, df_vector_signatures)
 
-    # reorder columns
-    if simulate_isotopes
-        select!(df_all_fluxes,
+    # specify column order:
+    cols_selected = (
         :dates,
         # i) internal fluxes:
         :cum_d_prec,:cum_d_sfal,:cum_d_sthr,:cum_d_sint,:cum_d_irrig,
@@ -210,75 +209,18 @@ function get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
         # # # TODO: add dsfli # define this as accum.vec_dsfl.mmday, .d18O, .d2H # similar to u.TRANI
         # # simulation.ODESolution.u[1].TRANI.mmday
         r"TRANI_"
-        )
-    else
-        select!(df_all_fluxes,
-        :dates,
-        # i) internal fluxes:
-        :cum_d_prec,:cum_d_sfal,:cum_d_sthr,:cum_d_sint,:cum_d_irrig,
-        :cum_d_rfal,:cum_d_rint,:cum_d_rthr,:cum_d_rsno,:cum_d_rnet,:cum_d_smlt,
-        :cum_d_irvp,:cum_d_isvp,:cum_d_snvp,:cum_d_slvp,
-        :cum_d_plfl,:cum_d_plrf,:cum_pd_plpsi,:cum_md_plpsi,
-        :cum_d_tran, # TODO: :accum.cum_d_tran, # delete. we can use u[1].RWU.mmday # all([(simulation.ODESolution.u[idx].accum.cum_d_tran == simulation.ODESolution.u[idx].RWU.mmday) for idx in eachindex(simulation.ODESolution.u)])
-        # :RWU_mmday, # use RWU instead of accum.cum_d_tran
-
-        :cum_d_pint, :cum_d_ptran, :cum_d_pslvp, # not shown in Figure of P2
-        :srfl,:slfl,:byfl,:dsfl,:gwfl,:vrfln,
-
-        # ii) external fluxes:
-        # :cum_d_prec
-        :flow, :seep, :evap, # formerly cum_d_evap
-
-        # # iii) for error computation
-        # simulation.ODESolution.u[1].accum.StorageSWAT
-        # simulation.ODESolution.u[1].accum.StorageWATER
-        # simulation.ODESolution.u[1].accum.BALERD_SWAT
-        # simulation.ODESolution.u[1].accum.BALERD_total
-
-        # iv) internal fluxes per soil layer
-        # # # TODO: add byfli # define this as accum.vec_byfl.mmday, .d18O, .d2H # similar to u.TRANI
-        # # # TODO: add infli # define this as accum.vec_infl.mmday, .d18O, .d2H # similar to u.TRANI
-        # # # TODO: add dsfli # define this as accum.vec_dsfl.mmday, .d18O, .d2H # similar to u.TRANI
-        # # simulation.ODESolution.u[1].TRANI.mmday
-        r"TRANI_"
-        )
+    )
+    if (!simulate_isotopes)
+        cols_to_drop = [
+            :RWU_d18O, :RWU_d2H, 
+            :PREC_d18O, :PREC_d2H,]
+        cols_selected = filter(x -> x ∉ cols_to_drop, cols_selected) 
     end
+
+    select!(df_all_fluxes, cols_selected...)
 
     return df_all_fluxes
 
-    # Reorder columns
-    #= return select(df_all_fluxes,
-        :dates,
-        # i) internal fluxes:
-        :cum_d_prec,:cum_d_sfal,:cum_d_sthr,:cum_d_sint,:cum_d_irrig,
-        :cum_d_rfal,:cum_d_rint,:cum_d_rthr,:cum_d_rsno,:cum_d_rnet,:cum_d_smlt,
-        :cum_d_irvp,:cum_d_isvp,:cum_d_snvp,:cum_d_slvp,
-        :cum_d_plfl,:cum_d_plrf,:cum_pd_plpsi,:cum_md_plpsi,
-        :cum_d_tran, # TODO: :accum.cum_d_tran, # delete. we can use u[1].RWU.mmday # all([(simulation.ODESolution.u[idx].accum.cum_d_tran == simulation.ODESolution.u[idx].RWU.mmday) for idx in eachindex(simulation.ODESolution.u)])
-        # :RWU_mmday, # use RWU instead of accum.cum_d_tran
-        :RWU_d18O, :RWU_d2H,
-        :PREC_d18O, :PREC_d2H,
-
-        :cum_d_pint, :cum_d_ptran, :cum_d_pslvp, # not shown in Figure of P2
-        :srfl,:slfl,:byfl,:dsfl,:gwfl,:vrfln,
-
-        # ii) external fluxes:
-        # :cum_d_prec
-        :flow, :seep, :evap, # formerly cum_d_evap
-
-        # # iii) for error computation
-        # simulation.ODESolution.u[1].accum.StorageSWAT
-        # simulation.ODESolution.u[1].accum.StorageWATER
-        # simulation.ODESolution.u[1].accum.BALERD_SWAT
-        # simulation.ODESolution.u[1].accum.BALERD_total
-
-        # iv) internal fluxes per soil layer
-        # # # TODO: add byfli # define this as accum.vec_byfl.mmday, .d18O, .d2H # similar to u.TRANI
-        # # # TODO: add infli # define this as accum.vec_infl.mmday, .d18O, .d2H # similar to u.TRANI
-        # # # TODO: add dsfli # define this as accum.vec_dsfl.mmday, .d18O, .d2H # similar to u.TRANI
-        # # simulation.ODESolution.u[1].TRANI.mmday
-        r"TRANI_"
-        ) =#
                             # df_partitioning_daily = @chain df_fluxes begin
                             #         @rtransform begin
                             #             :ETa           = :evap # is actual evapotranspiration, i.e. sum of IRVP + ISVP + SNVP + SLVP + sum(aux_du_TRANI)
