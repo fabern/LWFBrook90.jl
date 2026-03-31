@@ -192,25 +192,25 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
 
             # 1) Either set daily sum if rate is constant throughout precipitation interval: p_DTP*(...)
             # 2) or then set daily sum to zero and use ODE to accumulate flow.
-            du.accum.cum_d_prec     = 0 # was computed in callback
-            du.accum.cum_d_rfal     = 0 # was computed in callback
-            du.accum.cum_d_sfal     = 0 # was computed in callback
-            du.accum.cum_d_rint     = 0 # was computed in callback
-            du.accum.cum_d_sint     = 0 # was computed in callback
-            du.accum.cum_d_rsno     = 0 # was computed in callback
-            du.accum.cum_d_rnet     = 0 # was computed in callback
-            du.accum.cum_d_smlt     = 0 # was computed in callback
+            # du.accum.cum_d_prec     = 0 # was computed in callback
+            # du.accum.cum_d_rfal     = 0 # was computed in callback
+            # du.accum.cum_d_sfal     = 0 # was computed in callback
+            # du.accum.cum_d_rint     = 0 # was computed in callback
+            # du.accum.cum_d_sint     = 0 # was computed in callback
+            # du.accum.cum_d_rsno     = 0 # was computed in callback
+            # du.accum.cum_d_rnet     = 0 # was computed in callback
+            # du.accum.cum_d_smlt     = 0 # was computed in callback
 
-            du.accum.cum_d_tran     = 0 # was computed in callback
-            du.accum.cum_d_irvp     = 0 # was computed in callback
-            du.accum.cum_d_isvp     = 0 # was computed in callback
-            du.accum.cum_d_slvp     = 0 # was computed in callback
-            du.accum.cum_d_snvp     = 0 # was computed in callback
-            du.accum.cum_d_pint     = 0 # was computed in callback
-            du.accum.cum_d_ptran    = 0 # was computed in callback
-            du.accum.cum_d_pslvp    = 0 # was computed in callback
+            # du.accum.cum_d_tran     = 0 # was computed in callback
+            # du.accum.cum_d_irvp     = 0 # was computed in callback
+            # du.accum.cum_d_isvp     = 0 # was computed in callback
+            # du.accum.cum_d_slvp     = 0 # was computed in callback
+            # du.accum.cum_d_snvp     = 0 # was computed in callback
+            # du.accum.cum_d_pint     = 0 # was computed in callback
+            # du.accum.cum_d_ptran    = 0 # was computed in callback
+            # du.accum.cum_d_pslvp    = 0 # was computed in callback
 
-            du.accum.evap           = 0 # was computed in callback
+            # du.accum.evap           = 0 # was computed in callback
             du.accum.flow           = p_fu_SRFL[1] +
                                         sum(aux_du_BYFLI) +
                                         sum(aux_du_DSFLI) +
@@ -224,13 +224,13 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
             du.accum.vrfln          = aux_du_VRFLI[NLAYER]
             # du.accum.cum_d_rthr   = 0 # was computed in callback
             # du.accum.cum_d_sthr   = 0 # was computed in callback
-            du.accum.cum_d_irrig    = 0 # was computed in callback
-            du.accum.cum_d_plfl     = 0 # was computed in callback
+            # du.accum.cum_d_irrig    = 0 # was computed in callback
+            # du.accum.cum_d_plfl     = 0 # was computed in callback
 
-            du.accum.StorageSWAT    = 0 # is computed in callback
-            du.accum.StorageWATER   = 0 # is computed in callback
-            du.accum.BALERD_SWAT    = 0 # is computed in callback
-            du.accum.BALERD_total   = 0 # is computed in callback
+            # du.accum.StorageSWAT    = 0 # is computed in callback
+            # du.accum.StorageWATER   = 0 # is computed in callback
+            # du.accum.BALERD_SWAT    = 0 # is computed in callback
+            # du.accum.BALERD_total   = 0 # is computed in callback
 
             # TODO(bernhard): use SavingCallback() for all quantities that have du=0
             #                 only keep du=... for quantities for which we compute cumulative sums
