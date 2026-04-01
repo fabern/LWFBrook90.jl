@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - develop
+      - hotfix-accum-one-off
   workflow_dispatch:
     inputs:
       custom_input:
