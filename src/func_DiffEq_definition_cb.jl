@@ -36,9 +36,9 @@ function define_LWFB90_cb(tspan)
 
     # saving callback to align callback outputs exactly with midnight
 
-    saved_all = SavedValues(Float64, NamedTuple)
+    saved_values = SavedValues(Float64, NamedTuple)
 
-    save_all(u, t, integrator) = (
+    save_func(u, t, integrator) = (
         accum = deepcopy(u.accum),
         RWU   = u.RWU.mmday,
         INTS  = u.INTS.mm,
@@ -50,9 +50,9 @@ function define_LWFB90_cb(tspan)
         PLRFI = copy(u.PLRFI.mmday)
     )
 
-    cb_save_all = SavingCallback(
-        save_all, 
-        saved_all; 
+    cb_save = SavingCallback(
+        save_func, 
+        saved_values; 
         saveat=tspan[1]:1:tspan[2]);
 
     #TODO(bernhard) Implement swchek from LWFBrook90 as ContinuousCallback
@@ -75,9 +75,9 @@ function define_LWFB90_cb(tspan)
         cb_INTS_INTR_SNOW_deltas,
 
         # 3) Saving callback to save accumulated flows at daily time step
-        cb_save_all
+        cb_save
         )
-    return cb_set, saved_all
+    return cb_set, saved_values
 end
 
 # A) Define updating function

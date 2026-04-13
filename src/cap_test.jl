@@ -45,9 +45,9 @@ plot(psi_comp.t[305:315], psi_comp.PLPSI[305:315])
 
 =#
 
-# post-processing of new saved_all
+# post-processing of new saved_values
 
-out = simulation.saved_all;
+out = simulation.saved_values;
 t = out.t;
 
 RWU_fix = [out.saveval[t].RWU for t in 1:length(t)];
@@ -89,4 +89,4 @@ function saved_values_to_dataframe(saved)
     return DataFrame(data_cols)
 end
 
-flux_fix = saved_values_to_dataframe(simulation.saved_all)
+flux_fix = saved_values_to_dataframe(simulation.saved_values)

@@ -95,7 +95,7 @@ Base.@kwdef mutable struct DiscretizedSPAC
 	ODEProblem
 	ODESolution
     ODESolution_datetime
-    saved_all
+    saved_values
 end
 
 # input_prefix = "isoBEAdense2010-18-reset-FALSE";
@@ -540,7 +540,7 @@ function setup(parametrizedSPAC::SPAC;
     # splitting using a callback function for the daily updates and a ODE RHS (right hand
     # side) for the continuous update.
 
-    cb_func, saved_all = define_LWFB90_cb(tspan_to_use) # define callback functions
+    cb_func, saved_values = define_LWFB90_cb(tspan_to_use) # define callback functions
     @assert !any(ismissing.(u0)) """
     There are missing values in the provided initial conditions `u0`. Please correct!"""
 
@@ -590,7 +590,7 @@ function setup(parametrizedSPAC::SPAC;
         ODEProblem          = ode_LWFBrook90,
         ODESolution         = nothing,
         ODESolution_datetime= nothing,
-        saved_all           = saved_all)
+        saved_values           = saved_values)
 end
 """
     is_setup(parametrizedSPAC::SPAC)
