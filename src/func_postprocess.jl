@@ -181,7 +181,7 @@ function get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
     return select(df_all_fluxes,
         :dates,
         # i) internal fluxes:
-        :cum_d_prec,:cum_d_sfal,:cum_d_sthr,:cum_d_sint,
+        :cum_d_prec,:cum_d_sfal,:cum_d_sthr,:cum_d_sint,:cum_d_irrig,
         :cum_d_rfal,:cum_d_rint,:cum_d_rthr,:cum_d_rsno,:cum_d_rnet,:cum_d_smlt,
         :cum_d_irvp,:cum_d_isvp,:cum_d_snvp,:cum_d_slvp,
         :cum_d_tran, # TODO: :accum.cum_d_tran, # delete. we can use u[1].RWU.mmday # all([(simulation.ODESolution.u[idx].accum.cum_d_tran == simulation.ODESolution.u[idx].RWU.mmday) for idx in eachindex(simulation.ODESolution.u)])
@@ -269,6 +269,9 @@ function get_forcing(simulation::DiscretizedSPAC) # returns forcing [..., ..., .
         :prec_mmDay              => p_fT.p_PREC.(timepoints),
         :precdelta18O_permil     => p_fT.p_δ18O_PREC.(timepoints),
         :precdelta2H_permil      => p_fT.p_δ2H_PREC.(timepoints),
+        :irrig_mmDay             => p_fT.p_IRRIG.(timepoints),
+        :irrigdelta18O_permil    => p_fT.p_δ18O_IRRIG.(timepoints),
+        :irrigdelta2H_permil     => p_fT.p_δ2H_IRRIG.(timepoints),
         :densef_percent          => p_fT.p_DENSEF.(timepoints)*100,
         :height_m                => p_fT.p_HEIGHT.(timepoints),
         :lai_m2m2                => p_fT.p_LAI.(timepoints),
@@ -433,6 +436,7 @@ function get_water_partitioning(simulation::DiscretizedSPAC;)
             :Einterception = :cum_d_irvp + :cum_d_isvp
             :Ta            = :cum_d_tran
             :Precip        = :cum_d_prec
+            :Irrig         = :cum_d_irrig
             :Td            = :cum_d_ptran - :cum_d_tran
             :D             = - :vrfln
             # :R1          = -(:flow - :vrfln)    # flow = srfl+byfl+dsfli+gwfl, gwfl, vrfln
@@ -441,7 +445,7 @@ function get_water_partitioning(simulation::DiscretizedSPAC;)
         end
         @transform :year = year.(:date)
         @transform :month = month.(:date)
-        @select(:date, :year, :month, :ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Td,:D,:R,:Swat)
+        @select(:date, :year, :month, :ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Irrig,:Td,:D,:R,:Swat)
     end
 
     # Aggregate to monghly and yearly
@@ -449,7 +453,7 @@ function get_water_partitioning(simulation::DiscretizedSPAC;)
         groupby([:year, :month])
         combine(
             nrow,
-            [:ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Td,:D,:R] .=> sum,
+            [:ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Irrig,:Td,:D,:R] .=> sum,
             [:Swat] .=> mean, renamecols=false)
         @rtransform :date = Date(:year, :month)
         select(Between(:year, :nrow), :date, All()) # Bring date to beginning
@@ -458,7 +462,7 @@ function get_water_partitioning(simulation::DiscretizedSPAC;)
         groupby([:year])
         combine(
             nrow,
-            [:ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Td,:D,:R] .=> sum,
+            [:ETa,:Esoil,:Esnow,:Einterception,:Ta,:Precip,:Irrig,:Td,:D,:R] .=> sum,
             [:Swat] .=> mean, renamecols=false)
         @rtransform :date = Date(:year)
         select(Between(:year, :nrow), :date, All()) # Bring date to beginning
@@ -499,7 +503,7 @@ function intern___get_SWATI_derivatives(simulation::DiscretizedSPAC; days_to_rea
     p_soil = solution.prob.p.p_soil
     NLAYER = p_soil.NLAYER
     if isnothing(days_to_read_out_d)
-        u_SWATI = reduce(hcat, [solution[t_idx].SWATI.mm  for t_idx = eachindex(solution)])
+        u_SWATI = reduce(hcat, [solution.u[t_idx].SWATI.mm  for t_idx = eachindex(solution)])
     else
         u_SWATI = reduce(hcat, [solution(t_days).SWATI.mm for t_days = days_to_read_out_d])
     end
@@ -540,6 +544,9 @@ function intern___get_scalars(compartments_to_extract, units_to_extract, simulat
         uni ∈ [:mmday,  :mm] ? solution.prob.p.p_PREC.(timepoints) :
             uni ∈ [:d18O, :δ18O] ? solution.prob.p.p_δ18O_PREC.(timepoints) :
             uni ∈ [:d2H , :δ2H ] ? solution.prob.p.p_δ2H_PREC.(timepoints) :
+            # uni ∈ [:mmday,  :mm] ? solution.prob.p.p_IRRIG.(timepoints) :
+            # uni ∈ [:d18O, :δ18O] ? solution.prob.p.p_δ18O_IRRIG.(timepoints) :
+            # uni ∈ [:d2H , :δ2H ] ? solution.prob.p.p_δ2H_IRRIG.(timepoints) :
             error("Unknown compartments or units to extract provided.")
         for (comp, uni) in cycle_over2)...)
 
@@ -644,6 +651,11 @@ function intern___get_data_for_isotopePlot(simulation)
         col_PREC_d2H_dense  = solu.prob.p.p_δ2H_PREC.(t1),
         col_PREC_d18O = solu.prob.p.p_δ18O_PREC.(days_to_read_out_d),
         col_PREC_d2H  = solu.prob.p.p_δ2H_PREC.(days_to_read_out_d),
+        col_IRRIG_amt_dense  = solu.prob.p.p_IRRIG.(t1),
+        col_IRRIG_d18O_dense = solu.prob.p.p_δ18O_IRRIG.(t1),           # TODO: do we really want to output nothing? Or simply NaN? (Prevents Union type: Union{Nothing, FLoat64})
+        col_IRRIG_d2H_dense  = solu.prob.p.p_δ2H_IRRIG.(t1),            # TODO: do we really want to output nothing? Or simply NaN? (Prevents Union type: Union{Nothing, FLoat64})
+        col_IRRIG_d18O = solu.prob.p.p_δ18O_IRRIG.(days_to_read_out_d), # TODO: do we really want to output nothing? Or simply NaN? (Prevents Union type: Union{Nothing, FLoat64})
+        col_IRRIG_d2H  = solu.prob.p.p_δ2H_IRRIG.(days_to_read_out_d),  # TODO: do we really want to output nothing? Or simply NaN? (Prevents Union type: Union{Nothing, FLoat64})
         col_INTS_d18O = [solu(t).INTS.d18O for t in days_to_read_out_d],
         col_INTR_d18O = [solu(t).INTR.d18O for t in days_to_read_out_d],
         col_SNOW_d18O = [solu(t).SNOW.d18O for t in days_to_read_out_d],
@@ -887,6 +899,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     # bar(reshape(x1_input,1,:), reshape(row_PREC_amt_dense_input,1,:))
 
     row_PREC_amt_dense = reshape(solu.prob.p.p_PREC.(t1), 1, :)
+    # row_IRRIG_amt_dense = reshape(solu.prob.p.p_IRRIG.(t1), 1, :)
     rows_SWAT_amt  = reduce(hcat, [solu(t).SWATI.mm    for t in days_to_read_out_d])
     rows_RWU_mmDay = reduce(hcat, [solu(t).TRANI.mmday for t in days_to_read_out_d])
     row_NaN       = fill(NaN, 1,length(x))
@@ -913,6 +926,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
             tran  = [solu(t).accum.cum_d_tran for t in days],
             slvp  = [solu(t).accum.cum_d_slvp for t in days],
             prec  = [solu(t).accum.cum_d_prec for t in days],
+            irrig = [solu(t).accum.cum_d_irrig for t in days],
             evap  = [solu(t).accum.evap for t in days], # evap is sum of irvp, isvp, snvp, slvp, sum(trani)
             flow  = [solu(t).accum.flow for t in days], # flow is sum of byfli, dsfli, gwfl
             seep  = [solu(t).accum.seep for t in days],
@@ -929,7 +943,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
             return cumInflow_mm, cumOutflow_mm, df.swat, error_mm
         end
         function compute_error_ModelDomain(df) #
-            cumInflow_mm  = cumsum(df.prec)                     # corresponds to q(t,0)  in Ireson 2023 eq 16 with additionally sources and sinks
+            cumInflow_mm  = cumsum(df.prec + df.irrig)          # corresponds to q(t,0)  in Ireson 2023 eq 16 with additionally sources and sinks
             cumOutflow_mm = cumsum(df.evap + df.flow + df.seep) # corresponds to q(t,zN) in Ireson 2023 eq 16 with additionally sources and sinks
             storage = df.swat .+ df.gwat + df.snow + df.intr + df.ints
             error_mm = (cumInflow_mm .- cumOutflow_mm) .- (storage .- storage[1])
@@ -1352,6 +1366,8 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     simulate_isotopes = solu.prob.p.simulate_isotopes
     @assert simulate_isotopes "Provided DiscretizedSPAC() did not simulate isotopes"
 
+    simulate_irrigation = solu.prob.p.simulate_irrigation
+    
     # Some hardcoded options:
     xlimits = RelativeDaysFloat2DateTime.(solu.prob.tspan, t_ref)
     tick_function = (x1, x2) -> PlotUtils.optimize_ticks(x1, x2; k_min = 4)
@@ -1378,12 +1394,14 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     row_INTS_d18O = reduce(hcat, df.col_INTS_d18O)
     row_INTR_d18O = reduce(hcat, df.col_INTR_d18O)
     row_SNOW_d18O = reduce(hcat, df.col_SNOW_d18O)
+    row_IRRIG_d18O = reduce(hcat, df.col_IRRIG_d18O)
     row_GWAT_d18O = reduce(hcat, df.col_GWAT_d18O)
     row_RWU_d18O = reduce(hcat, df.col_RWU_d18O)
     row_XYL_d18O = reduce(hcat, df.col_XYL_d18O)
     row_INTS_d2H = reduce(hcat, df.col_INTS_d2H)
     row_INTR_d2H = reduce(hcat, df.col_INTR_d2H)
     row_SNOW_d2H = reduce(hcat, df.col_SNOW_d2H)
+    row_IRRIG_d2H = reduce(hcat, df.col_IRRIG_d2H)
     row_GWAT_d2H = reduce(hcat, df.col_GWAT_d2H)
     row_RWU_d2H = reduce(hcat, df.col_RWU_d2H)
     row_XYL_d2H = reduce(hcat, df.col_XYL_d2H)
@@ -1481,9 +1499,16 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     y_extended = [-500; -350; -300; -250; -200; -150; -100; -50;         y_center;             (maxdepth .+ [50; 100; 150; 250; 300;400])]
     y_soil_ticks = tick_function(0., round(maxdepth))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
     y_ticks    = [-500;       -300;       -200;       -100;          y_soil_ticks;             (maxdepth .+ [    100;      250;     400])]
-    y_labels   = ["PREC";   "INTS";     "INTR";     "SNOW";     round.(y_soil_ticks; digits=0);                                                "GWAT";    "RWU";     "XYLEM"]
-    z2_extended = [row_PREC_d18O; row_NaN; row_INTS_d18O; row_NaN; row_INTR_d18O; row_NaN; row_SNOW_d18O; row_NaN; rows_SWAT_d18O; row_NaN; row_GWAT_d18O; row_NaN; row_RWU_d18O; row_NaN; row_XYL_d18O]
-    z3_extended = [row_PREC_d2H;  row_NaN; row_INTS_d2H;  row_NaN; row_INTR_d2H;  row_NaN; row_SNOW_d2H;  row_NaN; rows_SWAT_d2H;  row_NaN; row_GWAT_d2H;  row_NaN; row_RWU_d2H;  row_NaN; row_XYL_d2H ]
+    
+    if simulate_irrigation # replace snow isotopic signature with irrigation input
+        y_labels   = ["PREC";   "INTS";     "INTR";     "IRRIG";     round.(y_soil_ticks; digits=0);                                                "GWAT";    "RWU";     "XYLEM"]
+        z2_extended = [row_PREC_d18O; row_NaN; row_INTS_d18O; row_NaN; row_INTR_d18O; row_NaN; row_IRRIG_d18O; row_NaN; rows_SWAT_d18O; row_NaN; row_GWAT_d18O; row_NaN; row_RWU_d18O; row_NaN; row_XYL_d18O]
+        z3_extended = [row_PREC_d2H;  row_NaN; row_INTS_d2H;  row_NaN; row_INTR_d2H;  row_NaN; row_IRRIG_d2H;  row_NaN; rows_SWAT_d2H;  row_NaN; row_GWAT_d2H;  row_NaN; row_RWU_d2H;  row_NaN; row_XYL_d2H ]
+    else
+        y_labels   = ["PREC";   "INTS";     "INTR";     "SNOW";     round.(y_soil_ticks; digits=0);                                                "GWAT";    "RWU";     "XYLEM"]
+        z2_extended = [row_PREC_d18O; row_NaN; row_INTS_d18O; row_NaN; row_INTR_d18O; row_NaN; row_SNOW_d18O; row_NaN; rows_SWAT_d18O; row_NaN; row_GWAT_d18O; row_NaN; row_RWU_d18O; row_NaN; row_XYL_d18O]
+        z3_extended = [row_PREC_d2H;  row_NaN; row_INTS_d2H;  row_NaN; row_INTR_d2H;  row_NaN; row_SNOW_d2H;  row_NaN; rows_SWAT_d2H;  row_NaN; row_GWAT_d2H;  row_NaN; row_RWU_d2H;  row_NaN; row_XYL_d2H ]
+    end
 
     if (isotope == :d18O || isotope == :d18O_and_d2H)
         @series begin # pl_δ18O
@@ -1599,6 +1624,7 @@ Plots the forcing, states and major fluxes as results of a SPAC Simulation.
     y14 = hcat(simulation.ODESolution.prob.p.p_TMIN.(t1),
                simulation.ODESolution.prob.p.p_TMAX.(t1));lbl14 = ["p_TMIN [°C]" "p_TMAX [°C]"]
     y15 = simulation.ODESolution.prob.p.p_PREC.(t1);      lbl15 = "p_PREC [mm]"
+    # y15 = simulation.ODESolution.prob.p.p_IRRIG.(t1);      lbl15 = "p_IRRIG [mm]"
     # plot_forcing = plot(layout = (:,1),
     #     plot(x1, y11; labels = lbl11),
     #     plot(x1, y12; labels = lbl12),

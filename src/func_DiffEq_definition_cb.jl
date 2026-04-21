@@ -93,9 +93,9 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         p_VXYLEM, p_DISPERSIVITY = integrator.p;
 
     ## B) time dependent parameters
-    @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
+    @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC, p_IRRIG,
         p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_RELDEN,
-        p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p;
+        p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, REFERENCE_DATE = integrator.p;
 
     ## C) state dependent parameters:
     # Calculate parameters:
@@ -287,6 +287,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         integrator.u.accum.vrfln            = 0 # vrfln, is computed in ODE
         integrator.u.accum.cum_d_rthr     = p_DTP*(p_fT_RFAL - aux_du_RINT[1]) # cum_d_rthr
         integrator.u.accum.cum_d_sthr     = p_DTP*(p_fT_SFAL - aux_du_SINT[1]) # cum_d_sthr
+        integrator.u.accum.cum_d_irrig      = p_DTP * (p_IRRIG(integrator.t)) # cum_d_irrig
         # integrator.u.accum.ε_prev_t          = t              # Update in separate daily callback
         # integrator.u.accum.ε_prev_StorageSWAT  = StorageSWAT  # Update in separate daily callback
         # integrator.u.accum.ε_prev_StorageWATER = StorageWATER # Update in separate daily callback
@@ -324,10 +325,11 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         @unpack p_DTP = integrator.p # TODO: is p_DTP still used??
 
         ## B) time dependent parameters
-        # @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
+        # @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC, p_IRRIG,
         #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_RELDEN,
-        #     p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p
-        @unpack p_δ18O_PREC, p_δ2H_PREC = integrator.p
+        #     p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, REFERENCE_DATE = integrator.p
+        @unpack p_IRRIG = integrator.p
+        @unpack p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG = integrator.p
 
         ## C) state dependent parameters or intermediate results:
         # These were computed in the callback and are kept constant in between two
@@ -386,6 +388,21 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         u_δ18O_INTR         = p_δ18O_PREC(integrator.t)
         u_δ18O_SNOW         = p_δ18O_PREC(integrator.t)
         # # END variant 2
+
+        # Compromise: need mixing with irrigation water for SLFL
+        if p_IRRIG(integrator.t) > 0
+            # local variables to simplify formula
+            u_δ18O_PREC = p_δ18O_PREC(integrator.t)
+            u_δ2H_PREC = p_δ2H_PREC(integrator.t)
+            u_δ18O_IRRIG = p_δ18O_IRRIG(integrator.t)
+            u_δ2H_IRRIG = p_δ2H_IRRIG(integrator.t)
+            p_u_IRRIG = p_IRRIG(integrator.t)
+
+            # mixing model between snowmelt, infiltrating rainfall and irrigation water
+            p_fu_δ18O_SLFL[1] = (u_δ18O_SNOW * aux_du_SMLT[1] + u_δ18O_PREC * p_fu_RNET[1] + u_δ18O_IRRIG * p_u_IRRIG) / (aux_du_SMLT[1] + p_fu_RNET[1] + p_u_IRRIG)
+            p_fu_δ2H_SLFL[1]  = (u_δ2H_SNOW * aux_du_SMLT[1]  + u_δ2H_PREC * p_fu_RNET[1] + u_δ2H_IRRIG * p_u_IRRIG)  / (aux_du_SMLT[1] + p_fu_RNET[1] + p_u_IRRIG)
+        end
+    
 
             # # Variant 3) trying to unwrap variant 1) by reducing allocations. Currently not working and also not faster than 1)
             # R_std_2H  = LWFBrook90.ISO.R_VSMOW²H
@@ -556,12 +573,12 @@ end
         #         ############
         #         ### Compute parameters
         #         ## B) time dependent parameters
-        #         # p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
+        #         # p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC, p_IRRIG,
         #         #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_RELDEN,
-        #         #     p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p[2]
-        #         @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
+        #         #     p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, REFERENCE_DATE = integrator.p[2]
+        #         @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC, p_IRRIG,
         #             p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_RELDEN,
-        #             p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE                = integrator.p
+        #             p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, REFERENCE_DATE                = integrator.p
 
         #         ## C) state dependent parameters or intermediate results:
         #         # These were computed in the callback and are kept constant in between two callbacks.
@@ -709,10 +726,10 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         @unpack du_GWFL, du_SEEP = integrator.p     # all in mm/day
 
         ## B) time dependent parameters
-        # @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC,
+        # @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC, p_IRRIG,
         #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_RELDEN,
-        #     p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = integrator.p
-        @unpack p_δ18O_PREC, p_δ2H_PREC = integrator.p
+        #     p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, REFERENCE_DATE = integrator.p
+        @unpack p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG = integrator.p
 
         ## C) state dependent parameters or intermediate results:
         # These were computed in the callback and are kept constant in between two
@@ -1282,13 +1299,13 @@ function LWFBrook90R_check_balance_errors!(integrator)
             integrator.u.accum.cum_d_tran +
             integrator.u.accum.cum_d_slvp
 
-        # b2) BALERD_total = old_StorageWATER - StorageWATER + PRECD - EVAPD - FLOWD - SEEPD
-        accum_qin_total  = integrator.u.accum.cum_d_prec
+        # b2) BALERD_total = old_StorageWATER - StorageWATER + PRECD + IRRIG - EVAPD - FLOWD - SEEPD
+        accum_qin_total  = integrator.u.accum.cum_d_prec + integrator.u.accum.cum_d_irrig
         accum_qout_total = integrator.u.accum.evap + integrator.u.accum.flow + integrator.u.accum.seep
 
         # c) Compute balance error
         # d) Store balance errors into state vector
-        # BALERD_total = old_StorageWATER - StorageWATER + PRECD - EVAPD - FLOWD - SEEPD
+        # BALERD_total = old_StorageWATER - StorageWATER + PRECD + IRRIG - EVAPD - FLOWD - SEEPD
 
         integrator.u.accum.BALERD_SWAT  = (accum_qin - accum_qout)             - (StorageSWAT  - old_SWAT)       # implicitly assume accum.XXX are reset to zero daily AND this callback is called daily
         integrator.u.accum.BALERD_total = (accum_qin_total - accum_qout_total) - (StorageWATER - old_StorageWATER) # implicitly assume accum.XXX are reset to zero daily AND this callback is called daily

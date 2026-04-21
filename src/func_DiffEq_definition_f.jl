@@ -24,9 +24,9 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
             p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX, p_GSC, p_GSP, p_BYPAR = p;
 
         ## B) time dependent parameters
-        @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND,  p_PREC,
+        @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC, p_IRRIG,
             p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_RELDEN,
-            p_δ18O_PREC, p_δ2H_PREC, REFERENCE_DATE = p;
+            p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, REFERENCE_DATE = p;
 
         ## C) state dependent parameters:
         # Calculate parameters:
@@ -98,7 +98,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
                     # for SRFLFR:
                     u_SWATI, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC,
                     #
-                    p_IMPERV, p_fu_RNET, aux_du_SMLT,
+                    p_IMPERV, p_IRRIG(t), p_fu_RNET, aux_du_SMLT,
                     p_LENGTH_SLOPE, p_DSLOPE,
                     # for DSLOP:
                     p_RHOWG, u_aux_PSIM, p_fu_KK,
@@ -217,6 +217,8 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
             du.accum.vrfln          = aux_du_VRFLI[NLAYER]
             # du.accum.cum_d_rthr   = 0 # was computed in callback
             # du.accum.cum_d_sthr   = 0 # was computed in callback
+            du.accum.cum_d_irrig    = 0 # was computed in callback
+
             du.accum.StorageSWAT    = 0 # is computed in callback
             du.accum.StorageWATER   = 0 # is computed in callback
             du.accum.BALERD_SWAT    = 0 # is computed in callback

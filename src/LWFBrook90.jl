@@ -1,6 +1,7 @@
 module LWFBrook90
 
 using SciMLBase       # instead of loading the full DifferentialEquations
+using DiffEqBase      # instead of loading the full DifferentialEquations
 using OrdinaryDiffEq  # instead of loading the full DifferentialEquations
 using DiffEqCallbacks # instead of loading the full DifferentialEquations
 using ProgressLogging
@@ -427,7 +428,11 @@ function setup(parametrizedSPAC::SPAC;
         # keep as is
     elseif (modifiedSPAC.pars.root_distribution isa NamedTuple)
         overwrite_rootden!(refined_soil_discretizationDF, modifiedSPAC.pars.root_distribution, Δz_refined)
-        overwrite_IC!(     refined_soil_discretizationDF, modifiedSPAC.pars.IC_soil, modifiedSPAC.solver_options.simulate_isotopes)
+        #overwrite_IC!(     refined_soil_discretizationDF, modifiedSPAC.pars.IC_soil, modifiedSPAC.solver_options.simulate_isotopes)
+    end
+
+    if (modifiedSPAC.pars.IC_soil isa NamedTuple)
+        overwrite_IC!(refined_soil_discretizationDF, modifiedSPAC.pars.IC_soil, modifiedSPAC.solver_options.simulate_isotopes)
     end
 
     # Discretize the model in space as `soil_discretization`
@@ -642,7 +647,7 @@ function simulate!(s::DiscretizedSPAC; assert_retcode = true, description = "", 
 
     @time description*" runtime" s.ODESolution = solve(s.ODEProblem; kwargs...)
 
-    @info description * "  Time steps for solving: $(s.ODESolution.destats.naccept) ($(s.ODESolution.destats.naccept) accepted out of $(s.ODESolution.destats.nreject + s.ODESolution.destats.naccept) total)"
+    @info description * "  Time steps for solving: $(s.ODESolution.stats.naccept) ($(s.ODESolution.stats.naccept) accepted out of $(s.ODESolution.stats.nreject + s.ODESolution.stats.naccept) total)"
     @info description * "  End of simulation at $(now())."
 
     if assert_retcode

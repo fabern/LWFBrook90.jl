@@ -19,7 +19,7 @@ function norm_to_use(u::Real,           t) norm(u)                              
 #                                                                         u[12,1]], t) end
 function norm_to_use(u::ComponentVector, t)
     # DiffEqBase.ODE_DEFAULT_NORM(u.SWATI, t)
-    # NOTE: `aux`` is missing on purpose
+    # NOTE: `aux` is missing on purpose
     DiffEqBase.ODE_DEFAULT_NORM(vcat(u.GWAT.mm,
                                     u.INTS.mm,
                                     u.INTR.mm,
