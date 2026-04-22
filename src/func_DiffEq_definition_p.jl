@@ -31,11 +31,6 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
     p_VXYLEM       = parametrizedSPAC.pars.params[:VXYLEM_mm] # mm, storage volume of well mixed xylem storage per ground area # TODO(bernhard): possibly link this to SAI...
     p_DISPERSIVITY = parametrizedSPAC.pars.params[:DISPERSIVITY_mm]/1000  # m, dispersivity length (0.04m is the average fitted dispersivity to the lysimters of Stumpp et al. 2012)
 
-    # capacitance parameters
-    p_CAPACITANCE   = parametrizedSPAC.pars.params[:CAPACITANCE]     # plant storage capacitance, mm MPa-1
-    p_STORAGEK   = parametrizedSPAC.pars.params[:STORAGEK]     # plant storage conductivity, mm d-1 MPa-1
-    p_VSTORAGE = parametrizedSPAC.pars.params[:VSTORAGE]   # total plant storage capacity, mm
-
     ## Location / Meteo
     p_NPINT  = 1 # Hardcoded. If p_NPINT>1, then multiple precipitation intervals would need
                  #            to be defined in an additional input data set PRECDAT.
@@ -465,8 +460,6 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
         p_DURATN = p_DURATN, p_MAXLQF = p_MAXLQF, p_GRDMLT = p_GRDMLT,
         # for isotope mixing:
         p_VXYLEM = p_VXYLEM, p_DISPERSIVITY = p_DISPERSIVITY,
-        # for capacitance
-        p_CAPACITANCE = p_CAPACITANCE, p_STORAGEK = p_STORAGEK, p_VSTORAGE = p_VSTORAGE,
 
         # formerly p_cst4:
         simulate_isotopes = parametrizedSPAC.solver_options.simulate_isotopes,
@@ -479,8 +472,7 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
                             CC   = nothing,#findfirst(isequal(:CC),    u0_field_names),#:CC,
                             SNOWLQ=nothing,#findfirst(isequal(:SNOWLQ),u0_field_names),#:SNOWLQ,
                             RWU  = nothing,#findfirst(isequal(:RWU),   u0_field_names),#:RWU,
-                            XYLEM= nothing,#findfirst(isequal(:XYLEM), u0_field_names)),#:XYLEM],
-                            PLSTOR= nothing),#findfirst(isequal(:PLSTOR), u0_field_names)),#:PLSTOR],
+                            XYLEM= nothing),#findfirst(isequal(:XYLEM), u0_field_names)),#:XYLEM],
         row_idx_SWATI   = nothing,#findfirst(isequal(:SWATI), u0_field_names),#:SWATI],
         row_idx_TRANI   = nothing,#findfirst(isequal(:TRANI), u0_field_names),#[:TRANI],
                         # findfirst(isequal(:aux),   u0_field_names)
@@ -529,12 +521,10 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
         aux_du_ISVP    = [NaN],
         aux_du_RINT    = [NaN],
         aux_du_IRVP    = [NaN],
-        aux_du_PLFL    = [NaN],
         u_SNOW_old     = [NaN],
 
         du_GWFL        = [NaN],
         du_SEEP        = [NaN],
-        aux_du_PLRFI   = fill(NaN, NLAYER),
         aux_du_TRANI   = fill(NaN, NLAYER), # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto
         du_NTFLI       = fill(NaN, NLAYER), # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto
         aux_du_VRFLI   = fill(NaN, NLAYER), # see Localizing variables helps to ensure type stability. under https://nextjournal.com/sosiris-de/ode-diffeq?change-id=CkQATVFdWBPaEkpdm6vuto
@@ -653,8 +643,8 @@ Take meteorologic parameters in `input_meteoveg` and `input_meteoiso` and genera
 """
 function interpolate_meteo(;
     meteo_forcing::DataFrame,
-    meteo_iso_forcing::Union{DataFrame,Nothing},
-    irrig_iso_forcing::Union{DataFrame,Nothing})
+    meteo_iso_forcing::Union{DataFrame,Nothing}, # TODO: do we really want to output nothing? Or simply NaN? (Prevents Union type: Union{Nothing, FLoat64})
+    irrig_iso_forcing::Union{DataFrame,Nothing}) # TODO: do we really want to output nothing? Or simply NaN? (Prevents Union type: Union{Nothing, FLoat64})
 
     # @assert meteo_iso_forcing.days # NOTE: DataFrame `meteo_iso_forcing` can be on a different spacing
 

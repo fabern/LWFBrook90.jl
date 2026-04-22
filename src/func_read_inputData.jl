@@ -1054,7 +1054,6 @@ function read_path_param(path_param; simulate_isotopes::Bool = false) # simulate
             "MXRTLN" => Float64,           "INITRLEN" => Float64,         "INITRDEP" => Float64,
             "RGRORATE" => Float64,         "RGROPER" => Float64,          "FXYLEM" => Float64,
             "PSICR" => Float64,            "RTRAD" => Float64,            "NOOUTF" => Float64,
-            "CAPACITANCE" => Float64,      "STORAGEK" => Float64,         "VSTORAGE" => Float64,
             # Soil parameters -------
             "IDEPTH_m" => Float64,           "QDEPTH_m" => Float64,
             "RSSA" => Float64,             "RSSB" => Float64,             "INFEXP" => Float64,

@@ -312,7 +312,7 @@ original VRFLIi are needed again if the iteration time step (DTI) is reduced.
 """
 function INFLOW!(VRFLI_posterior, INFLI, BYFLI, # these are modified in-place
                 NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
-                aux_du_DSFLI, aux_du_TRANI, aux_du_PLRFI, aux_du_SLVP, p_SWATMAX, u_SWATI, VRFLI_prior)
+                aux_du_DSFLI, aux_du_TRANI, aux_du_SLVP, p_SWATMAX, u_SWATI, VRFLI_prior)
                 # This function a) computes all the fluxes involved in the
                 # balance of a single soil layer and b) corrects the fluxes of
                 # VRFLI, INFLI and BYFLI.
@@ -334,7 +334,7 @@ function INFLOW!(VRFLI_posterior, INFLI, BYFLI, # these are modified in-place
                 ###              |          |             |
                 ###  <-TRANI(i)- | SWATI(i) |             ┴ SLFLI(1) (unused)
                 ###              |          |
-                ###  <-PLRFI(i)- .----------. --DSFLI(i)------------------------>
+                ###              .----------. --DSFLI(i)------------------------>
                 ###                 |
                 ###            VRFLI(i)
                 ###                 |
@@ -349,7 +349,7 @@ function INFLOW!(VRFLI_posterior, INFLI, BYFLI, # these are modified in-place
                 ###              |          |             |
                 ###  <-TRANI(i)- | SWATI(i) |             ┴ SLFLI(1) (unused)
                 ###              |          |
-                ###  <-PLRFI(i)- .----------. --DSFLI(i)------------------------>
+                ###              .----------. --DSFLI(i)------------------------>
                 ###                 |
                 ###            VRFLI(i)
                 ###                 |
@@ -363,7 +363,6 @@ function INFLOW!(VRFLI_posterior, INFLI, BYFLI, # these are modified in-place
     # SLFL      - input rate to soil surface, mm/d
     # DSFLI(*)  - downslope flow rate from layer, mm/d
     # TRANI(*)  - transpiration rate from layer, mm/d
-    # PLRFI(*)  - plant storage refill from layer, mm/d
     # SLVP      - evaporation rate from soil, mm/d
     # SWATMAX(*) - maximum water storage for layer, mm
     # SWATI(*)  - water volume in layer, mm
@@ -393,7 +392,7 @@ function INFLOW!(VRFLI_posterior, INFLI, BYFLI, # these are modified in-place
     for i = NLAYER:-1:1
         # Compute maximum possible inflow during time interval DTI:
         # maximum allowed rate of input of water to layer, mm/d:
-        MAXIN = (p_SWATMAX[i] - u_SWATI[i]) / DTI + VRFLI_posterior[i] + aux_du_DSFLI[i] + aux_du_TRANI[i] + aux_du_PLRFI[i]
+        MAXIN = (p_SWATMAX[i] - u_SWATI[i]) / DTI + VRFLI_posterior[i] + aux_du_DSFLI[i] + aux_du_TRANI[i]
 
         # inflow is composed of INFLI[1]             for the first layer 1
         # inflow is composed of INFLI[i], VRFLI[i-1] for any layer i

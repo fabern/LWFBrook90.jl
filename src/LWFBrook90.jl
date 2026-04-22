@@ -649,7 +649,7 @@ function simulate!(s::DiscretizedSPAC; assert_retcode = true, description = "", 
 
     @time description*" runtime" s.ODESolution = solve(s.ODEProblem; kwargs...)
 
-    @info description * "  Time steps for solving: $(s.ODESolution.destats.naccept) ($(s.ODESolution.destats.naccept) accepted out of $(s.ODESolution.destats.nreject + s.ODESolution.destats.naccept) total)"
+    @info description * "  Time steps for solving: $(s.ODESolution.stats.naccept) ($(s.ODESolution.stats.naccept) accepted out of $(s.ODESolution.stats.nreject + s.ODESolution.stats.naccept) total)"
     @info description * "  End of simulation at $(now())."
 
     if assert_retcode

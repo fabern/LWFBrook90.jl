@@ -184,7 +184,6 @@ function get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
         :cum_d_prec,:cum_d_sfal,:cum_d_sthr,:cum_d_sint,:cum_d_irrig,
         :cum_d_rfal,:cum_d_rint,:cum_d_rthr,:cum_d_rsno,:cum_d_rnet,:cum_d_smlt,
         :cum_d_irvp,:cum_d_isvp,:cum_d_snvp,:cum_d_slvp,
-        :cum_d_plfl,:cum_d_plrf,:cum_pd_plpsi,:cum_md_plpsi,
         :cum_d_tran, # TODO: :accum.cum_d_tran, # delete. we can use u[1].RWU.mmday # all([(simulation.ODESolution.u[idx].accum.cum_d_tran == simulation.ODESolution.u[idx].RWU.mmday) for idx in eachindex(simulation.ODESolution.u)])
         # :RWU_mmday, # use RWU instead of accum.cum_d_tran
         :RWU_d18O, :RWU_d2H,
@@ -371,7 +370,6 @@ function get_soil_(
     end
     # 2) get fluxes
     u_TRANI = reduce(hcat, [solution(t_days).TRANI.mmday for t_days = timepoints])
-    u_PLRFI = reduce(hcat, [solution(t_days).PLRFI.mmday for t_days = timepoints])
     # TODO: possibly add BYFLI, INFLI, DSFLI
 
     # Setup DataFrame to fill
@@ -397,7 +395,6 @@ function get_soil_(
             symbol in [:SWATI                  ] ? (u_SWATI,      "mm"     ) :
             symbol in [:K                      ] ? (p_fu_KK,      "mmday"  ) :
             symbol in [:TRANI, :RWU            ] ? (u_TRANI,      "mmday"  ) :
-            symbol in [:PLRFI                  ] ? (u_PLRFI,      "mmday"  ) :
             # TODO: possibly add BYFLI, INFLI, DSFLI
             error("Unknown symobl $(symbol) requested in `get_soil_()`"))
 

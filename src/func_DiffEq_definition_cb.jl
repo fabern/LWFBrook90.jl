@@ -46,8 +46,7 @@ function define_LWFB90_cb(tspan)
         SNOW  = u.SNOW.mm,
         CC    = u.CC.MJm2,
         SNOWLQ= u.SNOWLQ.mm,
-        TRANI = copy(u.TRANI.mmday),
-        PLRFI = copy(u.PLRFI.mmday)
+        TRANI = copy(u.TRANI.mmday)
     )
 
     cb_save = SavingCallback(
@@ -114,8 +113,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS,
         p_DURATN, p_MAXLQF, p_GRDMLT,
 
-        p_VXYLEM, p_DISPERSIVITY,
-        p_CAPACITANCE, p_VSTORAGE, p_STORAGEK = integrator.p;
+        p_VXYLEM, p_DISPERSIVITY = integrator.p;
 
     ## B) time dependent parameters
     @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC, p_IRRIG,
@@ -134,7 +132,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     @unpack p_fT_TADTM, p_fT_TA, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
         p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
         aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old,
-        aux_du_TRANI, aux_du_PLRFI, aux_du_PLFL = integrator.p;
+        aux_du_TRANI = integrator.p;
     @unpack p_fu_δ18O_SLFL, p_fu_δ2H_SLFL = integrator.p;
 
             # Pre-allocated caches to save memory allocations
@@ -143,7 +141,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
                 aux_du_VRFLI_1st_approx, aux_du_BYFLI, p_fu_BYFRAC,
                 p_fu_SRFL, p_fu_SLFL, DPSIDW = integrator.p;
             @unpack cache1, cache2 = integrator.p # cache vectors of length N
-    
+
     # integrator.p.aux_du_TRANI
     # Parse states
     u_INTS     = integrator.u.INTS.mm
@@ -152,8 +150,6 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     u_CC       = integrator.u.CC.MJm2
     u_SNOWLQ   = integrator.u.SNOWLQ.mm
     u_SWATI    = integrator.u.SWATI.mm
-    u_PLPSI    = integrator.u.PLHYD.ψ
-    u_PLSTOR   = integrator.u.PLSTOR.mm
 
     LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, integrator.t)
 
@@ -195,52 +191,13 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
                        # for SNOENRGY:
                        p_CCFAC, p_MELFAC, p_LAIMLT, p_SAIMLT)
 
-    # output for troubleshooting
-    println("Time: ", integrator.t, " (", LWFBrook90.RelativeDaysFloat2DateTime(integrator.t, REFERENCE_DATE), ")")
-    println("Scalar params: p_fu_DISPC = ", p_fu_DISPC[1], ", p_fT_RXYLEM = ", p_fT_RXYLEM[1], ", p_STORAGEK = ", p_STORAGEK, ", p_fT_DAYLEN = ", p_fT_DAYLEN)
-    println("Vector params: p_fT_RROOTI = ", p_fT_RROOTI, ", p_fT_ALPHA = ", p_fT_ALPHA, ", p_fu_KK = ", p_fu_KK)
-    println("Scalar states: u_PLPSI = ", u_PLPSI, ", u_PLSTOR = ", u_PLSTOR)
-    println("Vector states: u_aux_PSITI = ", u_aux_PSITI, ", u_SWATI = ", u_SWATI, ", u_aux_θ = ", u_aux_θ)
-    
-    # total plant potential including matric and gravity potential assumes plant storage is located halfway up stem
-    p_fu_PLPSIG = 0.5 * p_RHOWG * p_fu_DISPC * 1000 # plant gravity potential in kPa
-    u_aux_PLPSIT = u_PLPSI + p_fu_PLPSIG # total plant water potential
-    
-    # calculate plant storage refill based on previous day's midday plant water potential
-    aux_PLRFI = LWFBrook90.EVP.PLRFBYLAYER(p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, u_aux_PSITI, u_aux_PLPSIT, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
-    
-    # accounting for daylength fraction since refill only occurs during night
-    aux_du_PLRFI .= (p_DTP * (1.0 - p_fT_DAYLEN)) .* aux_PLRFI
-    u_aux_PLRF = sum(aux_du_PLRFI)
-
-    # check that plant storage refill does not exceed max storage capacity
-    if u_aux_PLRF > (p_VSTORAGE - u_PLSTOR)
-        MAXRF = p_VSTORAGE - u_PLSTOR
-        corr_factor = MAXRF / u_aux_PLRF
-        aux_du_PLRFI .= aux_du_PLRFI .* corr_factor
-        u_aux_PLRF = sum(aux_du_PLRFI)
-    end
-    
-    # update plant storage amount
-    u_PLSTOR = u_PLSTOR + u_aux_PLRF
-    #println("Predawn PLSTOR: ", u_PLSTOR)
-
-    # convert to change in water potential with capacitance (in MPa)
-    aux_du_PLPSI = u_aux_PLRF / p_CAPACITANCE
-
-    # update predawn plant water potential in kPa
-    aux_pd_PLPSI = u_PLPSI + aux_du_PLPSI * 1000 # matric potential
-    aux_pd_PLPSIT = aux_pd_PLPSI + p_fu_PLPSIG # including gravitational potential
-    println("Predawn PLPSI: ", aux_pd_PLPSI)
-    println("Predawn PLRF: ", u_aux_PLRF)
-    println("Predawn PLRFI: ", aux_du_PLRFI)
 
     # Calculate average daily rate of potential and actual interception,
     # evaporation, and transpiration by considering weighted average of rate
     # during day and rate during night:
     #* * * * *  B E G I N   D A Y - N I G H T   E T   L O O P  * * * * * * * * *
     # Compute day and night rates
-    (p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR, p_fu_ATRI, p_fu_PGER, p_fu_PLFL) =
+    (p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR, p_fu_ATRI, p_fu_PGER) =
         MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM[1], p_fu_UADTM, p_fT_TANTM, p_fu_UANTM,
                     p_fT_I0HDAY,
                     # for AVAILEN:
@@ -252,12 +209,11 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
                     # for SWPE:
                     p_fu_RSS,
                     # for TBYLAYER:
-                    p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, aux_pd_PLPSIT, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
+                    p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, NLAYER, p_PSICR, NOOUTF)
                     # 0.000012 seconds (28 allocations: 1.938 KiB)
-    println("PTR: ", p_fu_PTR)
     # Combine day and night rates to average daily rate
-    (p_fu_PTRAN, p_fu_GEVP, p_fu_PINT, p_fu_GIVP, aux_du_TRANI[:], aux_du_PLFL[1]) =
-        MSBDAYNIGHT_postprocess(NLAYER, p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR, p_fu_ATRI, p_fu_PLFL, p_fT_DAYLEN)
+    (p_fu_PTRAN, p_fu_GEVP, p_fu_PINT, p_fu_GIVP, aux_du_TRANI[:]) =
+        MSBDAYNIGHT_postprocess(NLAYER, p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR, p_fu_ATRI, p_fT_DAYLEN)
     #* * * * * * * *  E N D   D A Y - N I G H T   L O O P  * * * * * * * * * *
     ####################################################################
     # 1) Update snow accumulation/melt: u_SNOW, u_CC, u_SNOWLQ
@@ -266,7 +222,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     (# compute some fluxes as intermediate results to be used in RHS function f:
     p_fT_SFAL, p_fT_RFAL, p_fu_RNET[1], p_fu_PTRAN,
     # compute changes in soil water storage:
-    aux_du_TRANI[:], aux_du_SLVP[1], aux_du_PLFL[1],
+    aux_du_TRANI[:], aux_du_SLVP[1],
     # compute change in interception storage:
     aux_du_SINT[1], aux_du_ISVP[1], aux_du_RINT[1], aux_du_IRVP[1],
     # compute change in snow storage:
@@ -281,7 +237,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
                # for INTER24 (snow + rain)
                p_DURATN, p_MONTHN(integrator.t),
                #
-               u_SNOW, p_fu_PTRAN, NLAYER, aux_du_TRANI, aux_du_PLFL[1], p_fu_GIVP, p_fu_GEVP,
+               u_SNOW, p_fu_PTRAN, NLAYER, aux_du_TRANI, p_fu_GIVP, p_fu_GEVP,
                # for SNOWPACK
                u_CC, u_SNOWLQ, p_fu_PSNVP, p_fu_SNOEN, p_MAXLQF, p_GRDMLT,
                # Constants
@@ -296,36 +252,14 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     u_SNOW = u_SNOW_MSBupdate
 
     ####################################################################
-    # 3) Update midday plant storage water potential
-    println("Daily PLFL: ", aux_du_PLFL)
-
-    # ensure that plant storage discharge is not more than remaining storage amount
-    aux_du_PLFL[1] = min(aux_du_PLFL[1], u_PLSTOR)
-
-    # change in plant water potential (in MPa)
-    aux_du_PLPSI = aux_du_PLFL[1] / p_CAPACITANCE
-
-    # midday plant storage matric potential
-    aux_md_PLPSI = aux_pd_PLPSI - aux_du_PLPSI * 1000 # convert from MPa to kPa
-    println("Midday PLPSI: ", aux_md_PLPSI)
-
-    # update plant storage amount
-    u_PLSTOR = u_PLSTOR - aux_du_PLFL[1]
-    #println("PLSTOR: ", u_PLSTOR, ", dSTOR: ", u_aux_PLRF - aux_du_PLFL[1])
-
-    u_PLPSI = aux_md_PLPSI
-    
-    println("TRANI: ", aux_du_TRANI)
-
-    ####################################################################
-    # 4) Update soil water using substeps smaller than precipitation
+    # 3) Update soil water using substeps smaller than precipitation
     #    interval. After each substep update: u_GWAT, u_SWATI
     # ... NOTE: this is not done in the callback function but in the main ODE solver
 
     ####################################################################
     # Return results from callback
     # update INTS
-    integrator.u.INTS.mm   = u_INTS
+    integrator.u.INTS.mm = u_INTS
 
     # update INTR
     integrator.u.INTR.mm   = u_INTR
@@ -334,12 +268,6 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     integrator.u.SNOW.mm   = u_SNOW
     integrator.u.CC.MJm2   = u_CC
     integrator.u.SNOWLQ.mm = u_SNOWLQ
-
-    # update plant storage values
-    integrator.u.PLSTOR.mm    = u_PLSTOR
-    integrator.u.PLHYD.θ      = u_PLSTOR / p_VSTORAGE
-    integrator.u.PLHYD.ψ      = u_PLPSI
-    integrator.u.PLRFI.mmday .= aux_du_PLRFI
 
     p_fu_δ18O_SLFL .= NaN # NOTE: safety check to assert NaNs are directly after overwritten by callback for isotopes
     p_fu_δ2H_SLFL  .= NaN # NOTE: safety check to assert NaNs are directly after overwritten by callback for isotopes
@@ -372,10 +300,6 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         integrator.u.accum.cum_d_ptran      = p_DTP * (p_fu_PTRAN)                                                                 # cum_d_ptran
         p_fu_PSLVP = (p_fu_PGER[1] * p_fT_DAYLEN + p_fu_PGER[2] * (1 - p_fT_DAYLEN)) # (not needed for model computations, just for comparison with LWFBrook90R)
         integrator.u.accum.cum_d_pslvp      = p_DTP * (p_fu_PSLVP)                                                             # cum_d_pslvp # Deactivated as p_fu_PSLVP is never used
-        integrator.u.accum.cum_d_plfl       = p_DTP * (aux_du_PLFL[1])                                                  # cum_d_plfl
-        integrator.u.accum.cum_d_plrf       = u_aux_PLRF                                                                # cum_d_plrf
-        integrator.u.accum.cum_pd_plpsi     = aux_pd_PLPSI                                                              # cum_pd_plpsi
-        integrator.u.accum.cum_md_plpsi     = aux_md_PLPSI                                                              # cum_md_plpsi
         # integrator.u.accum.flow             = 0 # flow,  is computed in ODE
         # integrator.u.accum.seep             = 0 # seep,  is computed in ODE
         # integrator.u.accum.srfl             = 0 # srfl,  is computed in ODE

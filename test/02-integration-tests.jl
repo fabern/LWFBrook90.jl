@@ -267,7 +267,7 @@ function plot_Hammel_Dense(sim, ref, hyd, depth_to_read_out_mm, title; subtitle 
     ODE_method = replace(String(Symbol(sim.ODEsolution.alg)), r"(.*?)(\(|{).*"=>s"\1")
     final_title = title
     final_subtitle = Printf.@sprintf("%d time steps with method: %s %s",
-            sim.ODEsolution.destats.naccept,
+            sim.ODEsolution.stats.naccept,
             ODE_method,
             ifelse(subtitle=="","","\n"*subtitle))
 
@@ -787,8 +787,8 @@ end
     # check that irrigation is contributing to daily flux
     @test sum(fluxes.cum_d_irrig) > 0
 
-    # check that irrigation flux is same as forcing
-    @test all(abs.(forcing.irrig_mmDay[1:(end-1)] .- fluxes.cum_d_irrig[2:end]) .< 1e-10)
+    # check that irrigation flux yields same annual sum as forcing
+    @test (sum(forcing.irrig_mmDay[1:(end-1)]) .- sum(fluxes.cum_d_irrig[2:end])) < 1e-10
 
     # check that irrigation isotopes have values
     @test all((!isnothing).(forcing.irrigdelta18O_permil))

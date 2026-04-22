@@ -8,8 +8,6 @@ using Random
 using Printf
 using Logging
 using Dates: today, DateTime, Date
-using JLD2: jldsave, load
-# using FileIO
 import FileIO
 
 # A flag that determines if tests are run on a CI system
