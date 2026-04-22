@@ -2,7 +2,7 @@
 #    - julia --project=docs docs/make.jl
 #    - empty!(ARGS); include("make.jl")
 # To build the documentation without running the tests:
-#    - julia --project="." make.jl preview
+#    - julia --project=docs docs/make.jl preview
 #    - push!(ARGS,"preview"); include("make.jl")
 
 using

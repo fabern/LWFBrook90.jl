@@ -213,7 +213,7 @@ function test_states_comparison(u_mm, u_δ, u_belowground,
     loaded_u_δsoil_d2H   = select(loaded_u_belowground, r"δ2H_" ) # loaded["u_δsoil"].d2H
 
     @testset "test_states_comparison" begin
-                # Test scalar states
+        # Test scalar states
         compare_scalar = (A,B; nans = false) -> all(isapprox.(Matrix(A), Matrix(B); nans))
         @test compare_scalar(loaded_u_ref, u_ref)
         @test compare_scalar(loaded_u_δ[:, Not(1)],   u_δ[:, Not(1)]; nans=true) # Not(1) removes :time or :dates
@@ -235,13 +235,13 @@ end
     u_mm, u_δ, u_belowground = get_some_states_to_compare(example_result);
 
     # test or overwrite
-        fname = "../examples/DAV2020-full_u_sol_reference.jld2"
-        loaded_u_mm          = read(replace(fname, ".jld2"=>"u_mm.csv"), DataFrame)
+    fname = "../examples/DAV2020-full_u_sol_reference.jld2"
+    loaded_u_mm          = read(replace(fname, ".jld2"=>"u_mm.csv"), DataFrame)
     loaded_u_δ           = read(replace(fname, ".jld2"=>"u_δ.csv"), DataFrame)
     loaded_u_belowground = read(replace(fname, ".jld2"=>"u_belowground.csv"), DataFrame)
 
     currSPAC = example_result.parametrizedSPAC;
-fname_base = replace(fname, ".jld2" => "")
+    fname_base = replace(fname, ".jld2" => "")
     if task == "test"
         test_states_comparison(u_mm, u_δ, u_belowground,
             loaded_u_mm, loaded_u_δ, loaded_u_belowground)
@@ -513,7 +513,7 @@ end
     df_simulatedFluxes = get_daily_soilFluxes(example_result3);
 
     # test or overwrite
-        fname = "../examples/DAV2020-full-modified_fluxes_referencedf.csv"
+    fname = "../examples/DAV2020-full-modified_fluxes_referencedf.csv"
     loadeddf = read(fname, DataFrame)
     if task == "test"
         test_fluxes_comparison(df_simulatedFluxes, loadeddf)

@@ -514,7 +514,7 @@ function intern___get_SWATI_derivatives(simulation::DiscretizedSPAC; days_to_rea
     p_soil = solution.prob.p.p_soil
     NLAYER = p_soil.NLAYER
     if isnothing(days_to_read_out_d)
-        u_SWATI = reduce(hcat, [solution[t_idx].SWATI.mm  for t_idx = eachindex(solution)])
+        u_SWATI = reduce(hcat, [solution.u[t_idx].SWATI.mm  for t_idx = eachindex(solution)])
     else
         u_SWATI = reduce(hcat, [solution(t_days).SWATI.mm for t_days = days_to_read_out_d])
     end
@@ -663,10 +663,10 @@ function intern___get_data_for_isotopePlot(simulation)
         col_PREC_d18O = solu.prob.p.p_δ18O_PREC.(days_to_read_out_d),
         col_PREC_d2H  = solu.prob.p.p_δ2H_PREC.(days_to_read_out_d),
         col_IRRIG_amt_dense  = solu.prob.p.p_IRRIG.(t1),
-        col_IRRIG_d18O_dense = solu.prob.p.p_δ18O_IRRIG.(t1),
-        col_IRRIG_d2H_dense  = solu.prob.p.p_δ2H_IRRIG.(t1),
-        col_IRRIG_d18O = solu.prob.p.p_δ18O_IRRIG.(days_to_read_out_d),
-        col_IRRIG_d2H  = solu.prob.p.p_δ2H_IRRIG.(days_to_read_out_d),
+        col_IRRIG_d18O_dense = solu.prob.p.p_δ18O_IRRIG.(t1),           # TODO: do we really want to output nothing? Or simply NaN? (Prevents Union type: Union{Nothing, FLoat64})
+        col_IRRIG_d2H_dense  = solu.prob.p.p_δ2H_IRRIG.(t1),            # TODO: do we really want to output nothing? Or simply NaN? (Prevents Union type: Union{Nothing, FLoat64})
+        col_IRRIG_d18O = solu.prob.p.p_δ18O_IRRIG.(days_to_read_out_d), # TODO: do we really want to output nothing? Or simply NaN? (Prevents Union type: Union{Nothing, FLoat64})
+        col_IRRIG_d2H  = solu.prob.p.p_δ2H_IRRIG.(days_to_read_out_d),  # TODO: do we really want to output nothing? Or simply NaN? (Prevents Union type: Union{Nothing, FLoat64})
         col_INTS_d18O = [solu(t).INTS.d18O for t in days_to_read_out_d],
         col_INTR_d18O = [solu(t).INTR.d18O for t in days_to_read_out_d],
         col_SNOW_d18O = [solu(t).SNOW.d18O for t in days_to_read_out_d],
