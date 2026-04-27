@@ -225,8 +225,6 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
             # du.accum.BALERD_SWAT    = 0 # is computed in callback
             # du.accum.BALERD_total   = 0 # is computed in callback
 
-            # TODO(bernhard): use SavingCallback() for all quantities that have du=0
-            #                 only keep du=... for quantities for which we compute cumulative sums
         end
 
         # @infiltrate any(abs.(du_δ2H_SWATI) .> 10)
