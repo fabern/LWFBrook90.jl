@@ -338,7 +338,6 @@ function LWFBrook90R_reset_daily!(integrator)
     @unpack compute_intermediate_quantities = integrator.p;
 
     if compute_intermediate_quantities
-
         # set daily sum to zero and use ODE to accumulate flow.
         integrator.u.accum.flow             = 0 # flow,  is computed in ODE
         integrator.u.accum.seep             = 0 # seep,  is computed in ODE
@@ -348,10 +347,7 @@ function LWFBrook90R_reset_daily!(integrator)
         integrator.u.accum.dsfl             = 0 # dsfl,  is computed in ODE
         integrator.u.accum.gwfl             = 0 # gwfl,  is computed in ODE
         integrator.u.accum.vrfln            = 0 # vrfln, is computed in ODE
-        
     end
-
-
 
 end
 
