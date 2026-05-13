@@ -64,7 +64,8 @@ function get_states(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
 
     # ii) vector states
     # names(get_soil_([:θ, :ψ, :δ18O, :δ2H, :W, :SWATI, :K], simulation))
-    vect_states = get_soil_([:θ, :ψ, :d18O, :d2H], simulation; days_to_read_out_d = timepoints)
+    vect_states = simulate_isotopes ? get_soil_([:θ, :ψ, :d18O, :d2H], simulation; days_to_read_out_d = timepoints) :
+        get_soil_([:θ, :ψ], simulation; days_to_read_out_d = timepoints)
 
     # simulation.ODESolution.u[1].SWATI.mm
     # simulation.ODESolution.u[1].SWATI.d2H
@@ -133,9 +134,9 @@ function get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
     @assert !isnothing(simulation.ODESolution) "Solution was not yet computed. Please simulate!(simulation)"
 
     timepoints =
-        isnothing(days_to_read_out_d)           ? unique(round.(simulation.ODESolution.t)) : # case nothing: return daily by default
-        # days_to_read_out_d == :integrator_step  ? error("Cumulative fluxes should not be read out on subdaily intervals.") : # if requested return for each integration step stored in ODESolution
-        days_to_read_out_d == :integrator_step  ? simulation.ODESolution.t :
+        isnothing(days_to_read_out_d)           ? simulation.saved_values.t : # case nothing: return daily by default
+        days_to_read_out_d == :integrator_step  ? error("Cumulative fluxes should not be read out on subdaily intervals.") : # if requested return for each integration step stored in ODESolution
+        # days_to_read_out_d == :integrator_step  ? simulation.ODESolution.t : # this will produce an error now so reactivating above error
         days_to_read_out_d[1] isa Number        ? days_to_read_out_d :                       # else assume we got a vector of days
         error("Unknown `days_to_read_out_d` provided.")
     if !isnothing(days_to_read_out_d) @warn("""
@@ -146,36 +147,64 @@ function get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
 
     t_ref = simulation.ODESolution.prob.p.REFERENCE_DATE
 
-    # 1) scalar fluxes
-    ks = keys(simulation.ODESolution.u[1].accum)
-    df_scalar_fluxes =
-        DataFrame((:dates => RelativeDaysFloat2DateTime.(timepoints, t_ref)),
-                (k => [simulation.ODESolution(t).accum[k] for t in timepoints] for k in ks)...)
-    # DataFrame((:date => simulation.ODESolution_datetime ),
-    #         (k => [ut.accum[k] for ut in simulation.ODESolution.u] for k in ks)...)
+    # need depths for transpiration fluxes
+    depths_to_read_out_mm = round.(Int, cumsum(simulation.ODESolution.prob.p.p_soil.p_THICK))      # NOTE: this rounds hardcoded to mm
 
-    # 2) vector fluxes
-    # trani:
-    df_vector_fluxes = get_soil_([:TRANI], simulation; days_to_read_out_d = timepoints)
-    # TODO: # byfli, infli, dsfli are currently not done
+    # extract the saved values from the simulation
+    saved = simulation.saved_values
+    nt = length(saved.t) # number of time steps
+    all_keys = fieldnames(typeof(saved.saveval[1]))  # keys of named tuple
 
-    t_ref = simulation.ODESolution.prob.p.REFERENCE_DATE
-    df_vector_fluxes.time = RelativeDaysFloat2DateTime.(df_vector_fluxes.time, t_ref)
-    rename!(df_vector_fluxes, :time => :dates)
+    # 1) scalar and vector fluxes from saved values
+    df_fluxes = DataFrame()
+    df_fluxes[:, :time] = saved.t
+    df_fluxes[:, :dates] = LWFBrook90.RelativeDaysFloat2DateTime.(saved.t, t_ref)
 
-    # 3) scalar fluxes, signatures
+    for k in all_keys
+        # extract all values for this key over time
+        vals = [getfield(saved.saveval[i], k) for i in 1:nt]
+
+        if (vals[1] isa AbstractArray) # needs to be unpacked into multiple columns
+            nsub = length(vals[1])
+            colnames = propertynames(vals[1]) # only for accum
+            for j in 1:nsub
+                if length(colnames) > 1 # accum has column names
+                    colname = colnames[j]
+                else # need to build column names
+                    # append layered fluxes with the unit and depths in column name
+                    colname = Symbol("$(k)_mmday_$(Int(depths_to_read_out_mm[j]))mm")
+                end
+                df_fluxes[:, colname] = [v[j] for v in vals]
+            end
+        else
+            df_fluxes[:, Symbol(k)] = vals
+        end
+    end
+
+    # align ODE vars with other accum fluxes
+    shift_vars = [:srfl,:slfl,:byfl,:dsfl,:gwfl,:vrfln,:flow,:seep]
+    df_fluxes[1:(nt-1), shift_vars] .= df_fluxes[2:nt, shift_vars]
+    
+    # filter for requested time points
+    filter!(row -> row.time in timepoints, df_fluxes)
+
+    # 2) scalar fluxes, signatures
     simulate_isotopes = simulation.parametrizedSPAC.solver_options.simulate_isotopes
     df_scalar_signatures = !simulate_isotopes ? DataFrame() : LWFBrook90.intern___get_scalars(
         [:RWU, :PREC, :RWU, :PREC, :RWU],
         [:mmday,:d18O, :d18O, :d2H, :d2H],
         simulation, timepoints)[:,Not(:time)]
 
-    # 4) vector fluxes, signatures
+    # 3) vector fluxes, signatures
     df_vector_signatures = DataFrame() # TODO: this is currently not stored anywhere when simulating (would need to append to state vector u0)
 
-    # combine scalar and vector
-    df_all_fluxes = innerjoin(df_scalar_fluxes, df_vector_fluxes, on = [:dates])
-    df_all_fluxes = hcat(df_all_fluxes, df_scalar_signatures, df_vector_signatures)
+    # combine fluxes and signatures
+    df_all_fluxes = hcat(df_fluxes, df_scalar_signatures, df_vector_signatures)
+
+    # remove last row if not already excluded by provided timepoints
+    if isnothing(days_to_read_out_d) || timepoints[end] == saved.t[end]
+        df_all_fluxes = df_all_fluxes[1:(end-1), :]
+    end
 
     # specify column order:
     cols_selected = (

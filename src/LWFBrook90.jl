@@ -586,11 +586,11 @@ function setup(parametrizedSPAC::SPAC;
     ####################
 
     return DiscretizedSPAC(;
-        parametrizedSPAC    = modifiedSPAC,
-        ODEProblem          = ode_LWFBrook90,
-        ODESolution         = nothing,
-        ODESolution_datetime= nothing,
-        saved_values           = saved_values)
+        parametrizedSPAC     = modifiedSPAC,
+        ODEProblem           = ode_LWFBrook90,
+        ODESolution          = nothing,
+        ODESolution_datetime = nothing,
+        saved_values         = saved_values)
 end
 """
     is_setup(parametrizedSPAC::SPAC)
