@@ -294,6 +294,7 @@ function get_forcing(simulation::DiscretizedSPAC) # returns forcing [..., ..., .
     # handle time
     t_ref = p_fT.REFERENCE_DATE
     timepoints = simulation.parametrizedSPAC.forcing.meteo["p_days"]         # forcing period can be longer than simulation output (e.g. when using a spinup period)
+    timepoints = timepoints[1:(end-1)]                                       # exclude last time point, which only repeats last day of forcing for interpolation
     # timepoints = range(simulation.ODEProblem.tspan..., step = 1)           # Plot forcing as daily, even if solution output (ODESolution.t) is not dense
     # timepoints = range(extrema(simulation.ODESolution.t)..., step = 1)     # Plot forcing as daily, even if solution output (ODESolution.t) is not dense
 

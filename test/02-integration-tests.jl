@@ -788,7 +788,10 @@ end
     @test sum(fluxes.cum_d_irrig) > 0
 
     # check that irrigation flux yields same annual sum as forcing
-    @test (sum(forcing.irrig_mmDay[1:(end-1)]) .- sum(fluxes.cum_d_irrig[2:end])) < 1e-10
+    @test (sum(forcing.irrig_mmDay) .- sum(fluxes.cum_d_irrig)) < 1e-10
+
+    # check that daily irrigation forcing is same as fluxes
+    @test all((abs.(forcing.irrig_mmDay .- fluxes.cum_d_irrig) .< 1e-10))
 
     # check that irrigation isotopes have values
     @test all((!isnothing).(forcing.irrigdelta18O_permil))
