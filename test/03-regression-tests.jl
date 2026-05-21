@@ -320,14 +320,14 @@ function get_daily_soilFluxes(simulation)
 
     return hcat(DataFrame(time = d_out), DataFrame(simulated_fluxes))
 end
-function get_daily_soilFluxes_new(simulation)
+function get_daily_soilFluxes_from_saveval(simulation)
     
     out = simulation.saved_values;
     t_out = out.t;
     t_ref = simulation.ODESolution.prob.p.REFERENCE_DATE;
     d_out = RelativeDaysFloat2DateTime.(t_out, t_ref);
 
-    # format to match order of current fluxes output
+    # format to match order of ODESolution output
     simulated_fluxes = (
         cum_d_prec      = vcat(0, [out.saveval[t_days].accum.cum_d_prec      for t_days = 1:(length(t_out)-1)]),
         cum_d_rfal      = vcat(0, [out.saveval[t_days].accum.cum_d_rfal      for t_days = 1:(length(t_out)-1)]),
@@ -464,8 +464,8 @@ end
     df_simulatedFluxes2 = get_daily_soilFluxes(simulation2);
     df_simulatedFluxes2b = get_daily_soilFluxes(simulation2_withVariousFlows);
 
-    df_simulatedFluxes2c = get_daily_soilFluxes_new(simulation2);
-    df_simulatedFluxes2d = get_daily_soilFluxes_new(simulation2_withVariousFlows);
+    df_simulatedFluxes2c = get_daily_soilFluxes_from_saveval(simulation2);
+    df_simulatedFluxes2d = get_daily_soilFluxes_from_saveval(simulation2_withVariousFlows);
 
     fname2  = "../examples/INFEXP1_fluxes_referencedf.csv"
     fname2b = "../examples/INFEXP1-modified_fluxes_referencedf.csv"
@@ -474,8 +474,6 @@ end
     if task == "test"
         test_fluxes_comparison(df_simulatedFluxes2,  loadeddf2)
         test_fluxes_comparison(df_simulatedFluxes2b, loadeddf2b)
-        #test_fluxes_comparison(df_simulatedFluxes2c, loadeddf2) # new format
-        #test_fluxes_comparison(df_simulatedFluxes2d, loadeddf2b)# new format
         test_fluxes_comparison(df_simulatedFluxes2, df_simulatedFluxes2c) # check that new format matches old format
         test_fluxes_comparison(df_simulatedFluxes2b, df_simulatedFluxes2d) # check that new format matches old format
     elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
@@ -561,15 +559,14 @@ end
 
     # extract required data from solution object
     df_simulatedFluxes = get_daily_soilFluxes(example_result3);
-    df_simulatedFluxes_new = get_daily_soilFluxes_new(example_result3);
+    df_simulatedFluxes2 = get_daily_soilFluxes_from_saveval(example_result3);
 
     # test or overwrite
     fname = "../examples/DAV2020-full-modified_fluxes_referencedf.csv"
     loadeddf = read(fname, DataFrame)
     if task == "test"
         test_fluxes_comparison(df_simulatedFluxes, loadeddf)
-        test_fluxes_comparison(df_simulatedFluxes_new, loadeddf)
-        test_fluxes_comparison(df_simulatedFluxes_new, df_simulatedFluxes) # check that new format matches old format
+        test_fluxes_comparison(df_simulatedFluxes2, df_simulatedFluxes) # check that new format matches old format
     elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
         # overwrite output
         write(fname, df_simulatedFluxes)
