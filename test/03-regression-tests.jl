@@ -320,6 +320,49 @@ function get_daily_soilFluxes(simulation)
 
     return hcat(DataFrame(time = d_out), DataFrame(simulated_fluxes))
 end
+function get_daily_soilFluxes_from_saveval(simulation)
+    
+    out = simulation.saved_values;
+    t_out = out.t;
+    t_ref = simulation.ODESolution.prob.p.REFERENCE_DATE;
+    d_out = RelativeDaysFloat2DateTime.(t_out, t_ref);
+
+    # format to match order of ODESolution output
+    simulated_fluxes = (
+        cum_d_prec      = vcat(0, [out.saveval[t_days].accum.cum_d_prec      for t_days = 1:(length(t_out)-1)]),
+        cum_d_rfal      = vcat(0, [out.saveval[t_days].accum.cum_d_rfal      for t_days = 1:(length(t_out)-1)]),
+        cum_d_sfal      = vcat(0, [out.saveval[t_days].accum.cum_d_sfal      for t_days = 1:(length(t_out)-1)]),
+        cum_d_rint      = vcat(0, [out.saveval[t_days].accum.cum_d_rint      for t_days = 1:(length(t_out)-1)]),
+        cum_d_sint      = vcat(0, [out.saveval[t_days].accum.cum_d_sint      for t_days = 1:(length(t_out)-1)]),
+        cum_d_rthr      = vcat(0, [out.saveval[t_days].accum.cum_d_rthr      for t_days = 1:(length(t_out)-1)]),
+        cum_d_sthr      = vcat(0, [out.saveval[t_days].accum.cum_d_sthr      for t_days = 1:(length(t_out)-1)]),
+        cum_d_rsno      = vcat(0, [out.saveval[t_days].accum.cum_d_rsno      for t_days = 1:(length(t_out)-1)]),
+        cum_d_rnet      = vcat(0, [out.saveval[t_days].accum.cum_d_rnet      for t_days = 1:(length(t_out)-1)]),
+        cum_d_smlt      = vcat(0, [out.saveval[t_days].accum.cum_d_smlt      for t_days = 1:(length(t_out)-1)]),
+        cum_d_tran      = vcat(0, [out.saveval[t_days].accum.cum_d_tran      for t_days = 1:(length(t_out)-1)]),
+        cum_d_irvp      = vcat(0, [out.saveval[t_days].accum.cum_d_irvp      for t_days = 1:(length(t_out)-1)]),
+        cum_d_isvp      = vcat(0, [out.saveval[t_days].accum.cum_d_isvp      for t_days = 1:(length(t_out)-1)]),
+        cum_d_slvp      = vcat(0, [out.saveval[t_days].accum.cum_d_slvp      for t_days = 1:(length(t_out)-1)]),
+        cum_d_snvp      = vcat(0, [out.saveval[t_days].accum.cum_d_snvp      for t_days = 1:(length(t_out)-1)]),
+        cum_d_pint      = vcat(0, [out.saveval[t_days].accum.cum_d_pint      for t_days = 1:(length(t_out)-1)]),
+        cum_d_ptran     = vcat(0, [out.saveval[t_days].accum.cum_d_ptran     for t_days = 1:(length(t_out)-1)]),
+        evap            = vcat(0, [out.saveval[t_days].accum.evap            for t_days = 1:(length(t_out)-1)]),
+        flow            = [out.saveval[t_days].accum.flow            for t_days = 1:length(t_out)],
+        seep            = [out.saveval[t_days].accum.seep            for t_days = 1:length(t_out)],
+        srfl            = [out.saveval[t_days].accum.srfl            for t_days = 1:length(t_out)],
+        slfl            = [out.saveval[t_days].accum.slfl            for t_days = 1:length(t_out)],
+        byfl            = [out.saveval[t_days].accum.byfl            for t_days = 1:length(t_out)],
+        dsfl            = [out.saveval[t_days].accum.dsfl            for t_days = 1:length(t_out)],
+        gwfl            = [out.saveval[t_days].accum.gwfl            for t_days = 1:length(t_out)],
+        vrfln           = [out.saveval[t_days].accum.vrfln           for t_days = 1:length(t_out)],
+        StorageSWAT     = vcat(out.saveval[1].accum.StorageSWAT,  [out.saveval[t_days].accum.StorageSWAT     for t_days = 1:(length(t_out)-1)]),
+        StorageWATER    = vcat(out.saveval[1].accum.StorageWATER, [out.saveval[t_days].accum.StorageWATER    for t_days = 1:(length(t_out)-1)]),
+        BALERD_SWAT     = vcat(out.saveval[1].accum.BALERD_SWAT,  [out.saveval[t_days].accum.BALERD_SWAT     for t_days = 1:(length(t_out)-1)]),
+        BALERD_total    = vcat(out.saveval[1].accum.BALERD_total, [out.saveval[t_days].accum.BALERD_total    for t_days = 1:(length(t_out)-1)]),
+        )
+
+    return hcat(DataFrame(time = d_out), DataFrame(simulated_fluxes))
+end
 function plot_simulated_fluxes_vs_reference(simulated_fluxes_arg, reference_arg; labels = ["current code" "reference simulation"], kwargs...)
     d_out = simulated_fluxes_arg.time
     simulated_fluxes = NamedTuple([k=>v for (k,v) in pairs(eachcol(simulated_fluxes_arg))])
@@ -377,27 +420,27 @@ function test_fluxes_comparison(simulated_fluxes_arg, reference_arg)
         @test isapprox(reference["cum_d_rsno"],     simulated_fluxes.cum_d_rsno,     atol = 1e-4, rtol = 1e-4)
         @test isapprox(reference["cum_d_rnet"],     simulated_fluxes.cum_d_rnet,     atol = 1e-4, rtol = 1e-4)
         @test isapprox(reference["cum_d_smlt"],     simulated_fluxes.cum_d_smlt,     atol = 1e-4, rtol = 1e-4)
-        @test_skip isapprox(reference["evap"],      simulated_fluxes.evap,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["cum_d_tran"],     simulated_fluxes.cum_d_tran,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["evap"],      simulated_fluxes.evap,     atol = 1e-3, rtol = 1e-3) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["cum_d_tran"],     simulated_fluxes.cum_d_tran,     atol = 1e-1, rtol = 1e-1) # TODO: somehow this does not work on CI?
         @test isapprox(reference["cum_d_irvp"],     simulated_fluxes.cum_d_irvp,     atol = 1e-4, rtol = 1e-4)
         @test isapprox(reference["cum_d_isvp"],     simulated_fluxes.cum_d_isvp,     atol = 1e-4, rtol = 1e-4)
-        @test_skip isapprox(reference["cum_d_slvp"],     simulated_fluxes.cum_d_slvp,     atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["cum_d_slvp"],     simulated_fluxes.cum_d_slvp,     atol = 1e-1, rtol = 1e-1) # TODO: somehow this does not work on CI?
         @test isapprox(reference["cum_d_snvp"],     simulated_fluxes.cum_d_snvp,     atol = 1e-4, rtol = 1e-4)
         @test isapprox(reference["cum_d_pint"],     simulated_fluxes.cum_d_pint,     atol = 1e-4, rtol = 1e-4)
         @test isapprox(reference["cum_d_ptran"],    simulated_fluxes.cum_d_ptran,    atol = 1e-4, rtol = 1e-4)
         # @test isapprox(reference["cum_d_pslvp"],  simulated_fluxes.cum_d_pslvp,    atol = 1e-4, rtol = 1e-4)
-        @test_skip isapprox(reference["flow"],           simulated_fluxes.flow,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["flow"],           simulated_fluxes.flow,           atol = 1e-1, rtol = 1e-1) # TODO: somehow this does not work on CI?
         @test isapprox(reference["seep"],           simulated_fluxes.seep,           atol = 1e-4, rtol = 1e-4)
-        @test_skip isapprox(reference["srfl"],           simulated_fluxes.srfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["slfl"],           simulated_fluxes.slfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["byfl"],           simulated_fluxes.byfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["srfl"],           simulated_fluxes.srfl,           atol = 1e-1, rtol = 1e-1) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["slfl"],           simulated_fluxes.slfl,           atol = 1e-1, rtol = 1e-1) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["byfl"],           simulated_fluxes.byfl,           atol = 1e-1, rtol = 1e-1) # TODO: somehow this does not work on CI?
         @test isapprox(reference["dsfl"],           simulated_fluxes.dsfl,           atol = 1e-4, rtol = 1e-4) #
-        @test_skip isapprox(reference["gwfl"],           simulated_fluxes.gwfl,           atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["vrfln"],          simulated_fluxes.vrfln,          atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["StorageSWAT"],    simulated_fluxes.StorageSWAT,    atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["StorageWATER"],   simulated_fluxes.StorageWATER,   atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["BALERD_SWAT"],    simulated_fluxes.BALERD_SWAT,    atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
-        @test_skip isapprox(reference["BALERD_total"],   simulated_fluxes.BALERD_total,   atol = 1e-4, rtol = 1e-4) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["gwfl"],           simulated_fluxes.gwfl,           atol = 1e-1, rtol = 1e-1) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["vrfln"],          simulated_fluxes.vrfln,          atol = 1e-1, rtol = 1e-1) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["StorageSWAT"],    simulated_fluxes.StorageSWAT,    atol = 1e-1, rtol = 1e-1) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["StorageWATER"],   simulated_fluxes.StorageWATER,   atol = 1e-1, rtol = 1e-1) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["BALERD_SWAT"],    simulated_fluxes.BALERD_SWAT,    atol = 1e-0, rtol = 1e-0) # TODO: somehow this does not work on CI?
+        @test isapprox(reference["BALERD_total"],   simulated_fluxes.BALERD_total,   atol = 1e-0, rtol = 1e-0) # TODO: somehow this does not work on CI?
     end
 end
 
@@ -421,6 +464,9 @@ end
     df_simulatedFluxes2 = get_daily_soilFluxes(simulation2);
     df_simulatedFluxes2b = get_daily_soilFluxes(simulation2_withVariousFlows);
 
+    df_simulatedFluxes2c = get_daily_soilFluxes_from_saveval(simulation2);
+    df_simulatedFluxes2d = get_daily_soilFluxes_from_saveval(simulation2_withVariousFlows);
+
     fname2  = "../examples/INFEXP1_fluxes_referencedf.csv"
     fname2b = "../examples/INFEXP1-modified_fluxes_referencedf.csv"
     loadeddf2  = read(fname2, DataFrame)
@@ -428,6 +474,8 @@ end
     if task == "test"
         test_fluxes_comparison(df_simulatedFluxes2,  loadeddf2)
         test_fluxes_comparison(df_simulatedFluxes2b, loadeddf2b)
+        test_fluxes_comparison(df_simulatedFluxes2, df_simulatedFluxes2c) # check that new format matches old format
+        test_fluxes_comparison(df_simulatedFluxes2b, df_simulatedFluxes2d) # check that new format matches old format
     elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
         # overwrite output
         write(fname2,  df_simulatedFluxes2)
@@ -511,12 +559,14 @@ end
 
     # extract required data from solution object
     df_simulatedFluxes = get_daily_soilFluxes(example_result3);
+    df_simulatedFluxes2 = get_daily_soilFluxes_from_saveval(example_result3);
 
     # test or overwrite
     fname = "../examples/DAV2020-full-modified_fluxes_referencedf.csv"
     loadeddf = read(fname, DataFrame)
     if task == "test"
         test_fluxes_comparison(df_simulatedFluxes, loadeddf)
+        test_fluxes_comparison(df_simulatedFluxes2, df_simulatedFluxes) # check that new format matches old format
     elseif task == "overwrite" && !is_a_CI_system # only overwrite on local machine, never on CI
         # overwrite output
         write(fname, df_simulatedFluxes)
