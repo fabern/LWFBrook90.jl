@@ -8,7 +8,7 @@ once per day. This operator splitting (daily vs continuous update of ODEs) is
 implemented by using this callback function which is called once per day.
 """
 # B) Define callback
-function define_LWFB90_cb()
+function define_LWFB90_cb(tspan)
     # cb_LaiRichardsCorrectorStep = FunctionCallingCallback(
     #     (u,t,integrator) -> nothing;    # TODO(bernhard): this can be used to implement the corrector step of Lai-2015 (or Li-2021-J_Hydrol.pdf) after DiffEq.jl is used for the predictor step
     #     func_everystep=true, func_start=false)
@@ -34,6 +34,33 @@ function define_LWFB90_cb()
                                 func_everystep = true,
                                 func_start = false);
 
+    # saving callback to align callback outputs exactly with midnight
+
+    saved_values = SavedValues(Float64, NamedTuple)
+
+    save_func(u, t, integrator) = (
+        accum = deepcopy(u.accum),
+        RWU   = u.RWU.mmday,
+        INTS  = u.INTS.mm,
+        INTR  = u.INTR.mm,
+        SNOW  = u.SNOW.mm,
+        CC    = u.CC.MJm2,
+        SNOWLQ= u.SNOWLQ.mm,
+        TRANI = copy(u.TRANI.mmday)
+    )
+
+    cb_save = SavingCallback(
+        save_func, 
+        saved_values; 
+        saveat=tspan[1]:1:tspan[2]);
+
+    # callback for daily reset of RHS accumulators
+    cb_reset_daily = PeriodicCallback(
+                                LWFBrook90R_reset_daily!,  1.0;
+                                initial_affect = false, # we do not need to reset accumulators at the initial conditions
+                                save_positions=(false,false));
+    
+
     #TODO(bernhard) Implement swchek from LWFBrook90 as ContinuousCallback
     # swcheck_cb = ContinuousCallback()
 
@@ -51,9 +78,15 @@ function define_LWFB90_cb()
         # 2) Aboveground
         # Daily update of aboveground storages and concentrations
         cb_INTS_INTR_SNOW_amounts,
-        cb_INTS_INTR_SNOW_deltas
+        cb_INTS_INTR_SNOW_deltas,
+
+        # 3a) Saving callback to save daily callback-derived variables
+        cb_save,
+
+        # 3b) Need to reset daily accumulators for ODE after saving callback
+        cb_reset_daily
         )
-    return cb_set
+    return cb_set, saved_values
 end
 
 # A) Define updating function
@@ -258,7 +291,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     if compute_intermediate_quantities
 
         # 1) Either set daily sum if rate is constant throughout precipitation interval: p_DTP*(...)
-        # 2) or then set daily sum to zero and use ODE to accumulate flow.
+        # 2) or set daily sum to zero in reset_daily callback and use ODE to accumulate flow.
         integrator.u.accum.cum_d_prec       = p_DTP * (p_fT_RFAL + p_fT_SFAL)                 # RFALD + SFALD        # cum_d_prec
         integrator.u.accum.cum_d_rfal       = p_DTP * (p_fT_RFAL)                                                    # cum_d_rfal
         integrator.u.accum.cum_d_sfal       = p_DTP * (p_fT_SFAL)                                                    # cum_d_sfal
@@ -277,6 +310,35 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         integrator.u.accum.cum_d_ptran      = p_DTP * (p_fu_PTRAN)                                                                 # cum_d_ptran
         p_fu_PSLVP = (p_fu_PGER[1] * p_fT_DAYLEN + p_fu_PGER[2] * (1 - p_fT_DAYLEN)) # (not needed for model computations, just for comparison with LWFBrook90R)
         integrator.u.accum.cum_d_pslvp      = p_DTP * (p_fu_PSLVP)                                                             # cum_d_pslvp # Deactivated as p_fu_PSLVP is never used
+        # integrator.u.accum.flow             = 0 # flow,  updated in separate callback
+        # integrator.u.accum.seep             = 0 # seep,  updated in separate callback
+        # integrator.u.accum.srfl             = 0 # srfl,  updated in separate callback
+        # integrator.u.accum.slfl             = 0 # slfl,  updated in separate callback
+        # integrator.u.accum.byfl             = 0 # byfl,  updated in separate callback
+        # integrator.u.accum.dsfl             = 0 # dsfl,  updated in separate callback
+        # integrator.u.accum.gwfl             = 0 # gwfl,  updated in separate callback
+        # integrator.u.accum.vrfln            = 0 # vrfln, updated in separate callback
+        integrator.u.accum.cum_d_rthr       = p_DTP*(p_fT_RFAL - aux_du_RINT[1]) # cum_d_rthr
+        integrator.u.accum.cum_d_sthr       = p_DTP*(p_fT_SFAL - aux_du_SINT[1]) # cum_d_sthr
+        integrator.u.accum.cum_d_irrig      = p_DTP * (p_IRRIG(integrator.t)) # cum_d_irrig
+        # integrator.u.accum.ε_prev_t          = t              # Update in separate daily callback
+        # integrator.u.accum.ε_prev_StorageSWAT  = StorageSWAT  # Update in separate daily callback
+        # integrator.u.accum.ε_prev_StorageWATER = StorageWATER # Update in separate daily callback
+        # integrator.u.accum.BALERD_SWAT       = BALERD_SWAT    # Update in separate daily callback
+        # integrator.u.accum.BALERD_total      = BALERD_total   # Update in separate daily callback
+
+    end
+
+    return nothing
+    ##########################################
+end
+
+function LWFBrook90R_reset_daily!(integrator)
+
+    @unpack compute_intermediate_quantities = integrator.p;
+
+    if compute_intermediate_quantities
+        # set daily sum to zero and use ODE to accumulate flow.
         integrator.u.accum.flow             = 0 # flow,  is computed in ODE
         integrator.u.accum.seep             = 0 # seep,  is computed in ODE
         integrator.u.accum.srfl             = 0 # srfl,  is computed in ODE
@@ -285,21 +347,8 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         integrator.u.accum.dsfl             = 0 # dsfl,  is computed in ODE
         integrator.u.accum.gwfl             = 0 # gwfl,  is computed in ODE
         integrator.u.accum.vrfln            = 0 # vrfln, is computed in ODE
-        integrator.u.accum.cum_d_rthr     = p_DTP*(p_fT_RFAL - aux_du_RINT[1]) # cum_d_rthr
-        integrator.u.accum.cum_d_sthr     = p_DTP*(p_fT_SFAL - aux_du_SINT[1]) # cum_d_sthr
-        integrator.u.accum.cum_d_irrig      = p_DTP * (p_IRRIG(integrator.t)) # cum_d_irrig
-        # integrator.u.accum.ε_prev_t          = t              # Update in separate daily callback
-        # integrator.u.accum.ε_prev_StorageSWAT  = StorageSWAT  # Update in separate daily callback
-        # integrator.u.accum.ε_prev_StorageWATER = StorageWATER # Update in separate daily callback
-        # integrator.u.accum.BALERD_SWAT       = BALERD_SWAT    # Update in separate daily callback
-        # integrator.u.accum.BALERD_total      = BALERD_total   # Update in separate daily callback
-
-        # TODO(bernhard): use SavingCallback() for all quantities that have u=... and du=0
-        #                 only keep du=... for quantities for which we compute cumulative sums
     end
 
-    return nothing
-    ##########################################
 end
 
 function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
