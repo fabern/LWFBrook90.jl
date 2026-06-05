@@ -1,0 +1,5 @@
+HorizonNr,Upper_m,Lower_m,ths_volFrac,thr_volFrac,alpha_perMeter,npar_,ksat_mmDay,tort_,gravel_volFrac
+-,m,m,volume fraction (-),volume fraction (-),perMeter,-,mm per day,-,volume fraction (-)
+1,0.0,-0.07,0.332,0.0272,4.575,1.2432,2404.6,-3.919,0.38
+2,-0.07,-0.25,0.166,0.00905,9.595,1.192,568.21,-3.919,0.62
+3,-0.25,-2.0,0.172,0.00663,5.133,1.2593,1693.0,-3.738,0.62

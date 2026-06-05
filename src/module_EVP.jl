@@ -21,7 +21,7 @@ module EVP # Interception and transpiration
 
 using ..CONSTANTS: p_RHOWG, p_PI # https://discourse.julialang.org/t/large-programs-structuring-modules-include-such-that-to-increase-performance-and-readability/29102/5
 
-export PLNTRES, TBYLAYER, INTER, INTER24
+export PLNTRES, TBYLAYER, PLRFBYLAYER, INTER, INTER24
 
 """
     PLNTRES()
@@ -298,9 +298,9 @@ eliminated and new values of rt , ψt , T, and Ti are obtained. If any Ti are st
 the elimination process is repeated. This elimination procedure causes transpiration from a
 layer to cease when its potential is still greater than PSICR.
 """
-function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, NLAYER, p_PSICR, NOOUTF)
+function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, u_aux_PLPSIT, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
 
-    FLAG = zeros(NLAYER)
+    FLAG = zeros(NLAYER+1) # add one for plant storage
     for i = 1:NLAYER
         if p_fT_RROOTI[i] > 1E+15
             # This layer has no roots
@@ -314,11 +314,12 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
         end
     end
 
-    # Compute ATR and ATRANI
+    # Compute ATR, ATRANI and PLFL
     # top of loop for recalculation of transpiration if more layers get flagged
     RI = zeros(NLAYER)
     ATRANI=zeros(NLAYER)
     ATR = 0.0
+    PLFL = 0.0
     while true
         # start loop with NEGFLAG = 0
         NEGFLAG = false
@@ -334,6 +335,14 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
                 ATRANI[i] = 0.0
             end
         end
+
+        # check whether to include plant storage in transpiration
+        if (FLAG[NLAYER+1] == 0)
+            SUM = SUM + p_STORAGEK; # plant storage conductance
+        else
+            PLFL = 0.0
+        end
+
         if SUM < 1E-20
                 ATR = 0.
                 PSIT = -1e10
@@ -350,6 +359,10 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
                 if FLAG[i] == 0
                     PSIT = PSIT + RT * u_aux_PSITI[i] / RI[i]
                 end
+        end
+
+        if (FLAG[NLAYER+1] == 0)
+            PSIT = PSIT + RT * u_aux_PLPSIT * p_STORAGEK # add plant storage water potential weighted by storage conductance
         end
 
         # 1) compute available SUPPLY
@@ -396,6 +409,18 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
                 end
             end
         end
+        
+        # plant storage contribution to transpiration
+        if FLAG[NLAYER+1] == 0
+            PLFL = ((u_aux_PLPSIT - PSIT) / 1000 + RT * ATR) * p_STORAGEK # plant storage flux
+
+            # prevent negative plant storage flux (downwards flux)
+            if PLFL < -0.0000001
+                NEGFLAG = true
+            end
+        else
+            PLFL = 0.0
+        end
 
         ###
         if NOOUTF && NEGFLAG
@@ -408,6 +433,9 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
                     IDEL = i
                 end
             end
+            if (IDEL == 0) # then must be negative plant storage that is causing NEGFLAG
+                IDEL = NLAYER + 1 # omit plant storage
+            end
             FLAG[IDEL] = 1
         # repeat main loop with flagged layers excluded
         else
@@ -415,9 +443,88 @@ function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_f
         end
     end
 
-    return (ATR, ATRANI)
+    return (ATR, ATRANI, PLFL)
 end
 
+"""
+    PLRFBYLAYER()
+
+    Allocate root water uptake for plant storage refill among soil layers.
+    Code modified from TBYLAYER for PLRF
+"""
+
+function PLRFBYLAYER(p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, u_aux_PSITI, u_aux_PLPSIT, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
+    
+    FLAG = zeros(NLAYER)
+    for i = 1:NLAYER
+        if p_fT_RROOTI[i] > 1E+15
+            # This layer has no roots
+            FLAG[i] = 1
+        elseif (NOOUTF && u_aux_PSITI[i] / 1000. <= p_PSICR)
+            # This layer has no outflow from roots to soil
+            FLAG[i] = 1
+        else
+            # This layer has roots connected to soil
+            FLAG[i]= 0
+        end
+    end
+
+    # top of loop for recalculation of root water uptake if more layers get flagged
+    RI = zeros(NLAYER)
+    RWU = zeros(NLAYER)
+    while true
+        # start loop with NEGFLAG = 0
+        NEGFLAG = false
+
+        ###
+        SUM = 0
+        for i = 1:NLAYER
+            if (FLAG[i] == 0)
+                RI[i] = p_fT_RROOTI[i] + p_fT_ALPHA[i] / p_fu_KK[i]
+                SUM = SUM + 1.0 / RI[i]
+            else
+                RWU[i] = 0.0
+            end
+        end
+
+        if SUM < 1E-20
+            break
+        end
+
+        # distribute total plant refill to layers
+        for  i = 1:NLAYER
+            if FLAG[i] == 1
+                RWU[i] = 0
+            else
+                RWU[i] = ((u_aux_PSITI[i] - u_aux_PLPSIT) / 1000) / (RI[i] + (1/p_STORAGEK))
+
+                # check for any negative root water uptake
+                if RWU[i] < -0.0000001
+                    NEGFLAG = true
+                end
+            end
+        end
+
+        ###
+        if NOOUTF && NEGFLAG
+            # find layer with most negative root water uptake and omit it
+            IDEL = 0
+            RWUMIN = 0
+            for i = 1:NLAYER
+                if (RWU[i] < RWUMIN)
+                    RWUMIN = RWU[i]
+                    IDEL = i
+                end
+            end
+            FLAG[IDEL] = 1
+        # repeat main loop with flagged layers excluded
+        else
+            break
+        end
+    end
+
+    return (RWU)
+end
 
 """
     INTER(p_fT_RFAL, p_fu_PINT, p_fu_LAI, p_fu_SAI, p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS, p_DTP, u_INTR)
