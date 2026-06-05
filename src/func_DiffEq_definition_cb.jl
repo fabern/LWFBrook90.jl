@@ -205,11 +205,11 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
                        p_CCFAC, p_MELFAC, p_LAIMLT, p_SAIMLT)
 
     # output for troubleshooting
-    println("Time: ", integrator.t, " (", LWFBrook90.RelativeDaysFloat2DateTime(integrator.t, REFERENCE_DATE), ")")
-    println("Scalar params: p_fu_DISPC = ", p_fu_DISPC[1], ", p_fT_RXYLEM = ", p_fT_RXYLEM[1], ", p_STORAGEK = ", p_STORAGEK, ", p_fT_DAYLEN = ", p_fT_DAYLEN)
-    println("Vector params: p_fT_RROOTI = ", p_fT_RROOTI, ", p_fT_ALPHA = ", p_fT_ALPHA, ", p_fu_KK = ", p_fu_KK)
-    println("Scalar states: u_PLPSI = ", u_PLPSI, ", u_PLSTOR = ", u_PLSTOR)
-    println("Vector states: u_aux_PSITI = ", u_aux_PSITI, ", u_SWATI = ", u_SWATI, ", u_aux_θ = ", u_aux_θ)
+    #println("Time: ", integrator.t, " (", LWFBrook90.RelativeDaysFloat2DateTime(integrator.t, REFERENCE_DATE), ")")
+    #println("Scalar params: p_fu_DISPC = ", p_fu_DISPC[1], ", p_fT_RXYLEM = ", p_fT_RXYLEM[1], ", p_STORAGEK = ", p_STORAGEK, ", p_fT_DAYLEN = ", p_fT_DAYLEN)
+    #println("Vector params: p_fT_RROOTI = ", p_fT_RROOTI, ", p_fT_ALPHA = ", p_fT_ALPHA, ", p_fu_KK = ", p_fu_KK)
+    #println("Scalar states: u_PLPSI = ", u_PLPSI, ", u_PLSTOR = ", u_PLSTOR)
+    #println("Vector states: u_aux_PSITI = ", u_aux_PSITI, ", u_SWATI = ", u_SWATI, ", u_aux_θ = ", u_aux_θ)
     
     # total plant potential including matric and gravity potential assumes plant storage is located halfway up stem
     p_fu_PLPSIG = 0.5 * p_RHOWG * p_fu_DISPC * 1000 # plant gravity potential in kPa
@@ -240,9 +240,9 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     # update predawn plant water potential in kPa
     aux_pd_PLPSI = u_PLPSI + aux_du_PLPSI * 1000 # matric potential
     aux_pd_PLPSIT = aux_pd_PLPSI + p_fu_PLPSIG # including gravitational potential
-    println("Predawn PLPSI: ", aux_pd_PLPSI)
-    println("Predawn PLRF: ", u_aux_PLRF)
-    println("Predawn PLRFI: ", aux_du_PLRFI)
+    #println("Predawn PLPSI: ", aux_pd_PLPSI)
+    #println("Predawn PLRF: ", u_aux_PLRF)
+    #println("Predawn PLRFI: ", aux_du_PLRFI)
 
     # Calculate average daily rate of potential and actual interception,
     # evaporation, and transpiration by considering weighted average of rate
@@ -263,7 +263,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
                     # for TBYLAYER:
                     p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, aux_pd_PLPSIT, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
                     # 0.000012 seconds (28 allocations: 1.938 KiB)
-    println("PTR: ", p_fu_PTR)
+    #println("PTR: ", p_fu_PTR)
     # Combine day and night rates to average daily rate
     (p_fu_PTRAN, p_fu_GEVP, p_fu_PINT, p_fu_GIVP, aux_du_TRANI[:], aux_du_PLFL[1]) =
         MSBDAYNIGHT_postprocess(NLAYER, p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR, p_fu_ATRI, p_fu_PLFL, p_fT_DAYLEN)
@@ -306,7 +306,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
 
     ####################################################################
     # 3) Update midday plant storage water potential
-    println("Daily PLFL: ", aux_du_PLFL)
+    #println("Daily PLFL: ", aux_du_PLFL)
 
     # ensure that plant storage discharge is not more than remaining storage amount
     aux_du_PLFL[1] = min(aux_du_PLFL[1], u_PLSTOR)
@@ -316,7 +316,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
 
     # midday plant storage matric potential
     aux_md_PLPSI = aux_pd_PLPSI - aux_du_PLPSI * 1000 # convert from MPa to kPa
-    println("Midday PLPSI: ", aux_md_PLPSI)
+    #println("Midday PLPSI: ", aux_md_PLPSI)
 
     # update plant storage amount
     u_PLSTOR = u_PLSTOR - aux_du_PLFL[1]
@@ -324,7 +324,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
 
     u_PLPSI = aux_md_PLPSI
     
-    println("TRANI: ", aux_du_TRANI)
+    #println("TRANI: ", aux_du_TRANI)
 
     ####################################################################
     # 4) Update soil water using substeps smaller than precipitation
