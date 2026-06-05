@@ -596,7 +596,7 @@ function saveSPAC(sim::DiscretizedSPAC, out_dir; prefix = basename(dirname(out_d
         NaN,params.FRINTLAI,params.FSINTLAI,params.FRINTSAI,params.FSINTSAI,params.CINTRL,params.CINTRS,params.CINTSL,params.CINTSS,params.RSTEMP,
         NaN,params.MELFAC,params.CCFAC,params.LAIMLT,params.SAIMLT,params.GRDMLT,params.MAXLQF,params.KSNVP,params.SNODEN,
         NaN,params.GLMAX,params.GLMIN,params.CR,params.RM,params.R5,params.CVPD,params.TL,params.T1,params.T2,params.TH,
-        NaN,params.MXKPL,params.MXRTLN,params.INITRLEN,params.INITRDEP,params.RGRORATE,params.RGROPER,params.FXYLEM,params.PSICR,params.RTRAD,params.NOOUTF,
+        NaN,params.MXKPL,params.MXRTLN,params.INITRLEN,params.INITRDEP,params.RGRORATE,params.RGROPER,params.FXYLEM,params.PSICR,params.RTRAD,params.NOOUTF,params.CAPACITANCE,params.STORAGEK,params.VSTORAGE,
         NaN,params.IDEPTH_m,params.QDEPTH_m,params.RSSA,params.RSSB,params.INFEXP,params.BYPAR,params.QFPAR,params.QFFC,params.IMPERV,params.DSLOPE,params.LENGTH_SLOPE,params.DRAIN,params.GSC,params.GSP,
         NaN,sim.parametrizedSPAC.solver_options.DTIMAX,sim.parametrizedSPAC.solver_options.DSWMAX, sim.parametrizedSPAC.solver_options.DPSIMAX]
     par_col1 = ["### Isotope transport parameters  -------", "### TODO", "### TODO2", "VXYLEM_mm", "DISPERSIVITY_mm",
@@ -605,10 +605,12 @@ function saveSPAC(sim::DiscretizedSPAC, out_dir; prefix = basename(dirname(out_d
                 "### Interception parameters -------", "FRINTLAI", "FSINTLAI", "FRINTSAI", "FSINTSAI", "CINTRL", "CINTRS", "CINTSL", "CINTSS", "RSTEMP",
                 "### Snowpack parameters -------", "MELFAC", "CCFAC", "LAIMLT", "SAIMLT", "GRDMLT", "MAXLQF", "KSNVP", "SNODEN",
                 "### Leaf evaporation parameters (affecting PE) -------", "GLMAX", "GLMIN", "CR", "RM", "R5", "CVPD", "TL", "T1", "T2", "TH",
-                "### Plant parameters (affecting soil-water supply) -------", "MXKPL", "MXRTLN", "INITRLEN", "INITRDEP", "RGRORATE", "RGROPER", "FXYLEM", "PSICR", "RTRAD", "NOOUTF",
+                "### Plant parameters (affecting soil-water supply) -------", "MXKPL", "MXRTLN", "INITRLEN", "INITRDEP", "RGRORATE", "RGROPER", "FXYLEM", "PSICR", "RTRAD", "NOOUTF", "CAPACITANCE", "STORAGEK", "VSTORAGE",
                 "### Soil parameters -------", "IDEPTH_m", "QDEPTH_m", "RSSA", "RSSB", "INFEXP", "BYPAR", "QFPAR", "QFFC", "IMPERV", "DSLOPE", "LENGTH_SLOPE", "DRAIN", "GSC", "GSP",
                 "### Numerical solver parameters -------", "DTIMAX", "DSWMAX", "DPSIMAX",]
-    par = DataFrame(param_id = par_col1, x = round.(par_col2, digits=4))
+    par_col2_rounded = round.(par_col2, digits=4)
+    par_col2_rounded[par_col1 .== "STORAGEK"] = par_col2[par_col1 .== "STORAGEK"]
+    par = DataFrame(param_id = par_col1, x = par_col2_rounded)
     param_file = joinpath(out_dir, prefix*"_param.csv")
     write_with_subheader(param_file, par, nothing)
         # correct the format of booleans NOOUTF and BYPAR to Integer type by removing the dot (".0")
@@ -1005,77 +1007,162 @@ function read_path_initial_conditions(path_initial_conditions)
     return input_initial_conditions
 end
 
+function default_param_values()
+    return (
+        # Isotope transport parameters
+        VXYLEM_mm = 20.0,
+        DISPERSIVITY_mm = 40.0,
+        # Meteorologic site parameters
+        LAT_DEG = 46.3,
+        ESLOPE_DEG = 0.0,
+        ASPECT_DEG = 0.0,
+        ALB = 0.2,
+        ALBSN = 0.5,
+        C1 = 0.25,
+        C2 = 0.5,
+        C3 = 0.2,
+        WNDRAT = 0.3,
+        FETCH = 5000.0,
+        Z0W = 0.005,
+        ZW = 2.0,
+        # Canopy parameters
+        MAXLAI = 3.0,
+        DENSEF_baseline_ = 1.0,
+        SAI_baseline_ = 1.0,
+        AGE_baseline_yrs = 100.0,
+        HEIGHT_baseline_m = 15.0,
+        LWIDTH = 0.1,
+        Z0G = 0.00325,
+        Z0S = 0.001,
+        LPC = 4.0,
+        CZS = 0.13,
+        CZR = 0.05,
+        HS = 1.0,
+        HR = 10.0,
+        ZMINH = 2.0,
+        RHOTP = 2.0,
+        NN = 2.5,
+        # Interception parameters
+        FRINTLAI = 0.06,
+        FSINTLAI = 0.04,
+        FRINTSAI = 0.06,
+        FSINTSAI = 0.04,
+        CINTRL = 0.15,
+        CINTRS = 0.15,
+        CINTSL = 0.6,
+        CINTSS = 0.6,
+        RSTEMP = -0.5,
+        # Snowpack parameters
+        MELFAC = 1.5,
+        CCFAC = 0.3,
+        LAIMLT = 0.2,
+        SAIMLT = 0.5,
+        GRDMLT = 0.35,
+        MAXLQF = 0.05,
+        KSNVP = 0.3,
+        SNODEN = 0.3,
+        # Leaf evaporation parameters
+        GLMAX = 0.0053,
+        GLMIN = 0.0003,
+        CR = 0.5,
+        RM = 1000.0,
+        R5 = 100.0,
+        CVPD = 2.0,
+        TL = 0.0,
+        T1 = 10.0,
+        T2 = 30.0,
+        TH = 40.0,
+        # Plant parameters
+        MXKPL = 8.0,
+        MXRTLN = 3000.0,
+        INITRLEN = 12.0,
+        INITRDEP = 0.25,
+        RGRORATE = 0.03,
+        RGROPER = 30.0,
+        FXYLEM = 0.5,
+        PSICR = -2.0,
+        RTRAD = 0.35,
+        NOOUTF = 1.0,
+        CAPACITANCE = 1.0,
+        STORAGEK = 1.0e-20,
+        VSTORAGE = 1.0,
+        # Soil parameters
+        IDEPTH_m = 0.0,
+        QDEPTH_m = 0.0,
+        RSSA = 100.0,
+        RSSB = 1.0,
+        INFEXP = 0.0,
+        BYPAR = 0.0,
+        QFPAR = 1.0,
+        QFFC = 0.0,
+        IMPERV = 0.0,
+        DSLOPE = 0.0,
+        LENGTH_SLOPE = 200.0,
+        DRAIN = 1.0,
+        GSC = 0.0,
+        GSP = 0.0,
+        # Numerical solver parameters
+        DTIMAX = 0.5,
+        DSWMAX = 0.05,
+        DPSIMAX = 0.0005,
+    )
+end
+
+function parse_param_value(value, param_name, path_param)
+    if ismissing(value)
+        error("Parameter '$param_name' in input file '$path_param' is missing a value.")
+    elseif value isa Real
+        return Float64(value)
+    elseif value isa AbstractString
+        parsed = tryparse(Float64, strip(value))
+        isnothing(parsed) && error("Parameter '$param_name' in input file '$path_param' could not be parsed as Float64. Received: '$value'.")
+        return parsed
+    else
+        error("Parameter '$param_name' in input file '$path_param' has unsupported value type $(typeof(value)).")
+    end
+end
+
 # TODO: check why read_path_param does not appear in the docs...
 """
     read_path_param(path_param; simulate_isotopes::Bool = false)
 
 Reads in the `param.csv` based on a provided path. The `param.csv` has a structure shown in
 the documentation (User Guide -> Input data). [Structure of input data](@ref)
+Parameters omitted from the file are filled from `default_param_values()`.
 """
 function read_path_param(path_param; simulate_isotopes::Bool = false) # simulate_irrigation::Bool = false
-    required_coltypes =
-        Dict(### Isotope transport parameters  -------,NA
-            # "TODO" => Float64, "TODO2" => Float64,
-            # TODO(bernhard): this needs to be extended with the currently hardcoded isotope transport parameters
-            "DISPERSIVITY_mm" => Float64,
-            "VXYLEM_mm" => Float64,
-            # Meteorologic site parameters -------
-            "LAT_DEG" => Float64,
-            "ESLOPE_DEG" => Float64,       "ASPECT_DEG" => Float64,
-            "ALB" => Float64,              "ALBSN" => Float64,
-            "C1" => Float64,               "C2" => Float64,               "C3" => Float64,
-            "WNDRAT" => Float64,           "FETCH" => Float64,            "Z0W" => Float64,              "ZW" => Float64,
-            # Canopy parameters -------
-            "MAXLAI" => Float64,
-            "DENSEF_baseline_" => Float64,
-            "SAI_baseline_" => Float64,
-            "AGE_baseline_yrs" => Float64,
-            "HEIGHT_baseline_m" => Float64,
-            "LWIDTH" => Float64,           "Z0G" => Float64,              "Z0S" => Float64,
-            "LPC" => Float64,              "CZS" => Float64,
-            "CZR" => Float64,              "HS" => Float64,               "HR" => Float64,
-            "ZMINH" => Float64,            "RHOTP" => Float64,            "NN" => Float64,
-            # Interception parameters -------
-            "FRINTLAI" => Float64,         "FSINTLAI" => Float64,
-            "FRINTSAI" => Float64,         "FSINTSAI" => Float64,
-            "CINTRL" => Float64,           "CINTRS" => Float64,
-            "CINTSL" => Float64,           "CINTSS" => Float64,
-            "RSTEMP" => Float64,
-            # Snowpack parameters -------
-            "MELFAC" => Float64,           "CCFAC" => Float64,            "LAIMLT" => Float64,
-            "SAIMLT" => Float64,           "GRDMLT" => Float64,           "MAXLQF" => Float64,
-            "KSNVP" => Float64,            "SNODEN" => Float64,
-            # Leaf evaporation parameters (affecting PE) -------
-            "GLMAX" => Float64,            "GLMIN" => Float64,            "CR" => Float64,               "RM" => Float64,
-            "R5" => Float64,               "CVPD" => Float64,             "TL" => Float64,               "T1" => Float64,
-            "T2" => Float64,               "TH" => Float64,
-            # Plant parameters (affecting soil-water supply) -------
-            "MXKPL" => Float64,
-            "MXRTLN" => Float64,           "INITRLEN" => Float64,         "INITRDEP" => Float64,
-            "RGRORATE" => Float64,         "RGROPER" => Float64,          "FXYLEM" => Float64,
-            "PSICR" => Float64,            "RTRAD" => Float64,            "NOOUTF" => Float64,
-            "CAPACITANCE" => Float64,      "STORAGEK" => Float64,         "VSTORAGE" => Float64,
-            # Soil parameters -------
-            "IDEPTH_m" => Float64,           "QDEPTH_m" => Float64,
-            "RSSA" => Float64,             "RSSB" => Float64,             "INFEXP" => Float64,
-            "BYPAR" => Float64  ,
-            "QFPAR" => Float64,            "QFFC" => Float64,
-            "IMPERV" => Float64,           "DSLOPE" => Float64,           "LENGTH_SLOPE" => Float64,
-            "DRAIN" => Float64,            "GSC" => Float64,              "GSP" => Float64,
-            # Numerical solver parameters -------
-            "DTIMAX" => Float64,           "DSWMAX" => Float64,           "DPSIMAX" => Float64)
-    # if (!simulate_isotopes)
-    #     delete!(required_coltypes, "TODO")
-    #     delete!(required_coltypes, "TODO2")
-    # end
+    default_values = default_param_values()
+    expected_names = [String(k) for k in keys(default_values)]
 
-    input_param_df = DataFrame(File(path_param;
-        transpose=true, drop=[1], comment = "###",
+    input_param_rows = DataFrame(File(path_param;
+        comment = "###",
         # Be strict about loading NA's -> error if NA present
-        types = required_coltypes, missingstring = nothing, strict=true))
+        missingstring = nothing, strict=true))
 
-    expected_names = [String(k) for k in keys(required_coltypes)]
-    assert_colnames_as_expected(input_param_df, path_param, expected_names)
+    @assert size(input_param_rows, 2) == 2 """
+    Input file '$path_param' must contain exactly two columns: parameter name and value.
+    Received columns:
+    $(names(input_param_rows))
+    """
+
+    received_names = strip.(String.(input_param_rows[!, 1]))
+    duplicate_names = unique([name for name in received_names if count(==(name), received_names) > 1])
+    @assert isempty(duplicate_names) """
+    Input file '$path_param' contains duplicate parameter names.
+    \nDuplicated:\n$duplicate_names
+    """
+
+    @assert all(received_names .∈ (expected_names,)) """
+    Input file '$path_param' contains other than the expected parameter names.
+    \nReceived unexpected: $(received_names[(!).(received_names .∈ (expected_names,))])
+    """
+
+    input_values = Dict(String(k) => v for (k, v) in pairs(default_values))
+    for i in eachindex(received_names)
+        input_values[received_names[i]] = parse_param_value(input_param_rows[i, 2], received_names[i], path_param)
+    end
+
+    input_param_df = DataFrame([Symbol(name) => [input_values[name]] for name in expected_names])
 
     # Set minimum/maximum values
     # from LWFBrook90R:PFILE.h
