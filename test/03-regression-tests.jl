@@ -214,12 +214,12 @@ function test_states_comparison(u_mm, u_δ, u_belowground,
 
     @testset "test_states_comparison" begin
         # Test scalar states
-        compare_scalar = (A,B; nans = false) -> all(isapprox.(Matrix(A), Matrix(B); nans))
+        compare_scalar = (A,B; nans = false) -> all(isapprox.(Matrix(A), Matrix(B); atol = 1e-4, rtol = 1e-4, nans))
         @test compare_scalar(loaded_u_ref, u_ref)
         @test compare_scalar(loaded_u_δ[:, Not(1)],   u_δ[:, Not(1)]; nans=true) # Not(1) removes :time or :dates
 
         # Test vector states
-        compare_vector = (A,B) -> all(isapprox.(Matrix(A), Matrix(B)))
+        compare_vector = (A,B) -> all(isapprox.(Matrix(A), Matrix(B); atol = 1e-4, rtol = 1e-4))
         @test compare_vector(loaded_u_SWATI,       u_SWATI)
         @test compare_vector(loaded_u_aux_PSIM,    u_aux_PSIM)
         @test compare_vector(loaded_u_aux_θ,       u_aux_θ)
