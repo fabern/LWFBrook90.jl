@@ -373,7 +373,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         integrator.u.accum.cum_d_rnet       = p_DTP * (p_fT_RFAL - aux_du_RINT[1] - aux_du_RSNO[1]) # cum_d_RTHR - RSNOD   # cum_d_rnet
         integrator.u.accum.cum_d_smlt       = p_DTP * (aux_du_SMLT[1])                                                  # cum_d_smlt
         integrator.u.accum.evap             = p_DTP * (aux_du_IRVP[1] + aux_du_ISVP[1] + aux_du_SNVP[1] + aux_du_SLVP[1] + sum(aux_du_TRANI))  # evap
-        integrator.u.accum.cum_d_tran       = p_DTP * (sum(aux_du_TRANI))                                                          # cum_d_tran
+        integrator.u.accum.cum_d_tran       = p_DTP * (sum(aux_du_TRANI) + aux_du_PLFL[1])                                            # cum_d_tran
         integrator.u.accum.cum_d_irvp       = p_DTP * (aux_du_IRVP[1])                                                                # cum_d_irvp
         integrator.u.accum.cum_d_isvp       = p_DTP * (aux_du_ISVP[1])                                                                # cum_d_isvp
         integrator.u.accum.cum_d_slvp       = p_DTP * (aux_du_SLVP[1])                                                                # cum_d_slvp

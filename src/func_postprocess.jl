@@ -191,8 +191,8 @@ function get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
     # 2) scalar fluxes, signatures
     simulate_isotopes = simulation.parametrizedSPAC.solver_options.simulate_isotopes
     df_scalar_signatures = !simulate_isotopes ? DataFrame() : LWFBrook90.intern___get_scalars(
-        [:RWU, :PREC, :RWU, :PREC, :RWU],
-        [:mmday,:d18O, :d18O, :d2H, :d2H],
+        [:PREC, :RWU, :PREC, :RWU],
+        [:d18O, :d18O, :d2H, :d2H],
         simulation, timepoints)[:,Not(:time)]
 
     # 3) vector fluxes, signatures
@@ -214,8 +214,9 @@ function get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
         :cum_d_rfal,:cum_d_rint,:cum_d_rthr,:cum_d_rsno,:cum_d_rnet,:cum_d_smlt,
         :cum_d_irvp,:cum_d_isvp,:cum_d_snvp,:cum_d_slvp,
         :cum_d_plfl,:cum_d_plrf,:cum_pd_plpsi,:cum_md_plpsi,
-        :cum_d_tran, # TODO: :accum.cum_d_tran, # delete. we can use u[1].RWU.mmday # all([(simulation.ODESolution.u[idx].accum.cum_d_tran == simulation.ODESolution.u[idx].RWU.mmday) for idx in eachindex(simulation.ODESolution.u)])
-        # :RWU_mmday, # use RWU instead of accum.cum_d_tran
+        :cum_d_tran, 
+        :RWU, :INTS, :INTR, :SNOW, :CC, :SNOWLQ,
+
         :RWU_d18O, :RWU_d2H,
         :PREC_d18O, :PREC_d2H,
 
@@ -237,7 +238,7 @@ function get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
         # # # TODO: add infli # define this as accum.vec_infl.mmday, .d18O, .d2H # similar to u.TRANI
         # # # TODO: add dsfli # define this as accum.vec_dsfl.mmday, .d18O, .d2H # similar to u.TRANI
         # # simulation.ODESolution.u[1].TRANI.mmday
-        r"TRANI_"
+        r"TRANI_", r"PLRFI_"
     )
     if (!simulate_isotopes)
         cols_to_drop = [
