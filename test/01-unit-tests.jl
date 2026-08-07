@@ -10,6 +10,33 @@
 
 # NOTE: locally, i.e. not on CI system, one might need to do manually cd("test")
 if basename(pwd()) != "test"; cd("test"); end
+
+@testset "Plant capacitance compatibility mode" begin
+    legacy_params, _ = LWFBrook90.read_path_param(
+        "../examples/DAV2020-full/DAV2020-full_param.csv")
+    @test legacy_params.CAPACITANCE == 1.0
+    @test legacy_params.STORAGEK == 0.0
+    @test legacy_params.VSTORAGE == 1.0
+
+    capacitance_params, _ = LWFBrook90.read_path_param(
+        "../examples/PFY2024-capacitance/pfynwald_param.csv")
+    @test capacitance_params.CAPACITANCE == 2.0
+    @test capacitance_params.STORAGEK == 2.4
+    @test capacitance_params.VSTORAGE == 10.0
+
+    transpiration, transpiration_by_layer, storage_flux =
+        LWFBrook90.EVP.TBYLAYER(
+            2, 1.0, 0.0, [0.0], [1.0], [1.0], 1.0, [-100.0],
+            -500.0, 0.0, 1, -2.0, true)
+    @test transpiration ≈ 0.95
+    @test transpiration_by_layer ≈ [0.95]
+    @test storage_flux == 0.0
+
+    storage_refill = LWFBrook90.EVP.PLRFBYLAYER(
+        [0.0], [1.0], [1.0], [-100.0], -500.0, 0.0, 1, -2.0, true)
+    @test storage_refill == [0.0]
+end
+
 @testset "Soil Hydraulics" begin
     # Test a single element of MualemVanGenuchtenSHP
     shp = LWFBrook90.MualemVanGenuchtenSHP(; p_THSAT = 1.0, p_θr = 1.0, p_MvGα = 1.0, p_MvGn = 1.0, p_KSAT = 1.0,

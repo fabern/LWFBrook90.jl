@@ -1084,7 +1084,7 @@ function default_param_values()
         RTRAD = 0.35,
         NOOUTF = 1.0,
         CAPACITANCE = 1.0,
-        STORAGEK = 1.0e-20,
+        STORAGEK = 0.0,
         VSTORAGE = 1.0,
         # Soil parameters
         IDEPTH_m = 0.0,
