@@ -544,7 +544,7 @@ function intern___get_SWATI_derivatives(simulation::DiscretizedSPAC; days_to_rea
     p_soil = solution.prob.p.p_soil
     NLAYER = p_soil.NLAYER
     if isnothing(days_to_read_out_d)
-        u_SWATI = reduce(hcat, [solution.u[t_idx].SWATI.mm  for t_idx = eachindex(solution)])
+        u_SWATI = reduce(hcat, [solution.u[t_idx].SWATI.mm for t_idx = eachindex(solution.u)])
     else
         u_SWATI = reduce(hcat, [solution(t_days).SWATI.mm for t_days = days_to_read_out_d])
     end
@@ -653,7 +653,7 @@ function intern___get_data_for_isotopePlot(simulation)
 
     # 1a) extract data from solution object `solu`
     # # Two ways to extract data from soil object: using `[]` or `()`
-    # u_SWATI = reduce(hcat, [solu[t_idx].SWATI.mm  for t_idx = eachindex(solu)])
+    # u_SWATI = reduce(hcat, [solu.u[t_idx].SWATI.mm for t_idx = eachindex(solu.u)])
     # u_SWATI = reduce(hcat, [solu(t_days).SWATI.mm for t_days = days_to_read_out_d])
 
     # days_to_read_out_d decides which points to use:
@@ -864,7 +864,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
 
     # 1a) extract data from solution object `solu`
         # # Two ways to extract data from soil object: using `[]` or `()`
-        # u_SWATI = reduce(hcat, [solu[t_idx].SWATI.mm  for t_idx = eachindex(solu)])
+        # u_SWATI = reduce(hcat, [solu.u[t_idx].SWATI.mm for t_idx = eachindex(solu.u)])
         # u_SWATI = reduce(hcat, [solu(t_days).SWATI.mm for t_days = days_to_read_out_d])
 
         # days_to_read_out_d decides which points to use:
