@@ -13,20 +13,21 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
+      actions: write
       contents: write
     steps:
-      - uses: actions/checkout@v2
-      - uses: julia-actions/setup-julia@v1
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
         with:
-          version: '1.9'
-      - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-docdeploy@v1
+          version: '1'
+      - uses: julia-actions/cache@v3
+      - name: Install dependencies
+        shell: julia --color=yes --project=docs {0}
+        run: |
+          using Pkg
+          Pkg.develop(PackageSpec(path=pwd()))
+          Pkg.instantiate()
+      - name: Build and deploy
+        run: julia --color=yes --project=docs docs/make.jl
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
-      - run: |
-          julia --project=docs -e '
-            using Documenter: DocMeta, doctest
-            using LWFBrook90
-            DocMeta.setdocmeta!(LWFBrook90, :DocTestSetup, :(using LWFBrook90); recursive=true)
-            doctest(LWFBrook90)'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # If authenticating with GitHub Actions token
