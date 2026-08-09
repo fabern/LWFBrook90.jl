@@ -19,9 +19,6 @@ if haskey(ENV, "GITHUB_ACTIONS")
     ENV["GKSwstype"] = "100" # following https://github.com/JuliaPlots/Plots.jl/issues/1182
 end
 
-deployconfig = Documenter.auto_detect_deploy_system()
-Documenter.post_status(deployconfig; type="pending", repo="github.com/fabern/LWFBrook90.jl")
-
 # a) define preprocessor for Literate.jl
 function update_date(content)
     content = replace(content, "DATEOFTODAY" => Date(now()))
@@ -37,9 +34,9 @@ OUTPUT_markdown_for_Docs = joinpath(@__DIR__, "src/generated")
 # OUTPUT_scripts_for_examp = joinpath(@__DIR__, "src/generated")
 
 INPUT_example_script_01 = joinpath(@__DIR__, "../examples/example-script-01.jl")
-Literate.markdown(INPUT_example_script_01, OUTPUT_markdown_for_Docs;   name = "example-script-01", documenter = true, preprocess = update_date)
-# Literate.script(  INPUT_example_script_01, OUTPUT_scripts_for_examp;   name = "example-script-01", documenter = true, preprocess = update_date, keep_comments = true)
-# Literate.notebook(INPUT_example_script_01, OUTPUT_scripts_for_examp;   name = "example-script-01", documenter = true, preprocess = update_date) # TODO: reactivate
+Literate.markdown(INPUT_example_script_01, OUTPUT_markdown_for_Docs;   name = "example-script-01", preprocess = update_date)
+# Literate.script(  INPUT_example_script_01, OUTPUT_scripts_for_examp;   name = "example-script-01", preprocess = update_date, keep_comments = true)
+# Literate.notebook(INPUT_example_script_01, OUTPUT_scripts_for_examp;   name = "example-script-01", preprocess = update_date) # TODO: reactivate
 #### end code for Literate.jl
 
 
