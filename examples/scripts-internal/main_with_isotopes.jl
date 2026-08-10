@@ -4,7 +4,7 @@
 # ## Loading of the package LWFBrook90 and other dependencies:
 
 using LWFBrook90
-using OrdinaryDiffEq: solve, Tsit5, init
+using OrdinaryDiffEqTsit5: solve, Tsit5, init
 
 # ## Define input data and reading it in:
 input_path = "examples/isoBEAdense2010-18-reset-FALSE-input/"; input_prefix = "isoBEAdense2010-18-reset-FALSE"

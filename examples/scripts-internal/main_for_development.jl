@@ -1,5 +1,5 @@
 using LWFBrook90
-using OrdinaryDiffEq: solve, Tsit5, init#, step!
+using OrdinaryDiffEqTsit5: solve, Tsit5, init#, step!
 # example = LWFBrook90.run_example()
 # using Plots
 using Dates
@@ -78,8 +78,8 @@ function run_main_with_isotopes(;input_prefix, input_path)
     simulate!(simulation);
     # plot(simulation.ODESolution)
 
-    #u_soil1_amt_d18_d2 = reduce(hcat, [simulation.ODESolution[i].x[simulation.ODESolution.prob.p.row_idx_SWATI][1,:] for i = eachindex(simulation.ODESolution)])
-    #u_soilX_amts       = reduce(hcat, [simulation.ODESolution[i].x[simulation.ODESolution.prob.p.row_idx_SWATI][:,1] for i = eachindex(simulation.ODESolution)])
+    #u_soil1_amt_d18_d2 = reduce(hcat, [simulation.ODESolution.u[i].x[simulation.ODESolution.prob.p.row_idx_SWATI][1,:] for i = eachindex(simulation.ODESolution.u)])
+    #u_soilX_amts       = reduce(hcat, [simulation.ODESolution.u[i].x[simulation.ODESolution.prob.p.row_idx_SWATI][:,1] for i = eachindex(simulation.ODESolution.u)])
     ####################
 
     ####################
@@ -271,14 +271,14 @@ function run_main_with_isotopes(;input_prefix, input_path)
     #     idx_u_scalar_isotopes_d2H  = simulation.ODESolution.prob.p[1][4][10     ]
     #     idx_u_vector_isotopes_d2H  = simulation.ODESolution.prob.p[1][4][11     ]
     if simulate_isotopes
-        # all states:                        [simulation.ODESolution[t] for t = eachindex(simulation.ODESolution)]
-        # all states as matrix: reduce(hcat, [simulation.ODESolution[t] for t = eachindex(simulation.ODESolution)])
-        # reduce(hcat, [simulation.ODESolution[t].x[1][:,1] for t = eachindex(simulation.ODESolution)])
-        # reduce(hcat, [simulation.ODESolution[t].x[2][:,1] for t = eachindex(simulation.ODESolution)])
-        # row_RWU_d18O = reduce(hcat, [simulation.ODESolution[t].x[simulation.ODESolution.prob.p.row_idx_scalars.RWU][:,simulation.ODESolution.prob.p.col_idx_d18O] for t = eachindex(simulation.ODESolution)])
-        # row_XYL_d18O = reduce(hcat, [simulation.ODESolution[t].x[simulation.ODESolution.prob.p.row_idx_scalars.XYLEM][:,simulation.ODESolution.prob.p.col_idx_d18O] for t = eachindex(simulation.ODESolution)])
-        row_RWU_d18O  = reduce(hcat, [simulation.ODESolution.u[t_idx].RWU.d18O   for t_idx = eachindex(simulation.ODESolution)])
-        row_XYL_d18O  = reduce(hcat, [simulation.ODESolution.u[t_idx].XYLEM.d18O for t_idx = eachindex(simulation.ODESolution)])
+        # all states:                        [simulation.ODESolution.u[t] for t = eachindex(simulation.ODESolution.u)]
+        # all states as matrix: reduce(hcat, [simulation.ODESolution.u[t] for t = eachindex(simulation.ODESolution.u)])
+        # reduce(hcat, [simulation.ODESolution.u[t].x[1][:,1] for t = eachindex(simulation.ODESolution.u)])
+        # reduce(hcat, [simulation.ODESolution.u[t].x[2][:,1] for t = eachindex(simulation.ODESolution.u)])
+        # row_RWU_d18O = reduce(hcat, [simulation.ODESolution.u[t].x[simulation.ODESolution.prob.p.row_idx_scalars.RWU][:,simulation.ODESolution.prob.p.col_idx_d18O] for t = eachindex(simulation.ODESolution.u)])
+        # row_XYL_d18O = reduce(hcat, [simulation.ODESolution.u[t].x[simulation.ODESolution.prob.p.row_idx_scalars.XYLEM][:,simulation.ODESolution.prob.p.col_idx_d18O] for t = eachindex(simulation.ODESolution.u)])
+        row_RWU_d18O  = reduce(hcat, [simulation.ODESolution.u[t_idx].RWU.d18O   for t_idx = eachindex(simulation.ODESolution.u)])
+        row_XYL_d18O  = reduce(hcat, [simulation.ODESolution.u[t_idx].XYLEM.d18O for t_idx = eachindex(simulation.ODESolution.u)])
         plot([transpose(row_RWU_d18O) transpose(row_XYL_d18O)], labels = ["δ_RWU" "δ_XylemV"])
     end
 
@@ -380,8 +380,8 @@ function run_main_with_isotopes(;input_prefix, input_path)
         savefig(fname*"_plot-θ-ψ-δ.png")
     end
 
-    # BALERD_SWAT  = [simulation.ODESolution.u[idx].accum.BALERD_SWAT for idx in eachindex(simulation.ODESolution)]
-    # BALERD_total = [simulation.ODESolution.u[idx].accum.BALERD_total for idx in eachindex(simulation.ODESolution)]
+    # BALERD_SWAT  = [simulation.ODESolution.u[idx].accum.BALERD_SWAT for idx in eachindex(simulation.ODESolution.u)]
+    # BALERD_total = [simulation.ODESolution.u[idx].accum.BALERD_total for idx in eachindex(simulation.ODESolution.u)]
 
     # plot(simulation.ODESolution_datetime,
     #             [BALERD_SWAT BALERD_total],

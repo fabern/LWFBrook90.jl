@@ -1,9 +1,9 @@
 module LWFBrook90
 
-using SciMLBase       # instead of loading the full DifferentialEquations
-using DiffEqBase      # instead of loading the full DifferentialEquations
-using OrdinaryDiffEq  # instead of loading the full DifferentialEquations
-using DiffEqCallbacks # instead of loading the full DifferentialEquations
+using SciMLBase
+using DiffEqBase
+using OrdinaryDiffEqTsit5
+using DiffEqCallbacks
 using ProgressLogging
 using RecipesBase, PlotUtils, Measures
 using LinearAlgebra
