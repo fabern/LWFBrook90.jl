@@ -300,7 +300,9 @@ layer to cease when its potential is still greater than PSICR.
 """
 function TBYLAYER(J, p_fu_PTR, p_fu_DISPC, p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, u_aux_PLPSIT, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
 
+    p_STORAGEK >= 0 || throw(ArgumentError("STORAGEK must be non-negative."))
     FLAG = zeros(NLAYER+1) # add one for plant storage
+    FLAG[NLAYER+1] = iszero(p_STORAGEK) # zero conductance disables capacitance
     for i = 1:NLAYER
         if p_fT_RROOTI[i] > 1E+15
             # This layer has no roots
@@ -454,7 +456,10 @@ end
 """
 
 function PLRFBYLAYER(p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, u_aux_PSITI, u_aux_PLPSIT, p_STORAGEK, NLAYER, p_PSICR, NOOUTF)
-    
+
+    p_STORAGEK >= 0 || throw(ArgumentError("STORAGEK must be non-negative."))
+    iszero(p_STORAGEK) && return zeros(NLAYER)
+
     FLAG = zeros(NLAYER)
     for i = 1:NLAYER
         if p_fT_RROOTI[i] > 1E+15

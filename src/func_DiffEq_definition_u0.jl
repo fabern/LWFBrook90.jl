@@ -104,6 +104,10 @@ function init_LWFB90_u0!(;u0::ComponentArray, parametrizedSPAC, p_soil)
     p_STORAGEK  = parametrizedSPAC.pars.params.STORAGEK
     p_HEIGHT = parametrizedSPAC.pars.params.HEIGHT_baseline_m
 
+    p_CAPACITANCE > 0 || throw(ArgumentError("CAPACITANCE must be positive."))
+    p_VSTORAGE > 0 || throw(ArgumentError("VSTORAGE must be positive."))
+    p_STORAGEK >= 0 || throw(ArgumentError("STORAGEK must be non-negative."))
+
     # A) Define initial conditions of states
     u_SWATIinit_mm      = LWFBrook90.KPT.FTheta(LWFBrook90.KPT.FWETNES(soil_PSIM_init, p_soil), p_soil) .*
                           p_soil.p_SWATMAX ./ p_soil.p_THSAT # see l.2020: https://github.com/pschmidtwalter/LWFBrook90R/blob/6f23dc1f6be9e1723b8df5b188804da5acc92e0f/src/md_brook90.f95#L2020
@@ -124,7 +128,13 @@ function init_LWFB90_u0!(;u0::ComponentArray, parametrizedSPAC, p_soil)
 
     u0.RWU.mmday   = 0
     u0.XYLEM.mm    = 5
-    u0.PLSTOR.mm   = p_VSTORAGE + u_PLPSI_init / 1000 * p_CAPACITANCE # reduce initial plant storage by initial water potential
+    # Legacy compatibility mode: zero storage conductance disconnects plant
+    # storage, so initialize this otherwise-unused state at full capacity.
+    u0.PLSTOR.mm   = if iszero(p_STORAGEK)
+        p_VSTORAGE
+    else
+        p_VSTORAGE + u_PLPSI_init / 1000 * p_CAPACITANCE # reduce initial plant storage by initial water potential
+    end
     u0.PLHYD       = [u0.PLSTOR.mm / p_VSTORAGE, u_PLPSI_init, p_STORAGEK] # θ, ψ, K
     u0.TRANI.mmday = zeros(nrow(parametrizedSPAC.soil_discretization.df))
     u0.PLRFI.mmday = zeros(nrow(parametrizedSPAC.soil_discretization.df))

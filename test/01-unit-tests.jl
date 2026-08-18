@@ -10,6 +10,33 @@
 
 # NOTE: locally, i.e. not on CI system, one might need to do manually cd("test")
 if basename(pwd()) != "test"; cd("test"); end
+
+@testset "Plant capacitance compatibility mode" begin
+    legacy_params, _ = LWFBrook90.read_path_param(
+        "../examples/DAV2020-full/DAV2020-full_param.csv")
+    @test legacy_params.CAPACITANCE == 1.0
+    @test legacy_params.STORAGEK == 0.0
+    @test legacy_params.VSTORAGE == 1.0
+
+    capacitance_params, _ = LWFBrook90.read_path_param(
+        "../examples/PFY2024-capacitance/pfynwald_param.csv")
+    @test capacitance_params.CAPACITANCE == 2.0
+    @test capacitance_params.STORAGEK == 2.4
+    @test capacitance_params.VSTORAGE == 10.0
+
+    transpiration, transpiration_by_layer, storage_flux =
+        LWFBrook90.EVP.TBYLAYER(
+            2, 1.0, 0.0, [0.0], [1.0], [1.0], 1.0, [-100.0],
+            -500.0, 0.0, 1, -2.0, true)
+    @test transpiration ≈ 0.95
+    @test transpiration_by_layer ≈ [0.95]
+    @test storage_flux == 0.0
+
+    storage_refill = LWFBrook90.EVP.PLRFBYLAYER(
+        [0.0], [1.0], [1.0], [-100.0], -500.0, 0.0, 1, -2.0, true)
+    @test storage_refill == [0.0]
+end
+
 @testset "Soil Hydraulics" begin
     # Test a single element of MualemVanGenuchtenSHP
     shp = LWFBrook90.MualemVanGenuchtenSHP(; p_THSAT = 1.0, p_θr = 1.0, p_MvGα = 1.0, p_MvGn = 1.0, p_KSAT = 1.0,
@@ -1124,9 +1151,15 @@ end
         cum_d_slvp=[0.04482920026138777],
         cum_d_plfl=[0.0],
         cum_d_plrf=[0.0],
-        cum_pd_plpsi=[0.0],
-        cum_md_plpsi=[0.0],
+        cum_pd_plpsi=[-129.625],
+        cum_md_plpsi=[-129.625],
         cum_d_tran=[0.056616161386777504],
+        RWU=[0.056616161386777504],
+        INTS=[0.0],
+        INTR=[0.0],
+        SNOW=[0.0],
+        CC=[0.0],
+        SNOWLQ=[0.0],
         RWU_d18O=[-10.11111],
         RWU_d2H=[-91.1111],
         PREC_d18O=[-15.04],
@@ -1164,7 +1197,29 @@ end
         TRANI_mmday_950mm=[0.0],
         TRANI_mmday_1000mm=[0.0],
         TRANI_mmday_1050mm=[0.0],
-        TRANI_mmday_1100mm=[0.0])
+        TRANI_mmday_1100mm=[0.0],
+        PLRFI_mmday_50mm=[0.0],
+        PLRFI_mmday_100mm=[0.0],
+        PLRFI_mmday_150mm=[0.0],
+        PLRFI_mmday_200mm=[0.0],
+        PLRFI_mmday_250mm=[0.0],
+        PLRFI_mmday_300mm=[0.0],
+        PLRFI_mmday_350mm=[0.0],
+        PLRFI_mmday_400mm=[0.0],
+        PLRFI_mmday_450mm=[0.0],
+        PLRFI_mmday_500mm=[0.0],
+        PLRFI_mmday_550mm=[0.0],
+        PLRFI_mmday_600mm=[0.0],
+        PLRFI_mmday_650mm=[0.0],
+        PLRFI_mmday_700mm=[0.0],
+        PLRFI_mmday_750mm=[0.0],
+        PLRFI_mmday_800mm=[0.0],
+        PLRFI_mmday_850mm=[0.0],
+        PLRFI_mmday_900mm=[0.0],
+        PLRFI_mmday_950mm=[0.0],
+        PLRFI_mmday_1000mm=[0.0],
+        PLRFI_mmday_1050mm=[0.0],
+        PLRFI_mmday_1100mm=[0.0])
     
     # julian_dput(df_get_soil_all, multiline=true)
     ref_get_soil_all = DataFrame(
@@ -1581,9 +1636,15 @@ end
         cum_d_slvp=[0.04482920026138777],
         cum_d_plfl=[0.0],
         cum_d_plrf=[0.0],
-        cum_pd_plpsi=[0.0],
-        cum_md_plpsi=[0.0],
+        cum_pd_plpsi=[-129.625],
+        cum_md_plpsi=[-129.625],
         cum_d_tran=[0.056616161386777504],
+        RWU=[0.056616161386777504],
+        INTS=[0.0],
+        INTR=[0.0],
+        SNOW=[0.0],
+        CC=[0.0],
+        SNOWLQ=[0.0],
         RWU_d18O=[-10.11111],
         RWU_d2H=[-91.1111],
         PREC_d18O=[-15.04],
@@ -1621,7 +1682,29 @@ end
         TRANI_mmday_950mm=[0.0],
         TRANI_mmday_1000mm=[0.0],
         TRANI_mmday_1050mm=[0.0],
-        TRANI_mmday_1100mm=[0.0])
+        TRANI_mmday_1100mm=[0.0],
+        PLRFI_mmday_50mm=[0.0],
+        PLRFI_mmday_100mm=[0.0],
+        PLRFI_mmday_150mm=[0.0],
+        PLRFI_mmday_200mm=[0.0],
+        PLRFI_mmday_250mm=[0.0],
+        PLRFI_mmday_300mm=[0.0],
+        PLRFI_mmday_350mm=[0.0],
+        PLRFI_mmday_400mm=[0.0],
+        PLRFI_mmday_450mm=[0.0],
+        PLRFI_mmday_500mm=[0.0],
+        PLRFI_mmday_550mm=[0.0],
+        PLRFI_mmday_600mm=[0.0],
+        PLRFI_mmday_650mm=[0.0],
+        PLRFI_mmday_700mm=[0.0],
+        PLRFI_mmday_750mm=[0.0],
+        PLRFI_mmday_800mm=[0.0],
+        PLRFI_mmday_850mm=[0.0],
+        PLRFI_mmday_900mm=[0.0],
+        PLRFI_mmday_950mm=[0.0],
+        PLRFI_mmday_1000mm=[0.0],
+        PLRFI_mmday_1050mm=[0.0],
+        PLRFI_mmday_1100mm=[0.0])
     
     # julian_dput(df_get_soil_all, multiline=true)
     ref_get_soil_all = DataFrame(
