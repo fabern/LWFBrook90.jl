@@ -66,6 +66,12 @@ Tests are run to assert agreement with results from LWFBrook90R. Visualizations 
 Note that some features of LWFBrook90R are not implemented in the main version of LWFBrook90.jl. The time step adaptivity and `Reset==1` of LWFBrook90R would require code refactoring, which goes slightly against the intended use of the library for ODEs DifferentialEquations.jl. Because of this, implementation of these features is left away from the main version. However, an attempt at their implementation resides currently in a feature branch `005`.
 
 
+## Citing LWFBrook90.jl
+When using LWFBrook90.jl, please cite the [published description paper](https://doi.org/10.1029/2024MS004445):
+
+Bernhard, F., Knighton, J., Seeger, S., Waldner, P., & Meusburger, K. (2025). LWFBrook90.jl—Including Stable Water Isotopes in a Soil Vegetation Atmosphere Transport Model to Constrain Vertical Root Water Uptake Dynamics. *Journal of Advances in Modeling Earth Systems, 17*(11), e2024MS004445. [https://doi.org/10.1029/2024MS004445](https://doi.org/10.1029/2024MS004445)
+
+
 ## License
 LWFBrook90.jl is licensed under GPL-3.0 (for details see the file `LICENSE`).
 
