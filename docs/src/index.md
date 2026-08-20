@@ -27,7 +27,7 @@ For further details read through the section [User Guide](@ref) or refer to sect
 
 
 ## Citing LWFBrook90.jl
-When using LWFBrook90.jl please cite [Bernhard et al. (in press, 2025)](http://dx.doi.org/10.1029/2024MS004445)
+When using LWFBrook90.jl, please cite the [published description paper by Bernhard et al. (2025)](https://doi.org/10.1029/2024MS004445).
 
 
 ## Acknowledgments
@@ -39,7 +39,7 @@ Matthias Häni, Katrin Meusburger, Peter Waldner, Lorenz Walthert, Stephan Zimme
 
 
 ## References
-Bernhard, F., Knighton, J., Seeger, S., Waldner, P., & Meusburger, K. (in press, 2025). LWFBrook90.jl – Including Stable Water Isotopes in a Soil Vegetation Atmosphere Transport Model to Constrain Vertical Root Water Uptake Dynamics. *Journal of Advances in Modeling Earth Systems (JAMES)*. https://doi.org/10.1029/2024MS004445
+Bernhard, F., Knighton, J., Seeger, S., Waldner, P., & Meusburger, K. (2025). LWFBrook90.jl—Including Stable Water Isotopes in a Soil Vegetation Atmosphere Transport Model to Constrain Vertical Root Water Uptake Dynamics. *Journal of Advances in Modeling Earth Systems, 17*(11), e2024MS004445. [https://doi.org/10.1029/2024MS004445](https://doi.org/10.1029/2024MS004445)
 
 Federer, C. A., Vörösmarty, C., & Fekete, B. (2003). Sensitivity of Annual Evaporation to Soil and Root Properties in Two Models of Contrasting Complexity. *Journal of Hydrometeorology*, 4(6), 1276–1290. [https://doi.org/10.1175/1525-7541(2003)004<1276:SOAETS>2.0.CO;2](https://doi.org/10.1175/1525-7541(2003)004<1276:SOAETS>2.0.CO;2)
 
