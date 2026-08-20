@@ -5,5 +5,5 @@ SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
 
 [compat]
 BenchmarkTools = "1"
-SciMLBase = "1, 2"
+SciMLBase = "3"
 julia = "1.8"
