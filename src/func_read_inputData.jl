@@ -1005,15 +1005,22 @@ function read_path_initial_conditions(path_initial_conditions)
     return input_initial_conditions
 end
 
+"""
+    default_param_values()
+
+Returns a NamedTuple containing complete listing of required model parameters.
+Elements in the NamedTuple containing NaN values do not have a default value and
+must be provided in the input file `param.csv`.
+"""
 function default_param_values()
     return (
         # Isotope transport parameters
         VXYLEM_mm = 20.0,
         DISPERSIVITY_mm = 40.0,
         # Meteorologic site parameters
-        LAT_DEG = 46.3,
-        ESLOPE_DEG = 0.0,
-        ASPECT_DEG = 0.0,
+        LAT_DEG = NaN,
+        ESLOPE_DEG = NaN,
+        ASPECT_DEG = NaN,
         ALB = 0.2,
         ALBSN = 0.5,
         C1 = 0.25,
@@ -1024,11 +1031,11 @@ function default_param_values()
         Z0W = 0.005,
         ZW = 2.0,
         # Canopy parameters
-        MAXLAI = 3.0,
+        MAXLAI = NaN,
         DENSEF_baseline_ = 1.0,
         SAI_baseline_ = 1.0,
         AGE_baseline_yrs = 100.0,
-        HEIGHT_baseline_m = 15.0,
+        HEIGHT_baseline_m = 25.0,
         LWIDTH = 0.1,
         Z0G = 0.00325,
         Z0S = 0.001,
@@ -1060,18 +1067,18 @@ function default_param_values()
         KSNVP = 0.3,
         SNODEN = 0.3,
         # Leaf evaporation parameters
-        GLMAX = 0.0053,
+        GLMAX = 0.00868,
         GLMIN = 0.0003,
         CR = 0.5,
         RM = 1000.0,
-        R5 = 100.0,
+        R5 = 287.0,
         CVPD = 2.0,
         TL = 0.0,
         T1 = 10.0,
         T2 = 30.0,
         TH = 40.0,
         # Plant parameters
-        MXKPL = 8.0,
+        MXKPL = 15.64,
         MXRTLN = 3000.0,
         INITRLEN = 12.0,
         INITRDEP = 0.25,
@@ -1082,18 +1089,18 @@ function default_param_values()
         RTRAD = 0.35,
         NOOUTF = 1.0,
         # Soil parameters
-        IDEPTH_m = 0.0,
+        IDEPTH_m = 0.4,
         QDEPTH_m = 0.0,
-        RSSA = 100.0,
+        RSSA = 795.0,
         RSSB = 1.0,
-        INFEXP = 0.0,
+        INFEXP = 0.45,
         BYPAR = 0.0,
         QFPAR = 1.0,
         QFFC = 0.0,
         IMPERV = 0.0,
         DSLOPE = 0.0,
         LENGTH_SLOPE = 200.0,
-        DRAIN = 1.0,
+        DRAIN = 0.51,
         GSC = 0.0,
         GSP = 0.0,
         # Numerical solver parameters
@@ -1123,7 +1130,8 @@ end
 
 Reads in the `param.csv` based on a provided path. The `param.csv` has a structure shown in
 the documentation (User Guide -> Input data). [Structure of input data](@ref)
-Parameters omitted from the file are filled from `default_param_values()`.
+Parameters omitted from the file are filled from `default_param_values()`. Parameters whose
+default value is `NaN` must be provided with a non-`NaN` value by the user.
 """
 function read_path_param(path_param; simulate_isotopes::Bool = false) # simulate_irrigation::Bool = false
     default_values = default_param_values()
@@ -1156,6 +1164,13 @@ function read_path_param(path_param; simulate_isotopes::Bool = false) # simulate
     for i in eachindex(received_names)
         input_values[received_names[i]] = parse_param_value(input_param_rows[i, 2], received_names[i], path_param)
     end
+
+    required_names = [String(name) for (name, value) in pairs(default_values) if isnan(value)]
+    unresolved_names = [name for name in required_names if isnan(input_values[name])]
+    isempty(unresolved_names) || error("""
+    Input file '$path_param' must provide values for all parameters without defaults.
+    Missing or NaN: $unresolved_names
+    """)
 
     input_param_df = DataFrame([Symbol(name) => [input_values[name]] for name in expected_names])
 

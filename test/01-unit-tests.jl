@@ -40,21 +40,46 @@ end
 
 @testset "Parameter defaults and incomplete files" begin
     defaults = LWFBrook90.default_param_values()
-    @test defaults.LAT_DEG == 46.3
+    @test all(isnan, [defaults.LAT_DEG, defaults.ESLOPE_DEG, defaults.ASPECT_DEG, defaults.MAXLAI])
     @test defaults.DTIMAX == 0.5
 
+    # test use of incomplete param.csv file, where missing parameters can be filled with defaults
+    # test use of incomplete param.csv file, where missing parameters can NOT be filled with defaults
     path, io = mktemp()
     try
-        Base.write(io, "param_id,x\nLAT_DEG,48.5\nNOOUTF,0\n")
+        Base.write(io, "param_id,x\nLAT_DEG,48.5\nESLOPE_DEG,10\nASPECT_DEG,180\nMAXLAI,4\nNOOUTF,0\n")
         close(io)
 
         params, solver_options = LWFBrook90.read_path_param(path)
         @test params.LAT_DEG == 48.5
+        @test params.ESLOPE_DEG == 10.0
+        @test params.ASPECT_DEG == 180.0
+        @test params.MAXLAI == 4.0
         @test params.NOOUTF == 0
         @test params.ALB == defaults.ALB
+        # and others in between ...
         @test solver_options.DTIMAX == defaults.DTIMAX
         @test solver_options.DSWMAX == defaults.DSWMAX
         @test solver_options.DPSIMAX == defaults.DPSIMAX
+    finally
+        isopen(io) && close(io)
+        rm(path; force = true)
+    end
+
+    # test use of incomplete param.csv file, where missing parameters can NOT be filled with defaults
+    path, io = mktemp()
+    try
+        Base.write(io, "param_id,x\nLAT_DEG,48.5\nESLOPE_DEG,NaN\n")
+        close(io)
+
+        thrown_error = try
+            LWFBrook90.read_path_param(path)
+            nothing
+        catch error
+            error
+        end
+        @test thrown_error isa ErrorException
+        @test occursin("Missing or NaN: [\"ESLOPE_DEG\", \"ASPECT_DEG\", \"MAXLAI\"]", thrown_error.msg)
     finally
         isopen(io) && close(io)
         rm(path; force = true)

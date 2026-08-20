@@ -53,7 +53,7 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             TRANI = NamedTuple{name_fluxes, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:TRANI][:,:,1])...)),
 
             aux   = NamedTuple{name_aux,   NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:aux])...)),
-            accum = NamedTuple{name_accum, NTuple{32, Float64}}((0. for i in eachindex(name_accum))))
+            accum = NamedTuple{name_accum, NTuple{N_accum_var, Float64}}((0. for i in eachindex(name_accum))))
     else
         # TODO(bernhard): check if this is bad programming if NTuple{1, ...} depends on runtime variable simulate_isotopes...
         u0 = ComponentArray(
@@ -70,7 +70,7 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             TRANI = NamedTuple{name_fluxes, NTuple{1, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:TRANI][:,:,1])...)),
 
             aux   = NamedTuple{name_aux, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:aux])...)),
-            accum = NamedTuple{name_accum, NTuple{32, Float64}}((0. for i in eachindex(name_accum))))
+            accum = NamedTuple{name_accum, NTuple{N_accum_var, Float64}}((0. for i in eachindex(name_accum))))
     end
 
     # # Give ArrayPartition as u0 to DiffEq.jl

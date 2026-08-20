@@ -213,7 +213,7 @@ function get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
         :cum_d_prec,:cum_d_sfal,:cum_d_sthr,:cum_d_sint,:cum_d_irrig,
         :cum_d_rfal,:cum_d_rint,:cum_d_rthr,:cum_d_rsno,:cum_d_rnet,:cum_d_smlt,
         :cum_d_irvp,:cum_d_isvp,:cum_d_snvp,:cum_d_slvp,
-        :cum_d_tran,
+        :cum_d_tran, 
         :RWU, :INTS, :INTR, :SNOW, :CC, :SNOWLQ,
 
         :RWU_d18O, :RWU_d2H,
