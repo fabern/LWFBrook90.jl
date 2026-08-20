@@ -10,7 +10,11 @@ Measures = "442fdcdd-2543-5da2-b0f3-8c86c306513e"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 
 [compat]
+CSV = "0.10.16"
 DiffEqBase = "7.13.0"
 Documenter = "1.17"
+LWFBrook90 = "0.9.9"
 Latexify = "0.16.11"
 Literate = "2"
+Measures = "0.3.3"
+Plots = "1.41.6"
