@@ -14,7 +14,7 @@ https://techytok.com/lesson-workflow/
 
 ## DevOps
 
-___Git Flow__: Main project is `develop`.
+__Git Flow__: Main project is `develop`.
 Features are to be developed in branches and merged.
 For further information, see: https://discourse.julialang.org/t/good-practices-for-package-development-in-the-julia-ecosystem/8175/2
 
@@ -22,7 +22,8 @@ __Commit messages__: There are standards to commit messages.
 Various info is summarized in the file `.git-commit-msg-template`.
 It also serves as a template for commit messages: execute `git config commit.template .git-commit-msg-template` to make it the standard commit message for the repository, which will be shown each time you `git commit`.
 
-__Version numbering__: https://semver.org
+__Version update__: This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Changes are to be recorded in `CHANGELOG.md` under header `Unreleased`. To prepare for a new release, make preparations in a branch `release-x.y.z`, change the version field in `Project.toml`, curate and update `CHANGELOG.md`, merge into default branch and trigger the [Registrator.jl](https://github.com/JuliaRegistries/Registrator.jl). Then add `## [Unreleased]` to `CHANGELOG.md` and update `Project.toml` to `version = "0.9.9-DEV"` (Alternatively, this could be automatized with `PkgDev.tag`.)
+
 
 __Before pushing__: you **could** run test suite locally and test generation of documentation.
 To do so use `julia --project=docs docs/make.jl` or `julia --project=. test/runtests.jl`
