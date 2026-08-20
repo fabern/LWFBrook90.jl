@@ -10,6 +10,7 @@
 
 # NOTE: locally, i.e. not on CI system, one might need to do manually cd("test")
 if basename(pwd()) != "test"; cd("test"); end
+
 @testset "Soil Hydraulics" begin
     # Test a single element of MualemVanGenuchtenSHP
     shp = LWFBrook90.MualemVanGenuchtenSHP(; p_THSAT = 1.0, p_θr = 1.0, p_MvGα = 1.0, p_MvGn = 1.0, p_KSAT = 1.0,
@@ -35,6 +36,54 @@ if basename(pwd()) != "test"; cd("test"); end
     @test [shp.p_KSAT   for shp in soil_horizons.shp] ≈ [2854.91, 2854.91, 2854.91]
     @test [shp.p_MvGl   for shp in soil_horizons.shp] ≈ [-3.339, -3.339, -3.339]
     @test [shp.p_STONEF for shp in soil_horizons.shp] ≈ [0.175, 0.375, 0.75]
+end
+
+@testset "Parameter defaults and incomplete files" begin
+    defaults = LWFBrook90.default_param_values()
+    @test all(isnan, [defaults.LAT_DEG, defaults.ESLOPE_DEG, defaults.ASPECT_DEG, defaults.MAXLAI])
+    @test defaults.DTIMAX == 0.5
+
+    # test use of incomplete param.csv file, where missing parameters can be filled with defaults
+    # test use of incomplete param.csv file, where missing parameters can NOT be filled with defaults
+    path, io = mktemp()
+    try
+        Base.write(io, "param_id,x\nLAT_DEG,48.5\nESLOPE_DEG,10\nASPECT_DEG,180\nMAXLAI,4\nNOOUTF,0\n")
+        close(io)
+
+        params, solver_options = LWFBrook90.read_path_param(path)
+        @test params.LAT_DEG == 48.5
+        @test params.ESLOPE_DEG == 10.0
+        @test params.ASPECT_DEG == 180.0
+        @test params.MAXLAI == 4.0
+        @test params.NOOUTF == 0
+        @test params.ALB == defaults.ALB
+        # and others in between ...
+        @test solver_options.DTIMAX == defaults.DTIMAX
+        @test solver_options.DSWMAX == defaults.DSWMAX
+        @test solver_options.DPSIMAX == defaults.DPSIMAX
+    finally
+        isopen(io) && close(io)
+        rm(path; force = true)
+    end
+
+    # test use of incomplete param.csv file, where missing parameters can NOT be filled with defaults
+    path, io = mktemp()
+    try
+        Base.write(io, "param_id,x\nLAT_DEG,48.5\nESLOPE_DEG,NaN\n")
+        close(io)
+
+        thrown_error = try
+            LWFBrook90.read_path_param(path)
+            nothing
+        catch error
+            error
+        end
+        @test thrown_error isa ErrorException
+        @test occursin("Missing or NaN: [\"ESLOPE_DEG\", \"ASPECT_DEG\", \"MAXLAI\"]", thrown_error.msg)
+    finally
+        isopen(io) && close(io)
+        rm(path; force = true)
+    end
 end
 
 # @testset "Module WAT" begin
@@ -1123,6 +1172,12 @@ end
         cum_d_snvp=[0.0],
         cum_d_slvp=[0.04482920026138777],
         cum_d_tran=[0.056616161386777504],
+        RWU=[0.056616161386777504],
+        INTS=[0.0],
+        INTR=[0.0],
+        SNOW=[0.0],
+        CC=[0.0],
+        SNOWLQ=[0.0],
         RWU_d18O=[-10.11111],
         RWU_d2H=[-91.1111],
         PREC_d18O=[-15.04],
@@ -1576,6 +1631,12 @@ end
         cum_d_snvp=[0.0],
         cum_d_slvp=[0.04482920026138777],
         cum_d_tran=[0.056616161386777504],
+        RWU=[0.056616161386777504],
+        INTS=[0.0],
+        INTR=[0.0],
+        SNOW=[0.0],
+        CC=[0.0],
+        SNOWLQ=[0.0],
         RWU_d18O=[-10.11111],
         RWU_d2H=[-91.1111],
         PREC_d18O=[-15.04],

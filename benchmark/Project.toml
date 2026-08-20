@@ -1,0 +1,9 @@
+[deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+LWFBrook90 = "100deb6c-4418-4b77-ad5c-a1fadb580743"
+SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
+
+[compat]
+BenchmarkTools = "1"
+SciMLBase = "1, 2"
+julia = "1.8"
