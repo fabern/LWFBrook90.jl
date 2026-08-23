@@ -2220,3 +2220,53 @@ end
     simulate!(sim_frac)
     @test SciMLBase.successful_retcode(sim_frac.ODESolution.retcode)
 end
+
+@testset "Module ISO: Evaporative Fractionation (Craig-Gordon & Soil X)" begin
+    # 1. Equilibrium fractionation factor tests
+    @test LWFBrook90.ISO.α¹⁸O_eq(20.0) ≈ 1.00983 atol=1e-3
+    @test LWFBrook90.ISO.α²H_eq(20.0) ≈ 1.08479 atol=1e-2
+    # Check monotonic decrease with temperature
+    @test LWFBrook90.ISO.α¹⁸O_eq(0.0) > LWFBrook90.ISO.α¹⁸O_eq(20.0) > LWFBrook90.ISO.α¹⁸O_eq(40.0)
+    @test LWFBrook90.ISO.α²H_eq(0.0) > LWFBrook90.ISO.α²H_eq(20.0) > LWFBrook90.ISO.α²H_eq(40.0)
+
+    # 2. Dynamic soil turbulence exponent X_soil tests
+    @test LWFBrook90.ISO.compute_X_soil(0.40, 0.05, 0.40) ≈ 0.5 # fully saturated -> turbulent (0.5)
+    @test LWFBrook90.ISO.compute_X_soil(0.05, 0.05, 0.40) ≈ 1.0 # residual -> molecular (1.0)
+    @test LWFBrook90.ISO.compute_X_soil(0.225, 0.05, 0.40) ≈ 0.75 # midpoint (0.75)
+    @test LWFBrook90.ISO.compute_X_soil(0.50, 0.05, 0.40) ≈ 0.5 # clamped above sat
+    @test LWFBrook90.ISO.compute_X_soil(0.01, 0.05, 0.40) ≈ 1.0 # clamped below res
+
+    # 3. Atmospheric vapor equilibrium signature
+    δP_18O = 0.0
+    δP_2H  = 0.0
+    α_18O = LWFBrook90.ISO.α¹⁸O_eq(20.0)
+    α_2H  = LWFBrook90.ISO.α²H_eq(20.0)
+    δa_18O = LWFBrook90.ISO.δₐ(δP_18O, α_18O)
+    δa_2H  = LWFBrook90.ISO.δₐ(δP_2H,  α_2H)
+    @test δa_18O < 0.0
+    @test δa_2H < 0.0
+
+    # 4. Craig-Gordon evaporating flux signature
+    δL_18O = 0.0
+    δL_2H  = 0.0
+    h = 0.5 # 50% relative humidity
+    γ = 1.0
+    X_water = 0.5 # open water surface
+
+    δE_18O = LWFBrook90.ISO.δ_CraigGordon_evap_flux(δL_18O, δa_18O, h, α_18O, LWFBrook90.ISO.α¹⁸O_dif, γ, X_water)
+    δE_2H  = LWFBrook90.ISO.δ_CraigGordon_evap_flux(δL_2H,  δa_2H,  h, α_2H,  LWFBrook90.ISO.α²H_dif,  γ, X_water)
+
+    # Evaporated flux should be depleted relative to liquid water
+    @test δE_18O < δL_18O
+    @test δE_2H < δL_2H
+
+    # 5. Evaporation slope in δ18O-δ2H space (characteristic local evaporation line slope)
+    # The slope S = (δL_2H - δE_2H) / (δL_18O - δE_18O)
+    slope_evap = (δL_2H - δE_2H) / (δL_18O - δE_18O)
+    # Open water evaporation slope is typically between 3.5 and 5.5 (distinct from meteoric line slope 8.0)
+    @test 3.0 < slope_evap < 6.0
+end
+
+
+
+

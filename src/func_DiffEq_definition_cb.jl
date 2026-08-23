@@ -906,6 +906,31 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
             # # E¹⁸O = C_¹⁸O_SLVP * aux_du_SLVP[1] * 0.001 # kg/m3 * mm/day * 0.001 m/mm # (kg/m²/day¹)
             # # E²H  = C_²H_SLVP  * aux_du_SLVP[1] * 0.001 # kg/m3 * mm/day * 0.001 m/mm # (kg/m²/day¹)
             error("Not implemented")
+            Tc = p_fT_TADTM[1] # °C, average daytime air temperature
+            vappres_val = p_VAPPRES(integrator.t) # kPa, daily average vapor pressure
+            esat_val = LWFBrook90.PET.ESAT(Tc)[1] # kPa, saturated vp
+            h_atm = (esat_val > 0) ? min(1.0, max(0.0, vappres_val / esat_val)) : 0.5
+            γ = 1.0 # thermodynamic activity coefficient of evaporating water
+
+            # Atmospheric vapor composition assumed to be in equilibrium with precipitation
+            δ¹⁸O_a = LWFBrook90.ISO.δₐ(p_δ18O_PREC(integrator.t), LWFBrook90.ISO.α¹⁸O_eq(Tc))
+            δ²H_a  = LWFBrook90.ISO.δₐ(p_δ2H_PREC(integrator.t),  LWFBrook90.ISO.α²H_eq(Tc))
+
+            for i in 1:p_SLVPLAYER
+                # Soil moisture in layer i to compute kinetic fractionation
+                θ_i     = θᵏ⁺¹[i]
+                θ_r_i   = p_soil.p_θr[i]
+                θ_sat_i = p_THSAT[i]
+                X_SOIL  = LWFBrook90.ISO.compute_X_soil(θ_i, θ_r_i, θ_sat_i)
+
+                # Evaporating vapor flux isotopic signature via Craig-Gordon:
+                # units: permil
+                δ¹⁸O_SLVP_i = LWFBrook90.ISO.δ_CraigGordon_evap_flux(u_δ18O_SWATI[i], δ¹⁸O_a, h_atm, LWFBrook90.ISO.α¹⁸O_eq(Tc), LWFBrook90.ISO.α¹⁸O_dif, γ, X_SOIL)
+                δ²H_SLVP_i  = LWFBrook90.ISO.δ_CraigGordon_evap_flux(u_δ2H_SWATI[i], δ²H_a,  h_atm, LWFBrook90.ISO.α²H_eq(Tc),  LWFBrook90.ISO.α²H_dif,  γ, X_SOIL)
+
+                C_¹⁸O_SLVP[i] = LWFBrook90.ISO.δ_to_x(δ¹⁸O_SLVP_i, LWFBrook90.ISO.R_VSMOW¹⁸O)
+                C_²H_SLVP[i]  = LWFBrook90.ISO.δ_to_x(δ²H_SLVP_i,  LWFBrook90.ISO.R_VSMOW²H)
+            end
         end
 
 
