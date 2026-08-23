@@ -580,7 +580,7 @@ function MSBITERATE!(
                     #
                     p_DRAIN, p_DTP, t, p_DTIMAX,
                     # for INFLOW:
-                    p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP,
+                    p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP, p_SLVPFRAC,
                     # for FDPSIDW:
                     u_aux_WETNES,
                     # for ITER:
@@ -650,7 +650,7 @@ function MSBITERATE!(
     # aux_du_VRFLI[:], aux_du_INFLI[:], aux_du_BYFLI[:] =
     LWFBrook90.WAT.INFLOW!(aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, # modified in place
                             NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL[1], aux_du_DSFLI, aux_du_TRANI,
-                            aux_du_SLVP, p_soil.p_SWATMAX, u_SWATI,
+                            aux_du_SLVP, p_SLVPFRAC, p_soil.p_SWATMAX, u_SWATI,
                             aux_du_VRFLI_1st_approx)
 
     # limit step size
@@ -677,17 +677,18 @@ function MSBITERATE!(
             # aux_du_VRFLI[:], aux_du_INFLI[:], aux_du_BYFLI[:] =
             LWFBrook90.WAT.INFLOW!(aux_du_VRFLI, aux_du_INFLI, aux_du_BYFLI, # modified in place
                                     NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL[1], aux_du_DSFLI, aux_du_TRANI,
-                                    aux_du_SLVP, p_soil.p_SWATMAX, u_SWATI,
+                                    aux_du_SLVP, p_SLVPFRAC, p_soil.p_SWATMAX, u_SWATI,
                                     aux_du_VRFLI_1st_approx)
         end
     end
 
     # Compute net flows du_NTFLI based on corrected flows
     for i = NLAYER:-1:1
+        slvp_i = aux_du_SLVP * p_SLVPFRAC[i] # TODO: use this much earlier than carrying around two separate quantities
         if (i == 1)
-            du_NTFLI[i] =                     aux_du_INFLI[i] - aux_du_VRFLI[i] - aux_du_DSFLI[i] - aux_du_TRANI[i] - aux_du_SLVP
+            du_NTFLI[i] =                     aux_du_INFLI[i] - aux_du_VRFLI[i] - aux_du_DSFLI[i] - aux_du_TRANI[i] - slvp_i
         elseif (i > 1)
-            du_NTFLI[i] = aux_du_VRFLI[i-1] + aux_du_INFLI[i] - aux_du_VRFLI[i] - aux_du_DSFLI[i] - aux_du_TRANI[i]
+            du_NTFLI[i] = aux_du_VRFLI[i-1] + aux_du_INFLI[i] - aux_du_VRFLI[i] - aux_du_DSFLI[i] - aux_du_TRANI[i] - slvp_i
         else
             error("Unexpected value of i.")
         end

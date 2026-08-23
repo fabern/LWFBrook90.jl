@@ -75,6 +75,7 @@ Initial conditions of states other than soil can be provided as NamedTuple, e.g.
 function loadSPAC(folder::String, prefix::String;
     simulate_isotopes::Bool = true,
     simulate_irrigation::Bool = false,
+    simulate_evaporation_fractionation::Bool = false,
     # compute_intermediate_quantities::Bool = true,
     canopy_evolution  = "meteoveg.csv",
     Δz_thickness_m    = "soil_discretization.csv",
@@ -101,7 +102,8 @@ function loadSPAC(folder::String, prefix::String;
         (#Reset                           = false, # currently only Reset = 0 implemented
          compute_intermediate_quantities = true,   # Flag whether ODE containes additional quantities than only states
          simulate_isotopes               = simulate_isotopes,
-         simulate_irrigation             = simulate_irrigation
+         simulate_irrigation             = simulate_irrigation,
+         simulate_evaporation_fractionation = simulate_evaporation_fractionation
         )
 
     ## Load model input parameters
@@ -597,7 +599,7 @@ function saveSPAC(sim::DiscretizedSPAC, out_dir; prefix = basename(dirname(out_d
         NaN,params.MELFAC,params.CCFAC,params.LAIMLT,params.SAIMLT,params.GRDMLT,params.MAXLQF,params.KSNVP,params.SNODEN,
         NaN,params.GLMAX,params.GLMIN,params.CR,params.RM,params.R5,params.CVPD,params.TL,params.T1,params.T2,params.TH,
         NaN,params.MXKPL,params.MXRTLN,params.INITRLEN,params.INITRDEP,params.RGRORATE,params.RGROPER,params.FXYLEM,params.PSICR,params.RTRAD,params.NOOUTF,
-        NaN,params.IDEPTH_m,params.QDEPTH_m,params.RSSA,params.RSSB,params.INFEXP,params.BYPAR,params.QFPAR,params.QFFC,params.IMPERV,params.DSLOPE,params.LENGTH_SLOPE,params.DRAIN,params.GSC,params.GSP,
+        NaN,params.IDEPTH_m,params.QDEPTH_m,params.SLVPDEPTH_m,params.RSSA,params.RSSB,params.INFEXP,params.BYPAR,params.QFPAR,params.QFFC,params.IMPERV,params.DSLOPE,params.LENGTH_SLOPE,params.DRAIN,params.GSC,params.GSP,
         NaN,sim.parametrizedSPAC.solver_options.DTIMAX,sim.parametrizedSPAC.solver_options.DSWMAX, sim.parametrizedSPAC.solver_options.DPSIMAX]
     par_col1 = ["### Isotope transport parameters  -------", "### TODO", "### TODO2", "VXYLEM_mm", "DISPERSIVITY_mm",
                 "### Meteorologic site parameters -------", "LAT_DEG", "ESLOPE_DEG", "ASPECT_DEG", "ALB", "ALBSN", "C1", "C2", "C3", "WNDRAT", "FETCH", "Z0W", "ZW",
@@ -606,7 +608,7 @@ function saveSPAC(sim::DiscretizedSPAC, out_dir; prefix = basename(dirname(out_d
                 "### Snowpack parameters -------", "MELFAC", "CCFAC", "LAIMLT", "SAIMLT", "GRDMLT", "MAXLQF", "KSNVP", "SNODEN",
                 "### Leaf evaporation parameters (affecting PE) -------", "GLMAX", "GLMIN", "CR", "RM", "R5", "CVPD", "TL", "T1", "T2", "TH",
                 "### Plant parameters (affecting soil-water supply) -------", "MXKPL", "MXRTLN", "INITRLEN", "INITRDEP", "RGRORATE", "RGROPER", "FXYLEM", "PSICR", "RTRAD", "NOOUTF",
-                "### Soil parameters -------", "IDEPTH_m", "QDEPTH_m", "RSSA", "RSSB", "INFEXP", "BYPAR", "QFPAR", "QFFC", "IMPERV", "DSLOPE", "LENGTH_SLOPE", "DRAIN", "GSC", "GSP",
+                "### Soil parameters -------", "IDEPTH_m", "QDEPTH_m", "SLVPDEPTH_m", "RSSA", "RSSB", "INFEXP", "BYPAR", "QFPAR", "QFFC", "IMPERV", "DSLOPE", "LENGTH_SLOPE", "DRAIN", "GSC", "GSP",
                 "### Numerical solver parameters -------", "DTIMAX", "DSWMAX", "DPSIMAX",]
     par = DataFrame(param_id = par_col1, x = round.(par_col2, digits=4))
     param_file = joinpath(out_dir, prefix*"_param.csv")
@@ -1091,6 +1093,7 @@ function default_param_values()
         # Soil parameters
         IDEPTH_m = 0.4,
         QDEPTH_m = 0.0,
+        SLVPDEPTH_m = 0.0,
         RSSA = 795.0,
         RSSB = 1.0,
         INFEXP = 0.45,

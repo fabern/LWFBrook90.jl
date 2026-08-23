@@ -210,17 +210,19 @@ end
                         # p_MvGl = 0, p_STONEF = 0.9:-0.1:0.5))
     IDEPTH_m = 0.045 # m
     QDEPTH_m = 0.0  # m
+    SLVPDEPTH_m = 0.0 # m (will use the first layer only for soil evaporation)
     INITRDEP = 10
     RGRORATE = 10
     FLAG_MualVanGen = 1
     # FLAG_MualVanGen = 0
-    refined_soil_disc, IDEPTH_idx, QDEPTH_idx =
+    refined_soil_disc, IDEPTH_idx, QDEPTH_idx, SLVPDEPTH_idx =
         LWFBrook90.refine_soil_discretization(
             # modifiedSPAC.soil_discretization.Δz,
             input_soil_discretization,
             input_soil_horizons,
             [],
-            IDEPTH_m, QDEPTH_m)
+            IDEPTH_m, QDEPTH_m,
+            SLVPDEPTH_m)
     final_soil_discr = LWFBrook90.map_soil_horizons_to_discretization(input_soil_horizons, refined_soil_disc)
 
     @test nrow(final_soil_discr) == 10
@@ -231,6 +233,7 @@ end
     @test final_soil_discr[!,"Rootden_"] ≈ [0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
     @test QDEPTH_idx == 0
     @test IDEPTH_idx == 1
+    @test SLVPDEPTH_idx == 1
     @test [shp.p_STONEF for shp in final_soil_discr.shp] ≈ [0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7]
     # @test [shp.p_STONEF for shp in final_soil_discr.shp] ≈ [0.9, 0.9, 0.9, 0.9, 0.8, 0.8, 0.8, 0.8, 0.8, 0.7]
     @test [shp.p_THSAT for shp in final_soil_discr.shp] ≈ [0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55]
@@ -321,7 +324,7 @@ end
     else
         soil_output_depths_m = soil_output_depths_m = zeros(Float64, 0)
     end
-    refined_soil_discretizationDF, IDEPTH_idx, QDEPTH_idx =
+    refined_soil_discretizationDF, IDEPTH_idx, QDEPTH_idx, SLVPDEPTH_idx =
         LWFBrook90.refine_soil_discretization(
             # parametrizedSPAC.soil_discretization.df,
             soil_discretization,
@@ -329,6 +332,7 @@ end
             soil_output_depths_m,
             parametrizedSPAC.pars.params[:IDEPTH_m],
             parametrizedSPAC.pars.params[:QDEPTH_m],
+            parametrizedSPAC.pars.params[:SLVPDEPTH_m],
             ε = 0.005)
 
     # Discretize the model in space as `soil_discretization`
@@ -373,7 +377,7 @@ end
 
     ####################
     # Define parameters for differential equation
-    p = LWFBrook90.define_LWFB90_p(parametrizedSPAC, vegetation_fT, IDEPTH_idx, QDEPTH_idx);
+    p = LWFBrook90.define_LWFB90_p(parametrizedSPAC, vegetation_fT, IDEPTH_idx, QDEPTH_idx, SLVPDEPTH_idx);
 
     # using Plots
     # hline([0; cumsum(p.p_soil.p_THICK)], yflip = true, xticks = false,
@@ -2156,4 +2160,63 @@ end
                 "For $k: compared (now:) $v ≈ (reference:) $(replace(reference_isotopePlotPermutedDims, nothing => NaN)[it,:])"
         end
     end
+end
+
+@testset "SLVPDEPTH and Evaporation Depth Sourcing" begin
+    # 1. Test default SLVPDEPTH_m = 0.0 in refine_soil_discretization
+    horizons = DataFrame(
+        Upper_m = [0.0, -0.2, -0.5],
+        Lower_m = [-0.2, -0.5, -1.0],
+        Mat = [1, 2, 3]
+    )
+    prior_discr = DataFrame(
+        Upper_m = [0.0, -0.1, -0.2, -0.5],
+        Lower_m = [-0.1, -0.2, -0.5, -1.0]
+    )
+    
+    refined_disc, idepth_idx, qdepth_idx, slvpdepth_idx = LWFBrook90.refine_soil_discretization(
+        prior_discr, horizons, Float64[], 0.4, 0.0, 0.0; ε = 0.05
+    )
+    @test slvpdepth_idx == 1 # defaults / 0.0 bounds to layer 1
+
+    # 2. Test SLVPDEPTH_m smaller than first layer thickness
+    refined_disc_small, _, _, slvpdepth_idx_small = LWFBrook90.refine_soil_discretization(
+        prior_discr, horizons, Float64[], 0.4, 0.0, 0.03; ε = 0.05
+    )
+    @test slvpdepth_idx_small == 1 # extended to first layer thickness
+
+    # 3. Test SLVPDEPTH_m larger than first layer thickness (e.g. 0.15 m)
+    refined_disc_deep, _, _, slvpdepth_idx_deep = LWFBrook90.refine_soil_discretization(
+        prior_discr, horizons, Float64[], 0.4, 0.0, 0.15; ε = 0.05
+    )
+    @test slvpdepth_idx_deep >= 2
+    @test any(abs.(refined_disc_deep.Lower_m .- (-0.15)) .< 1e-4)
+
+    # 4. Test p_SLVPFRAC partitioning in setup
+    spac = loadSPAC("../examples/DAV2020-full/", "DAV2020-full";
+                    simulate_isotopes = true,
+                    simulate_evaporation_fractionation = false)
+    # Default parameters: SLVPDEPTH_m = 0.0
+    @test haskey(spac.pars.params, :SLVPDEPTH_m)
+    @test spac.pars.params.SLVPDEPTH_m == 0.0
+    sim = setup(spac, requested_tspan = (0.0, 5.0))
+    p = sim.ODEProblem.p
+    @test p.p_SLVPLAYER == 1
+    @test p.p_SLVPFRAC[1] ≈ 1.0
+    @test sum(p.p_SLVPFRAC) ≈ 1.0
+
+    # Setting custom SLVPDEPTH_m = 0.15 m (layers: [0, -0.03], [-0.03, -0.10], [-0.10, -0.15])
+    sim_deep = remakeSPAC(spac; params = (SLVPDEPTH_m = 0.15,), requested_tspan = (0.0, 5.0))
+    p_deep = sim_deep.ODEProblem.p
+    @test p_deep.p_SLVPLAYER == 3
+    @test sum(p_deep.p_SLVPFRAC) ≈ 1.0
+    @test p_deep.p_SLVPFRAC[1:3] ≈ [0.03, 0.07, 0.05] ./ 0.15
+    @test all(p_deep.p_SLVPFRAC[4:end] .== 0.0)
+
+    # Run simulation with fractionating evaporation across multiple layers
+    sim_frac = remakeSPAC(sim_deep;
+                          solver_options = (simulate_evaporation_fractionation = true,),
+                          requested_tspan = (0.0, 5.0))
+    simulate!(sim_frac)
+    @test SciMLBase.successful_retcode(sim_frac.ODESolution.retcode)
 end

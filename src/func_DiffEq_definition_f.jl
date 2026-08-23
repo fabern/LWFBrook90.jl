@@ -21,7 +21,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
             # FOR MSBITERATE:
             p_QLAYER, p_SWATQX, p_QFPAR, p_SWATQF, p_QFFC, p_IMPERV,
             p_LENGTH_SLOPE, p_DSLOPE, p_RHOWG, p_DPSIMAX, #TODO(bernhard) p_RHOWG is a global constant
-            p_DRAIN, p_DTIMAX, p_INFRAC, p_DSWMAX, p_GSC, p_GSP, p_BYPAR = p;
+            p_DRAIN, p_DTIMAX, p_INFRAC, p_SLVPFRAC, p_DSWMAX, p_GSC, p_GSP, p_BYPAR = p;
 
         ## B) time dependent parameters
         @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC, p_IRRIG,
@@ -107,7 +107,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
                     #
                     p_DRAIN, p_DTP, t, p_DTIMAX,
                     # for INFLOW:
-                    p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP[1],
+                    p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP[1], p_SLVPFRAC, # TODO: instead of using SLVPFRAC just use aux_du_SLVPI as vector
                     # for FDPSIDW:
                     u_aux_WETNES,
                     # for ITER:

@@ -778,7 +778,8 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC, p_IRRIG,
         #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_RELDEN,
         #     p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, REFERENCE_DATE = integrator.p
-        @unpack p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG = integrator.p
+        @unpack p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, 
+            p_VAPPRES, simulate_evaporation_fractionation, p_SLVPFRAC, p_SLVPLAYER = integrator.p
 
         ## C) state dependent parameters or intermediate results:
         # These were computed in the callback and are kept constant in between two
@@ -877,24 +878,36 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # # TODO(bernhard): for TRANI and DSFL we are instead using Cᵏ⁺¹ (i.e. use the concentrations in the LHS in the implicit scheme...)
 
         ### Compute δ signature of evaporating flux (SLVP)
-        δ¹⁸O_SLVP = u_δ18O_SWATI[1] # TODO(bernhard): disabling evaporation fractionation (TODO: should yield solution similar to Stumpp 2012 model)
-        δ²H_SLVP  = u_δ2H_SWATI[1]  # TODO(bernhard): disabling evaporation fractionation (TODO: should yield solution similar to Stumpp 2012 model)
-        # Equation derived based on Gonfiantini (see 60 lines above in comment)
-        # # δ_E = 1000*(1 + 1/((γ - h)*(α_dif)^X) * (γ/α*(1+δ_w/1000) - h*(1+δ_A/1000)))
-        # δ¹⁸O_SLVP = 1000*( 1 + (γ/α¹⁸O_eq*(1 + u_δ18O_SWATI[1] / 1000) - h*(1 + δ¹⁸O_a/1000)) /
-        #                         ((γ - h)*(LWFBrook90.ISO.α¹⁸O_dif)^X_SOIL) )
-        # δ²H_SLVP  = 1000*( 1 + (γ/α²H_eq*(1 + u_δ2H_SWATI[1] / 1000) - h*(1 + δ²H_a/1000)) /
-        #                         ((γ - h)*(LWFBrook90.ISO.α²H_dif)^X_SOIL) )
-        # (Above is an alternative to formulation in Benettin 2018 HESS eq. 1 and Gibson 2016)
-        # Cᵢ_SLVP = ( (Cᵢ - ε¹⁸O_eq)/α¹⁸O_eq - h*δ¹⁸O_a - ε¹⁸O_dif ) /
-        #             (1 - h + ε¹⁸O_dif/1000) # [‰]
+        C_¹⁸O_SLVP .= 0
+        C_²H_SLVP .= 0
+        
+        if !simulate_evaporation_fractionation
+            for i in 1:p_SLVPLAYER
+                δ¹⁸O_SLVP_i = u_δ18O_SWATI[i] # permil, Non-fractionating mode (Stumpp et al., 2012)
+                δ²H_SLVP_i  = u_δ2H_SWATI[i]  # permil
+                C_¹⁸O_SLVP[i] = LWFBrook90.ISO.δ_to_x(δ¹⁸O_SLVP_i, LWFBrook90.ISO.R_VSMOW¹⁸O)
+                C_²H_SLVP[i]  = LWFBrook90.ISO.δ_to_x(δ²H_SLVP_i,  LWFBrook90.ISO.R_VSMOW²H)
+            end
+        else
+            # Equation derived based on Gonfiantini (see 60 lines above in comment)
+            # # δ_E = 1000*(1 + 1/((γ - h)*(α_dif)^X) * (γ/α*(1+δ_w/1000) - h*(1+δ_A/1000)))
+            # δ¹⁸O_SLVP = 1000*( 1 + (γ/α¹⁸O_eq*(1 + u_δ18O_SWATI[1] / 1000) - h*(1 + δ¹⁸O_a/1000)) /
+            #                         ((γ - h)*(LWFBrook90.ISO.α¹⁸O_dif)^X_SOIL) )
+            # δ²H_SLVP  = 1000*( 1 + (γ/α²H_eq*(1 + u_δ2H_SWATI[1] / 1000) - h*(1 + δ²H_a/1000)) /
+            #                         ((γ - h)*(LWFBrook90.ISO.α²H_dif)^X_SOIL) )
+            # (Above is an alternative to formulation in Benettin 2018 HESS eq. 1 and Gibson 2016)
+            # Cᵢ_SLVP = ( (Cᵢ - ε¹⁸O_eq)/α¹⁸O_eq - h*δ¹⁸O_a - ε¹⁸O_dif ) /
+            #             (1 - h + ε¹⁸O_dif/1000) # [‰]
+    
+            # C_¹⁸O_SLVP .= 0
+            # C_²H_SLVP  .= 0
+            # C_¹⁸O_SLVP[1]  = LWFBrook90.ISO.δ_to_C(δ¹⁸O_SLVP, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O)
+            # C_²H_SLVP[1]   = LWFBrook90.ISO.δ_to_C(δ²H_SLVP,  LWFBrook90.ISO.R_VSMOW²H,  LWFBrook90.ISO.Mi_²H)
+            # # E¹⁸O = C_¹⁸O_SLVP * aux_du_SLVP[1] * 0.001 # kg/m3 * mm/day * 0.001 m/mm # (kg/m²/day¹)
+            # # E²H  = C_²H_SLVP  * aux_du_SLVP[1] * 0.001 # kg/m3 * mm/day * 0.001 m/mm # (kg/m²/day¹)
+            error("Not implemented")
+        end
 
-        # C_¹⁸O_SLVP .= 0
-        # C_²H_SLVP  .= 0
-        # C_¹⁸O_SLVP[1]  = LWFBrook90.ISO.δ_to_C(δ¹⁸O_SLVP, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O)
-        # C_²H_SLVP[1]   = LWFBrook90.ISO.δ_to_C(δ²H_SLVP,  LWFBrook90.ISO.R_VSMOW²H,  LWFBrook90.ISO.Mi_²H)
-        # # E¹⁸O = C_¹⁸O_SLVP * aux_du_SLVP[1] * 0.001 # kg/m3 * mm/day * 0.001 m/mm # (kg/m²/day¹)
-        # # E²H  = C_²H_SLVP  * aux_du_SLVP[1] * 0.001 # kg/m3 * mm/day * 0.001 m/mm # (kg/m²/day¹)
 
         ### Prepare terms to evaluate linear system to be solved
         Δt = integrator.t - integrator.tprev # days
@@ -1165,10 +1178,6 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
 
         Cᵢ¹⁸O_DSFL = C_¹⁸Oᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
         Cᵢ²H_DSFL  = C_²Hᵏ  # no fractionation occurring, i.e. outflux composition equal to storage composition
-        C_¹⁸O_SLVP .= 0  # setting all elements except [1] to 0 removes effect of evaporation flux from equation
-        C_²H_SLVP  .= 0  # setting all elements except [1] to 0 removes effect of evaporation flux from equation
-        C_¹⁸O_SLVP[1] = LWFBrook90.ISO.δ_to_x.(δ¹⁸O_SLVP, LWFBrook90.ISO.R_VSMOW¹⁸O)
-        C_²H_SLVP[1]  = LWFBrook90.ISO.δ_to_x.(δ²H_SLVP,  LWFBrook90.ISO.R_VSMOW²H )
 
         # 3) Some other terms in the isotope balance equation
         dVdt = du_NTFLI # [mm/day]
@@ -1189,12 +1198,12 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # units: dVdt (mm/day), C (), u_SWATI (mm), diff¹⁸O_upp (m/day) => diff¹⁸O_upp*1000 (mm/day), qCᵢ¹⁸O_upp (mm/day), INFLI, DSFLI, SLVP, TRANI (mm/day)
         du_Cᵢ¹⁸_SWATI .= -C_¹⁸Oᵏ./u_SWATIᵏ⁺¹ .* dVdt .+ 1 ./ u_SWATIᵏ⁺¹ .* (
                                 -diff¹⁸O_upp*1000 .+ diff¹⁸O_low*1000 .+ qCᵢ¹⁸O_upp .- qCᵢ¹⁸O_low .+
-                                aux_du_INFLI.*Cᵢ¹⁸O_INFLI .- aux_du_DSFLI.*Cᵢ¹⁸O_DSFL .- aux_du_SLVP[1].*C_¹⁸O_SLVP .-
+                                aux_du_INFLI.*Cᵢ¹⁸O_INFLI .- aux_du_DSFLI.*Cᵢ¹⁸O_DSFL .- (aux_du_SLVP[1].*p_SLVPFRAC).*C_¹⁸O_SLVP .- # TODO: use aux_du_SLVPI instead of p_SLVPFRAC
                                 aux_du_TRANI.*Cᵢ¹⁸O_TRANI
                             )
         du_Cᵢ²H_SWATI .= -C_²Hᵏ./u_SWATIᵏ⁺¹ .* dVdt .+ 1 ./ u_SWATIᵏ⁺¹ .* (
                                 -diff²H_upp*1000 .+ diff²H_low*1000 .+ qCᵢ²H_upp .- qCᵢ²H_low .+
-                                aux_du_INFLI.*Cᵢ²H_INFLI .- aux_du_DSFLI.*Cᵢ²H_DSFL .- aux_du_SLVP[1].*C_²H_SLVP .-
+                                aux_du_INFLI.*Cᵢ²H_INFLI .- aux_du_DSFLI.*Cᵢ²H_DSFL .- (aux_du_SLVP[1].*p_SLVPFRAC).*C_²H_SLVP .- # TODO: use aux_du_SLVPI instead of p_SLVPFRAC
                                 aux_du_TRANI.*Cᵢ²H_TRANI
                             )
 

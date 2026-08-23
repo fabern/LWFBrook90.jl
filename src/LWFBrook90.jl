@@ -35,7 +35,7 @@ An instance of a soil-plant-atmopsheric continuum model with the following field
 
 - `reference_date`: DateTime to relate internal use of numerical days to real-world dates
 - `tspan`: Tuple `(0, Int)` Time span of available input data in days since reference date
-- `solver_options`: `NamedTuple`: (compute_intermediate_quantities, simulate_isotopes, DTIMAX, DSWMAX, DPSIMAX), containing some solver options for the model
+- `solver_options`: `NamedTuple`: (compute_intermediate_quantities, simulate_isotopes, simulate_irrigation, simulate_evaporation_fractionation, DTIMAX, DSWMAX, DPSIMAX), containing some solver options for the model
 
 - `soil_discretization`: `DataFrame` with contents from `soil_discretizations.csv`, i.e. containing columns:
         `Upper_m`,`Lower_m`,`Rootden_`,`uAux_PSIM_init_kPa`,`u_delta18O_init_permil`,`u_delta2H_init_permil`
@@ -246,6 +246,8 @@ function remakeSPAC(parametrizedSPAC::SPAC;
             modifiedSPAC = remake_IC_soil(          modifiedSPAC, values(kwargs)[curr_change])
         elseif (curr_change == :IC_scalar)
             modifiedSPAC = remake_IC_scalar(        modifiedSPAC, values(kwargs)[curr_change])
+        elseif (curr_change == :solver_options)
+            modifiedSPAC = remake_solver_options(   modifiedSPAC, values(kwargs)[curr_change])
         else
             error("Unknown argument provided to remake(): $curr_change")
         end
@@ -254,6 +256,11 @@ function remakeSPAC(parametrizedSPAC::SPAC;
                 requested_tspan = requested_tspan,
                 soil_output_depths_m = soil_output_depths_m)
 end
+function remake_solver_options(spac, changesNT)
+    spac.solver_options = merge(spac.solver_options, changesNT)
+    return spac
+end
+
 function remake_soil_horizons(spac, changesNT)
     shp_names = Dict(:ths_           => :p_THSAT,
                      :thr_           => :p_θr,
@@ -404,6 +411,10 @@ function setup(parametrizedSPAC::SPAC;
 
     modifiedSPAC = deepcopy(parametrizedSPAC); # make a copy to put into DiscretizedSPAC
 
+    # SLVPDEPTH_m is set to at least the thickness of the first soil layer in soil_discretization.df
+    top_layer_thickness = abs(modifiedSPAC.soil_discretization.df[1, "Upper_m"] - modifiedSPAC.soil_discretization.df[1, "Lower_m"])
+    SLVPDEPTH_m = max( modifiedSPAC.pars.params[:SLVPDEPTH_m], top_layer_thickness) # legacy behavior if SLVPDEPTH_m = 0.0 or thinner than top_layer use whole top_layer as SLVPDEPTH_m
+
     ##########
     # a) Refine soil disretization to provide all needed output
     # Define grid for spatial discretization
@@ -413,14 +424,15 @@ function setup(parametrizedSPAC::SPAC;
     #         soil_output_depths_m,
     #         modifiedSPAC.pars.params[:IDEPTH_m],
     #         modifiedSPAC.pars.params[:QDEPTH_m])
-    refined_soil_discretizationDF, IDEPTH_idx, QDEPTH_idx =
+    refined_soil_discretizationDF, IDEPTH_idx, QDEPTH_idx, SLVPDEPTH_idx =
         LWFBrook90.refine_soil_discretization(
             # modifiedSPAC.soil_discretization.Δz,
             modifiedSPAC.soil_discretization.df,
             modifiedSPAC.pars.soil_horizons,
             soil_output_depths_m,
             modifiedSPAC.pars.params[:IDEPTH_m],
-            modifiedSPAC.pars.params[:QDEPTH_m];
+            modifiedSPAC.pars.params[:QDEPTH_m],
+            SLVPDEPTH_m;
             ε = ε)
     Δz_refined = refined_soil_discretizationDF.Upper_m - refined_soil_discretizationDF.Lower_m
     # if rootden (and initial conditions were given parametrically redo them):
@@ -492,7 +504,7 @@ function setup(parametrizedSPAC::SPAC;
 
     ####################
     # Define parameters for differential equation
-    p = define_LWFB90_p(modifiedSPAC, vegetation_fT, IDEPTH_idx, QDEPTH_idx)
+    p = define_LWFB90_p(modifiedSPAC, vegetation_fT, IDEPTH_idx, QDEPTH_idx, SLVPDEPTH_idx)
     # using Plots
     # hline([0; cumsum(p.p_soil.p_THICK)], yflip = true, xticks = false,
     #     title = "N_layer = "*string(p.NLAYER))

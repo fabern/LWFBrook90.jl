@@ -29,6 +29,8 @@ Types of changes:
 - By default `ODESimulations` now saves only daily values. Previous behavior was 
     to save every ODE solver step. To recover prvious behavior use `kwargs` (`saveat` 
     or `save_everystep`) when calling `simulate!()`.
+- Added soil evaporation depth sourcing parameter `SLVPDEPTH_m` (default `0.0` m), enabling soil evaporation mass and isotopic fluxes to be distributed across the topsoil layers down to `SLVPDEPTH_m`.
+- Added support for modifying `solver_options` directly in `remakeSPAC`.
 
 ## [0.9.9] - 2024-04-05
 

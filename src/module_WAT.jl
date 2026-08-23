@@ -312,7 +312,7 @@ original VRFLIi are needed again if the iteration time step (DTI) is reduced.
 """
 function INFLOW!(VRFLI_posterior, INFLI, BYFLI, # these are modified in-place
                 NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
-                aux_du_DSFLI, aux_du_TRANI, aux_du_SLVP, p_SWATMAX, u_SWATI, VRFLI_prior)
+                aux_du_DSFLI, aux_du_TRANI, aux_du_SLVP, p_SLVPFRAC, p_SWATMAX, u_SWATI, VRFLI_prior)
                 # This function a) computes all the fluxes involved in the
                 # balance of a single soil layer and b) corrects the fluxes of
                 # VRFLI, INFLI and BYFLI.
@@ -393,13 +393,15 @@ function INFLOW!(VRFLI_posterior, INFLI, BYFLI, # these are modified in-place
         # Compute maximum possible inflow during time interval DTI:
         # maximum allowed rate of input of water to layer, mm/d:
         MAXIN = (p_SWATMAX[i] - u_SWATI[i]) / DTI + VRFLI_posterior[i] + aux_du_DSFLI[i] + aux_du_TRANI[i]
+        
+        # The first few layer(s) there is additionally soil evaporation SLVP as an
+        # outflow. A fact which increases the maximum possible inflow.
+        MAXIN = MAXIN + aux_du_SLVP * p_SLVPFRAC[i]
 
-        # inflow is composed of INFLI[1]             for the first layer 1
-        # inflow is composed of INFLI[i], VRFLI[i-1] for any layer i
+            
+        # inflow is composed of INFLI[1]             , SLVP[1] for the first layer 1
+        # inflow is composed of INFLI[i], VRFLI[i-1] , SLVP[i] for any layer i
         if (i == 1)
-            # In first layer there is additionally soil evaporation SLVP as an
-            # outflow. A fact which increases the maximum possible inflow.
-            MAXIN = MAXIN + aux_du_SLVP[1]
             # If inflow is too large
             if (INFLI[1] > MAXIN)
                 # Decrease INFLI, and increase BYFLI:

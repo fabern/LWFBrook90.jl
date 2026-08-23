@@ -9,7 +9,7 @@ Generate vector p needed for ODE() problem in DiffEq.jl package.
 - `simulate_isotopes::...`: TODO argument description.
 - `soil_output_depths_m`: vector of depths at which state variables should be extractable (negative numeric values [in meter])
 """
-function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEPTH_idx)
+function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEPTH_idx, SLVPDEPTH_idx)
 
     ########
     ## Solver algorithm options
@@ -239,6 +239,16 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
     p_QLAYER = QDEPTH_idx #soil_discr["QLAYER"] # (Flow parameter), number of soil layers for SRFL
     p_INFRAC = LWFBrook90.WAT.INFPAR(p_INFEXP, p_ILAYER, p_soil) # fraction of (preferential) infiltration to each layer
 
+    p_SLVPLAYER = SLVPDEPTH_idx
+    p_SLVPFRAC  = zeros(Float64, NLAYER)
+    if SLVPDEPTH_idx == 1
+        p_SLVPFRAC[1] = 1.0
+    else
+        # evaporation is distributed equally over all depths up to SLVPDEPTH_idx
+        tot_thick = sum(p_soil.p_THICK[1:SLVPDEPTH_idx])
+        p_SLVPFRAC[1:SLVPDEPTH_idx] .= p_soil.p_THICK[1:SLVPDEPTH_idx] ./ tot_thick
+    end
+
     ### Flow generation
     p_BYPAR  = parametrizedSPAC.pars.params[:BYPAR]  # (Flow parameter), flag to activate bypass flow (BYFL), (0/1)
     p_DRAIN  = parametrizedSPAC.pars.params[:DRAIN] # (Flow parameter), continuous flag to activate drainge VRFLI(n), (between 0 and 1; 1 = gravity drainage, 0 = no drainage)
@@ -436,7 +446,8 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
         p_QFFC        = p_QFFC,        p_IMPERV      = p_IMPERV,      p_LENGTH_SLOPE= p_LENGTH_SLOPE,
         p_DSLOPE      = p_DSLOPE,      p_RHOWG       = LWFBrook90.CONSTANTS.p_RHOWG,
         p_DPSIMAX     = p_DPSIMAX,     p_DRAIN       = p_DRAIN,       p_DTIMAX      = p_DTIMAX,
-        p_INFRAC      = p_INFRAC,      p_DSWMAX      = p_DSWMAX,      p_GSC         = p_GSC,
+        p_INFRAC      = p_INFRAC,      p_SLVPFRAC    = p_SLVPFRAC,    p_SLVPLAYER   = p_SLVPLAYER, 
+        p_DSWMAX      = p_DSWMAX,      p_GSC         = p_GSC,
         p_GSP         = p_GSP,         p_BYPAR       = p_BYPAR,
 
         # formerly p_cst3:
@@ -464,6 +475,7 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
         # formerly p_cst4:
         simulate_isotopes = parametrizedSPAC.solver_options.simulate_isotopes,
         simulate_irrigation = parametrizedSPAC.solver_options.simulate_irrigation,
+        simulate_evaporation_fractionation = parametrizedSPAC.solver_options.simulate_evaporation_fractionation,
         # row_idx_scalars = [], # TODO(bernharf): replace with keys(states) or states[:accum]
         row_idx_scalars = (GWAT = nothing,#findfirst(isequal(:GWAT),  u0_field_names),#:GWAT,
                             INTS = nothing,#findfirst(isequal(:INTS),  u0_field_names),#:INTS,
