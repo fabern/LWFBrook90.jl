@@ -520,6 +520,122 @@ end
     end
 end
 
+@testset "SLVPDEPTH and Evaporation Depth Sourcing" begin
+    # 1. Test default SLVPDEPTH_m = 0.0 in refine_soil_discretization
+    horizons = DataFrame(
+        Upper_m = [0.0, -0.2, -0.5],
+        Lower_m = [-0.2, -0.5, -1.0],
+        Mat = [1, 2, 3]
+    )
+    prior_discr = DataFrame(
+        Upper_m = [0.0, -0.1, -0.2, -0.5],
+        Lower_m = [-0.1, -0.2, -0.5, -1.0]
+    )
+    
+    SLVPDEPTH_m = 0.0
+    refined_disc, idepth_idx, qdepth_idx, slvpdepth_idx = LWFBrook90.refine_soil_discretization(
+        prior_discr, horizons, Float64[], 0.4, 0.0, SLVPDEPTH_m; ε = 0.05
+    )
+    @test slvpdepth_idx == 1 # defaults / 0.0 bounds to layer 1
+
+    # 2. Test SLVPDEPTH_m smaller than first layer thickness
+    SLVPDEPTH_m = 0.03
+    refined_disc_small, _, _, slvpdepth_idx_small = LWFBrook90.refine_soil_discretization(
+        prior_discr, horizons, Float64[], 0.4, 0.0, SLVPDEPTH_m; ε = 0.05
+    )
+    @test slvpdepth_idx_small == 1 # extended to first layer thickness
+
+    # 3. Test SLVPDEPTH_m larger than first layer thickness (e.g. 0.15 m)
+    SLVPDEPTH_m = 0.15
+    refined_disc_deep, _, _, slvpdepth_idx_deep = LWFBrook90.refine_soil_discretization(
+        prior_discr, horizons, Float64[], 0.4, 0.0, SLVPDEPTH_m; ε = 0.05
+    )
+    @test any(abs.(refined_disc_deep.Lower_m .- (-SLVPDEPTH_m)) .< 1e-4) # ensure a layer was added
+    @test slvpdepth_idx_deep == 2 # ensure that with added layer depth is correct
+    @test refined_disc_deep.Lower_m[slvpdepth_idx_deep] ≈ -SLVPDEPTH_m
+
+    SLVPDEPTH_m = 0.5
+    refined_disc_deep, _, _, slvpdepth_idx_deep = LWFBrook90.refine_soil_discretization(
+        prior_discr, horizons, Float64[], 0.4, 0.0, SLVPDEPTH_m; ε = 0.05
+    )
+    @test slvpdepth_idx_deep == 4 # ensure that with added layer depth is correct
+    @test refined_disc_deep.Lower_m[slvpdepth_idx_deep] ≈ -SLVPDEPTH_m
+
+    # 4. Test p_SLVPFRAC partitioning in setup
+    spac = loadSPAC("../examples/DAV2020-full/", "DAV2020-full";
+                    simulate_isotopes = true,
+                    simulate_evaporation_fractionation = false)
+    # Default parameters: SLVPDEPTH_m = 0.0
+    @test haskey(spac.pars.params, :SLVPDEPTH_m)
+    @test spac.pars.params.SLVPDEPTH_m == 0.0
+    sim = setup(spac, requested_tspan = (0.0, 5.0))
+    p = sim.ODEProblem.p
+    @test p.p_SLVPLAYER == 1
+    @test p.p_SLVPFRAC[1] ≈ 1.0
+    @test sum(p.p_SLVPFRAC) ≈ 1.0
+
+    # Setting custom SLVPDEPTH_m = 0.15 m (layers: [0, -0.03], [-0.03, -0.10], [-0.10, -0.15])
+    sim_deep = remakeSPAC(spac; params = (SLVPDEPTH_m = 0.15,), requested_tspan = (0.0, 5.0))
+    p_deep = sim_deep.ODEProblem.p
+    @test p_deep.p_SLVPLAYER == 3
+    @test sum(p_deep.p_SLVPFRAC) ≈ 1.0
+    @test p_deep.p_SLVPFRAC[1:3] ≈ [0.03, 0.07, 0.05] ./ 0.15
+    @test all(p_deep.p_SLVPFRAC[4:end] .== 0.0)
+
+    # Run simulation with fractionating evaporation
+    sim_frac = remakeSPAC(sim_deep;
+                          solver_options = (simulate_evaporation_fractionation = true,),
+                          requested_tspan = (0.0, 5.0))
+    simulate!(sim_frac)
+    @test SciMLBase.successful_retcode(sim_frac.ODESolution.retcode)
+end
+
+@testset "Module ISO: Evaporative Fractionation (Craig-Gordon & Soil X)" begin
+    # 1. Equilibrium fractionation factor tests
+    @test LWFBrook90.ISO.α¹⁸O_eq(20.0) ≈ 1.00983 atol=1e-3
+    @test LWFBrook90.ISO.α²H_eq(20.0) ≈ 1.08479 atol=1e-2
+    # Check monotonic decrease with temperature
+    @test LWFBrook90.ISO.α¹⁸O_eq(0.0) > LWFBrook90.ISO.α¹⁸O_eq(20.0) > LWFBrook90.ISO.α¹⁸O_eq(40.0)
+    @test LWFBrook90.ISO.α²H_eq(0.0) > LWFBrook90.ISO.α²H_eq(20.0) > LWFBrook90.ISO.α²H_eq(40.0)
+
+    # 2. Dynamic soil turbulence exponent X_soil tests
+    @test LWFBrook90.ISO.compute_X_soil(0.40, 0.05, 0.40) ≈ 0.5 # fully saturated -> turbulent (0.5)
+    @test LWFBrook90.ISO.compute_X_soil(0.05, 0.05, 0.40) ≈ 1.0 # residual -> molecular (1.0)
+    @test LWFBrook90.ISO.compute_X_soil(0.225, 0.05, 0.40) ≈ 0.75 # midpoint (0.75)
+    @test LWFBrook90.ISO.compute_X_soil(0.50, 0.05, 0.40) ≈ 0.5 # clamped above sat
+    @test LWFBrook90.ISO.compute_X_soil(0.01, 0.05, 0.40) ≈ 1.0 # clamped below res
+
+    # 3. Atmospheric vapor equilibrium signature
+    δP_18O = 0.0
+    δP_2H  = 0.0
+    α_18O = LWFBrook90.ISO.α¹⁸O_eq(20.0)
+    α_2H  = LWFBrook90.ISO.α²H_eq(20.0)
+    δa_18O = LWFBrook90.ISO.δₐ(δP_18O, α_18O)
+    δa_2H  = LWFBrook90.ISO.δₐ(δP_2H,  α_2H)
+    @test δa_18O < 0.0
+    @test δa_2H < 0.0
+
+    # 4. Craig-Gordon evaporating flux signature
+    δL_18O = -6.0
+    δL_2H  = -38.0
+    h = 0.5 # 50% relative humidity
+    γ = 1.0
+    X_water = 0.5 # open water surface
+
+    δE_18O = LWFBrook90.ISO.δ_CraigGordon_evap_flux(δL_18O, δa_18O, h, α_18O, LWFBrook90.ISO.α¹⁸O_dif, γ, X_water)
+    δE_2H  = LWFBrook90.ISO.δ_CraigGordon_evap_flux(δL_2H,  δa_2H,  h, α_2H,  LWFBrook90.ISO.α²H_dif,  γ, X_water)
+
+    # Evaporated flux should be depleted relative to liquid water
+    @test δE_18O < δL_18O
+    @test δE_2H < δL_2H
+
+    # 5. Evaporation slope in δ18O-δ2H space (characteristic local evaporation line slope)
+    # The slope S = (δL_2H - δE_2H) / (δL_18O - δE_18O)
+    slope_evap = (δL_2H - δE_2H) / (δL_18O - δE_18O)
+    # Open water evaporation slope is typically between 3.5 and 5.5 
+    # (distinct from meteoric line slope 8.0)
+    @test 3.0 < slope_evap < 6.0
+end
 @testset "bare-minimum provided to loadSPAC" begin
     Δz_m = fill(0.1, 11)
     parametrizedSPAC = loadSPAC(
@@ -2160,123 +2276,6 @@ end
                 "For $k: compared (now:) $v ≈ (reference:) $(replace(reference_isotopePlotPermutedDims, nothing => NaN)[it,:])"
         end
     end
-end
-
-@testset "SLVPDEPTH and Evaporation Depth Sourcing" begin
-    # 1. Test default SLVPDEPTH_m = 0.0 in refine_soil_discretization
-    horizons = DataFrame(
-        Upper_m = [0.0, -0.2, -0.5],
-        Lower_m = [-0.2, -0.5, -1.0],
-        Mat = [1, 2, 3]
-    )
-    prior_discr = DataFrame(
-        Upper_m = [0.0, -0.1, -0.2, -0.5],
-        Lower_m = [-0.1, -0.2, -0.5, -1.0]
-    )
-    
-    SLVPDEPTH_m = 0.0
-    refined_disc, idepth_idx, qdepth_idx, slvpdepth_idx = LWFBrook90.refine_soil_discretization(
-        prior_discr, horizons, Float64[], 0.4, 0.0, SLVPDEPTH_m; ε = 0.05
-    )
-    @test slvpdepth_idx == 1 # defaults / 0.0 bounds to layer 1
-
-    # 2. Test SLVPDEPTH_m smaller than first layer thickness
-    SLVPDEPTH_m = 0.03
-    refined_disc_small, _, _, slvpdepth_idx_small = LWFBrook90.refine_soil_discretization(
-        prior_discr, horizons, Float64[], 0.4, 0.0, SLVPDEPTH_m; ε = 0.05
-    )
-    @test slvpdepth_idx_small == 1 # extended to first layer thickness
-
-    # 3. Test SLVPDEPTH_m larger than first layer thickness (e.g. 0.15 m)
-    SLVPDEPTH_m = 0.15
-    refined_disc_deep, _, _, slvpdepth_idx_deep = LWFBrook90.refine_soil_discretization(
-        prior_discr, horizons, Float64[], 0.4, 0.0, SLVPDEPTH_m; ε = 0.05
-    )
-    @test any(abs.(refined_disc_deep.Lower_m .- (-SLVPDEPTH_m)) .< 1e-4) # ensure a layer was added
-    @test slvpdepth_idx_deep == 2 # ensure that with added layer depth is correct
-    @test refined_disc_deep.Lower_m[slvpdepth_idx_deep] ≈ -SLVPDEPTH_m
-
-    SLVPDEPTH_m = 0.5
-    refined_disc_deep, _, _, slvpdepth_idx_deep = LWFBrook90.refine_soil_discretization(
-        prior_discr, horizons, Float64[], 0.4, 0.0, SLVPDEPTH_m; ε = 0.05
-    )
-    @test slvpdepth_idx_deep == 4 # ensure that with added layer depth is correct
-    @test refined_disc_deep.Lower_m[slvpdepth_idx_deep] ≈ -SLVPDEPTH_m
-
-    # 4. Test p_SLVPFRAC partitioning in setup
-    spac = loadSPAC("../examples/DAV2020-full/", "DAV2020-full";
-                    simulate_isotopes = true,
-                    simulate_evaporation_fractionation = false)
-    # Default parameters: SLVPDEPTH_m = 0.0
-    @test haskey(spac.pars.params, :SLVPDEPTH_m)
-    @test spac.pars.params.SLVPDEPTH_m == 0.0
-    sim = setup(spac, requested_tspan = (0.0, 5.0))
-    p = sim.ODEProblem.p
-    @test p.p_SLVPLAYER == 1
-    @test p.p_SLVPFRAC[1] ≈ 1.0
-    @test sum(p.p_SLVPFRAC) ≈ 1.0
-
-    # Setting custom SLVPDEPTH_m = 0.15 m (layers: [0, -0.03], [-0.03, -0.10], [-0.10, -0.15])
-    sim_deep = remakeSPAC(spac; params = (SLVPDEPTH_m = 0.15,), requested_tspan = (0.0, 5.0))
-    p_deep = sim_deep.ODEProblem.p
-    @test p_deep.p_SLVPLAYER == 3
-    @test sum(p_deep.p_SLVPFRAC) ≈ 1.0
-    @test p_deep.p_SLVPFRAC[1:3] ≈ [0.03, 0.07, 0.05] ./ 0.15
-    @test all(p_deep.p_SLVPFRAC[4:end] .== 0.0)
-
-    # Run simulation with fractionating evaporation
-    sim_frac = remakeSPAC(sim_deep;
-                          solver_options = (simulate_evaporation_fractionation = true,),
-                          requested_tspan = (0.0, 5.0))
-    simulate!(sim_frac)
-    @test SciMLBase.successful_retcode(sim_frac.ODESolution.retcode)
-end
-
-@testset "Module ISO: Evaporative Fractionation (Craig-Gordon & Soil X)" begin
-    # 1. Equilibrium fractionation factor tests
-    @test LWFBrook90.ISO.α¹⁸O_eq(20.0) ≈ 1.00983 atol=1e-3
-    @test LWFBrook90.ISO.α²H_eq(20.0) ≈ 1.08479 atol=1e-2
-    # Check monotonic decrease with temperature
-    @test LWFBrook90.ISO.α¹⁸O_eq(0.0) > LWFBrook90.ISO.α¹⁸O_eq(20.0) > LWFBrook90.ISO.α¹⁸O_eq(40.0)
-    @test LWFBrook90.ISO.α²H_eq(0.0) > LWFBrook90.ISO.α²H_eq(20.0) > LWFBrook90.ISO.α²H_eq(40.0)
-
-    # 2. Dynamic soil turbulence exponent X_soil tests
-    @test LWFBrook90.ISO.compute_X_soil(0.40, 0.05, 0.40) ≈ 0.5 # fully saturated -> turbulent (0.5)
-    @test LWFBrook90.ISO.compute_X_soil(0.05, 0.05, 0.40) ≈ 1.0 # residual -> molecular (1.0)
-    @test LWFBrook90.ISO.compute_X_soil(0.225, 0.05, 0.40) ≈ 0.75 # midpoint (0.75)
-    @test LWFBrook90.ISO.compute_X_soil(0.50, 0.05, 0.40) ≈ 0.5 # clamped above sat
-    @test LWFBrook90.ISO.compute_X_soil(0.01, 0.05, 0.40) ≈ 1.0 # clamped below res
-
-    # 3. Atmospheric vapor equilibrium signature
-    δP_18O = 0.0
-    δP_2H  = 0.0
-    α_18O = LWFBrook90.ISO.α¹⁸O_eq(20.0)
-    α_2H  = LWFBrook90.ISO.α²H_eq(20.0)
-    δa_18O = LWFBrook90.ISO.δₐ(δP_18O, α_18O)
-    δa_2H  = LWFBrook90.ISO.δₐ(δP_2H,  α_2H)
-    @test δa_18O < 0.0
-    @test δa_2H < 0.0
-
-    # 4. Craig-Gordon evaporating flux signature
-    δL_18O = -6.0
-    δL_2H  = -38.0
-    h = 0.5 # 50% relative humidity
-    γ = 1.0
-    X_water = 0.5 # open water surface
-
-    δE_18O = LWFBrook90.ISO.δ_CraigGordon_evap_flux(δL_18O, δa_18O, h, α_18O, LWFBrook90.ISO.α¹⁸O_dif, γ, X_water)
-    δE_2H  = LWFBrook90.ISO.δ_CraigGordon_evap_flux(δL_2H,  δa_2H,  h, α_2H,  LWFBrook90.ISO.α²H_dif,  γ, X_water)
-
-    # Evaporated flux should be depleted relative to liquid water
-    @test δE_18O < δL_18O
-    @test δE_2H < δL_2H
-
-    # 5. Evaporation slope in δ18O-δ2H space (characteristic local evaporation line slope)
-    # The slope S = (δL_2H - δE_2H) / (δL_18O - δE_18O)
-    slope_evap = (δL_2H - δE_2H) / (δL_18O - δE_18O)
-    # Open water evaporation slope is typically between 3.5 and 5.5 
-    # (distinct from meteoric line slope 8.0)
-    @test 3.0 < slope_evap < 6.0
 end
 
 
