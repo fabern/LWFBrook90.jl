@@ -2174,23 +2174,34 @@ end
         Lower_m = [-0.1, -0.2, -0.5, -1.0]
     )
     
+    SLVPDEPTH_m = 0.0
     refined_disc, idepth_idx, qdepth_idx, slvpdepth_idx = LWFBrook90.refine_soil_discretization(
-        prior_discr, horizons, Float64[], 0.4, 0.0, 0.0; ε = 0.05
+        prior_discr, horizons, Float64[], 0.4, 0.0, SLVPDEPTH_m; ε = 0.05
     )
     @test slvpdepth_idx == 1 # defaults / 0.0 bounds to layer 1
 
     # 2. Test SLVPDEPTH_m smaller than first layer thickness
+    SLVPDEPTH_m = 0.03
     refined_disc_small, _, _, slvpdepth_idx_small = LWFBrook90.refine_soil_discretization(
-        prior_discr, horizons, Float64[], 0.4, 0.0, 0.03; ε = 0.05
+        prior_discr, horizons, Float64[], 0.4, 0.0, SLVPDEPTH_m; ε = 0.05
     )
     @test slvpdepth_idx_small == 1 # extended to first layer thickness
 
     # 3. Test SLVPDEPTH_m larger than first layer thickness (e.g. 0.15 m)
+    SLVPDEPTH_m = 0.15
     refined_disc_deep, _, _, slvpdepth_idx_deep = LWFBrook90.refine_soil_discretization(
-        prior_discr, horizons, Float64[], 0.4, 0.0, 0.15; ε = 0.05
+        prior_discr, horizons, Float64[], 0.4, 0.0, SLVPDEPTH_m; ε = 0.05
     )
-    @test slvpdepth_idx_deep >= 2
-    @test any(abs.(refined_disc_deep.Lower_m .- (-0.15)) .< 1e-4)
+    @test any(abs.(refined_disc_deep.Lower_m .- (-SLVPDEPTH_m)) .< 1e-4) # ensure a layer was added
+    @test slvpdepth_idx_deep == 2 # ensure that with added layer depth is correct
+    @test refined_disc_deep.Lower_m[slvpdepth_idx_deep] ≈ -SLVPDEPTH_m
+
+    SLVPDEPTH_m = 0.5
+    refined_disc_deep, _, _, slvpdepth_idx_deep = LWFBrook90.refine_soil_discretization(
+        prior_discr, horizons, Float64[], 0.4, 0.0, SLVPDEPTH_m; ε = 0.05
+    )
+    @test slvpdepth_idx_deep == 4 # ensure that with added layer depth is correct
+    @test refined_disc_deep.Lower_m[slvpdepth_idx_deep] ≈ -SLVPDEPTH_m
 
     # 4. Test p_SLVPFRAC partitioning in setup
     spac = loadSPAC("../examples/DAV2020-full/", "DAV2020-full";
@@ -2213,7 +2224,7 @@ end
     @test p_deep.p_SLVPFRAC[1:3] ≈ [0.03, 0.07, 0.05] ./ 0.15
     @test all(p_deep.p_SLVPFRAC[4:end] .== 0.0)
 
-    # Run simulation with fractionating evaporation across multiple layers
+    # Run simulation with fractionating evaporation
     sim_frac = remakeSPAC(sim_deep;
                           solver_options = (simulate_evaporation_fractionation = true,),
                           requested_tspan = (0.0, 5.0))
@@ -2247,8 +2258,8 @@ end
     @test δa_2H < 0.0
 
     # 4. Craig-Gordon evaporating flux signature
-    δL_18O = 0.0
-    δL_2H  = 0.0
+    δL_18O = -6.0
+    δL_2H  = -38.0
     h = 0.5 # 50% relative humidity
     γ = 1.0
     X_water = 0.5 # open water surface
@@ -2263,7 +2274,8 @@ end
     # 5. Evaporation slope in δ18O-δ2H space (characteristic local evaporation line slope)
     # The slope S = (δL_2H - δE_2H) / (δL_18O - δE_18O)
     slope_evap = (δL_2H - δE_2H) / (δL_18O - δE_18O)
-    # Open water evaporation slope is typically between 3.5 and 5.5 (distinct from meteoric line slope 8.0)
+    # Open water evaporation slope is typically between 3.5 and 5.5 
+    # (distinct from meteoric line slope 8.0)
     @test 3.0 < slope_evap < 6.0
 end
 

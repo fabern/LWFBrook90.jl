@@ -905,7 +905,6 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
             # C_²H_SLVP[1]   = LWFBrook90.ISO.δ_to_C(δ²H_SLVP,  LWFBrook90.ISO.R_VSMOW²H,  LWFBrook90.ISO.Mi_²H)
             # # E¹⁸O = C_¹⁸O_SLVP * aux_du_SLVP[1] * 0.001 # kg/m3 * mm/day * 0.001 m/mm # (kg/m²/day¹)
             # # E²H  = C_²H_SLVP  * aux_du_SLVP[1] * 0.001 # kg/m3 * mm/day * 0.001 m/mm # (kg/m²/day¹)
-            error("Not implemented")
             Tc = p_fT_TADTM[1] # °C, average daytime air temperature
             vappres_val = p_VAPPRES(integrator.t) # kPa, daily average vapor pressure
             esat_val = LWFBrook90.PET.ESAT(Tc)[1] # kPa, saturated vp
