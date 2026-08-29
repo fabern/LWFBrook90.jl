@@ -256,7 +256,7 @@ end
 
 """
     INFLOW(NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
-    aux_du_DSFLI, aux_du_TRANI, aux_du_SLVP, p_SWATMAX, u_SWATI, VRFLI_prior)
+    aux_du_DSFLI, aux_du_TRANI, aux_du_SLVPI, p_SWATMAX, u_SWATI, VRFLI_prior)
 
 Compute net inflow to soil layer.
 
@@ -312,7 +312,7 @@ original VRFLIi are needed again if the iteration time step (DTI) is reduced.
 """
 function INFLOW!(VRFLI_posterior, INFLI, BYFLI, # these are modified in-place
                 NLAYER, DTI, p_INFRAC, p_fu_BYFRAC, p_fu_SLFL,
-                aux_du_DSFLI, aux_du_TRANI, aux_du_SLVP, p_SLVPFRAC, p_SWATMAX, u_SWATI, VRFLI_prior)
+                aux_du_DSFLI, aux_du_TRANI, aux_du_SLVPI, p_SWATMAX, u_SWATI, VRFLI_prior)
                 # This function a) computes all the fluxes involved in the
                 # balance of a single soil layer and b) corrects the fluxes of
                 # VRFLI, INFLI and BYFLI.
@@ -330,7 +330,7 @@ function INFLOW!(VRFLI_posterior, INFLI, BYFLI, # these are modified in-place
                 ###                               SLFL*p_INFRAC(1)
                 ###                                       |
                 ###                                       v
-                ###  <-SLVP----- .----------. <-INFLI(1)--+--BYFLI(1)----------->
+                ###  <-SLVPI(i)- .----------. <-INFLI(1)--+--BYFLI(1)----------->
                 ###              |          |             |
                 ###  <-TRANI(i)- | SWATI(i) |             ┴ SLFLI(1) (unused)
                 ###              |          |
@@ -345,7 +345,7 @@ function INFLOW!(VRFLI_posterior, INFLI, BYFLI, # these are modified in-place
                 ###            VRFLI(i-1)         SLFL*p_INFRAC(i)
                 ###                 |                     |
                 ###                 v                     v
-                ###              .----------. <-INFLI(i)--+--BYFLI(i)----------->
+                ###  <-SLVPI(i)- .----------. <-INFLI(i)--+--BYFLI(i)----------->
                 ###              |          |             |
                 ###  <-TRANI(i)- | SWATI(i) |             ┴ SLFLI(1) (unused)
                 ###              |          |
@@ -363,7 +363,7 @@ function INFLOW!(VRFLI_posterior, INFLI, BYFLI, # these are modified in-place
     # SLFL      - input rate to soil surface, mm/d
     # DSFLI(*)  - downslope flow rate from layer, mm/d
     # TRANI(*)  - transpiration rate from layer, mm/d
-    # SLVP      - evaporation rate from soil, mm/d
+    # SLVPI     - evaporation rate from soil, mm/d
     # SWATMAX(*) - maximum water storage for layer, mm
     # SWATI(*)  - water volume in layer, mm
     # VRFLI(*)  - vertical drainage rate from layer, mm/d
@@ -396,7 +396,7 @@ function INFLOW!(VRFLI_posterior, INFLI, BYFLI, # these are modified in-place
         
         # The first few layer(s) there is additionally soil evaporation SLVP as an
         # outflow. A fact which increases the maximum possible inflow.
-        MAXIN = MAXIN + aux_du_SLVP * p_SLVPFRAC[i]
+        MAXIN = MAXIN + aux_du_SLVPI[i]
 
             
         # inflow is composed of INFLI[1]             , SLVP[1] for the first layer 1
@@ -548,7 +548,7 @@ function ITER(NLAYER, FLAG_MualVanGen, DTI, DTIMIN, DPSIDW, du_NTFLI, u_aux_PSIT
                 # error("DTINEW is smaller than DTMIN. LWFBrook90R reduce in this case TRANI and SLVP. This is not implemented in LWFBrook90.jl.")
                 # TRANI[i] = 0 # TODO(Bernhard): shold this change leak out into main program? (side effect)
                 # if (i == 1)
-                #     SLVP=0   # TODO(Benrhard): should this change leak out into main program? (side effect)
+                #     SLVP=0   # TODO(Bernhard): should this change leak out into main program? (side effect)
                 # end
                 # NOTE: This original TRANI and SLVP correction violates the mass balance.
                 # @warn "Reduced DTI was lower than DTIMIN. DTI was increased to DTIMIN. Warning: original Brook set TRANI and SLVP to zero in these cases. This is not done anymore."

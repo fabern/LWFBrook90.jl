@@ -100,7 +100,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     ### Compute parameters
     ## A) constant parameters:
     @unpack p_soil = integrator.p;
-    @unpack NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, Reset, p_DTP, p_NPINT = integrator.p;
+    @unpack NLAYER, FLAG_MualVanGen, compute_intermediate_quantities, Reset, p_DTP, p_NPINT, p_SLVPFRAC = integrator.p;
     @unpack p_LAT, p_ESLOPE, p_L1, p_L2,
         p_SNODEN, p_MXRTLN, p_MXKPL,
         p_Z0S, p_Z0G,
@@ -139,7 +139,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     #  - weather data depending on DOY and u_SNOW
     #  - fraction of precipitation as snowfall depending on DOY
     #  - snowpack temperature, potential snow evaporation and soil evaporation resistance depending on u_SNOW
-    @unpack p_fT_TADTM, p_fT_TA, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
+    @unpack p_fT_TADTM, p_fT_TA, p_fu_RNET, aux_du_SMLT, aux_du_SLVPI,
         p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
         aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old,
         aux_du_TRANI = integrator.p;
@@ -232,7 +232,7 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     (# compute some fluxes as intermediate results to be used in RHS function f:
     p_fT_SFAL, p_fT_RFAL, p_fu_RNET[1], p_fu_PTRAN,
     # compute changes in soil water storage:
-    aux_du_TRANI[:], aux_du_SLVP[1],
+    aux_du_TRANI[:], aux_du_SLVP_total,
     # compute change in interception storage:
     aux_du_SINT[1], aux_du_ISVP[1], aux_du_RINT[1], aux_du_IRVP[1],
     # compute change in snow storage:
@@ -253,6 +253,11 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
                # Constants
                LWFBrook90.CONSTANTS.p_CVICE, LWFBrook90.CONSTANTS.p_LF, LWFBrook90.CONSTANTS.p_CVLQ)
                # 0.000016 seconds (28 allocations: 3.609 KiB)
+
+    # distribute aux_du_SLVP_total onto computational soil layers. (Default in BROOK90 is only topmost soil layer.)
+    @inbounds @simd for i in eachindex(aux_du_SLVPI, p_SLVPFRAC)
+        aux_du_SLVPI[i] = aux_du_SLVP_total * p_SLVPFRAC[i]
+    end
 
     ####################################################################
     # 2) Update states of interception storage over entire precipitation
@@ -300,11 +305,11 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         integrator.u.accum.cum_d_rsno       = p_DTP * (aux_du_RSNO[1])                                                  # cum_d_rsno
         integrator.u.accum.cum_d_rnet       = p_DTP * (p_fT_RFAL - aux_du_RINT[1] - aux_du_RSNO[1]) # cum_d_RTHR - RSNOD   # cum_d_rnet
         integrator.u.accum.cum_d_smlt       = p_DTP * (aux_du_SMLT[1])                                                  # cum_d_smlt
-        integrator.u.accum.evap             = p_DTP * (aux_du_IRVP[1] + aux_du_ISVP[1] + aux_du_SNVP[1] + aux_du_SLVP[1] + sum(aux_du_TRANI))  # evap
+        integrator.u.accum.evap             = p_DTP * (aux_du_IRVP[1] + aux_du_ISVP[1] + aux_du_SNVP[1] + aux_du_SLVP_total + sum(aux_du_TRANI))  # evap
         integrator.u.accum.cum_d_tran       = p_DTP * (sum(aux_du_TRANI))                                                          # cum_d_tran
         integrator.u.accum.cum_d_irvp       = p_DTP * (aux_du_IRVP[1])                                                                # cum_d_irvp
         integrator.u.accum.cum_d_isvp       = p_DTP * (aux_du_ISVP[1])                                                                # cum_d_isvp
-        integrator.u.accum.cum_d_slvp       = p_DTP * (aux_du_SLVP[1])                                                                # cum_d_slvp
+        integrator.u.accum.cum_d_slvp       = p_DTP * aux_du_SLVP_total                                                               # cum_d_slvp
         integrator.u.accum.cum_d_snvp       = p_DTP * (aux_du_SNVP[1])                                                                # cum_d_snvp
         integrator.u.accum.cum_d_pint       = p_DTP * (p_fu_PINT)                                                                  # cum_d_pint
         integrator.u.accum.cum_d_ptran      = p_DTP * (p_fu_PTRAN)                                                                 # cum_d_ptran
@@ -383,7 +388,7 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
         ## C) state dependent parameters or intermediate results:
         # These were computed in the callback and are kept constant in between two
         # callbacks.
-        @unpack p_fT_TADTM, p_fT_TA, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
+        @unpack p_fT_TADTM, p_fT_TA, p_fu_RNET, aux_du_SMLT,
             p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
             aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old = integrator.p
         @unpack aux_du_TRANI = integrator.p
@@ -778,13 +783,13 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # @unpack p_DOY, p_MONTHN, p_GLOBRAD, p_TMAX, p_TMIN, p_VAPPRES, p_WIND, p_PREC, p_IRRIG,
         #     p_DENSEF, p_HEIGHT, p_LAI, p_SAI, p_RELDEN,
         #     p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, REFERENCE_DATE = integrator.p
-        @unpack p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG, 
-            p_VAPPRES, simulate_evaporation_fractionation, p_SLVPFRAC, p_SLVPLAYER = integrator.p
+        @unpack p_δ18O_PREC, p_δ2H_PREC, p_δ18O_IRRIG, p_δ2H_IRRIG,
+            p_VAPPRES, simulate_evaporation_fractionation, p_SLVPLAYER = integrator.p
 
         ## C) state dependent parameters or intermediate results:
         # These were computed in the callback and are kept constant in between two
         # callbacks.
-        @unpack p_fu_δ18O_SLFL, p_fu_δ2H_SLFL, p_fT_TADTM, p_fT_TA, p_fu_RNET, aux_du_SMLT, aux_du_SLVP,
+        @unpack p_fu_δ18O_SLFL, p_fu_δ2H_SLFL, p_fT_TADTM, p_fT_TA, p_fu_RNET, aux_du_SMLT, aux_du_SLVPI,
             p_fu_STHR, aux_du_RSNO, aux_du_SNVP,
             aux_du_SINT, aux_du_ISVP, aux_du_RINT, aux_du_IRVP, u_SNOW_old = integrator.p
 
@@ -1222,12 +1227,12 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # units: dVdt (mm/day), C (), u_SWATI (mm), diff¹⁸O_upp (m/day) => diff¹⁸O_upp*1000 (mm/day), qCᵢ¹⁸O_upp (mm/day), INFLI, DSFLI, SLVP, TRANI (mm/day)
         du_Cᵢ¹⁸_SWATI .= -C_¹⁸Oᵏ./u_SWATIᵏ⁺¹ .* dVdt .+ 1 ./ u_SWATIᵏ⁺¹ .* (
                                 -diff¹⁸O_upp*1000 .+ diff¹⁸O_low*1000 .+ qCᵢ¹⁸O_upp .- qCᵢ¹⁸O_low .+
-                                aux_du_INFLI.*Cᵢ¹⁸O_INFLI .- aux_du_DSFLI.*Cᵢ¹⁸O_DSFL .- (aux_du_SLVP[1].*p_SLVPFRAC).*C_¹⁸O_SLVP .- # TODO: use aux_du_SLVPI instead of p_SLVPFRAC
+                                aux_du_INFLI.*Cᵢ¹⁸O_INFLI .- aux_du_DSFLI.*Cᵢ¹⁸O_DSFL .- aux_du_SLVPI.*C_¹⁸O_SLVP .-
                                 aux_du_TRANI.*Cᵢ¹⁸O_TRANI
                             )
         du_Cᵢ²H_SWATI .= -C_²Hᵏ./u_SWATIᵏ⁺¹ .* dVdt .+ 1 ./ u_SWATIᵏ⁺¹ .* (
                                 -diff²H_upp*1000 .+ diff²H_low*1000 .+ qCᵢ²H_upp .- qCᵢ²H_low .+
-                                aux_du_INFLI.*Cᵢ²H_INFLI .- aux_du_DSFLI.*Cᵢ²H_DSFL .- (aux_du_SLVP[1].*p_SLVPFRAC).*C_²H_SLVP .- # TODO: use aux_du_SLVPI instead of p_SLVPFRAC
+                                aux_du_INFLI.*Cᵢ²H_INFLI .- aux_du_DSFLI.*Cᵢ²H_DSFL .- aux_du_SLVPI.*C_²H_SLVP .-
                                 aux_du_TRANI.*Cᵢ²H_TRANI
                             )
 

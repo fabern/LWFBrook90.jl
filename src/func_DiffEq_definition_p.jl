@@ -525,7 +525,7 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
         p_fT_TA        = [NaN],
         p_fu_RNET      = [NaN],
         aux_du_SMLT    = [NaN],
-        aux_du_SLVP    = [NaN],
+        aux_du_SLVPI   = fill(NaN, NLAYER),
         p_fu_STHR      = [NaN],
         aux_du_RSNO    = [NaN],
         aux_du_SNVP    = [NaN],
