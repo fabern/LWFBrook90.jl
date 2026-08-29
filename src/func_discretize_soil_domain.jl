@@ -231,7 +231,12 @@ function refine_soil_discretization(
     # Define IDEPTH_idx, QDEPTH_idx, and SLVPDEPTH_idx (to be used internally instead of IDEPTH_m, QDEPTH_m, and SLVPDEPTH_m)
     is_infiltration_layer_BOOLEAN = -IDEPTH_m .<= refined_soil_discr[!,"Lower_m"]
     is_SRFL_layer_BOOLEAN         = -QDEPTH_m .<= refined_soil_discr[!,"Lower_m"]
-    is_SLVP_layer_BOOLEAN         = -SLVPDEPTH_m .<= refined_soil_discr[!,"Lower_m"]
+    # Tolerate roundoff in cumulative depths (three 0.1 m cells may end at
+    # -0.30000000000000004 rather than exactly -0.3 m), without extending the
+    # evaporation domain by the much larger grid-refinement tolerance `ε`.
+    lower_m = refined_soil_discr[!, "Lower_m"]
+    is_SLVP_layer_BOOLEAN =
+        (lower_m .>= -SLVPDEPTH_m) .| isapprox.(lower_m, -SLVPDEPTH_m)
     IDEPTH_idx = sum(is_infiltration_layer_BOOLEAN) # lowest node where Lower_m is below IDEPTH_m
     QDEPTH_idx = sum(is_SRFL_layer_BOOLEAN)         # lowest node where Lower_m is below QDEPTH_m
     SLVPDEPTH_idx = max(1, sum(is_SLVP_layer_BOOLEAN))      # lowest node where Lower_m is below SLVPDEPTH_m (at least 1)
