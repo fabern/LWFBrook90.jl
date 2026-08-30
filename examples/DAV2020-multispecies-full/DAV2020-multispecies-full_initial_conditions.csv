@@ -1,0 +1,14 @@
+param_id,amount,u_delta18O_init_permil,u_delta2H_init_permil
+### Initial conditions (shared states) -------,NA,NA,NA
+u_GWAT_init_mm,1.0,-13.0,-95.0
+u_SNOW_init_mm,0.0,-13.0,-95.0
+u_CC_init_MJ_per_m2,0.0,NA,NA
+u_SNOWLQ_init_mm,0.0,NA,NA
+### Initial conditions (species-specific states) -------,NA,NA,NA
+u_INTS_init_mm_Beech,0.0,-13.0,-95.0
+u_INTR_init_mm_Beech,0.0,-13.0,-95.0
+u_XYLEM_init_mm_Beech,5.0,-13.0,-95.0
+u_INTS_init_mm_Spruce,0.0,-13.0,-95.0
+u_INTR_init_mm_Spruce,0.0,-13.0,-95.0
+u_XYLEM_init_mm_Spruce,5.0,-13.0,-95.0
+
