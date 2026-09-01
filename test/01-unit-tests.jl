@@ -1655,35 +1655,35 @@ end
     @test nrow(simulation_d_out_states) == 31    
 
     # through API, also high temporal resolution ODE solution gives 'only' daily values
-    simulation_default_out_forcing = LWFBrook90.get_forcing(simulation_highres)
-    simulation_default_out_fluxes = LWFBrook90.get_fluxes(simulation_highres)
-    simulation_default_out_states = LWFBrook90.get_states(simulation_highres)
+    simulation_highres_out_forcing = LWFBrook90.get_forcing(simulation_highres)
+    simulation_highres_out_fluxes = LWFBrook90.get_fluxes(simulation_highres)
+    simulation_highres_out_states = LWFBrook90.get_states(simulation_highres)
     
-    @test nrow(simulation_default_out_forcing) == 30 # only 30 days were simulated
-    @test nrow(simulation_default_out_fluxes) == 30  # only 30 days were simulated between u0 and final state (thus 31 states reported)
-    @test nrow(simulation_default_out_states) == 31
+    @test nrow(simulation_highres_out_forcing) == 30 # only 30 days were simulated
+    @test nrow(simulation_highres_out_fluxes) == 30  # only 30 days were simulated between u0 and final state (thus 31 states reported)
+    @test nrow(simulation_highres_out_states) == 31
 
-    @test simulation_default_out_forcing.dates[1]   == simulation_d_out_forcing.dates[1]   == DateTime("2021-06-01T00:00:00")
-    @test simulation_default_out_forcing.dates[end] == simulation_d_out_forcing.dates[end] == DateTime("2021-06-30T00:00:00")
-    @test simulation_default_out_fluxes.dates[1]    == simulation_d_out_fluxes.dates[1]    == DateTime("2021-06-01T00:00:00")
-    @test simulation_default_out_fluxes.dates[end]  == simulation_d_out_fluxes.dates[end]  == DateTime("2021-06-30T00:00:00")
-    @test simulation_default_out_states.dates[1]    == simulation_d_out_states.dates[1]    == DateTime("2021-06-01T00:00:00")
-    @test simulation_default_out_states.dates[end]  == simulation_d_out_states.dates[end]  == DateTime("2021-07-01T00:00:00") # we add one day
+    @test simulation_highres_out_forcing.dates[1]   == simulation_d_out_forcing.dates[1]   == DateTime("2021-06-01T00:00:00")
+    @test simulation_highres_out_forcing.dates[end] == simulation_d_out_forcing.dates[end] == DateTime("2021-06-30T00:00:00")
+    @test simulation_highres_out_fluxes.dates[1]    == simulation_d_out_fluxes.dates[1]    == DateTime("2021-06-01T00:00:00")
+    @test simulation_highres_out_fluxes.dates[end]  == simulation_d_out_fluxes.dates[end]  == DateTime("2021-06-30T00:00:00")
+    @test simulation_highres_out_states.dates[1]    == simulation_d_out_states.dates[1]    == DateTime("2021-06-01T00:00:00")
+    @test simulation_highres_out_states.dates[end]  == simulation_d_out_states.dates[end]  == DateTime("2021-07-01T00:00:00") # we add one day
 
-    # simulation_default_out_states[:,       ["dates", "SWAT_mm", "ψ_kPa_200mm", "ψ_kPa_1600mm"]]
-    # simulation_default_out_states[[1,end], ["dates", "SWAT_mm", "ψ_kPa_200mm", "ψ_kPa_1600mm"]]
+    # simulation_highres_out_states[:,       ["dates", "SWAT_mm", "ψ_kPa_200mm", "ψ_kPa_1600mm"]]
+    # simulation_highres_out_states[[1,end], ["dates", "SWAT_mm", "ψ_kPa_200mm", "ψ_kPa_1600mm"]]
     # DataFrame(
     #     dates = [DateTime("2021-06-01T00:00:00"), DateTime("2021-06-30T00:00:00")],
     #     SWAT_mm = [142, 82.536],
     #     ψ_kPa_200mm = [-3.0, 795.786],
     #     ψ_kPa_1600mm = [-3.0, -0.15]
     # )    
-    @test simulation_default_out_states.ψ_kPa_200mm[1] == -3.0
-    @test simulation_default_out_states.ψ_kPa_1600mm[1] == -3.0
-    @test simulation_default_out_states.ψ_kPa_200mm[end] < -750
-    @test simulation_default_out_states.ψ_kPa_1600mm[end] > -0.5
-    #simulation_default_out_fluxes[:,       ["dates", "cum_d_slvp", "cum_d_tran", "RWU"]]
-    #simulation_default_out_fluxes[[1,end], ["dates", "cum_d_slvp", "cum_d_tran", "RWU"]]
+    @test simulation_highres_out_states.ψ_kPa_200mm[1] == -3.0
+    @test simulation_highres_out_states.ψ_kPa_1600mm[1] == -3.0
+    @test simulation_highres_out_states.ψ_kPa_200mm[end] < -750
+    @test simulation_highres_out_states.ψ_kPa_1600mm[end] > -0.5
+    #simulation_highres_out_fluxes[:,       ["dates", "cum_d_slvp", "cum_d_tran", "RWU"]]
+    #simulation_highres_out_fluxes[[1,end], ["dates", "cum_d_slvp", "cum_d_tran", "RWU"]]
 
 
     # internal functions (not user facing):
