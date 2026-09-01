@@ -26,6 +26,9 @@ Types of changes:
 ### Added
 
 - This `CHANGELOG.md` file and release instructions in `README-for-Developers.md`.
+- By default `ODESimulations` now saves only daily values. Previous behavior was 
+    to save every ODE solver step. To recover prvious behavior use `kwargs` (`saveat` 
+    or `save_everystep`) when calling `simulate!()`.
 
 ## [0.9.9] - 2024-04-05
 

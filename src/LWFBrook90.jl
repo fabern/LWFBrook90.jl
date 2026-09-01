@@ -564,7 +564,7 @@ function setup(parametrizedSPAC::SPAC;
                     progress_name = "SPAC simulating...",
                     progress = true,
                     saveat = tspan_to_use[1] : 1 : tspan_to_use[2], # in days -> i.e. daily output
-                    save_everystep = true, # saves additionally to saveat
+                    save_everystep = false,  # by default only save at saveat (NOTE: this can later be overwritten by kwargs to simulate!())
                     alg=Tsit5(), reltol = 1e-5,
                     adaptive = true, internalnorm = LWFBrook90.norm_to_use, # fix adaptivity norm for NAs
                     unstable_check = LWFBrook90.unstable_check_function,         # fix instability norm for NAs

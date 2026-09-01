@@ -1639,14 +1639,13 @@ end
     
     parametrizedSPAC   = setup_synthetic_SPAC();
 
-    simulation_default = setup(parametrizedSPAC) # using default output (should be daily since it should use simulation.ODEProblem.kwargs[:saveat])
+    simulation_highres = setup(parametrizedSPAC) # using high-resolution ODESolution output
     simulation_d       = setup(parametrizedSPAC) # for daily output
     # simulation_w     = setup(parametrizedSPAC) # for weekly output (could make sense for some outputs, but not for fluxes)
-    # simulation_sd    = setup(parametrizedSPAC) # for sub daily output (does not make sense)
     
-    simulate!(simulation_default)
-    simulate!(simulation_d, save_everystep=false, saveat = range(parametrizedSPAC.tspan...; step = 1.0)) # This can be used to overwrite default options and reduce storage space # TODO: make this default
-    @test length(simulation_default.ODESolution_datetime) > length(simulation_d.ODESolution_datetime) # these are internal steps that are saved use more memory/storage
+    simulate!(simulation_d)
+    simulate!(simulation_highres, save_everystep=true) # This can be used to save internal ODE solution steps (useful for debugging, but uses more storage)
+    @test length(simulation_highres.ODESolution_datetime) > length(simulation_d.ODESolution_datetime) # these are internal steps that are saved use more memory/storage
 
     # check public API
     simulation_d_out_forcing = LWFBrook90.get_forcing(simulation_d)
@@ -1656,9 +1655,10 @@ end
     @test nrow(simulation_d_out_fluxes) == 30  # only 30 days were simulated between u0 and final state (thus 31 states reported)
     @test nrow(simulation_d_out_states) == 31    
 
-    simulation_default_out_forcing = LWFBrook90.get_forcing(simulation_default)
-    simulation_default_out_fluxes = LWFBrook90.get_fluxes(simulation_default)
-    simulation_default_out_states = LWFBrook90.get_states(simulation_default)
+    # through API, also high temporal resolution ODE solution gives 'only' daily values
+    simulation_default_out_forcing = LWFBrook90.get_forcing(simulation_highres)
+    simulation_default_out_fluxes = LWFBrook90.get_fluxes(simulation_highres)
+    simulation_default_out_states = LWFBrook90.get_states(simulation_highres)
     
     @test nrow(simulation_default_out_forcing) == 30 # only 30 days were simulated
     @test nrow(simulation_default_out_fluxes) == 30  # only 30 days were simulated between u0 and final state (thus 31 states reported)
@@ -1683,7 +1683,6 @@ end
     @test simulation_default_out_states.ψ_kPa_1600mm[1] == -3.0
     @test simulation_default_out_states.ψ_kPa_200mm[end] < -750
     @test simulation_default_out_states.ψ_kPa_1600mm[end] > -0.5
-
     #simulation_default_out_fluxes[:,       ["dates", "cum_d_slvp", "cum_d_tran", "RWU"]]
     #simulation_default_out_fluxes[[1,end], ["dates", "cum_d_slvp", "cum_d_tran", "RWU"]]
 
@@ -1696,10 +1695,10 @@ end
     @test length(simulation_d.ODESolution_datetime) == 31
     @test simulation_d.ODESolution_datetime[1]   == DateTime("2021-06-01T00:00:00")
     @test simulation_d.ODESolution_datetime[end] == DateTime("2021-07-01T00:00:00") # we add one day
-
-    @test length(simulation_default.ODESolution_datetime) > 700  #735 but depends on precise algorithmic details of the ODE solver (e.g. tolerance, etc.)
-    @test simulation_default.ODESolution_datetime[1]   == DateTime("2021-06-01T00:00:00")
-    @test simulation_default.ODESolution_datetime[end] == DateTime("2021-07-01T00:00:00")
+    # Here we recover the high temporal resolution:
+    @test length(simulation_highres.ODESolution_datetime) > 700  # == 735 but depends on precise algorithmic details of the ODE solver (e.g. tolerance, etc.)
+    @test simulation_highres.ODESolution_datetime[1]   == DateTime("2021-06-01T00:00:00")
+    @test simulation_highres.ODESolution_datetime[end] == DateTime("2021-07-01T00:00:00")
 
 end
 @testset "simulate-and-postprocess-DAV" begin

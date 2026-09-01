@@ -51,10 +51,10 @@ get_forcing(simulation)
 using Plots, Measures; gr();
 pl2 = plotisotopes(simulation, :d18O, (d18O = :auto, d2H = :auto), :showRWUcentroid)
 pl2
-#-
+
 pl1 = plotamounts(simulation, :above_and_belowground, :showRWUcentroid)
 pl1
-#-
+
 pl3 = plotforcingandstates(simulation)
 pl3
 ```
