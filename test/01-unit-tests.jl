@@ -1718,9 +1718,9 @@ end
                            LAI_perc_CtoB = 70)));
 
     simulation = setup(parametrizedSPAC);
-    simulate!(simulation)
-
+    
     # Check requirement of daily output resolution for some outputs:
+    simulate!(simulation, save_everystep = true) # activating this exceptionally (non-default)
     @test_throws r"Solution is not computed with daily output resolution." get_water_partitioning(simulation)
     # TODO: do we need that check for get_states, get_fluxes as well??
 
