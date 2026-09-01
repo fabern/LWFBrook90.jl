@@ -979,7 +979,7 @@ end
 
     # setup and run simulation
     parametrizedSPAC = loadSPAC(
-            "../examples/DAV2020-full/", "DAV2020-full"; 
+            joinpath(pkgdir(LWFBrook90), "examples", "DAV2020-full"), "DAV2020-full"; 
             simulate_isotopes = true, simulate_irrigation = false,
             Δz_thickness_m = fill(0.05, 22),
             root_distribution = (beta = 0.77, z_rootMax_m = -0.5),
@@ -994,17 +994,16 @@ end
                            LAI_perc_CtoB = 70)));
 
     simulation = setup(parametrizedSPAC);
-    simulate!(simulation)
-
+    
+    
     # Check requirement of daily output resolution for some outputs:
+    simulate!(simulation, save_everystep = true) # activating this exceptionally (non-default)
     @test_throws r"Solution is not computed with daily output resolution." get_water_partitioning(simulation)
     # TODO: do we need that check for get_states, get_fluxes as well??
 
-    # Rerun with daily:
-    simulate!(simulation; 
-        save_everystep = false, 
-        saveat = range(parametrizedSPAC.tspan...), 
-        tspan = parametrizedSPAC.tspan);
+    # Rerun with daily (default):
+    simulation = setup(parametrizedSPAC);
+    simulate!(simulation)
 
     # A) check consistency of documented output functions: 
     # (get_states, get_fluxes, get_forcing, get_soil_, get_water_partitioning)
@@ -1639,7 +1638,7 @@ end
     
     parametrizedSPAC   = setup_synthetic_SPAC();
 
-    simulation_highres = setup(parametrizedSPAC) # using high-resolution ODESolution output
+    simulation_highres = setup(parametrizedSPAC) # for high-resolution ODESolution output
     simulation_d       = setup(parametrizedSPAC) # for daily output
     # simulation_w     = setup(parametrizedSPAC) # for weekly output (could make sense for some outputs, but not for fluxes)
     
