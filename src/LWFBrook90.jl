@@ -632,6 +632,13 @@ Simulates a SPAC model and stores the solution in s.ODESolution.
 `kwargs...` are passed through to solve(SciML::ODEProblem; ...) and are
 documented under `https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/#solver_options`
 """
+function simulate!(::SPAC; kwargs...)
+    throw(ArgumentError(
+        "Cannot directly simulate a parametrized `SPAC`. First discretize it with " *
+        "`discretized_SPAC = setup(SPAC)`, then call `simulate!(discretized_SPAC)`.",
+    ))
+end
+
 function simulate!(s::DiscretizedSPAC; assert_retcode = true, description = "", kwargs...)
     if (:saveat ∈ keys(kwargs))
         @info description * """

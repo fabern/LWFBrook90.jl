@@ -551,6 +551,9 @@ end
     @test_throws r"tspan \([0-9., ]*\) goes beyond input forcing data" setup(parametrizedSPAC, requested_tspan = (0., 400)) # forcing only defined from 0 to 364
     @test_throws AssertionError simulation = setup(parametrizedSPAC, soil_output_depths_m = [-1.0755, -1.096])
     simulation                             = setup(parametrizedSPAC, soil_output_depths_m = [-1.0755, -1.096], ε = 0.005);
+    
+    @test_throws r"First discretize it with .*setup\(SPAC\)" simulate!(parametrizedSPAC)
+    
     # Test soil discretization
     ## Δz
     actual_interfaces = cumsum(simulation.ODEProblem.p.p_soil.p_THICK)
