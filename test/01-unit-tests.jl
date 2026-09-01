@@ -1435,7 +1435,274 @@ end
 end
 
 
-@testset "simulate-and-postprocess" begin
+@testset "simulate-and-postprocess-synthetic" begin
+    function setup_synthetic_SPAC()
+        path = mktempdir()
+        local parametrizedSPAC
+        try
+            synthetic_meteoiso = """
+            dates,delta18O_permil,delta2H_permil
+            YYYY-MM-DD,permil,permil
+            2021-06-03,-6.0,-38.0
+            2021-06-17,-6.0,-38.0
+            2021-07-01,-6.0,-38.0
+            """
+            synthetic_meteoveg = """
+            dates,globrad_MJDayM2,tmax_degC,tmin_degC,vappres_kPa,windspeed_ms,prec_mmDay
+            YYYY-MM-DD,MJ/Day/m2,degree C,degree C,kPa,m per s,mm per day
+            2021-06-01,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-02,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-03,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-04,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-05,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-06,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-07,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-08,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-09,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-10,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-11,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-12,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-13,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-14,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-15,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-16,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-17,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-18,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-19,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-20,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-21,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-22,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-23,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-24,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-25,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-26,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-27,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-28,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-29,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-30,28.00,20.00,20.0,1.755,0.5,0.0
+            """
+            synthetic_soil_horizons = """
+            HorizonNr,Upper_m,Lower_m,ths_volFrac,thr_volFrac,alpha_perMeter,npar_,ksat_mmDay,tort_,gravel_volFrac
+            -,m,m,volume fraction (-),volume fraction (-),perMeter,-,mm per day,-,volume fraction (-)
+            1,0.0000,-0.3000,0.3786,0.0000,20.3870,1.2347,2854.9100,-3.3390,0.1750
+            2,-0.3000,-0.4000,0.3786,0.0000,20.3870,1.2347,2854.9100,-3.3390,0.3750
+            3,-0.4000,-1.0000,0.3786,0.0000,20.3870,1.2347,2854.9100,-3.3390,0.7500
+            """
+            synthetic_param = """
+            param_id,x
+            ### Isotope transport parameters  -------,NA
+            VXYLEM_mm, 20
+            DISPERSIVITY_mm, 40
+            ### Meteorologic site parameters -------,NA
+            LAT_DEG,47
+            ESLOPE_DEG,0
+            ASPECT_DEG,0
+            ALB,0.2
+            ALBSN,0.5
+            C1,0.25
+            C2,0.5
+            C3,0.2
+            WNDRAT,0.3
+            FETCH,5000
+            Z0W,0.005
+            ZW,2
+            ### Canopy parameters -------,NA
+            MAXLAI,3
+            DENSEF_baseline_,1
+            SAI_baseline_,1
+            AGE_baseline_yrs,100
+            HEIGHT_baseline_m,25
+            LWIDTH,0.1
+            Z0G,0.00325
+            Z0S,0.001
+            LPC,4
+            CZS,0.13
+            CZR,0.05
+            HS,1
+            HR,10
+            ZMINH,2
+            RHOTP,2
+            NN,2.5
+            ### Interception parameters -------,NA
+            FRINTLAI,0.06
+            FSINTLAI,0.04
+            FRINTSAI,0.06
+            FSINTSAI,0.04
+            CINTRL,0.15
+            CINTRS,0.15
+            CINTSL,0.6
+            CINTSS,0.6
+            RSTEMP,-0.5
+            ### Snowpack parameters -------,NA
+            MELFAC,1.5
+            CCFAC,0.3
+            LAIMLT,0.2
+            SAIMLT,0.5
+            GRDMLT,0.35
+            MAXLQF,0.05
+            KSNVP,0.3
+            SNODEN,0.3
+            ### Leaf evaporation parameters (affecting PE) -------,NA
+            GLMAX,0.00868
+            GLMIN,0.0003
+            CR,0.5
+            RM,1000
+            R5,287
+            CVPD,2
+            TL,0
+            T1,10
+            T2,30
+            TH,40
+            ### Plant parameters (affecting soil-water supply) -------,NA
+            MXKPL,15.64
+            MXRTLN,3000
+            INITRLEN,12
+            INITRDEP,0.25
+            RGRORATE,0.03
+            RGROPER,30
+            FXYLEM,0.5
+            PSICR,-1.03942
+            RTRAD,0.35
+            NOOUTF,1
+            ### Soil parameters -------,NA
+            IDEPTH_m,0.0
+            QDEPTH_m,0
+            RSSA,795.29579
+            RSSB,1
+            INFEXP,0.0
+            BYPAR,0
+            QFPAR,1
+            QFFC,0
+            IMPERV,0
+            DSLOPE,0
+            LENGTH_SLOPE,200
+            DRAIN,0.0
+            GSC,0
+            GSP,0
+            ### Numerical solver parameters -------,NA
+            DTIMAX,0.5
+            DSWMAX,0.05
+            DPSIMAX,0.0005
+            """
+            synthetic_inputs = (
+                meteoiso = synthetic_meteoiso,
+                meteoveg = synthetic_meteoveg,
+                soil_horizons = synthetic_soil_horizons,
+                param = synthetic_param,
+            )
+            for (file_suffix, contents) in pairs(synthetic_inputs)
+                filepath = joinpath(path, "synthetic_$(file_suffix).csv")
+                open(filepath, "w") do io
+                    Base.write(io, strip(contents) * "\n")
+                end
+            end
+
+            Δz_m = [0.03, 0.07, fill(0.1, 15)...]
+
+            parametrizedSPAC = loadSPAC(
+                path, "synthetic";
+                simulate_isotopes = true,
+                Δz_thickness_m = Δz_m,
+                root_distribution = (beta = 0.9, z_rootMax_m = -1.0),
+                IC_soil = (
+                    PSIM_init_kPa = -3.0, 
+                    delta18O_init_permil = -6.0, 
+                    delta2H_init_permil = -38.0),
+                canopy_evolution = (DENSEF_rel = 100, HEIGHT_rel = 100, SAI_rel = 100,
+                                                LAI_rel = (DOY_Bstart = 50, # no leaves before DOY 50
+                                                    Bduration  = 1,
+                                                    DOY_Cstart = 365,
+                                                    Cduration  = 1,
+                                                    LAI_perc_BtoC = 100,
+                                                    LAI_perc_CtoB = 0)),
+                storm_durations_h = [4., 4., 4., 4., 4., 4., 4., 4., 4., 4., 4., 4.],
+                IC_scalar = (amount = (u_GWAT_init_mm = 1.,
+                                    u_INTS_init_mm = 0,
+                                    u_INTR_init_mm = 0.,
+                                    u_SNOW_init_mm = 0,
+                                    u_CC_init_MJ_per_m2 = 0,
+                                    u_SNOWLQ_init_mm =  0.),
+                            d18O    = (u_GWAT_init_permil = -11.111,
+                                    u_INTS_init_permil = -12.222,
+                                    u_INTR_init_permil = -13.333,
+                                    u_SNOW_init_permil = -14.444),
+                            d2H     = (u_GWAT_init_permil = -95.111,
+                                    u_INTS_init_permil = -95.222,
+                                    u_INTR_init_permil = -95.333,
+                                    u_SNOW_init_permil = -95.444)));
+        finally
+            rm(path; recursive = true, force = true)
+        end
+
+        return parametrizedSPAC
+    end
+    
+    parametrizedSPAC   = setup_synthetic_SPAC();
+
+    simulation_default = setup(parametrizedSPAC) # using default output (should be daily since it should use simulation.ODEProblem.kwargs[:saveat])
+    simulation_d       = setup(parametrizedSPAC) # for daily output
+    # simulation_w     = setup(parametrizedSPAC) # for weekly output (could make sense for some outputs, but not for fluxes)
+    # simulation_sd    = setup(parametrizedSPAC) # for sub daily output (does not make sense)
+    
+    simulate!(simulation_default)
+    simulate!(simulation_d, save_everystep=false, saveat = range(parametrizedSPAC.tspan...; step = 1.0)) # This can be used to overwrite default options and reduce storage space # TODO: make this default
+    @test length(simulation_default.ODESolution_datetime) > length(simulation_d.ODESolution_datetime) # these are internal steps that are saved use more memory/storage
+
+    # check public API
+    simulation_d_out_forcing = LWFBrook90.get_forcing(simulation_d)
+    simulation_d_out_fluxes = LWFBrook90.get_fluxes(simulation_d)
+    simulation_d_out_states = LWFBrook90.get_states(simulation_d)
+    @test nrow(simulation_d_out_forcing) == 30 # only 30 days were simulated
+    @test nrow(simulation_d_out_fluxes) == 30  # only 30 days were simulated between u0 and final state (thus 31 states reported)
+    @test nrow(simulation_d_out_states) == 31    
+
+    simulation_default_out_forcing = LWFBrook90.get_forcing(simulation_default)
+    simulation_default_out_fluxes = LWFBrook90.get_fluxes(simulation_default)
+    simulation_default_out_states = LWFBrook90.get_states(simulation_default)
+    
+    @test nrow(simulation_default_out_forcing) == 30 # only 30 days were simulated
+    @test nrow(simulation_default_out_fluxes) == 30  # only 30 days were simulated between u0 and final state (thus 31 states reported)
+    @test nrow(simulation_default_out_states) == 31
+
+    @test simulation_default_out_forcing.dates[1]   == simulation_d_out_forcing.dates[1]   == DateTime("2021-06-01T00:00:00")
+    @test simulation_default_out_forcing.dates[end] == simulation_d_out_forcing.dates[end] == DateTime("2021-06-30T00:00:00")
+    @test simulation_default_out_fluxes.dates[1]    == simulation_d_out_fluxes.dates[1]    == DateTime("2021-06-01T00:00:00")
+    @test simulation_default_out_fluxes.dates[end]  == simulation_d_out_fluxes.dates[end]  == DateTime("2021-06-30T00:00:00")
+    @test simulation_default_out_states.dates[1]    == simulation_d_out_states.dates[1]    == DateTime("2021-06-01T00:00:00")
+    @test simulation_default_out_states.dates[end]  == simulation_d_out_states.dates[end]  == DateTime("2021-07-01T00:00:00") # we add one day
+
+    # simulation_default_out_states[:,       ["dates", "SWAT_mm", "ψ_kPa_200mm", "ψ_kPa_1600mm"]]
+    # simulation_default_out_states[[1,end], ["dates", "SWAT_mm", "ψ_kPa_200mm", "ψ_kPa_1600mm"]]
+    # DataFrame(
+    #     dates = [DateTime("2021-06-01T00:00:00"), DateTime("2021-06-30T00:00:00")],
+    #     SWAT_mm = [142, 82.536],
+    #     ψ_kPa_200mm = [-3.0, 795.786],
+    #     ψ_kPa_1600mm = [-3.0, -0.15]
+    # )    
+    @test simulation_default_out_states.ψ_kPa_200mm[1] == -3.0
+    @test simulation_default_out_states.ψ_kPa_1600mm[1] == -3.0
+    @test simulation_default_out_states.ψ_kPa_200mm[end] < -750
+    @test simulation_default_out_states.ψ_kPa_1600mm[end] > -0.5
+
+    #simulation_default_out_fluxes[:,       ["dates", "cum_d_slvp", "cum_d_tran", "RWU"]]
+    #simulation_default_out_fluxes[[1,end], ["dates", "cum_d_slvp", "cum_d_tran", "RWU"]]
+
+
+    # internal functions (not user facing):
+    @test simulation_d.ODESolution.u[1] == simulation_d.ODEProblem.u0 # "2021-06-01T00:00:00" corresponds to initial conditions
+    @test length(simulation_d.parametrizedSPAC.forcing.meteo["p_GLOBRAD"]) == 31 # this has 31 values because internally in LWFBrook90.interpolate_meteo 
+                                                                                 # we duplicated the last day to create the interpolation function
+
+    @test length(simulation_d.ODESolution_datetime) == 31
+    @test simulation_d.ODESolution_datetime[1]   == DateTime("2021-06-01T00:00:00")
+    @test simulation_d.ODESolution_datetime[end] == DateTime("2021-07-01T00:00:00") # we add one day
+
+    @test length(simulation_default.ODESolution_datetime) > 700  #735 but depends on precise algorithmic details of the ODE solver (e.g. tolerance, etc.)
+    @test simulation_default.ODESolution_datetime[1]   == DateTime("2021-06-01T00:00:00")
+    @test simulation_default.ODESolution_datetime[end] == DateTime("2021-07-01T00:00:00")
+
+end
+@testset "simulate-and-postprocess-DAV" begin
     Δz_m = fill(0.05, 22)
     parametrizedSPAC = loadSPAC(
             "../examples/DAV2020-full/", "DAV2020-full"; 
