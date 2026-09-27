@@ -23,11 +23,41 @@ The steps in a typical simulation script are:
     - optional arguments in `loadSPAC()` can be used to define model parameters (-> type `?loadSPAC` to see documentation)
 - pre-process model for simulation `simulation = setup(model)`
 - compute simulation `simulate!(simulation)`
-- post-process and plot simulation results
+- post-process and plot simulation results, `get_fluxes(simulation)`, `get_states(simulation)`, `get_forcing(simulation)`
 
 LWFBrook90.jl outputs quantities in daily resolution.
 Monthly or yearly quantities can be derived in the post processing.
 ~~For performance reasons, e.g. for Bayesian parameter estimation, computation of these additional quantities can also be deactivated during simulation, and they could be calculated in a post-processing step from the state vector.~~
+
+Below is a code snippet providing a quick start. For more details refer to `examples/example-script-01.jl`.
+
+```julia
+
+# load problem defintion as SPAC object
+input_path = "../../../examples/DAV2020-full/"; input_prefix = "DAV2020-full"; # make sure to get the path correct relative to `pwd()``
+model = loadSPAC(input_path, input_prefix; simulate_isotopes = true);
+
+# transform into a system of ODEs (space discretization etc...)
+simulation     = setup(model)
+
+# run simulation
+simulate!(simulation)
+
+# Get simulation output (states, fluxes, forcing) as DataFrames
+get_states(simulation)
+get_fluxes(simulation)
+get_forcing(simulation)
+
+using Plots, Measures; gr();
+pl2 = plotisotopes(simulation, :d18O, (d18O = :auto, d2H = :auto), :showRWUcentroid)
+pl2
+
+pl1 = plotamounts(simulation, :above_and_belowground, :showRWUcentroid)
+pl1
+
+pl3 = plotforcingandstates(simulation)
+pl3
+```
 
 ## Input data
 
