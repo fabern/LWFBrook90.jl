@@ -1172,19 +1172,28 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
 
 
         #                     D_at_interface                                     .*   dC/dz_at_interface
-        diff¹⁸O_upp .= [0; (D_¹⁸O_ᵏ⁺¹[1:NLAYER-1] + D_¹⁸O_ᵏ⁺¹[2:NLAYER]) /2]     .* [0; [(C_¹⁸Oᵏ[i] - C_¹⁸Oᵏ[i-1]) / dz[i-1] for i ∈ 2:length(C_¹⁸Oᵏ)]]    # flux in m/d (D: m2/d, dC/dz = dx/dz: m-1)
-        diff¹⁸O_low .= [   (D_¹⁸O_ᵏ⁺¹[1:NLAYER-1] + D_¹⁸O_ᵏ⁺¹[2:NLAYER]) /2; 0]  .* [   [(C_¹⁸Oᵏ[i] - C_¹⁸Oᵏ[i-1]) / dz[i-1] for i ∈ 2:length(C_¹⁸Oᵏ)]; 0] # flux in m/d (D: m2/d, dC/dz = dx/dz: m-1)
-        diff²H_upp  .= [0; (D_²H_ᵏ⁺¹[1:NLAYER-1]  + D_²H_ᵏ⁺¹[2:NLAYER] ) /2]     .* [0; [(C_²Hᵏ[i]  - C_²Hᵏ[i-1] ) / dz[i-1] for i ∈ 2:length(C_²Hᵏ )]]    # flux in m/d (D: m2/d, dC/dz = dx/dz: m-1)
-        diff²H_low  .= [   (D_²H_ᵏ⁺¹[1:NLAYER-1]  + D_²H_ᵏ⁺¹[2:NLAYER] ) /2; 0]  .* [   [(C_²Hᵏ[i]  - C_²Hᵏ[i-1] ) / dz[i-1] for i ∈ 2:length(C_²Hᵏ )]; 0] # flux in m/d (D: m2/d, dC/dz = dx/dz: m-1)
+        # NOTE: below replaces bracket-literal `[0; ...]`/`[...; 0]` concatenations (which allocated
+        #       several temporary arrays per call) with explicit loops writing directly into the
+        #       preallocated cache vectors.
+        diff¹⁸O_upp[1] = 0
+        for i in 2:NLAYER; diff¹⁸O_upp[i] = (D_¹⁸O_ᵏ⁺¹[i-1] + D_¹⁸O_ᵏ⁺¹[i]) /2 * (C_¹⁸Oᵏ[i] - C_¹⁸Oᵏ[i-1]) / dz[i-1]; end    # flux in m/d (D: m2/d, dC/dz = dx/dz: m-1)
+        diff¹⁸O_low[NLAYER] = 0
+        for i in 1:NLAYER-1; diff¹⁸O_low[i] = (D_¹⁸O_ᵏ⁺¹[i] + D_¹⁸O_ᵏ⁺¹[i+1]) /2 * (C_¹⁸Oᵏ[i+1] - C_¹⁸Oᵏ[i]) / dz[i]; end    # flux in m/d (D: m2/d, dC/dz = dx/dz: m-1)
+        diff²H_upp[1] = 0
+        for i in 2:NLAYER; diff²H_upp[i]  = (D_²H_ᵏ⁺¹[i-1]  + D_²H_ᵏ⁺¹[i] ) /2 * (C_²Hᵏ[i]  - C_²Hᵏ[i-1] ) / dz[i-1]; end    # flux in m/d (D: m2/d, dC/dz = dx/dz: m-1)
+        diff²H_low[NLAYER] = 0
+        for i in 1:NLAYER-1; diff²H_low[i]  = (D_²H_ᵏ⁺¹[i]  + D_²H_ᵏ⁺¹[i+1] ) /2 * (C_²Hᵏ[i+1]  - C_²Hᵏ[i] ) / dz[i]; end    # flux in m/d (D: m2/d, dC/dz = dx/dz: m-1)
 
         # NOTE(bernhard): NOTE below Concentrations's are not at interface but in the
         #                 middle of the cell... best would be to use an upwind scheme and
         #                 use the correct C based on the sign of aux_du_VRFLI
         #                     q_at_interface           .*   C_at_interface
-        qCᵢ¹⁸O_upp  .= [0; aux_du_VRFLI[1:(NLAYER-1)]] .* [0; C_¹⁸Oᵏ[1:(NLAYER-1)]]  # units: aux_du_VRFLI (mm/day)
-        qCᵢ¹⁸O_low  .=     aux_du_VRFLI[1:(NLAYER)]    .*     C_¹⁸Oᵏ[1:(NLAYER)]     # units: aux_du_VRFLI (mm/day)
-        qCᵢ²H_upp   .= [0; aux_du_VRFLI[1:(NLAYER-1)]] .* [0; C_²Hᵏ[1:(NLAYER-1)]]   # units: aux_du_VRFLI (mm/day)
-        qCᵢ²H_low   .=     aux_du_VRFLI[1:(NLAYER)]    .*     C_²Hᵏ[1:(NLAYER)]      # units: aux_du_VRFLI (mm/day)
+        qCᵢ¹⁸O_upp[1] = 0
+        for i in 2:NLAYER; qCᵢ¹⁸O_upp[i] = aux_du_VRFLI[i-1] * C_¹⁸Oᵏ[i-1]; end  # units: aux_du_VRFLI (mm/day)
+        qCᵢ¹⁸O_low  .= aux_du_VRFLI .* C_¹⁸Oᵏ                                    # units: aux_du_VRFLI (mm/day)
+        qCᵢ²H_upp[1] = 0
+        for i in 2:NLAYER; qCᵢ²H_upp[i] = aux_du_VRFLI[i-1] * C_²Hᵏ[i-1]; end    # units: aux_du_VRFLI (mm/day)
+        qCᵢ²H_low   .= aux_du_VRFLI .* C_²Hᵏ                                     # units: aux_du_VRFLI (mm/day)
 
         Cᵢ¹⁸O_INFLI = LWFBrook90.ISO.δ_to_x.(p_δ18O_PREC(integrator.t), LWFBrook90.ISO.R_VSMOW¹⁸O)  # TODO(bernhard): for debugging, remove this again and replace with δ18O_INFLI
         # Cᵢ¹⁸O_INFLI = δ18O_INFLI
@@ -1226,12 +1235,12 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         du_Cᵢ²H_SWATI .= 0 # assert vector is zero
         # units: dVdt (mm/day), C (), u_SWATI (mm), diff¹⁸O_upp (m/day) => diff¹⁸O_upp*1000 (mm/day), qCᵢ¹⁸O_upp (mm/day), INFLI, DSFLI, SLVP, TRANI (mm/day)
         du_Cᵢ¹⁸_SWATI .= -C_¹⁸Oᵏ./u_SWATIᵏ⁺¹ .* dVdt .+ 1 ./ u_SWATIᵏ⁺¹ .* (
-                                -diff¹⁸O_upp*1000 .+ diff¹⁸O_low*1000 .+ qCᵢ¹⁸O_upp .- qCᵢ¹⁸O_low .+
+                                -diff¹⁸O_upp.*1000 .+ diff¹⁸O_low.*1000 .+ qCᵢ¹⁸O_upp .- qCᵢ¹⁸O_low .+ # NOTE: `.*1000` (not `*1000`) so this fuses into the surrounding broadcast without allocating
                                 aux_du_INFLI.*Cᵢ¹⁸O_INFLI .- aux_du_DSFLI.*Cᵢ¹⁸O_DSFL .- aux_du_SLVPI.*C_¹⁸O_SLVP .-
                                 aux_du_TRANI.*Cᵢ¹⁸O_TRANI
                             )
         du_Cᵢ²H_SWATI .= -C_²Hᵏ./u_SWATIᵏ⁺¹ .* dVdt .+ 1 ./ u_SWATIᵏ⁺¹ .* (
-                                -diff²H_upp*1000 .+ diff²H_low*1000 .+ qCᵢ²H_upp .- qCᵢ²H_low .+
+                                -diff²H_upp.*1000 .+ diff²H_low.*1000 .+ qCᵢ²H_upp .- qCᵢ²H_low .+
                                 aux_du_INFLI.*Cᵢ²H_INFLI .- aux_du_DSFLI.*Cᵢ²H_DSFL .- aux_du_SLVPI.*C_²H_SLVP .-
                                 aux_du_TRANI.*Cᵢ²H_TRANI
                             )
