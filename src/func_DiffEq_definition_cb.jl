@@ -164,8 +164,8 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     LWFBrook90.KPT.SWCHEK!(u_SWATI, p_soil.p_SWATMAX, integrator.t)
 
     # Derive (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) from u_SWATI
-    (u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK) =
-        LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATI, p_soil)
+    LWFBrook90.KPT.derive_auxiliary_SOILVAR!(u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK, # NOTE: in-place variant reuses the cache arrays already unpacked above instead of allocating 5 new ones
+        u_SWATI, p_soil)
 
     # MSBSETVARS: A) get: 1) sunshine durations, 2) SFAL, 3) plant resistance (TODO: could be done before simulation)
     # MSBSETVARS: B) get_windspeed_from_canopy_and_snowpack: (p_fu_UADTM, p_fu_UANTM) = f(...)
@@ -749,8 +749,12 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
 
         #TODO(bernhard): check that u_aux_θ_tminus1 and u_aux_θ are indeed different
         # θᵏ       = u_aux_θ_tminus1 # # TODO(bernhard): u_aux_θ_tminus1 is not saved, workaraound below:
-        _,_,_,θᵏ⁺¹[:],_ = LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATIᵏ⁺¹, p_soil)
-        _,_,_,θᵏ[:],_   = LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATIᵏ, p_soil)  # of time step before
+        #_,_,_,θᵏ⁺¹[:],_ = LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATIᵏ⁺¹, p_soil)
+        #_,_,_,θᵏ[:],_   = LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATIᵏ, p_soil)  # of time step before
+        # NOTE: in-place variant with local scratch (reused for both calls) instead of allocating 5 new arrays per call
+        _WETNES_scratch = similar(θᵏ⁺¹); _PSIM_scratch = similar(θᵏ⁺¹); _PSITI_scratch = similar(θᵏ⁺¹); _KK_scratch = similar(θᵏ⁺¹)
+        LWFBrook90.KPT.derive_auxiliary_SOILVAR!(_WETNES_scratch, _PSIM_scratch, _PSITI_scratch, θᵏ⁺¹, _KK_scratch, u_SWATIᵏ⁺¹, p_soil)
+        LWFBrook90.KPT.derive_auxiliary_SOILVAR!(_WETNES_scratch, _PSIM_scratch, _PSITI_scratch, θᵏ,   _KK_scratch, u_SWATIᵏ, p_soil)  # of time step before
 
         # TRANSPORT state variables (i.e. concentrations, not yet updated from tᵏ to tᵏ⁺¹)
         u_δ18O_GWAT   = integrator.u.GWAT.d18O
