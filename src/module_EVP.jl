@@ -153,19 +153,20 @@ function PLNTRES(NLAYER, p_soil, p_fT_RTLENeff, p_fT_RELDEN, p_RTRAD, p_fT_RPLAN
 
     p_THICK = p_soil.p_THICK
     p_STONEF = p_soil.p_STONEF
-    # compute stone-free layer thickness D
-    D = fill(NaN, NLAYER)
+    # compute stone-free layer thickness D and root-distribution weights
+    # Reuse the result array for weights; overwrite it with root resistances below.
+    RROOTI = zeros(NLAYER)
     for i = 1:NLAYER
-        D[i] = p_THICK[i] * (1 - p_STONEF[i])
+        D = Float64(p_THICK[i] * (1 - p_STONEF[i])) # same conversion as the former D array
+        RROOTI[i] = p_fT_RELDEN[i] * D
     end
 
     # compute fraction of total root length that is in each layer
-    RTFRAC = p_fT_RELDEN[1:NLAYER].*D[1:NLAYER] ./ sum(p_fT_RELDEN[1:NLAYER].*D[1:NLAYER])
+    total_root_weight = sum(RROOTI)
 
     # compute xylem resistance, MPa d/mm
     RXYLEM = p_FXYLEM * p_fT_RPLANT
     # compute RROOTI and ALPHA
-    RROOTI = zeros(NLAYER)
     ALPHA  = zeros(NLAYER)
     for i = 1:NLAYER
         if (p_fT_RELDEN[i] < 0.00001 || p_fT_RTLENeff < 0.1)
@@ -173,15 +174,17 @@ function PLNTRES(NLAYER, p_soil, p_fT_RTLENeff, p_fT_RELDEN, p_RTRAD, p_fT_RPLAN
             RROOTI[i] = 1E+20
             ALPHA[i]  = 1E+20
         else
+            D = Float64(p_THICK[i] * (1 - p_STONEF[i]))
+            RTFRAC = RROOTI[i] / total_root_weight
             # root resistance for layer
-            RROOTI[i] = (p_fT_RPLANT - RXYLEM) / RTFRAC[i]
+            RROOTI[i] = (p_fT_RPLANT - RXYLEM) / RTFRAC
             # rhizosphere resistance for layer
-            RTDENI = RTFRAC[i] * 0.001 * p_fT_RTLENeff / D[i] # .001 is (mm/mm2)/(m/m2) conversion
+            RTDENI = RTFRAC * 0.001 * p_fT_RTLENeff / D # .001 is (mm/mm2)/(m/m2) conversion
                      # RTDENI in mm/mm3 i.e. mm length of roots per mm3 of soil
             DELT = p_PI * p_RTRAD ^ 2 * RTDENI # DELT in mm3 roots per mm3 of soil
             ALPHA[i] = (1 / (8 * p_PI * RTDENI)) * (DELT - 3 - 2 * (log(DELT)) / (1 - DELT))
                     # ALPHA now in mm3 of soil / mm of root
-            ALPHA[i] = ALPHA[i] * 0.001 * p_RHOWG / D[i] # .001 is MPa/kPa conversion
+            ALPHA[i] = ALPHA[i] * 0.001 * p_RHOWG / D # .001 is MPa/kPa conversion
                     # ALPHA now in mm3 of soil / mm of root * MPa/kPa * kPa/mm / mm soil
                     # ALPHA now in MPa
         end
@@ -644,58 +647,54 @@ function INTER24(p_fT_RFAL, p_fu_PINT, p_fu_LAI, p_fu_SAI, p_FRINTL, p_FRINTS, p
 
     IHD = Int(floor((p_DURATN[MONTHN] + 0.1) / 2.0))
     DTH = 1                     # time step, = 1 hr
-    # Define catch along day
-    CATCH = fill(NaN, 24)       # maximum RINTHR, mm/hra
-    for i = 0:23                # hour, 0 to 23
-        if i < (12 - IHD) || i >= (12 + IHD)
-            # before or after rain
-            CATCH[i+1] = 0
-        else
-            # during rain, mm/hr is rate in mm/d divided by hr of rain/d
-            CATCH[i+1] = min(1, (p_FRINTL * p_fu_LAI + p_FRINTS * p_fu_SAI)) * p_fT_RFAL / (2 * IHD)
-        end
-    end
-
     # Define RINTHR and IRVPHR
     INTRMX = p_CINTRL * p_fu_LAI + p_CINTRS * p_fu_SAI  # maximum canopy storage for rain, mm
-    INTRNU = fill(NaN, 24)                              # canopy storage at end of hour, mm
-
-    RINTHR = fill(NaN, 24) # rain catch rate for hour, mm/hr
-    IRVPHR = fill(NaN, 24) # evaporation rate for hour, mm/hr
-
-    # Set INTRNU starting value for first loop
-    INTRNU[1]= u_INTR
+    # Set INTRNU starting value for first loop; only the current hour is needed.
+    INTRNU = Float64(u_INTR)                           # canopy storage at end of hour, mm
+    # Keep hourly rates for sum's original reduction order, without catch/storage arrays.
+    RINTHR = Vector{Float64}(undef, 24) # rain catch rate for hour, mm/hr
+    IRVPHR = Vector{Float64}(undef, 24) # evaporation rate for hour, mm/hr
 
     for i = 1:24
+        # Define catch along day (maximum RINTHR, mm/hr)
+        if (i - 1) < (12 - IHD) || (i - 1) >= (12 + IHD)
+            # before or after rain
+            CATCH = 0.0
+        else
+            # during rain, mm/hr is rate in mm/d divided by hr of rain/d
+            CATCH = Float64(min(1, (p_FRINTL * p_fu_LAI + p_FRINTS * p_fu_SAI)) * p_fT_RFAL / (2 * IHD))
+        end
+
         # INTRNU - canopy storage at end of hour (mm)
-        NEWINT = INTRNU[i] + (CATCH[i] - p_fu_PINT / 24) * DTH # first approximation to INTRNU, mm
+        NEWINT = INTRNU + (CATCH - p_fu_PINT / 24) * DTH # first approximation to INTRNU, mm
 
         if (NEWINT > 0.0001)
             # canopy is wet throughout hour, evap rate is PINT
             IRVPHR[i] = p_fu_PINT / 24
             if (NEWINT > INTRMX)
                 # canopy capacity is reached
-                RINTHR[i] = IRVPHR[i] + (INTRMX - INTRNU[i]) / DTH
+                RINTHR[i] = IRVPHR[i] + (INTRMX - INTRNU) / DTH
                 # INTRMX - INTRNU can be negative if LAI or SAI is decreasing over time
             else
                 # canopy capacity is not reached
-                RINTHR[i] = CATCH[i]
+                RINTHR[i] = CATCH
             end
         else
             # canopy dries during hour or stays dry
-            IRVPHR[i] = INTRNU[i] / DTH + CATCH[i]
-            RINTHR[i] = CATCH[i]
+            IRVPHR[i] = INTRNU / DTH + CATCH
+            RINTHR[i] = CATCH
             # IRVPHR for hour is < PI/24
         end
 
         # Set INTRNU starting value for next loop
         if i < 24
-            INTRNU[i+1] = INTRNU[i] + (RINTHR[i] - IRVPHR[i]) * DTH
+            INTRNU = INTRNU + (RINTHR[i] - IRVPHR[i]) * DTH
         end
     end
 
-    aux_du_RINT = sum(RINTHR .* DTH)# = SMINT    per 1 d # daily accumulated actual catch, mm
-    aux_du_IRVP = sum(IRVPHR .* DTH)# = SMVP     per 1 d # daily accumulated actual evaporation, mm
+    # DTH = 1 hr, so no scaled copies of the hourly arrays are needed.
+    aux_du_RINT = sum(RINTHR) # = SMINT per 1 d # daily accumulated actual catch, mm
+    aux_du_IRVP = sum(IRVPHR) # = SMVP per 1 d # daily accumulated actual evaporation, mm
 
     # RINT     -  rain catch rate, mm/d
     # IRVP     -  evaporation rate of intercepted rain, mm/d

@@ -59,6 +59,88 @@ pl3 = plotforcingandstates(simulation)
 pl3
 ```
 
+## [Soil evaporation depth and isotope fractionation](@id soil-evaporation-settings)
+
+Soil evaporation has two independent controls: the depth from which water is removed,
+and whether the evaporated vapor fractionates relative to the soil water.
+
+| Setting | Where to set it | Default | Effect |
+| --- | --- | --- | --- |
+| `SLVPDEPTH_m` | `param.csv`, or `remakeSPAC(...; params = (...,))` | `0.0` m | Depth of the soil evaporation source zone, positive downward. |
+| `simulate_evaporation_fractionation` | `loadSPAC`, or `remakeSPAC(...; solver_options = (...,))` | `false` | Enables Craig–Gordon fractionation of soil evaporation when `simulate_isotopes = true`. |
+
+### Choosing the evaporation depth
+
+The default `SLVPDEPTH_m = 0.0` draws evaporation from the uppermost input soil layer.
+A value smaller than this layer's thickness also uses its full thickness. For example,
+with a 3 cm surface layer, both `0.0` and `0.01` use the top 3 cm; `0.10` uses the top
+10 cm. The requested depth must fit within the soil profile.
+
+For a deeper source zone, the discretization is refined at its lower boundary when
+needed. Evaporation is apportioned by layer thickness within this zone. Thus a 3 cm
+layer and a 7 cm layer in a 10 cm source zone provide 30% and 70% of the soil evaporation
+flux, respectively. Layers below the zone do not directly supply soil evaporation,
+although water and isotopes can still move between layers. Use a sufficiently fine
+surface grid to resolve the enrichment pattern of interest.
+
+### Enabling evaporation fractionation
+
+With `simulate_evaporation_fractionation = false`, the evaporating flux has the same
+isotopic composition as the soil water in each contributing layer. Soil isotope values
+can still change through precipitation, transport, and mixing.
+
+With `simulate_evaporation_fractionation = true`, the model computes the evaporated
+vapor's δ¹⁸O and δ²H using Craig–Gordon fractionation for each contributing layer.
+The calculation uses daytime air temperature, atmospheric humidity, and a kinetic
+fractionation exponent that varies with local soil moisture. Atmospheric vapor is
+assumed to be in isotopic equilibrium with the precipitation forcing; a separate
+measured vapor-isotope time series is not used. The option changes the isotopic
+composition of the evaporation flux; water loss is calculated by the hydrologic model.
+It applies to soil evaporation, rather than being a general switch for fractionation
+in interception or snow stores.
+
+For a model loaded with `simulate_isotopes = true`, configure and run a simulation as
+follows. `remakeSPAC` returns a simulation ready for `simulate!`, so another `setup`
+call is unnecessary.
+
+```julia
+simulation = remakeSPAC(model;
+    params = (SLVPDEPTH_m = 0.10,),
+    solver_options = (simulate_evaporation_fractionation = true,),
+    requested_tspan = model.tspan)
+simulate!(simulation; save_everystep = false,
+    saveat = range(model.tspan...; step = 1.0))
+
+# Postprocessing depths are in millimeters, unlike SLVPDEPTH_m.
+soil_isotopes = get_soil_([:d18O, :d2H], simulation;
+    depths_to_read_out_mm = [15, 65, 150, 250])
+```
+
+Alternatively, enable fractionation while loading the model:
+
+```julia
+model = loadSPAC(input_path, input_prefix;
+    simulate_isotopes = true,
+    simulate_evaporation_fractionation = true)
+```
+
+Set `SLVPDEPTH_m` in `param.csv`, or change it afterward with `remakeSPAC`. Existing
+parameter files that omit it use the default `0.0` m.
+
+### Comparing the effects
+
+[Example Script 02](@ref) compares three simulations with identical forcing and
+initial conditions: 10 cm without fractionation, 10 cm with fractionation, and 30 cm
+with fractionation. The first pair isolates the fractionation option; the second pair
+isolates the evaporation depth. Heatmaps use a shared color scale for each isotope.
+Install `Plots` in the active Julia environment to run the plotting example.
+
+During drying, a shallow source zone can enrich more rapidly near the surface, while
+a deeper source zone spreads the evaporative loss and enrichment over more soil.
+Rainfall, transport, and mixing can interrupt this pattern, so the meteorological
+example need not show monotonic enrichment. The default combination of `0.0` m and
+`false` preserves the previous soil-evaporation configuration.
+
 ## Input data
 
 ### Overview of input data

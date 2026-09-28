@@ -39,7 +39,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
         #  - snowpack temperature, potential snow evaporation and soil evaporation resistance depending on u_SNOW
 
         # These were computed in the callback and are kept constant in between two callbacks.
-        @unpack p_fu_RNET, aux_du_SMLT, aux_du_SLVP, aux_du_TRANI = p
+        @unpack p_fu_RNET, aux_du_SMLT, aux_du_SLVPI, aux_du_TRANI = p
 
         # Pre-allocated caches to save memory allocations
         @unpack du_GWFL, du_SEEP, du_NTFLI, aux_du_VRFLI, aux_du_DSFLI, aux_du_INFLI, u_aux_WETNES = p;
@@ -107,7 +107,7 @@ Generate function f (right-hand-side of ODEs) needed for ODE() problem in DiffEq
                     #
                     p_DRAIN, p_DTP, t, p_DTIMAX,
                     # for INFLOW:
-                    p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVP[1],
+                    p_INFRAC, p_fu_BYFRAC, aux_du_TRANI, aux_du_SLVPI,
                     # for FDPSIDW:
                     u_aux_WETNES,
                     # for ITER:

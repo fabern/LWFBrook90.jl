@@ -94,7 +94,7 @@ Description of BROOK90 implementation from Ecoshift (TODO: rework this to pertai
 > - evaporation of intercepted rain ([IRVP](http://www.ecoshift.net/brook/defin.html#IRVP))
 > - evaporation of intercepted snow ([ISVP](http://www.ecoshift.net/brook/defin.html#IRVP))
 > - evaporation from snow ([SNVP](http://www.ecoshift.net/brook/defin.html#SNVP))
-> - soil evaporation ([SLVP](http://www.ecoshift.net/brook/defin.html#SLVP)) from the top soil layer
+> - soil evaporation ([SLVP or SLVPI](http://www.ecoshift.net/brook/defin.html#SLVP)) from the top soil layer (or multiple soil layers if using SLVPDEPTH_m)
 > - transpiration ([TRAN](http://www.ecoshift.net/brook/defin.html#TRAN)I) from each soil layer that contains roots
 >
 > Interception and snow evaporation are reduced later if their sources disappear. These evaporation values are obtained separately for daytime and nightime, then combined into a daily values.

@@ -46,6 +46,7 @@ Random.seed!(1234)
 # if !is_a_CI_system; include("00-plot-if-not-CI-system.jl"); end
 
 include("01-unit-tests.jl")
+include("04-allocation-tests.jl")
 
 plot_flag = false; high_resolution_flag = false;
 # plot_flag = true; high_resolution_flag = false; using Plots, Measures; using CairoMakie # run this line for plotting outside of default testing

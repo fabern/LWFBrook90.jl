@@ -4,6 +4,8 @@
 # Example data from Beatenberg is located in subfolder `examples/`. WSL is acknowledged for providing the input data (see section [Acknowledgments](@ref)).
 
 # To run your own simulations: follow the step-by-step instructions below.
+# For soil evaporation sourcing and optional Craig–Gordon isotope fractionation,
+# see [Example Script 02](@ref), which compares 10 cm and 30 cm source zones.
 
 # ## Setup and run simulation
 

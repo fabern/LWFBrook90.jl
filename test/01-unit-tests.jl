@@ -210,17 +210,19 @@ end
                         # p_MvGl = 0, p_STONEF = 0.9:-0.1:0.5))
     IDEPTH_m = 0.045 # m
     QDEPTH_m = 0.0  # m
+    SLVPDEPTH_m = 0.0 # m (will use the first layer only for soil evaporation)
     INITRDEP = 10
     RGRORATE = 10
     FLAG_MualVanGen = 1
     # FLAG_MualVanGen = 0
-    refined_soil_disc, IDEPTH_idx, QDEPTH_idx =
+    refined_soil_disc, IDEPTH_idx, QDEPTH_idx, SLVPDEPTH_idx =
         LWFBrook90.refine_soil_discretization(
             # modifiedSPAC.soil_discretization.Δz,
             input_soil_discretization,
             input_soil_horizons,
             [],
-            IDEPTH_m, QDEPTH_m)
+            IDEPTH_m, QDEPTH_m,
+            SLVPDEPTH_m)
     final_soil_discr = LWFBrook90.map_soil_horizons_to_discretization(input_soil_horizons, refined_soil_disc)
 
     @test nrow(final_soil_discr) == 10
@@ -231,6 +233,7 @@ end
     @test final_soil_discr[!,"Rootden_"] ≈ [0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
     @test QDEPTH_idx == 0
     @test IDEPTH_idx == 1
+    @test SLVPDEPTH_idx == 1
     @test [shp.p_STONEF for shp in final_soil_discr.shp] ≈ [0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7]
     # @test [shp.p_STONEF for shp in final_soil_discr.shp] ≈ [0.9, 0.9, 0.9, 0.9, 0.8, 0.8, 0.8, 0.8, 0.8, 0.7]
     @test [shp.p_THSAT for shp in final_soil_discr.shp] ≈ [0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55]
@@ -321,7 +324,7 @@ end
     else
         soil_output_depths_m = soil_output_depths_m = zeros(Float64, 0)
     end
-    refined_soil_discretizationDF, IDEPTH_idx, QDEPTH_idx =
+    refined_soil_discretizationDF, IDEPTH_idx, QDEPTH_idx, SLVPDEPTH_idx =
         LWFBrook90.refine_soil_discretization(
             # parametrizedSPAC.soil_discretization.df,
             soil_discretization,
@@ -329,6 +332,7 @@ end
             soil_output_depths_m,
             parametrizedSPAC.pars.params[:IDEPTH_m],
             parametrizedSPAC.pars.params[:QDEPTH_m],
+            parametrizedSPAC.pars.params[:SLVPDEPTH_m],
             ε = 0.005)
 
     # Discretize the model in space as `soil_discretization`
@@ -373,7 +377,7 @@ end
 
     ####################
     # Define parameters for differential equation
-    p = LWFBrook90.define_LWFB90_p(parametrizedSPAC, vegetation_fT, IDEPTH_idx, QDEPTH_idx);
+    p = LWFBrook90.define_LWFB90_p(parametrizedSPAC, vegetation_fT, IDEPTH_idx, QDEPTH_idx, SLVPDEPTH_idx);
 
     # using Plots
     # hline([0; cumsum(p.p_soil.p_THICK)], yflip = true, xticks = false,
@@ -514,6 +518,547 @@ end
     elseif ([fill(0.01, 200);] == Δz_m)
         @test simulation.parametrizedSPAC.soil_discretization.df.Rootden_[1:10:200] ≈ [5.528233262478093e-6, 0.003749688650354093, 0.009456878548333922, 0.012958944185572032, 0.013911350780858728, 0.013080734304564738, 0.011316177973638309, 0.009244379118960236, 0.007242414922077211, 0.005495855155572414, 0.004067005209129574, 0.0029491416245713367, 0.002103011304925199, 0.0014787113599272316, 0.0010273776115250128, 0.0007064829092284812, 0.0004814797904216458, 0.0003255617365651601, 0.00021860495106492463, 0.00014587690668812743]
     end
+end
+
+@testset "SLVPDEPTH and Evaporation Depth Sourcing" begin
+    # 1. Test default SLVPDEPTH_m = 0.0 in refine_soil_discretization
+    horizons = DataFrame(
+        Upper_m = [0.0, -0.2, -0.5],
+        Lower_m = [-0.2, -0.5, -1.0],
+        Mat = [1, 2, 3]
+    )
+    prior_discr = DataFrame(
+        Upper_m = [0.0, -0.1, -0.2, -0.5],
+        Lower_m = [-0.1, -0.2, -0.5, -1.0]
+    )
+    
+    SLVPDEPTH_m = 0.0
+    refined_disc, idepth_idx, qdepth_idx, slvpdepth_idx = LWFBrook90.refine_soil_discretization(
+        prior_discr, horizons, Float64[], 0.4, 0.0, SLVPDEPTH_m; ε = 0.05
+    )
+    @test slvpdepth_idx == 1 # defaults / 0.0 bounds to layer 1
+
+    # 2. Test SLVPDEPTH_m smaller than first layer thickness
+    SLVPDEPTH_m = 0.03
+    refined_disc_small, _, _, slvpdepth_idx_small = LWFBrook90.refine_soil_discretization(
+        prior_discr, horizons, Float64[], 0.4, 0.0, SLVPDEPTH_m; ε = 0.05
+    )
+    @test slvpdepth_idx_small == 1 # extended to first layer thickness
+
+    # 3. Test SLVPDEPTH_m larger than first layer thickness (e.g. 0.15 m)
+    SLVPDEPTH_m = 0.15
+    refined_disc_deep, _, _, slvpdepth_idx_deep = LWFBrook90.refine_soil_discretization(
+        prior_discr, horizons, Float64[], 0.4, 0.0, SLVPDEPTH_m; ε = 0.05
+    )
+    @test any(abs.(refined_disc_deep.Lower_m .- (-SLVPDEPTH_m)) .< 1e-4) # ensure a layer was added
+    @test slvpdepth_idx_deep == 2 # ensure that with added layer depth is correct
+    @test refined_disc_deep.Lower_m[slvpdepth_idx_deep] ≈ -SLVPDEPTH_m
+
+    SLVPDEPTH_m = 0.5
+    refined_disc_deep, _, _, slvpdepth_idx_deep = LWFBrook90.refine_soil_discretization(
+        prior_discr, horizons, Float64[], 0.4, 0.0, SLVPDEPTH_m; ε = 0.05
+    )
+    @test slvpdepth_idx_deep == 4 # ensure that with added layer depth is correct
+    @test refined_disc_deep.Lower_m[slvpdepth_idx_deep] ≈ -SLVPDEPTH_m
+
+    # 4. Test p_SLVPFRAC partitioning in setup
+    spac = loadSPAC("../examples/DAV2020-full/", "DAV2020-full";
+                    simulate_isotopes = true,
+                    simulate_evaporation_fractionation = false)
+    # Default parameters: SLVPDEPTH_m = 0.0
+    @test haskey(spac.pars.params, :SLVPDEPTH_m)
+    @test spac.pars.params.SLVPDEPTH_m == 0.0
+    sim = setup(spac, requested_tspan = (0.0, 5.0))
+    p = sim.ODEProblem.p
+    @test p.p_SLVPLAYER == 1
+    @test p.p_SLVPFRAC[1] ≈ 1.0
+    @test sum(p.p_SLVPFRAC) ≈ 1.0
+
+    # Setting custom SLVPDEPTH_m = 0.15 m (layers: [0, -0.03], [-0.03, -0.10], [-0.10, -0.15])
+    sim_deep = remakeSPAC(spac; params = (SLVPDEPTH_m = 0.15,), requested_tspan = (0.0, 5.0))
+    p_deep = sim_deep.ODEProblem.p
+    @test p_deep.p_SLVPLAYER == 3
+    @test sum(p_deep.p_SLVPFRAC) ≈ 1.0
+    @test p_deep.p_SLVPFRAC[1:3] ≈ [0.03, 0.07, 0.05] ./ 0.15
+    @test all(p_deep.p_SLVPFRAC[4:end] .== 0.0)
+
+    # Run simulation with fractionating evaporation
+    sim_frac = remakeSPAC(sim_deep;
+                          solver_options = (simulate_evaporation_fractionation = true,),
+                          requested_tspan = (0.0, 5.0))
+    simulate!(sim_frac)
+    @test SciMLBase.successful_retcode(sim_frac.ODESolution.retcode)
+end
+
+@testset "Module ISO: Evaporative Fractionation (Craig-Gordon & Soil X)" begin
+    # 1. Equilibrium fractionation factor tests
+    @test LWFBrook90.ISO.α¹⁸O_eq(20.0) ≈ 1.00983 atol=1e-3
+    @test LWFBrook90.ISO.α²H_eq(20.0) ≈ 1.08479 atol=1e-2
+    # Check monotonic decrease with temperature
+    @test LWFBrook90.ISO.α¹⁸O_eq(0.0) > LWFBrook90.ISO.α¹⁸O_eq(20.0) > LWFBrook90.ISO.α¹⁸O_eq(40.0)
+    @test LWFBrook90.ISO.α²H_eq(0.0) > LWFBrook90.ISO.α²H_eq(20.0) > LWFBrook90.ISO.α²H_eq(40.0)
+
+    # 2. Dynamic soil turbulence exponent X_soil tests
+    @test LWFBrook90.ISO.compute_X_soil(0.40, 0.05, 0.40) ≈ 0.5 # fully saturated -> turbulent (0.5)
+    @test LWFBrook90.ISO.compute_X_soil(0.05, 0.05, 0.40) ≈ 1.0 # residual -> molecular (1.0)
+    @test LWFBrook90.ISO.compute_X_soil(0.225, 0.05, 0.40) ≈ 0.75 # midpoint (0.75)
+    @test LWFBrook90.ISO.compute_X_soil(0.50, 0.05, 0.40) ≈ 0.5 # clamped above sat
+    @test LWFBrook90.ISO.compute_X_soil(0.01, 0.05, 0.40) ≈ 1.0 # clamped below res
+
+    # 3. Atmospheric vapor equilibrium signature
+    δP_18O = 0.0
+    δP_2H  = 0.0
+    α_18O = LWFBrook90.ISO.α¹⁸O_eq(20.0)
+    α_2H  = LWFBrook90.ISO.α²H_eq(20.0)
+    δa_18O = LWFBrook90.ISO.δₐ(δP_18O, α_18O)
+    δa_2H  = LWFBrook90.ISO.δₐ(δP_2H,  α_2H)
+    @test δa_18O < 0.0
+    @test δa_2H < 0.0
+
+    # 4. Craig-Gordon evaporating flux signature
+    δL_18O = -6.0
+    δL_2H  = -38.0
+    h = 0.5 # 50% relative humidity
+    γ = 1.0
+    X_water = 0.5 # open water surface
+
+    δE_18O = LWFBrook90.ISO.δ_CraigGordon_evap_flux(δL_18O, δa_18O, h, α_18O, LWFBrook90.ISO.α¹⁸O_dif, γ, X_water)
+    δE_2H  = LWFBrook90.ISO.δ_CraigGordon_evap_flux(δL_2H,  δa_2H,  h, α_2H,  LWFBrook90.ISO.α²H_dif,  γ, X_water)
+
+    # Evaporated flux should be depleted relative to liquid water
+    @test δE_18O < δL_18O
+    @test δE_2H < δL_2H
+
+    # 5. Evaporation slope in δ18O-δ2H space (characteristic local evaporation line slope)
+    # The slope S = (δL_2H - δE_2H) / (δL_18O - δE_18O)
+    slope_evap = (δL_2H - δE_2H) / (δL_18O - δE_18O)
+    # Open water evaporation slope is typically between 3.5 and 5.5 
+    # (distinct from meteoric line slope 8.0)
+    @test 3.0 < slope_evap < 6.0
+end
+
+@testset "Evaporation depth and isotope fractionation" begin
+    function setup_base_SPAC_for_evaporation_test(;
+            testcase = "evap_test", Δz_m = fill(0.1, 15))
+        testcase == "evap_test" || throw(ArgumentError("Unknown evaporation testcase: $testcase"))
+        path = mktempdir()
+        local parametrizedSPAC
+        try
+            synthetic_meteoiso = """
+            dates,delta18O_permil,delta2H_permil
+            YYYY-MM-DD,permil,permil
+            2021-06-03,-6.0,-38.0
+            2021-06-17,-6.0,-38.0
+            2021-07-01,-6.0,-38.0
+            """
+            synthetic_meteoveg = """
+            dates,globrad_MJDayM2,tmax_degC,tmin_degC,vappres_kPa,windspeed_ms,prec_mmDay
+            YYYY-MM-DD,MJ/Day/m2,degree C,degree C,kPa,m per s,mm per day
+            2021-06-01,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-02,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-03,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-04,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-05,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-06,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-07,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-08,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-09,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-10,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-11,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-12,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-13,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-14,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-15,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-16,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-17,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-18,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-19,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-20,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-21,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-22,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-23,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-24,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-25,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-26,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-27,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-28,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-29,28.00,20.00,20.0,1.755,0.5,0.0
+            2021-06-30,28.00,20.00,20.0,1.755,0.5,0.0
+            """
+            synthetic_soil_horizons = """
+            HorizonNr,Upper_m,Lower_m,ths_volFrac,thr_volFrac,alpha_perMeter,npar_,ksat_mmDay,tort_,gravel_volFrac
+            -,m,m,volume fraction (-),volume fraction (-),perMeter,-,mm per day,-,volume fraction (-)
+            1,0.0000,-0.3000,0.3786,0.0000,20.3870,1.2347,2854.9100,-3.3390,0.1750
+            2,-0.3000,-0.4000,0.3786,0.0000,20.3870,1.2347,2854.9100,-3.3390,0.3750
+            3,-0.4000,-1.0000,0.3786,0.0000,20.3870,1.2347,2854.9100,-3.3390,0.7500
+            """
+            synthetic_param = """
+            param_id,x
+            ### Isotope transport parameters  -------,NA
+            VXYLEM_mm, 20
+            DISPERSIVITY_mm, 40
+            ### Meteorologic site parameters -------,NA
+            LAT_DEG,47
+            ESLOPE_DEG,0
+            ASPECT_DEG,0
+            ALB,0.2
+            ALBSN,0.5
+            C1,0.25
+            C2,0.5
+            C3,0.2
+            WNDRAT,0.3
+            FETCH,5000
+            Z0W,0.005
+            ZW,2
+            ### Canopy parameters -------,NA
+            MAXLAI,3
+            DENSEF_baseline_,1
+            SAI_baseline_,1
+            AGE_baseline_yrs,100
+            HEIGHT_baseline_m,25
+            LWIDTH,0.1
+            Z0G,0.00325
+            Z0S,0.001
+            LPC,4
+            CZS,0.13
+            CZR,0.05
+            HS,1
+            HR,10
+            ZMINH,2
+            RHOTP,2
+            NN,2.5
+            ### Interception parameters -------,NA
+            FRINTLAI,0.06
+            FSINTLAI,0.04
+            FRINTSAI,0.06
+            FSINTSAI,0.04
+            CINTRL,0.15
+            CINTRS,0.15
+            CINTSL,0.6
+            CINTSS,0.6
+            RSTEMP,-0.5
+            ### Snowpack parameters -------,NA
+            MELFAC,1.5
+            CCFAC,0.3
+            LAIMLT,0.2
+            SAIMLT,0.5
+            GRDMLT,0.35
+            MAXLQF,0.05
+            KSNVP,0.3
+            SNODEN,0.3
+            ### Leaf evaporation parameters (affecting PE) -------,NA
+            GLMAX,0.00868
+            GLMIN,0.0003
+            CR,0.5
+            RM,1000
+            R5,287
+            CVPD,2
+            TL,0
+            T1,10
+            T2,30
+            TH,40
+            ### Plant parameters (affecting soil-water supply) -------,NA
+            MXKPL,15.64
+            MXRTLN,3000
+            INITRLEN,12
+            INITRDEP,0.25
+            RGRORATE,0.03
+            RGROPER,30
+            FXYLEM,0.5
+            PSICR,-1.03942
+            RTRAD,0.35
+            NOOUTF,1
+            ### Soil parameters -------,NA
+            IDEPTH_m,0.0
+            QDEPTH_m,0
+            RSSA,795.29579
+            RSSB,1
+            INFEXP,0.0
+            BYPAR,0
+            QFPAR,1
+            QFFC,0
+            IMPERV,0
+            DSLOPE,0
+            LENGTH_SLOPE,200
+            DRAIN,0.0
+            GSC,0
+            GSP,0
+            ### Numerical solver parameters -------,NA
+            DTIMAX,0.5
+            DSWMAX,0.05
+            DPSIMAX,0.0005
+            """
+
+            synthetic_inputs = (
+                meteoiso = synthetic_meteoiso,
+                meteoveg = synthetic_meteoveg,
+                soil_horizons = synthetic_soil_horizons,
+                param = synthetic_param,
+            )
+            for (file_suffix, contents) in pairs(synthetic_inputs)
+                filepath = joinpath(path, "$(testcase)_$(file_suffix).csv")
+                open(filepath, "w") do io
+                    Base.write(io, strip(contents) * "\n")
+                end
+            end
+
+            parametrizedSPAC = loadSPAC(
+                path, testcase;
+                simulate_isotopes = true,
+                Δz_thickness_m = Δz_m,
+                root_distribution = (beta = 0.9, z_rootMax_m = -1.0),
+                IC_soil = (
+                    PSIM_init_kPa = -7.0, 
+                    delta18O_init_permil = -6.0, 
+                    delta2H_init_permil = -38.0),
+                canopy_evolution = (DENSEF_rel = 100, HEIGHT_rel = 100, SAI_rel = 100,
+                                                LAI_rel = (DOY_Bstart = 50, # no leaves before DOY 50
+                                                    Bduration  = 1,
+                                                    DOY_Cstart = 365,
+                                                    Cduration  = 1,
+                                                    LAI_perc_BtoC = 0,
+                                                    LAI_perc_CtoB = 0)),
+                storm_durations_h = [4., 4., 4., 4., 4., 4., 4., 4., 4., 4., 4., 4.],
+                IC_scalar = (amount = (u_GWAT_init_mm = 1.,
+                                    u_INTS_init_mm = 0,
+                                    u_INTR_init_mm = 0.,
+                                    u_SNOW_init_mm = 0,
+                                    u_CC_init_MJ_per_m2 = 0,
+                                    u_SNOWLQ_init_mm =  0.),
+                            d18O    = (u_GWAT_init_permil = -11.111,
+                                    u_INTS_init_permil = -12.222,
+                                    u_INTR_init_permil = -13.333,
+                                    u_SNOW_init_permil = -14.444),
+                            d2H     = (u_GWAT_init_permil = -95.111,
+                                    u_INTS_init_permil = -95.222,
+                                    u_INTR_init_permil = -95.333,
+                                    u_SNOW_init_permil = -95.444)));
+        finally
+            rm(path; recursive = true, force = true)
+        end
+
+        return parametrizedSPAC
+    end
+    @test_throws ArgumentError setup_base_SPAC_for_evaporation_test(testcase = "unknown")
+
+    
+    parametrizedSPAC = setup_base_SPAC_for_evaporation_test(Δz_m = [0.03, 0.07, fill(0.1, 15)...]);
+    run_evaporation_case = function (parametrizedSPAC, depth_m, does_fractionate)
+        simulation = remakeSPAC(
+            parametrizedSPAC;
+            params = (SLVPDEPTH_m = depth_m, DRAIN = 0.0, GSC = 0.0, DSLOPE = 0.0),
+            solver_options = (simulate_evaporation_fractionation = does_fractionate,),
+            requested_tspan = parametrizedSPAC.tspan)
+        simulate!(simulation; save_everystep = false,
+                  saveat = range(parametrizedSPAC.tspan...; step = 1.0))
+        @test SciMLBase.successful_retcode(simulation.ODESolution.retcode)
+        return simulation
+    end
+
+    
+    # A) With the refined 3 cm surface horizon, a 10 cm evaporation depth consists
+    # of two cells. Evaporation is apportioned by cell thickness.
+    shallow = run_evaporation_case(parametrizedSPAC, 0.10, false);
+    shallow_frac = run_evaporation_case(parametrizedSPAC, 0.10, true);
+
+    # check constant parameters:
+    nevap = shallow.ODEProblem.p.p_SLVPLAYER; @test nevap == 2
+    @test shallow.ODEProblem.p.p_SLVPFRAC[1:2] ≈ [0.03, 0.07] ./ 0.10
+    @test all(iszero, shallow.ODEProblem.p.p_SLVPFRAC[3:end])
+    nevap = shallow_frac.ODEProblem.p.p_SLVPLAYER; @test nevap == 2
+    @test shallow_frac.ODEProblem.p.p_SLVPFRAC[1:2] ≈ [0.03, 0.07] ./ 0.10
+    @test all(iszero, shallow_frac.ODEProblem.p.p_SLVPFRAC[3:end])
+    # check variable fluxes: the actual daily flux retains the configured depth
+    #       distribution and has no contribution below 10 cm.
+    for sol in [shallow.ODESolution, shallow_frac.ODESolution]
+        daily_evaporation_mm = [u.accum.cum_d_slvp for u in sol.u]
+        DOY_END = 27
+        evaporation_by_layer_mm = daily_evaporation_mm[DOY_END] .* shallow.ODEProblem.p.p_SLVPFRAC
+        @test daily_evaporation_mm[DOY_END] > 0
+        @test sum(evaporation_by_layer_mm) ≈ daily_evaporation_mm[DOY_END] # SLVPFRAC sums to 1.0
+        @test all(iszero, evaporation_by_layer_mm[3:end]) # redundant with SLVPFRAC, but good to check
+        # check total loss from the evaporation zone must equal the sum of the daily losses
+        evaporation_zone_loss_mm = sum(sol.u[DOY_END].SWATI.mm[1:nevap])     - sum(sol.u[1].SWATI.mm[1:nevap])
+        lower_zone_loss_mm       = sum(sol.u[DOY_END].SWATI.mm[nevap+1:end]) - sum(sol.u[1].SWATI.mm[nevap+1:end])
+        leakage_bottom = [u.accum.vrfln for u in sol.u]
+        @test sum(daily_evaporation_mm[1:DOY_END]) + sum(leakage_bottom) ≈ -(lower_zone_loss_mm + evaporation_zone_loss_mm) atol = 1e-8
+    end
+
+    sol = shallow_frac.ODESolution
+    # Diagnostic points in δ²H-δ¹⁸O space: initial source, atmospheric vapor,
+    # residual soil water through time, and instantaneous evaporated vapor.
+    layer_idx = 1
+    residual_18O = [u.SWATI.d18O[layer_idx] for u in sol.u[1:DOY_END]] # TODO: this should increase
+    residual_2H  = [u.SWATI.d2H[layer_idx] for u in sol.u[1:DOY_END]]# TODO: this should increase
+    residual_slope = (residual_2H[end] - residual_2H[1]) /
+                     (residual_18O[end] - residual_18O[1])
+    @test 2.0 < residual_slope < 6.0
+    @test residual_18O[end] > residual_18O[1]
+    @test residual_2H[end] > residual_2H[1]
+
+    # The callback stores the instantaneous evaporated-vapor composition only
+    # for cells that contribute to soil evaporation.
+    C_¹⁸O_SLVP = shallow_frac.ODEProblem.p.cache_for_ADE_28[12]
+    C_²H_SLVP  = shallow_frac.ODEProblem.p.cache_for_ADE_28[13]
+    @test all(x -> !iszero(x), C_¹⁸O_SLVP[1:nevap])
+    @test all(x -> !iszero(x), C_²H_SLVP[1:nevap])
+    @test all(iszero, C_¹⁸O_SLVP[(nevap + 1):end])
+    @test all(iszero, C_²H_SLVP[(nevap + 1):end])
+    temperature_C = shallow_frac.ODEProblem.p.p_fT_TADTM[1]
+    atmospheric_18O = LWFBrook90.ISO.δₐ(shallow_frac.ODEProblem.p.p_δ18O_PREC(sol.t[1]), LWFBrook90.ISO.α¹⁸O_eq(temperature_C))
+    atmospheric_2H = LWFBrook90.ISO.δₐ(shallow_frac.ODEProblem.p.p_δ2H_PREC(sol.t[1]), LWFBrook90.ISO.α²H_eq(temperature_C))
+    
+    # NOTE: we only have access to the vapor generated in the last time step
+    vapor_18O = LWFBrook90.ISO.x_to_δ(C_¹⁸O_SLVP[layer_idx], LWFBrook90.ISO.R_VSMOW¹⁸O)
+    vapor_2H = LWFBrook90.ISO.x_to_δ(C_²H_SLVP[layer_idx], LWFBrook90.ISO.R_VSMOW²H)
+    @test vapor_2H < sol.u[end].SWATI.d2H[layer_idx]
+    @test vapor_18O < sol.u[end].SWATI.d18O[layer_idx]
+    instantaneous_vapor_slope = (sol.u[end].SWATI.d2H[layer_idx] - vapor_2H) /
+                                (sol.u[end].SWATI.d18O[layer_idx] - vapor_18O)
+    @test 3.0 < instantaneous_vapor_slope < 6.0
+
+    # check visually (Fig2 Benettin et al. 2018)
+    # indices_to_plot = [1, 2, 3, 4, 5, 16, 25]
+    # using Plots
+    # plot(size=(500,500))
+    # plot!(residual_18O[indices_to_plot], residual_2H[indices_to_plot]; marker=:circle, label="Residual Liquid")
+    # scatter!(residual_18O[[1]], residual_2H[[1]]; marker=:star, label="Source", color=:yellow)
+    # scatter!([atmospheric_18O], [atmospheric_2H]; marker=:diamond, label="Atmosphere", color=:orange)
+    # # scatter!([vapor_18O], [vapor_2H]; marker=:cross, label="Generated Vapor", color=:blue) # TODO: we only have access to the vapor generated in the last time step
+    # d18O_range = [-35, 10]
+    # plot!(d18O_range, 8 .* d18O_range .+ 10; linestyle=:dash, label="LMWL")
+    # plot!(d18O_range,
+    #       residual_2H[1] .+ residual_slope .* (d18O_range .- residual_18O[1]);
+    #       linestyle=:dashdot, label="LEL")
+    # plot!(; xlims=(-35, 15), ylims=(-140, 40))
+
+
+
+    # B) Increase the evaporation depth and enable Craig-Gordon fractionation.
+    deep = run_evaporation_case(parametrizedSPAC, 0.30, true)
+
+    # check constant parameters
+    nevap = deep.ODEProblem.p.p_SLVPLAYER; @test nevap == 4
+    @test deep.ODEProblem.p.p_SLVPFRAC[1:nevap] ≈ [0.03, 0.07, 0.10, 0.10] ./ 0.30
+    @test all(iszero, deep.ODEProblem.p.p_SLVPFRAC[(nevap + 1):end])
+    # check variable fluxes: the actual daily flux retains the configured depth
+    #       distribution and has no contribution below 10 cm.
+    sol = deep.ODESolution
+    daily_evaporation_mm = [u.accum.cum_d_slvp for u in sol.u]
+    DOY_END = 27
+    evaporation_by_layer_mm = daily_evaporation_mm[DOY_END] .* deep.ODEProblem.p.p_SLVPFRAC
+    @test daily_evaporation_mm[DOY_END] > 0
+    @test sum(evaporation_by_layer_mm) ≈ daily_evaporation_mm[DOY_END] # SLVPFRAC sums to 1.0
+    @test all(iszero, evaporation_by_layer_mm[(nevap + 1):end]) # redundant with SLVPFRAC, but good to check
+    # check total loss from the evaporation zone must equal the sum of the daily losses
+    # No precipitation, transpiration, drainage, or lateral flow occurs. 
+    # Thus their summed soil evaporation must equal the loss from the complete soil profile.
+    evaporation_zone_loss_mm = sum(sol.u[DOY_END].SWATI.mm[1:nevap])     - sum(sol.u[1].SWATI.mm[1:nevap])
+    lower_zone_loss_mm       = sum(sol.u[DOY_END].SWATI.mm[nevap+1:end]) - sum(sol.u[1].SWATI.mm[nevap+1:end])
+    full_profile_loss_mm     = sum(sol.u[DOY_END].SWATI.mm)              - sum(sol.u[1].SWATI.mm)
+    evaporation_mm  = sum(u.accum.cum_d_slvp for u in sol.u[2:DOY_END])
+
+    @test evaporation_mm > 0
+    @test sum(daily_evaporation_mm[1:DOY_END]) + sum(leakage_bottom) ≈ -(lower_zone_loss_mm + evaporation_zone_loss_mm) atol = 1e-8
+
+
+
+    # C) check evaporation fractionation of a bucket that is only 0.5 cm thick (1 layer):
+    parametrizedSPAC_bucket = setup_base_SPAC_for_evaporation_test(
+        Δz_m = [0.005]);
+    parametrizedSPAC_bucket = remakeSPAC(
+        parametrizedSPAC_bucket; 
+        requested_tspan = (0,30),
+        soil_horizons = (ths_ = 1.0, Ksat_mmday = 100, alpha_per_m = 7.11, gravel_volFrac = 0.0),
+        params = (SLVPDEPTH_m = 0.005, QDEPTH_m=0.0, IDEPTH_m=0.0, 
+                DRAIN=0.0, BYPAR=0, INFEXP=0.0, GSC = 0.0, DSLOPE = 0.0))
+    # parametrizedSPAC.pars.params.SLVPDEPTH_m
+    # parametrizedSPAC_bucket.parametrizedSPAC.pars.params.SLVPDEPTH_m
+    # parametrizedSPAC_bucket.ODEProblem.p.p_SLVPLAYER
+    
+    bucket_frac = run_evaporation_case(parametrizedSPAC_bucket.parametrizedSPAC, 0.005, true)
+    nevap = bucket_frac.ODEProblem.p.p_SLVPLAYER; @test nevap == 1
+    # check variable fluxes: the actual daily flux retains the configured depth
+    #       distribution and has no contribution below 10 cm.
+    sol = bucket_frac.ODESolution
+    daily_evaporation_mm = [u.accum.cum_d_slvp for u in sol.u]
+    DOY_END = 30
+    evaporation_by_layer_mm = daily_evaporation_mm[DOY_END] .* shallow.ODEProblem.p.p_SLVPFRAC
+    @test daily_evaporation_mm[DOY_END] > 0
+    @test sum(evaporation_by_layer_mm) ≈ daily_evaporation_mm[DOY_END] # SLVPFRAC sums to 1.0
+    @test all(iszero, evaporation_by_layer_mm[3:end]) # redundant with SLVPFRAC, but good to check
+    # check total loss from the evaporation zone must equal the sum of the daily losses
+    evaporation_zone_loss_mm = sum(sol.u[DOY_END].SWATI.mm[1:nevap])     - sum(sol.u[1].SWATI.mm[1:nevap])
+    lower_zone_loss_mm       = sum(sol.u[DOY_END].SWATI.mm[nevap+1:end]) - sum(sol.u[1].SWATI.mm[nevap+1:end])
+    leakage_bottom = [u.accum.vrfln for u in sol.u]
+    @test sum(daily_evaporation_mm[1:DOY_END]) + sum(leakage_bottom) ≈ -(lower_zone_loss_mm + evaporation_zone_loss_mm) atol = 1e-8
+
+    # Diagnostic points in δ²H-δ¹⁸O space: initial source, atmospheric vapor,
+    # residual soil water through time, and instantaneous evaporated vapor.
+    layer_idx = 1
+    residual_18O = [u.SWATI.d18O[layer_idx] for u in sol.u[1:DOY_END]] # TODO: this should increase
+    residual_2H  = [u.SWATI.d2H[layer_idx] for u in sol.u[1:DOY_END]]# TODO: this should increase
+    residual_slope = (residual_2H[end] - residual_2H[1]) /
+                     (residual_18O[end] - residual_18O[1])
+    @test 2.0 < residual_slope < 6.0
+    @test 2.4 < residual_slope < 6.0
+    @test residual_18O[end] > residual_18O[1]
+    @test residual_2H[end] > residual_2H[1]
+
+    # The callback stores the instantaneous evaporated-vapor composition only
+    # for cells that contribute to soil evaporation.
+    C_¹⁸O_SLVP = bucket_frac.ODEProblem.p.cache_for_ADE_28[12]
+    C_²H_SLVP  = bucket_frac.ODEProblem.p.cache_for_ADE_28[13]
+    @test all(x -> !iszero(x), C_¹⁸O_SLVP[1:nevap])
+    @test all(x -> !iszero(x), C_²H_SLVP[1:nevap])
+    @test all(iszero, C_¹⁸O_SLVP[(nevap + 1):end])
+    @test all(iszero, C_²H_SLVP[(nevap + 1):end])
+    temperature_C = bucket_frac.ODEProblem.p.p_fT_TADTM[1]
+    atmospheric_18O = LWFBrook90.ISO.δₐ(bucket_frac.ODEProblem.p.p_δ18O_PREC(sol.t[1]), LWFBrook90.ISO.α¹⁸O_eq(temperature_C))
+    atmospheric_2H = LWFBrook90.ISO.δₐ(bucket_frac.ODEProblem.p.p_δ2H_PREC(sol.t[1]), LWFBrook90.ISO.α²H_eq(temperature_C))
+
+    # # Benettin 2018 (eq. 6): deltaStar: final concentration of the evaporated liquid
+    vappres_kPa = 1.755 # kPa
+    h = min(1.0, vappres_kPa / LWFBrook90.PET.ESAT(20)[1]) # -, relative humidity of the atmosphere
+    
+    αplus_18O = LWFBrook90.ISO.α¹⁸O_eq(20)
+    αplus_2H  = LWFBrook90.ISO.α²H_eq(20)
+    ϵplus_18O = (αplus_18O-1) * 1000
+    ϵplus_2H  = (αplus_2H -1) * 1000
+    # ϵk_18O = (13.8+27.7)/2 # approx.
+    # ϵk_2H  = (12.2+24.5)/2 # approx.
+    Di_D_2H  = 0.9755
+    Di_D_18O = 0.9723
+    ϵk_2H  = 1*1*(1-h)*(1 - Di_D_2H ) * 1000
+    ϵk_18O = 1*1*(1-h)*(1 - Di_D_18O) * 1000
+
+    deltaStar_18O = (h*atmospheric_18O + ϵk_18O + ϵplus_18O/αplus_18O)/(h - ϵk_18O/1000 + ϵplus_18O/1000/αplus_18O)
+    deltaStar_2H  = (h*atmospheric_2H  + ϵk_2H  + ϵplus_2H /αplus_2H )/(h - ϵk_2H /1000 + ϵplus_2H /1000/αplus_2H )
+    
+    # NOTE: we only have access to the vapor generated in the last time step
+    vapor_18O = LWFBrook90.ISO.x_to_δ(C_¹⁸O_SLVP[layer_idx], LWFBrook90.ISO.R_VSMOW¹⁸O)
+    vapor_2H = LWFBrook90.ISO.x_to_δ(C_²H_SLVP[layer_idx], LWFBrook90.ISO.R_VSMOW²H)
+    @test vapor_2H < sol.u[end].SWATI.d2H[layer_idx]
+    @test vapor_18O < sol.u[end].SWATI.d18O[layer_idx]
+    instantaneous_vapor_slope = (sol.u[end].SWATI.d2H[layer_idx] - vapor_2H) /
+                                (sol.u[end].SWATI.d18O[layer_idx] - vapor_18O)
+    @test 2.5 < instantaneous_vapor_slope < 6.0
+    @test 2.5 < instantaneous_vapor_slope < 3.2
+
+    # check visually (Fig2 Benettin et al. 2018)
+    # indices_to_plot = [1, 2, 3, 4, 5, 10, 15, 20, 25, 30]
+    # using Plots
+    # plot(size=(500,500))
+    # d18O_range = [-35, 10]
+    # plot!(d18O_range, 8 .* d18O_range .+ 10; linestyle=:dash, label="LMWL")
+    # plot!(d18O_range,
+    #       residual_2H[1] .+ residual_slope .* (d18O_range .- residual_18O[1]);
+    #       linestyle=:dashdot, label="LEL")
+    # plot!(residual_18O[indices_to_plot], residual_2H[indices_to_plot]; marker=:circle, label="Residual Liquid")
+    # scatter!([atmospheric_18O], [atmospheric_2H]; marker=:diamond, label="Atmosphere", color=:orange)
+    # # scatter!([vapor_18O], [vapor_2H]; marker=:cross, label="Generated Vapor", color=:blue) # TODO: we only have access to the vapor generated in the last time step
+    # scatter!(residual_18O[[1]], residual_2H[[1]]; marker=:star, label="Source", color=:yellow, markersize=10)
+    # scatter!([deltaStar_18O], [deltaStar_2H]; marker=:star, label="Limit. composition", color=:grey, markersize=10)
 end
 
 @testset "bare-minimum provided to loadSPAC" begin

@@ -114,7 +114,8 @@ function refine_soil_discretization(
     input_soil_horizons::DataFrame,
     soil_output_depths_m::Vector,
     IDEPTH_m::Real, # = modified_SPAC.pars.params[:IDEPTH_m],
-    QDEPTH_m::Real; # = modified_SPAC.pars.params[:QDEPTH_m])
+    QDEPTH_m::Real, # = modified_SPAC.pars.params[:QDEPTH_m])
+    SLVPDEPTH_m::Real;
 
     # Define what is close enough for soil_output_depths_m (also minimal thickness of layers to create with this procedure)
     # ε = 0.005     # thickness of layer to be inserted, [m]
@@ -159,11 +160,12 @@ function refine_soil_discretization(
 
     # To accomodate current parameter settings (e.g. infiltration depth)
     interfaces_for_parameters = sort([
-         # interfaces for change in horizons or inflow depths or QDEPTH_m
+         # interfaces for change in horizons or inflow depths or QDEPTH_m or SLVPDEPTH_m
          input_soil_horizons[!,"Upper_m"];
          input_soil_horizons[!,"Lower_m"];
          -IDEPTH_m; # m (positive) to m (negative)
          -QDEPTH_m;  # m (positive) to m (negative)
+         -SLVPDEPTH_m; # m (positive) to m (negative)
          ];
         rev = true)
 
@@ -226,19 +228,27 @@ function refine_soil_discretization(
               ifelse(length(soil_output_depths_m)==0,".",", or `soil_output_depths_m`=$soil_output_depths_m.")
     end
 
-    # Define IDEPTH_idx and QDEPTH_idx (to be used internally instead of IDEPTH_m and QDEPTH_m)
+    # Define IDEPTH_idx, QDEPTH_idx, and SLVPDEPTH_idx (to be used internally instead of IDEPTH_m, QDEPTH_m, and SLVPDEPTH_m)
     is_infiltration_layer_BOOLEAN = -IDEPTH_m .<= refined_soil_discr[!,"Lower_m"]
     is_SRFL_layer_BOOLEAN         = -QDEPTH_m .<= refined_soil_discr[!,"Lower_m"]
+    # Tolerate roundoff in cumulative depths (three 0.1 m cells may end at
+    # -0.30000000000000004 rather than exactly -0.3 m), without extending the
+    # evaporation domain by the much larger grid-refinement tolerance `ε`.
+    lower_m = refined_soil_discr[!, "Lower_m"]
+    is_SLVP_layer_BOOLEAN =
+        (lower_m .>= -SLVPDEPTH_m) .| isapprox.(lower_m, -SLVPDEPTH_m)
     IDEPTH_idx = sum(is_infiltration_layer_BOOLEAN) # lowest node where Lower_m is below IDEPTH_m
     QDEPTH_idx = sum(is_SRFL_layer_BOOLEAN)         # lowest node where Lower_m is below QDEPTH_m
+    SLVPDEPTH_idx = max(1, sum(is_SLVP_layer_BOOLEAN))      # lowest node where Lower_m is below SLVPDEPTH_m (at least 1)
 
     if (-IDEPTH_m < refined_soil_discr[end,"Lower_m"]) ||
-        (-QDEPTH_m < refined_soil_discr[end,"Lower_m"])
-        error("QDEPTH_m or IDEPTH_m were defined deeper than the lowest simulation element.")
+        (-QDEPTH_m < refined_soil_discr[end,"Lower_m"]) ||
+        (-SLVPDEPTH_m < refined_soil_discr[end,"Lower_m"])
+        error("QDEPTH_m, IDEPTH_m, or SLVPDEPTH_m were defined deeper than the lowest simulation element.")
     end
     ############
 
-    return refined_soil_discr, IDEPTH_idx, QDEPTH_idx
+    return refined_soil_discr, IDEPTH_idx, QDEPTH_idx, SLVPDEPTH_idx
     # return refined_Δz, IDEPTH_idx, QDEPTH_idx
 end
 

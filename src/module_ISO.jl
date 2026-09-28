@@ -14,10 +14,13 @@ mixing computed in the first operator step.
 
 Turbulence conditions are fixed to different values for each compartment (X_INTR, X_INTS, X_SNOW).
 
-Evaporation from the soil is modelled from the uppermost layer only.TODO(bernhard): Should this be improved?
+Soil evaporation is sourced from the uppermost input layer by default, or from layers
+within the source zone configured by `SLVPDEPTH_m`, weighted by layer thickness.
+Craig-Gordon fractionation of soil evaporation is enabled with
+`simulate_evaporation_fractionation = true` (default: `false`) when simulating isotopes.
 Turbulence conditions for evaporation from the soil layer are conditional on the soil moisture
 status $θ$ following (Zhou-2021-Environ_Model_Softw (X is called n_k there)) as a weighted
-average between $X_s = 1$ (molecular diffusion only) and $X_s = 0.5$ (both molecular and turbulent diffusion):
+average between $X_s = 1$ (molecular diffusion only) and $X_a = 0.5$ (both molecular and turbulent diffusion):
 ```math
 X_{soil} = \frac{(θ-θ_{res})*X_a + (θ_{sat}-θ)*X_s}{(θ_{sat}-θ_{res})}
 ```
@@ -28,16 +31,17 @@ module ISO # ISOTOPIC MIXING AND FRACTIONATION
 
 using ..PET: ESAT
 
-export α¹⁸O_dif, α²H_dif, α¹⁸O_eq, α²H_eq, δ_CraigGordon, update_δ_with_mixing_and_evaporation
+export α¹⁸O_dif, α²H_dif, α¹⁸O_eq, α²H_eq, δ_CraigGordon_remain_liquid, update_δ_with_mixing_and_evaporation
 export R_VSMOW¹⁸O, R_VSMOW²H, Mi_¹⁸O, Mi_²H, Mw
 export δ_to_x, x_to_δ, dxdt_to_dδdt, δ_to_C, C_to_δ
+export compute_X_soil, δₐ, δ_CraigGordon_evap_flux
 
 # Isotopic ratios of standard ocean water VSMOW (reference for definition of δ)
-R_VSMOW¹⁸O = 2005.2e-6 # (source: Baertschi-1976-Earth_Planet_Sci_Lett)
-R_VSMOW²H  = 155.76e-6 # (source: Hagemann-1970-Tellus)
-Mi_¹⁸O = 0.020 # Molar mass of ¹H¹H¹⁸O in kg
-Mi_²H  = 0.019 # Molar mass of ¹H²H¹⁶O in kg
-Mw     = 0.018 # Molar mass of ¹H¹H¹⁶O in kg
+const R_VSMOW¹⁸O = 2005.2e-6 # (source: Baertschi-1976-Earth_Planet_Sci_Lett)
+const R_VSMOW²H  = 155.76e-6 # (source: Hagemann-1970-Tellus)
+const Mi_¹⁸O = 0.020 # Molar mass of ¹H¹H¹⁸O in kg
+const Mi_²H  = 0.019 # Molar mass of ¹H²H¹⁶O in kg
+const Mw     = 0.018 # Molar mass of ¹H¹H¹⁶O in kg
 
 #TODO(bernhard): debug issues and switch this back on...
 # δ to C (and back) implementation below is approximative (assuming Ni*Mi << Nw*Mw)
@@ -57,8 +61,8 @@ dxdt_to_dδdt(dxdt, x, R_std) = dxdt .* 1 ./ R_std .* 1 ./ (x .- 1).^2 .* 1000  
 
 
 # 1a) Kinetic fractionation (Gonfiantini 2018):
-α¹⁸O_dif = 1.0285 # -, D/D_i i.e. ¹H¹H¹⁶O/¹H¹H¹⁸O: Taken from Gonfiantini 2018, citing Merlivat 1978
-α²H_dif  = 1.0251 # -, D/D_i i.e. ¹H¹H¹⁶O/¹H¹H¹⁸O: Taken from Gonfiantini 2018, citing Merlivat 1978
+const α¹⁸O_dif = 1.0285 # -, D/D_i i.e. ¹H¹H¹⁶O/¹H¹H¹⁸O: Taken from Gonfiantini 2018, citing Merlivat 1978
+const α²H_dif  = 1.0251 # -, D/D_i i.e. ¹H¹H¹⁶O/¹H¹H¹⁸O: Taken from Gonfiantini 2018, citing Merlivat 1978
 
 # 1b) Equilibrium fractionation
 function α¹⁸O_eq(temp_celsius = 25.) # temp_celsius is temperature in Celsius
@@ -83,16 +87,80 @@ function α²H_eq(temp_celsius = 25.) # temp_celsius is temperature in Celsius
 end
 
 # 7a) source: equations from Gonfiantini 2018
-function δ_CraigGordon(δ0, δΑ, f, h, α_eq, α_dif, γ, X)
+@doc raw"""
+    δ_CraigGordon_evap_flux(δ_liquid, δ_atm, h, α_eq, α_dif, γ, X)
+
+Computes the isotopic composition of the evaporating vapor flux $\delta_E$ (‰) using the Craig-Gordon (1965) / Gonfiantini (1986, 2018) formulation:
+```math
+\delta_E = 1000 \cdot \left( \frac{\frac{\gamma}{\alpha_{eq}} (1 + \delta_L / 1000) - h (1 + \delta_a / 1000)}{(\gamma - h) \alpha_{dif}^X} - 1 \right)
+```
+where $h$ is atmospheric relative humidity normalized to evaporating surface temperature (clamped $< \gamma$).
+Isotopic deltas in inputs and return value are in permil, i.e. multiplied by 1000. 
+Fractionation factors ($\alpha_{eq}$, $\alpha_{dif}$) are given as ratios (i.e. not multiplied by 1000).
+"""
+function δ_CraigGordon_evap_flux(δ_liquid, δ_atm, h, α_eq, α_dif, γ, X)
+    h_safe = clamp(h, 0.0001, 0.999 * γ)
+
+    # Consider an evaporating body:
+    #   Mass balance all water: E = φesc - φcap = φ0vap * (γ - h) # positive outgoing (Gonfiantini 2018 Eq 6) ==> use to replace φ0vap = E/(γ - h)
+    #   Mass balance heavy iso: d(W*Rw)/dt = φesc*Resc - φcap*Rcap = φ0vap(γ*Resc - h*Rcap) = (Gonfiantini 2018 Eq 4,5 and Eq. 7)
+    #                 but also: d(W*Rw)/dt = E * R_net_evap_flux
+    #                 we want to compute the instantaneous net flux R_net_evap_flux (to integrate numerically over time)
+    
+    term_atm = h_safe * (1.0 + δ_atm / 1000.0)
+    term_liquid = (γ / α_eq) * (1.0 + δ_liquid / 1000.0)
+    denom = (γ - h_safe) * (α_dif^X)
+
+    R_net_evap_flux = (term_liquid - term_atm) / denom # TODO: check whether it is term_liquid - term_atm or term_atm - term_liquid
+
+    return (R_net_evap_flux - 1.0) * 1000.0
+end
+function δ_CraigGordon_remain_liquid(δ_liquid, δ_atm, f, h, α_eq, α_dif, γ, X)  # TODO: bring together with δ_CraigGordon_evap_flux
+    # Note, contrary to δ_CraigGordon_evap_flux that gives the signature of the instantaneous flux. This function computes
+    # the signature of the remaining liquid considering analytical integration of a single sink evaporation process (resulting in remaingin fraction f).
+    # This is not what we need to integrate numerically.s
+    
     # A(h, γ, α_dif, X)       = -h / (α_dif^X * (γ-h))            # Eq 12
     # B(h, γ, α_eq, α_dif, X) = γ / (α_eq * α_dif^X * (γ-h)) - 1  # Eq 13
     # Rw(A,B,RA,Rw0,f)        = -A/B*RA + (Rw0 + A/B*RA)*f^B      # Eq 14
 
-    A = -h / (α_dif^X * (γ-h))            # Eq 12
-    B = γ / (α_eq * α_dif^X * (γ-h)) - 1  # Eq 13
+    h_safe = clamp(h, 0.0001, 0.999 * γ)
 
-    return (-1 -A/B*(δΑ + 1) + (δ0 + 1 + A/B*(δΑ+1)) * f^B) # (-)
+    A = -h_safe / (α_dif^X * (γ - h_safe))       # Eq 12
+    B = γ / (α_eq * α_dif^X * (γ - h_safe)) - 1  # Eq 13
+
+    return 1000.0 * (-1.0 - A / B * (δ_atm / 1000.0 + 1.0) + (δ_liquid / 1000.0 + 1.0 + A / B * (δ_atm / 1000.0 + 1.0)) * f^B) # (-) # Eq. 15
 end
+
+@doc raw"""
+    compute_X_soil(θ, θ_res, θ_sat; X_a = 0.5, X_s = 1.0)
+
+Computes the soil turbulence/roughness exponent $X_{soil}$ ($n_k$ in Zhou et al. 2021 / Fu et al. 2025 eq. 24) as a weighted average
+between atmospheric turbulence ($X_a = 0.5$) and molecular pore diffusion ($X_s = 1.0$) based on soil moisture:
+```math
+X_{soil} = \frac{(\theta - \theta_{res}) X_a + (\theta_{sat} - \theta) X_s}{\theta_{sat} - \theta_{res}}
+```
+Clamped to $[\min(X_a, X_s), \max(X_a, X_s)]$.
+"""
+function compute_X_soil(θ, θ_res, θ_sat; X_a=0.5, X_s=1.0)
+    # X_SOIL = ((θ-θ_res)*Xa + (θ_sat-θ)*Xs) / (θ_sat-θ_res)
+
+    rel_sat = clamp((θ - θ_res) / (θ_sat - θ_res), 0.0, 1.0)
+    return rel_sat * X_a + (1.0 - rel_sat) * X_s
+end
+
+@doc raw"""
+    δₐ(δ_precip, α_eq)
+
+Computes the isotopic signature of atmospheric water vapor (assumed to be in equilibrium with precipitation) in permil (‰)
+using eq. 49 (Fu et al. 2025):
+```math
+\delta_a = \frac{\delta_p - 1000 (\alpha_{eq} - 1)}{\alpha_{eq}}
+```
+Isotopic deltas in inputs and return value are in permil, i.e. multiplied by 1000. 
+Fractionation factor ($\alpha_{eq}$) are given as ratios (i.e. not multiplied by 1000).
+"""
+δₐ(δ_precip, α_eq) = (δ_precip - 1000.0 * (α_eq - 1.0)) / α_eq
 
 function update_δ_with_mixing_and_evaporation(dt, u₀, δ₀, inflow, δin, outflow, R_std, E, δₐ, h, α_eq, α_dif, γ, X; do_fractionation=false)
     # dt       [day]      , time step
@@ -300,8 +368,8 @@ function compute_isotope_U_of_INTS_INTR_SNOW_and_SLFL(
                 #     # ε_δ2H  = 1/(ISO.α²H_eq(Tc)  * ISO.α²H_dif^X_INTS)  - 1
                 #     # u_δ18O_INTS_final = 1000 * ( (1 + u_δ18O_INTS_first/1000)(f_INTS)^ε_δ18O - 1 )
                 #     # u_δ2H_INTS_final  = 1000 * ( (1 + u_δ2H_INTS_first /1000)(f_INTS)^ε_δ2H  - 1 )
-                #     u_δ18O_INTS_final = u_δ18O_INTS_first#1000 * ISO.δ_CraigGordon.(u_δ18O_INTS_first/1000, δ¹⁸O_a/1000, f_INTS, h, ISO.α¹⁸O_eq(Tc), ISO.α¹⁸O_dif, γ, X_INTS)
-                #     u_δ2H_INTS_final  = u_δ2H_INTS_first#1000 * ISO.δ_CraigGordon.(u_δ2H_INTS_first /1000,  δ²H_a/1000, f_INTS, h, ISO.α²H_eq(Tc),  ISO.α²H_dif,  γ, X_INTS)
+                #     u_δ18O_INTS_final = u_δ18O_INTS_first#ISO.δ_CraigGordon_remain_liquid.(u_δ18O_INTS_first, δ¹⁸O_a, f_INTS, h, ISO.α¹⁸O_eq(Tc), ISO.α¹⁸O_dif, γ, X_INTS)
+                #     u_δ2H_INTS_final  = u_δ2H_INTS_first#ISO.δ_CraigGordon_remain_liquid.(u_δ2H_INTS_first ,  δ²H_a, f_INTS, h, ISO.α²H_eq(Tc),  ISO.α²H_dif,  γ, X_INTS)
                 # end
 
                 # # 2b) INTR (in: RINT*δ_RINT; out: IRVP*δ_IRVP)
@@ -328,8 +396,8 @@ function compute_isotope_U_of_INTS_INTR_SNOW_and_SLFL(
                 #     # ε_δ2H  = 1/(ISO.α²H_eq(Tc)  * ISO.α²H_dif^X_INTR)  - 1
                 #     # u_δ18O_INTR_final = 1000 * ( (1 + u_δ18O_INTR_first/1000)(f_INTR)^ε_δ18O - 1 )
                 #     # u_δ2H_INTR_final  = 1000 * ( (1 + u_δ2H_INTR_first /1000)(f_INTR)^ε_δ2H  - 1 )
-                #     u_δ18O_INTR_final = u_δ18O_INTR_first# 1000 * ISO.δ_CraigGordon.(u_δ18O_INTR_first/1000, δ¹⁸O_a/1000, f_INTR, h, ISO.α¹⁸O_eq(Tc), ISO.α¹⁸O_dif, γ, X_INTR)
-                #     u_δ2H_INTR_final  = u_δ2H_INTR_first# 1000 * ISO.δ_CraigGordon.(u_δ2H_INTR_first /1000,  δ²H_a/1000, f_INTR, h, ISO.α²H_eq(Tc),  ISO.α²H_dif,  γ, X_INTR)
+                #     u_δ18O_INTR_final = u_δ18O_INTR_first# ISO.δ_CraigGordon_remain_liquid.(u_δ18O_INTR_first, δ¹⁸O_a, f_INTR, h, ISO.α¹⁸O_eq(Tc), ISO.α¹⁸O_dif, γ, X_INTR)
+                #     u_δ2H_INTR_final  = u_δ2H_INTR_first# ISO.δ_CraigGordon_remain_liquid.(u_δ2H_INTR_first ,  δ²H_a, f_INTR, h, ISO.α²H_eq(Tc),  ISO.α²H_dif,  γ, X_INTR)
                 # end
 
                 # # 2c) SNOW (in: STHR*δ_STHR, RSNO*δ_RSNO; out: SMLT*δ_SMLT, SNVP*δ_SNVP)
@@ -366,8 +434,8 @@ function compute_isotope_U_of_INTS_INTR_SNOW_and_SLFL(
                 #     # ε_δ2H  = 1/(ISO.α²H_eq(Tc)  * ISO.α²H_dif^X_SNOW)  - 1
                 #     # u_δ18O_SNOW_final = 1000 * ( (1 + u_δ18O_SNOW_first/1000)(f_SNOW)^ε_δ18O - 1 )
                 #     # u_δ2H_SNOW_final  = 1000 * ( (1 + u_δ2H_SNOW_first /1000)(f_SNOW)^ε_δ2H  - 1 )
-                #     u_δ18O_SNOW_final = u_δ18O_SNOW_first#1000 * ISO.δ_CraigGordon.(u_δ18O_SNOW_first/1000, δ¹⁸O_a/1000, f_SNOW, h, ISO.α¹⁸O_eq(Tc), ISO.α¹⁸O_dif, γ, X_SNOW)
-                #     u_δ2H_SNOW_final  = u_δ2H_SNOW_first#1000 * ISO.δ_CraigGordon.(u_δ2H_SNOW_first /1000,  δ²H_a/1000, f_SNOW, h, ISO.α²H_eq(Tc),  ISO.α²H_dif,  γ, X_SNOW)
+                #     u_δ18O_SNOW_final = u_δ18O_SNOW_first# ISO.δ_CraigGordon_remain_liquid.(u_δ18O_SNOW_first, δ¹⁸O_a, f_SNOW, h, ISO.α¹⁸O_eq(Tc), ISO.α¹⁸O_dif, γ, X_SNOW)
+                #     u_δ2H_SNOW_final  = u_δ2H_SNOW_first# ISO.δ_CraigGordon_remain_liquid.(u_δ2H_SNOW_first ,  δ²H_a, f_SNOW, h, ISO.α²H_eq(Tc),  ISO.α²H_dif,  γ, X_SNOW)
                 # end
 
     # 2a) u_INTS (in: aux_du_SINT*δ_SINT; out: aux_du_ISVP*δ_ISVP)
