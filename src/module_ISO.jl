@@ -34,11 +34,11 @@ export δ_to_x, x_to_δ, dxdt_to_dδdt, δ_to_C, C_to_δ
 export compute_X_soil, δₐ, δ_CraigGordon_evap_flux
 
 # Isotopic ratios of standard ocean water VSMOW (reference for definition of δ)
-R_VSMOW¹⁸O = 2005.2e-6 # (source: Baertschi-1976-Earth_Planet_Sci_Lett)
-R_VSMOW²H  = 155.76e-6 # (source: Hagemann-1970-Tellus)
-Mi_¹⁸O = 0.020 # Molar mass of ¹H¹H¹⁸O in kg
-Mi_²H  = 0.019 # Molar mass of ¹H²H¹⁶O in kg
-Mw     = 0.018 # Molar mass of ¹H¹H¹⁶O in kg
+const R_VSMOW¹⁸O = 2005.2e-6 # (source: Baertschi-1976-Earth_Planet_Sci_Lett)
+const R_VSMOW²H  = 155.76e-6 # (source: Hagemann-1970-Tellus)
+const Mi_¹⁸O = 0.020 # Molar mass of ¹H¹H¹⁸O in kg
+const Mi_²H  = 0.019 # Molar mass of ¹H²H¹⁶O in kg
+const Mw     = 0.018 # Molar mass of ¹H¹H¹⁶O in kg
 
 #TODO(bernhard): debug issues and switch this back on...
 # δ to C (and back) implementation below is approximative (assuming Ni*Mi << Nw*Mw)
@@ -58,8 +58,8 @@ dxdt_to_dδdt(dxdt, x, R_std) = dxdt .* 1 ./ R_std .* 1 ./ (x .- 1).^2 .* 1000  
 
 
 # 1a) Kinetic fractionation (Gonfiantini 2018):
-α¹⁸O_dif = 1.0285 # -, D/D_i i.e. ¹H¹H¹⁶O/¹H¹H¹⁸O: Taken from Gonfiantini 2018, citing Merlivat 1978
-α²H_dif  = 1.0251 # -, D/D_i i.e. ¹H¹H¹⁶O/¹H¹H¹⁸O: Taken from Gonfiantini 2018, citing Merlivat 1978
+const α¹⁸O_dif = 1.0285 # -, D/D_i i.e. ¹H¹H¹⁶O/¹H¹H¹⁸O: Taken from Gonfiantini 2018, citing Merlivat 1978
+const α²H_dif  = 1.0251 # -, D/D_i i.e. ¹H¹H¹⁶O/¹H¹H¹⁸O: Taken from Gonfiantini 2018, citing Merlivat 1978
 
 # 1b) Equilibrium fractionation
 function α¹⁸O_eq(temp_celsius = 25.) # temp_celsius is temperature in Celsius

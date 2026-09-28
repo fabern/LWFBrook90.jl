@@ -19,18 +19,17 @@ function norm_to_use(u::Real,           t) norm(u)                              
 #                                                                         u[12,1]], t) end
 function norm_to_use(u::ComponentVector, t)
     # DiffEqBase.ODE_DEFAULT_NORM(u.SWATI, t)
-    # NOTE: `aux` is missing on purpose
+    # NOTE: isotope signatures, `aux.ψ` and `aux.K` are excluded on purpose
     # NOTE: below replicates DiffEqBase.ODE_DEFAULT_NORM(u::Array, t) = sqrt(sum(abs2, u) / max(length(u), 1))
     #       without allocating a temporary `vcat(...)` array on every call (this function is called
     #       on every internal adaptive-step norm evaluation and was a major allocation hotspot).
-    ssq = 0.0
-    n   = 0
-    for comp in (u.GWAT.mm, u.INTS.mm, u.INTR.mm, u.SNOW.mm, u.CC.MJm2, u.SNOWLQ.mm,
+    # `map` specializes each member of this heterogeneous tuple; iterating over
+    # scalar and vector components together boxes values on every solver step.
+    components = (u.GWAT.mm, u.INTS.mm, u.INTR.mm, u.SNOW.mm, u.CC.MJm2, u.SNOWLQ.mm,
                  u.SWATI.mm, u.RWU.mmday, u.XYLEM.mm, u.TRANI.mmday,
                  u.aux.θ, #u.aux.ψ, u.aux.K,
                  u.accum)
-        ssq += sum(abs2, comp)
-        n   += length(comp)
-    end
+    ssq = sum(map(comp -> sum(abs2, comp), components))
+    n = sum(map(length, components))
     return sqrt(ssq / max(n, 1))
 end
