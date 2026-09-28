@@ -14,10 +14,13 @@ mixing computed in the first operator step.
 
 Turbulence conditions are fixed to different values for each compartment (X_INTR, X_INTS, X_SNOW).
 
-Evaporation from the soil is modelled from the uppermost layer only.TODO(bernhard): Should this be improved?
+Soil evaporation is sourced from the uppermost input layer by default, or from layers
+within the source zone configured by `SLVPDEPTH_m`, weighted by layer thickness.
+Craig-Gordon fractionation of soil evaporation is enabled with
+`simulate_evaporation_fractionation = true` (default: `false`) when simulating isotopes.
 Turbulence conditions for evaporation from the soil layer are conditional on the soil moisture
 status $θ$ following (Zhou-2021-Environ_Model_Softw (X is called n_k there)) as a weighted
-average between $X_s = 1$ (molecular diffusion only) and $X_s = 0.5$ (both molecular and turbulent diffusion):
+average between $X_s = 1$ (molecular diffusion only) and $X_a = 0.5$ (both molecular and turbulent diffusion):
 ```math
 X_{soil} = \frac{(θ-θ_{res})*X_a + (θ_{sat}-θ)*X_s}{(θ_{sat}-θ_{res})}
 ```
