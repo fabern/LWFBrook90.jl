@@ -39,7 +39,8 @@ function define_LWFB90_cb(tspan)
     saved_values = SavedValues(Float64, NamedTuple)
 
     save_func(u, t, integrator) = (
-        accum = deepcopy(u.accum),
+        # Copy just the accumulator values, not the parent state behind this view.
+        accum = copy(u.accum),
         RWU   = u.RWU.mmday,
         INTS  = u.INTS.mm,
         INTR  = u.INTR.mm,
