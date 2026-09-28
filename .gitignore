@@ -18,6 +18,7 @@ deps/src/
 # committed for packages, but should be committed for applications that require a static
 # environment.
 Manifest.toml
+Manifest-v*.toml
 
 # Settings from VisualStudioCode (taken from https://stackoverflow.com/a/57749909)
 .vscode/launch.json

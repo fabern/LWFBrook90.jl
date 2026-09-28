@@ -164,7 +164,7 @@ function plntres_reference(nlayer, soil, rtlen, relden, rtrad, rplant, fxylem, p
     return (rxylem, rrooti, alpha)
 end
 
-function routine_allocated(f, args)
+function routine_allocated(f::F, args::A) where {F, A}
     f(args...) # compile before measuring
     return @allocated f(args...)
 end
