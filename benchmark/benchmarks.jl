@@ -7,8 +7,11 @@ const EXAMPLE_PATH = normpath(joinpath(@__DIR__, "..", "examples", "DAV2020-full
 const EXAMPLE_PREFIX = "DAV2020-full"
 const BENCHMARK_TSPAN = (0.0, 30.0)
 
-function load_benchmark_model(; simulate_isotopes)
-    model = loadSPAC(EXAMPLE_PATH, EXAMPLE_PREFIX; simulate_isotopes)
+function load_benchmark_model(; simulate_isotopes, simulate_evaporation_fractionation = false)
+    model = loadSPAC(
+        EXAMPLE_PATH, EXAMPLE_PREFIX; 
+        simulate_isotopes = simulate_isotopes,
+        simulate_evaporation_fractionation = simulate_evaporation_fractionation)
     model.tspan = BENCHMARK_TSPAN
     return model
 end
@@ -21,8 +24,12 @@ end
 
 const WATER_MODEL = load_benchmark_model(; simulate_isotopes = false)
 const ISOTOPE_MODEL = load_benchmark_model(; simulate_isotopes = true)
+const ISOTOPE_FRACT_MODEL = load_benchmark_model(; 
+    simulate_isotopes = true,
+    simulate_evaporation_fractionation = true)
 
 simulation_suite = SUITE["model simulation"] = BenchmarkGroup()
+
 simulation_suite["DAV2020-full, 30 days, water"] =
     @benchmarkable solve_benchmark_model(simulation) setup = (
         simulation = setup($WATER_MODEL)
@@ -30,4 +37,8 @@ simulation_suite["DAV2020-full, 30 days, water"] =
 simulation_suite["DAV2020-full, 30 days, water and isotopes"] =
     @benchmarkable solve_benchmark_model(simulation) setup = (
         simulation = setup($ISOTOPE_MODEL)
+    ) evals = 1 samples = 10 seconds = 60
+simulation_suite["DAV2020-full, 30 days, water and isotopes and fractionation"] =
+    @benchmarkable solve_benchmark_model(simulation) setup = (
+        simulation = setup($ISOTOPE_FRACT_MODEL)
     ) evals = 1 samples = 10 seconds = 60
