@@ -24,6 +24,11 @@ Types of changes:
 ## [Unreleased]
 
 ### Added
+- ...
+
+## [0.10.0] - 2026-09-28
+
+### Added
 
 - This `CHANGELOG.md` file and release instructions in `README-for-Developers.md`.
 - By default `ODESimulations` now saves only daily values. Previous behavior was 
