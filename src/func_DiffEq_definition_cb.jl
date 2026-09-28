@@ -751,10 +751,16 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # θᵏ       = u_aux_θ_tminus1 # # TODO(bernhard): u_aux_θ_tminus1 is not saved, workaraound below:
         #_,_,_,θᵏ⁺¹[:],_ = LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATIᵏ⁺¹, p_soil)
         #_,_,_,θᵏ[:],_   = LWFBrook90.KPT.derive_auxiliary_SOILVAR(u_SWATIᵏ, p_soil)  # of time step before
-        # NOTE: in-place variant with local scratch (reused for both calls) instead of allocating 5 new arrays per call
-        _WETNES_scratch = similar(θᵏ⁺¹); _PSIM_scratch = similar(θᵏ⁺¹); _PSITI_scratch = similar(θᵏ⁺¹); _KK_scratch = similar(θᵏ⁺¹)
-        LWFBrook90.KPT.derive_auxiliary_SOILVAR!(_WETNES_scratch, _PSIM_scratch, _PSITI_scratch, θᵏ⁺¹, _KK_scratch, u_SWATIᵏ⁺¹, p_soil)
-        LWFBrook90.KPT.derive_auxiliary_SOILVAR!(_WETNES_scratch, _PSIM_scratch, _PSITI_scratch, θᵏ,   _KK_scratch, u_SWATIᵏ, p_soil)  # of time step before
+        # Only volumetric water content is needed here. Reuse the ADE caches
+        # without computing pressure/conductivity or allocating scratch vectors.
+        for i in eachindex(θᵏ⁺¹)
+            wetnessᵏ⁺¹ = min(1, (p_soil.p_THSAT[i] * u_SWATIᵏ⁺¹[i] / p_soil.p_SWATMAX[i] - p_soil.p_θr[i]) /
+                                  (p_soil.p_THSAT[i] - p_soil.p_θr[i]))
+            wetnessᵏ = min(1, (p_soil.p_THSAT[i] * u_SWATIᵏ[i] / p_soil.p_SWATMAX[i] - p_soil.p_θr[i]) /
+                                (p_soil.p_THSAT[i] - p_soil.p_θr[i]))
+            θᵏ⁺¹[i] = wetnessᵏ⁺¹ * (p_soil.p_THSAT[i] - p_soil.p_θr[i]) + p_soil.p_θr[i]
+            θᵏ[i] = wetnessᵏ * (p_soil.p_THSAT[i] - p_soil.p_θr[i]) + p_soil.p_θr[i]
+        end
 
         # TRANSPORT state variables (i.e. concentrations, not yet updated from tᵏ to tᵏ⁺¹)
         u_δ18O_GWAT   = integrator.u.GWAT.d18O
@@ -860,13 +866,15 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
 
         # Define (constant) soil transport properties
         N = NLAYER
-        # Tsoil_K .= (p_fT_TADTM[1] + 273.15) .* ones(N) # °C, NOTE: at a later point solution from heat equation instead of approximation of p_fT_TADTM could be used
-        Tsoil_K .= (p_fT_TA[1] + 273.15) .* ones(N) # °C, NOTE: at a later point solution from heat equation instead of approximation of p_fT_TADTM could be used
-        τw = θᵏ⁺¹ .^ (7/3) ./ (p_THSAT .^ 2) # -, tortuosity in liquid phase (w = water) as function of θ, (Millington and Quirk 1961 as shown in Radcliffe et al. 2018, eq 6.6)
+        # Tsoil_K .= (p_fT_TADTM[1] + 273.15) .* ones(N) # alternative: daytime average; later replace with a heat-equation solution
+        Tsoil = p_fT_TA[1] + 273.15 # K; currently identical for every soil layer
+        τw .= θᵏ⁺¹ .^ (7/3) ./ (p_THSAT .^ 2) # -, tortuosity in liquid phase (w = water) as function of θ, (Millington and Quirk 1961 as shown in Radcliffe et al. 2018, eq 6.6)
         # τg = 1.0 .* ones(N) # -, tortuosity in vapor phase (g = gas), unused as no vapor transport is considered
         # p_Λ = p_soil.p_DISPER #(instead of p_DISPERSIVITY .* ones(N))         # m, dispersivity length (if we want to have different dispersivities per soil layer)
-        D⁰_¹⁸O .= 0.96691 .* 10^-9 .* exp.(-535400 ./ Tsoil_K.^2 .+ 1393.3 ./ Tsoil_K .+ 2.1876)  .* 3600 .* 24 # m²/day molecular diffusion constant of ¹⁸O in liquid water (eq. A3, Zhou et al. 2021)
-        D⁰_²H  .= 0.98331 .* 10^-9 .* exp.(-535400 ./ Tsoil_K.^2 .+ 1393.3 ./ Tsoil_K .+ 2.1876)  .* 3600 .* 24 # m²/day molecular diffusion constant of ²H  in liquid water (eq. A3, Zhou et al. 2021)
+        D⁰_¹⁸O_value = 0.96691 * 10^-9 * exp(-535400 / Tsoil^2 + 1393.3 / Tsoil + 2.1876) * 3600 * 24 # m²/day, eq. A3 Zhou et al. (2021)
+        D⁰_²H_value = 0.98331 * 10^-9 * exp(-535400 / Tsoil^2 + 1393.3 / Tsoil + 2.1876) * 3600 * 24 # m²/day, eq. A3 Zhou et al. (2021)
+        D⁰_¹⁸O .= D⁰_¹⁸O_value
+        D⁰_²H .= D⁰_²H_value
 
         # Effective dispersion coefficient (Eq. 33 Zhou et al. 2021)
         D_¹⁸O_ᵏ⁺¹ .= D⁰_¹⁸O .* τw .* θᵏ⁺¹ .+ p_DISPERSIVITY .* abs.(q) # m²/day
@@ -1175,29 +1183,36 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         C_²H_Xylem  = LWFBrook90.ISO.δ_to_x(u_δ2H_XYLEM,  LWFBrook90.ISO.R_VSMOW²H)  # -, isotope amounts
 
 
-        #                     D_at_interface                                     .*   dC/dz_at_interface
-        # NOTE: below replaces bracket-literal `[0; ...]`/`[...; 0]` concatenations (which allocated
-        #       several temporary arrays per call) with explicit loops writing directly into the
-        #       preallocated cache vectors.
+        # Compute interface diffusion directly into the preallocated caches.
+        # The lower flux of layer i is the upper flux of layer i + 1.
         diff¹⁸O_upp[1] = 0
-        for i in 2:NLAYER; diff¹⁸O_upp[i] = (D_¹⁸O_ᵏ⁺¹[i-1] + D_¹⁸O_ᵏ⁺¹[i]) /2 * (C_¹⁸Oᵏ[i] - C_¹⁸Oᵏ[i-1]) / dz[i-1]; end    # flux in m/d (D: m2/d, dC/dz = dx/dz: m-1)
-        diff¹⁸O_low[NLAYER] = 0
-        for i in 1:NLAYER-1; diff¹⁸O_low[i] = (D_¹⁸O_ᵏ⁺¹[i] + D_¹⁸O_ᵏ⁺¹[i+1]) /2 * (C_¹⁸Oᵏ[i+1] - C_¹⁸Oᵏ[i]) / dz[i]; end    # flux in m/d (D: m2/d, dC/dz = dx/dz: m-1)
+        #                     D_at_interface                                     .*   dC/dz_at_interface
         diff²H_upp[1] = 0
-        for i in 2:NLAYER; diff²H_upp[i]  = (D_²H_ᵏ⁺¹[i-1]  + D_²H_ᵏ⁺¹[i] ) /2 * (C_²Hᵏ[i]  - C_²Hᵏ[i-1] ) / dz[i-1]; end    # flux in m/d (D: m2/d, dC/dz = dx/dz: m-1)
+        for i in 2:NLAYER
+            interface¹⁸O = (D_¹⁸O_ᵏ⁺¹[i - 1] + D_¹⁸O_ᵏ⁺¹[i]) / 2 * (C_¹⁸Oᵏ[i] - C_¹⁸Oᵏ[i - 1]) / dz[i - 1]
+            interface²H = (D_²H_ᵏ⁺¹[i - 1] + D_²H_ᵏ⁺¹[i]) / 2 * (C_²Hᵏ[i] - C_²Hᵏ[i - 1]) / dz[i - 1]
+            diff¹⁸O_upp[i] = interface¹⁸O
+            diff²H_upp[i] = interface²H
+            diff¹⁸O_low[i - 1] = interface¹⁸O
+            diff²H_low[i - 1] = interface²H
+        end
+        diff¹⁸O_low[NLAYER] = 0
         diff²H_low[NLAYER] = 0
-        for i in 1:NLAYER-1; diff²H_low[i]  = (D_²H_ᵏ⁺¹[i]  + D_²H_ᵏ⁺¹[i+1] ) /2 * (C_²Hᵏ[i+1]  - C_²Hᵏ[i] ) / dz[i]; end    # flux in m/d (D: m2/d, dC/dz = dx/dz: m-1)
 
         # NOTE(bernhard): NOTE below Concentrations's are not at interface but in the
         #                 middle of the cell... best would be to use an upwind scheme and
         #                 use the correct C based on the sign of aux_du_VRFLI
-        #                     q_at_interface           .*   C_at_interface
+        #                     q_at_interface * C_at_interface
         qCᵢ¹⁸O_upp[1] = 0
-        for i in 2:NLAYER; qCᵢ¹⁸O_upp[i] = aux_du_VRFLI[i-1] * C_¹⁸Oᵏ[i-1]; end  # units: aux_du_VRFLI (mm/day)
-        qCᵢ¹⁸O_low  .= aux_du_VRFLI .* C_¹⁸Oᵏ                                    # units: aux_du_VRFLI (mm/day)
         qCᵢ²H_upp[1] = 0
-        for i in 2:NLAYER; qCᵢ²H_upp[i] = aux_du_VRFLI[i-1] * C_²Hᵏ[i-1]; end    # units: aux_du_VRFLI (mm/day)
-        qCᵢ²H_low   .= aux_du_VRFLI .* C_²Hᵏ                                     # units: aux_du_VRFLI (mm/day)
+        for i in 1:NLAYER
+            qCᵢ¹⁸O_low[i] = aux_du_VRFLI[i] * C_¹⁸Oᵏ[i]
+            qCᵢ²H_low[i]  = aux_du_VRFLI[i] * C_²Hᵏ[i]
+            if i < NLAYER
+                qCᵢ¹⁸O_upp[i + 1] = qCᵢ¹⁸O_low[i]
+                qCᵢ²H_upp[i + 1] = qCᵢ²H_low[i]
+            end
+        end
 
         Cᵢ¹⁸O_INFLI = LWFBrook90.ISO.δ_to_x.(p_δ18O_PREC(integrator.t), LWFBrook90.ISO.R_VSMOW¹⁸O)  # TODO(bernhard): for debugging, remove this again and replace with δ18O_INFLI
         # Cᵢ¹⁸O_INFLI = δ18O_INFLI
@@ -1208,12 +1223,17 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
 
         # Cᵢ¹⁸O_TRANI = C_¹⁸Oᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
         # Cᵢ²H_TRANI = C_²Hᵏ # no fractionation occurring, i.e. outflux composition equal to storage composition
-        Cᵢ¹⁸O_TRANI = ifelse.(aux_du_TRANI .< 0,
-                              C_¹⁸O_Xylem,
-                              C_¹⁸Oᵏ)
-        Cᵢ²H_TRANI = ifelse.(aux_du_TRANI .< 0,
-                              C_²H_Xylem,
-                              C_²Hᵏ)
+        Cᵢ¹⁸O_TRANI = C_¹⁸Oᵏ⁺¹ # reuse caches from the unused implicit solver
+        Cᵢ²H_TRANI = C_²Hᵏ⁺¹
+        for i in 1:NLAYER
+            if aux_du_TRANI[i] < 0
+                Cᵢ¹⁸O_TRANI[i] = C_¹⁸O_Xylem
+                Cᵢ²H_TRANI[i] = C_²H_Xylem
+            else
+                Cᵢ¹⁸O_TRANI[i] = C_¹⁸Oᵏ[i]
+                Cᵢ²H_TRANI[i] = C_²Hᵏ[i]
+            end
+        end
                              # Under root water uptake assume no fractionation occurring, i.e. outflux composition equal to storage composition C_¹⁸Oᵏ
                              # however if aux_du_TRANI is negative for some layers it means water from the root xylem flows out into the soil domain
                              # This is hereby accounted for the the isotope balance in soil water, as well as for the Xylem and δ_RWU
@@ -1235,19 +1255,20 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         ### ∂/∂t Cᵢ     = [- Cᵢ/SWATI * ∂/∂t SWATI]           + 1/SWATI *
         ###                      [diff(z_upper) - diff(z_lower) - qCᵢ(z_upper) + qCᵢ(z_lower) +
         ###                       INFLI*Cᵢ_{INFLI} - TRANI*Cᵢ_{TRANI} - DSFL*Cᵢ_{DSFL} - SLVP*Cᵢ_{SLVP}]
-        du_Cᵢ¹⁸_SWATI .= 0 # assert vector is zero
-        du_Cᵢ²H_SWATI .= 0 # assert vector is zero
         # units: dVdt (mm/day), C (), u_SWATI (mm), diff¹⁸O_upp (m/day) => diff¹⁸O_upp*1000 (mm/day), qCᵢ¹⁸O_upp (mm/day), INFLI, DSFLI, SLVP, TRANI (mm/day)
-        du_Cᵢ¹⁸_SWATI .= -C_¹⁸Oᵏ./u_SWATIᵏ⁺¹ .* dVdt .+ 1 ./ u_SWATIᵏ⁺¹ .* (
-                                -diff¹⁸O_upp.*1000 .+ diff¹⁸O_low.*1000 .+ qCᵢ¹⁸O_upp .- qCᵢ¹⁸O_low .+ # NOTE: `.*1000` (not `*1000`) so this fuses into the surrounding broadcast without allocating
-                                aux_du_INFLI.*Cᵢ¹⁸O_INFLI .- aux_du_DSFLI.*Cᵢ¹⁸O_DSFL .- aux_du_SLVPI.*C_¹⁸O_SLVP .-
-                                aux_du_TRANI.*Cᵢ¹⁸O_TRANI
-                            )
-        du_Cᵢ²H_SWATI .= -C_²Hᵏ./u_SWATIᵏ⁺¹ .* dVdt .+ 1 ./ u_SWATIᵏ⁺¹ .* (
-                                -diff²H_upp.*1000 .+ diff²H_low.*1000 .+ qCᵢ²H_upp .- qCᵢ²H_low .+
-                                aux_du_INFLI.*Cᵢ²H_INFLI .- aux_du_DSFLI.*Cᵢ²H_DSFL .- aux_du_SLVPI.*C_²H_SLVP .-
-                                aux_du_TRANI.*Cᵢ²H_TRANI
-                            )
+        for i in 1:NLAYER
+            inverse_storage = 1 / u_SWATIᵏ⁺¹[i]
+            du_Cᵢ¹⁸_SWATI[i] = -C_¹⁸Oᵏ[i] / u_SWATIᵏ⁺¹[i] * dVdt[i] + inverse_storage * (
+                -diff¹⁸O_upp[i] * 1000 + diff¹⁸O_low[i] * 1000 + qCᵢ¹⁸O_upp[i] - qCᵢ¹⁸O_low[i] +
+                aux_du_INFLI[i] * Cᵢ¹⁸O_INFLI - aux_du_DSFLI[i] * Cᵢ¹⁸O_DSFL[i] - aux_du_SLVPI[i] * C_¹⁸O_SLVP[i] -
+                aux_du_TRANI[i] * Cᵢ¹⁸O_TRANI[i]
+            )
+            du_Cᵢ²H_SWATI[i] = -C_²Hᵏ[i] / u_SWATIᵏ⁺¹[i] * dVdt[i] + inverse_storage * (
+                -diff²H_upp[i] * 1000 + diff²H_low[i] * 1000 + qCᵢ²H_upp[i] - qCᵢ²H_low[i] +
+                aux_du_INFLI[i] * Cᵢ²H_INFLI - aux_du_DSFLI[i] * Cᵢ²H_DSFL[i] - aux_du_SLVPI[i] * C_²H_SLVP[i] -
+                aux_du_TRANI[i] * Cᵢ²H_TRANI[i]
+            )
+        end
 
         # # NOTE: below max(0.001,u_SWATIᵏ⁺¹) makes the code more robust
         # du_Cᵢ¹⁸_SWATI = -C_¹⁸Oᵏ./max.(0.001,u_SWATIᵏ⁺¹) .* dVdt .+ 1 ./ max.(0.001,u_SWATIᵏ⁺¹) .* (
@@ -1302,8 +1323,10 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
             du_δ2H_GWAT   = LWFBrook90.ISO.dxdt_to_dδdt.(du_Cᵢ²H_GWAT, Cᵢ²H_GWAT, LWFBrook90.ISO.R_VSMOW²H)
         end
         # go back from atom fraction to delta values
-        du_δ18O_SWATI .= LWFBrook90.ISO.dxdt_to_dδdt(du_Cᵢ¹⁸_SWATI, C_¹⁸Oᵏ, LWFBrook90.ISO.R_VSMOW¹⁸O)
-        du_δ2H_SWATI  .= LWFBrook90.ISO.dxdt_to_dδdt(du_Cᵢ²H_SWATI, C_²Hᵏ, LWFBrook90.ISO.R_VSMOW²H)
+        for i in 1:NLAYER
+            du_δ18O_SWATI[i] = LWFBrook90.ISO.dxdt_to_dδdt(du_Cᵢ¹⁸_SWATI[i], C_¹⁸Oᵏ[i], LWFBrook90.ISO.R_VSMOW¹⁸O)
+            du_δ2H_SWATI[i] = LWFBrook90.ISO.dxdt_to_dδdt(du_Cᵢ²H_SWATI[i], C_²Hᵏ[i], LWFBrook90.ISO.R_VSMOW²H)
+        end
 
         # 5) Apply changes explicitly
         # Since we update this in the callback we can't overwrite `du` and let DiffEq.jl do
@@ -1312,8 +1335,10 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
 
         integrator.u.GWAT.d18O   += Δt * du_δ18O_GWAT     #TODO(bernhard)
         integrator.u.GWAT.d2H    += Δt * du_δ2H_GWAT      #TODO(bernhard)
-        integrator.u.SWATI.d18O .+= Δt * du_δ18O_SWATI    #TODO(bernhard)
-        integrator.u.SWATI.d2H  .+= Δt * du_δ2H_SWATI     #TODO(bernhard)
+        for i in 1:NLAYER
+            u_δ18O_SWATI[i] += Δt * du_δ18O_SWATI[i]
+            u_δ2H_SWATI[i] += Δt * du_δ2H_SWATI[i]
+        end
 
         # END SOLVING VARIANT B
         ################
@@ -1330,8 +1355,11 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         # # go back from atom fraction to delta values
         # δ¹⁸O_RWU = LWFBrook90.ISO.x_to_δ.(C¹⁸O_RWU, LWFBrook90.ISO.R_VSMOW¹⁸O)
         # δ²H_RWU  = LWFBrook90.ISO.x_to_δ.(C²H_RWU, LWFBrook90.ISO.R_VSMOW²H)
-        δ¹⁸O_RWU = LWFBrook90.ISO.x_to_δ(mean(Cᵢ¹⁸O_TRANI, weights(aux_du_TRANI)), LWFBrook90.ISO.R_VSMOW¹⁸O)
-        δ²H_RWU  = LWFBrook90.ISO.x_to_δ(mean(Cᵢ²H_TRANI,  weights(aux_du_TRANI)), LWFBrook90.ISO.R_VSMOW²H)
+        # Same weighted mean, without allocating two Weights wrappers. Preserve
+        # signed root outfluxes and 0/0 => NaN when there is no root water uptake.
+        total_TRANI = sum(aux_du_TRANI)
+        δ¹⁸O_RWU = LWFBrook90.ISO.x_to_δ(dot(aux_du_TRANI, Cᵢ¹⁸O_TRANI) / total_TRANI, LWFBrook90.ISO.R_VSMOW¹⁸O)
+        δ²H_RWU  = LWFBrook90.ISO.x_to_δ(dot(aux_du_TRANI, Cᵢ²H_TRANI) / total_TRANI, LWFBrook90.ISO.R_VSMOW²H)
 
         integrator.u.RWU.d18O = δ¹⁸O_RWU
         integrator.u.RWU.d2H  = δ²H_RWU
@@ -1352,8 +1380,8 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
 
         # a) Approximate solution (Forward Euler integration over dt)
         # if δ¹⁸O_RWU is NaN, it means aux_du_TRANI is zero
-        du_δ¹⁸O_Xylem = ifelse(isnan(δ¹⁸O_RWU), 0.0, sum(aux_du_TRANI) / p_VXYLEM * (δ¹⁸O_RWU - u_δ¹⁸O_Xylem))
-        du_δ²H_Xylem  = ifelse(isnan(δ²H_RWU),  0.0, sum(aux_du_TRANI) / p_VXYLEM * (δ²H_RWU  - u_δ²H_Xylem))
+        du_δ¹⁸O_Xylem = ifelse(isnan(δ¹⁸O_RWU), 0.0, total_TRANI / p_VXYLEM * (δ¹⁸O_RWU - u_δ¹⁸O_Xylem))
+        du_δ²H_Xylem  = ifelse(isnan(δ²H_RWU),  0.0, total_TRANI / p_VXYLEM * (δ²H_RWU  - u_δ²H_Xylem))
         integrator.u.XYLEM.d18O += Δt * du_δ¹⁸O_Xylem
         integrator.u.XYLEM.d2H  += Δt * du_δ²H_Xylem
         # b) Precise solution (Analytical integration over dt)
