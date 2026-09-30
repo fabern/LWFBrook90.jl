@@ -55,3 +55,5 @@ plot_flag = false; high_resolution_flag = false;
 include("02-integration-tests.jl")
 
 include("03-regression-tests.jl")
+
+include("04-multispecies-tests.jl")

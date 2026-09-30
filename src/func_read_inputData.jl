@@ -85,7 +85,9 @@ function loadSPAC(folder::String, prefix::String;
         #either "initial_conditions.csv" or IC_scalar = (amount = (u_GWAT_init_mm = 0, ...),
         #                                                d18O   = (u_GWAT_init_permil = -13., ...),
         #                                                d2H    = (u_GWAT_init_permil = -95., ...))
-    storm_durations_h = "meteo_storm_durations.csv")  #either "meteo_storm_durations.csv" or [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
+    storm_durations_h = "meteo_storm_durations.csv",
+    cover_fractions   = nothing,
+    params            = nothing)  #either "meteo_storm_durations.csv" or [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
 
     ## Define paths of all input files
     input_file_XXXX = prefix*"_XXXX"*".csv"
@@ -107,23 +109,60 @@ function loadSPAC(folder::String, prefix::String;
         )
 
     ## Load model input parameters
-    params, solver_opts = init_param(path_param; simulate_isotopes = simulate_isotopes) # simulate_irrigation = simulate_irrigation
+    loaded_params, solver_opts = init_param(path_param; simulate_isotopes = simulate_isotopes)
+
+    is_multi_species = hasproperty(loaded_params, :species_names) || (!hasproperty(loaded_params, :LAT_DEG) && !hasproperty(loaded_params, :VXYLEM_mm))
+    if is_multi_species
+        species_names = hasproperty(loaded_params, :species_names) ? loaded_params.species_names : collect(keys(loaded_params))
+        default_cover = hasproperty(loaded_params, :cover_fractions) ? loaded_params.cover_fractions : NamedTuple{Tuple(species_names)}(Tuple(fill(1.0 / length(species_names), length(species_names))))
+        loaded_params = NamedTuple{Tuple(species_names)}(Tuple([getproperty(loaded_params, sp) for sp in species_names]))
+    else
+        species_names = [:species1]
+        default_cover = (species1 = 1.0,)
+    end
+
+    _cover_fractions = default_cover
+
+    if cover_fractions !== nothing
+        @assert cover_fractions isa NamedTuple
+        if sort(collect(keys(cover_fractions))) != sort(species_names)
+            error("Species naming mismatch in cover_fractions argument: Expected keys matching $(species_names), but received $(keys(cover_fractions)).")
+        end
+        frac_sum = sum(values(cover_fractions))
+        if !(abs(frac_sum - 1.0) < 1e-4)
+            error("cover_fractions sum across species must equal 1.0. Received sum = $frac_sum.")
+        end
+        _cover_fractions = cover_fractions
+    end
+
+    if params !== nothing
+        @assert params isa NamedTuple
+        if is_multi_species
+            _params = loaded_params
+            for (k, v) in pairs(params)
+                if k in species_names && v isa NamedTuple
+                    _params = merge(_params, NamedTuple{(k,)}((merge(getproperty(loaded_params, k), v),)))
+                end
+            end
+            loaded_params = _params
+        else
+            loaded_params = merge(loaded_params, params)
+        end
+    end
 
     solver_options = merge(solver_options, solver_opts) # append to manually provided solver options
 
     ## Load time-varying atmospheric forcing
     reference_date, input_meteoveg, meteo_iso_forcing, irrig_iso_forcing, storm_durations =
-        init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes, simulate_irrigation, storm_durations_h)
+        init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes, simulate_irrigation, storm_durations_h, species_names = species_names)
 
     column_select = intersect(
         # actual names
-        Symbol.(names(input_meteoveg)), 
+        Symbol.(names(input_meteoveg)),
         # accepted names
         [:days, :GLOBRAD, :TMAX, :TMIN, :VAPPRES, :WIND, :PRECIN, :IRRIGIN])
     meteo_forcing = input_meteoveg[:, column_select]
     @assert all(meteo_forcing.GLOBRAD .>= 0) "Error in vegetation parameters: GLOBRAD must be above 0."
-    # @assert all(meteo_forcing.TMAX    .> 0) "Error in vegetation parameters: TMAX must be above 0."
-    # @assert all(meteo_forcing.TMIN    .> 0) "Error in vegetation parameters: TMIN must be above 0."
     @assert all(meteo_forcing.VAPPRES .>= 0) "Error in vegetation parameters: VAPPRES must be above 0."
     @assert all(meteo_forcing.WIND    .>= 0) "Error in vegetation parameters: WIND must be above 0."
     @assert all(meteo_forcing.PRECIN  .>= 0) "Error in vegetation parameters: PRECIN must be above 0."
@@ -138,52 +177,79 @@ function loadSPAC(folder::String, prefix::String;
     ## Load time-varying vegetation parameters
     if (canopy_evolution == "meteoveg.csv")
         # Use DataFrame from meteoveg.csv
-        column_select = intersect(
-            Symbol.(names(input_meteoveg)), # actual names
-            [:days, :DENSEF_rel, :HEIGHT_rel, :LAI_rel, :SAI_rel] # accepted names
-        )
-        if ("DENSEF_rel" in names(input_meteoveg) && "HEIGHT_rel" in names(input_meteoveg) &&
-            "LAI_rel"    in names(input_meteoveg) && "SAI_rel"    in names(input_meteoveg))
-            _to_use_canopy_evolution = input_meteoveg[:, column_select] # store DataFrame in SPAC
-            # Assert validity of vegetation values
-            @assert all(_to_use_canopy_evolution.LAI_rel .>= 0) "Error in vegetation parameters: LAI must be above 0%."
+        if !isempty(species_names) && species_names != [:species1]
+            sp_cols = Symbol[]
+            for sp in species_names
+                for p in [:DENSEF_rel_, :HEIGHT_rel_, :LAI_rel_, :SAI_rel_]
+                    push!(sp_cols, Symbol("$(p)$(sp)"))
+                end
+            end
+            column_select = intersect(Symbol.(names(input_meteoveg)), vcat([:days], sp_cols))
+            if all(String(c) in names(input_meteoveg) for c in sp_cols)
+                _to_use_canopy_evolution = input_meteoveg[:, column_select]
+                for sp in species_names
+                    @assert all(_to_use_canopy_evolution[!, Symbol("LAI_rel_$sp")] .>= 0) "Error in vegetation parameters: LAI must be above 0% for species '$sp'."
+                    @assert all(_to_use_canopy_evolution[!, Symbol("DENSEF_rel_$sp")] .> 5) "DENSEF (in meteoveg.csv or canopy_evolution argument) should not be set lower than 5% as it affects aerodynamics for species '$sp'."
+                    @assert all(_to_use_canopy_evolution[!, Symbol("HEIGHT_rel_$sp")] .> 0) "Error in vegetation parameters: HEIGHT must be above 0% for species '$sp'."
+                    @assert all(_to_use_canopy_evolution[!, Symbol("SAI_rel_$sp")] .> 0) "Error in vegetation parameters: SAI must be above 0% for species '$sp'."
+                end
+            else
+                error("Missing expected species vegetation columns in meteoveg.csv for species $(species_names).")
+            end
         else
-            error("""
-                Input_meteoveg is expected to contain one or multiple of the columns: :DENSEF_re, :HEIGHT_rel, :LAI_rel, or :SAI_rel.
-                Please check your input files with the current documentation and possibly contact the developer team if the error persists.
-                If it does not contain the columns please provide a parametrization to loadSPAC(, canopy_evolution::NamedTuple = ())
-                with the NamedTuple containing relative values in percent:
-                `(DENSEF_rel = 100, HEIGHT_rel = 100, SAI_rel = 100, LAI_rel = (DOY_Bstart, Bduration, DOY_Cstart, Cduration, LAI_perc_BtoC, LAI_perc_CtoB))`
-                """)
+            column_select = intersect(
+                Symbol.(names(input_meteoveg)), # actual names
+                [:days, :DENSEF_rel, :HEIGHT_rel, :LAI_rel, :SAI_rel] # accepted names
+            )
+            if ("DENSEF_rel" in names(input_meteoveg) && "HEIGHT_rel" in names(input_meteoveg) &&
+                "LAI_rel"    in names(input_meteoveg) && "SAI_rel"    in names(input_meteoveg))
+                _to_use_canopy_evolution = input_meteoveg[:, column_select] # store DataFrame in SPAC
+                # Assert validity of vegetation values
+                @assert all(_to_use_canopy_evolution.LAI_rel .>= 0) "Error in vegetation parameters: LAI must be above 0%."
+                @assert all(_to_use_canopy_evolution.DENSEF_rel .> 5) "DENSEF (in meteoveg.csv or canopy_evolution argument) should not be set lower than 5% as it affects aerodynamics."
+                @assert all(_to_use_canopy_evolution.HEIGHT_rel .> 0) "Error in vegetation parameters: HEIGHT must be above 0%."
+                @assert all(_to_use_canopy_evolution.SAI_rel .> 0) "Error in vegetation parameters: SAI must be above 0%."
+            else
+                error("""
+                    Input_meteoveg is expected to contain one or multiple of the columns: :DENSEF_rel, :HEIGHT_rel, :LAI_rel, or :SAI_rel.
+                    Please check your input files with the current documentation and possibly contact the developer team if the error persists.
+                    If it does not contain the columns please provide a parametrization to loadSPAC(, canopy_evolution::NamedTuple = ())
+                    with the NamedTuple containing relative values in percent:
+                    `(DENSEF_rel = 100, HEIGHT_rel = 100, SAI_rel = 100, LAI_rel = (DOY_Bstart, Bduration, DOY_Cstart, Cduration, LAI_perc_BtoC, LAI_perc_CtoB))`
+                    """)
+            end
         end
     else
         # Use received parameter from arguments to loadSPAC()
-        if ("DENSEF_rel" in names(input_meteoveg) && "HEIGHT_rel" in names(input_meteoveg) &&
-            "LAI_rel"    in names(input_meteoveg) && "SAI_rel"    in names(input_meteoveg))
-            @warn "Received canopy_evolution in loadSPAC(), overwriting values from `meteoveg.csv`."
-        end
         @assert canopy_evolution isa NamedTuple
-        @assert keys(canopy_evolution) == (:DENSEF_rel, :HEIGHT_rel, :SAI_rel, :LAI_rel)
-        @assert keys(canopy_evolution.LAI_rel) == (:DOY_Bstart, :Bduration, :DOY_Cstart, :Cduration, :LAI_perc_BtoC, :LAI_perc_CtoB)
+        if !isempty(species_names) && species_names != [:species1]
+            if sort(collect(keys(canopy_evolution))) != sort(species_names)
+                error("Species naming mismatch in canopy_evolution argument: Expected keys matching species names $(species_names), but received $(keys(canopy_evolution)).")
+            end
+            for sp in species_names
+                sp_ce = canopy_evolution[sp]
+                @assert keys(sp_ce) == (:DENSEF_rel, :HEIGHT_rel, :SAI_rel, :LAI_rel)
+                @assert keys(sp_ce.LAI_rel) == (:DOY_Bstart, :Bduration, :DOY_Cstart, :Cduration, :LAI_perc_BtoC, :LAI_perc_CtoB)
+                @assert all(sp_ce.LAI_rel.LAI_perc_BtoC >= 0) "Error in vegetation parameters: LAI must be above 0% for species '$sp'."
+                @assert all(sp_ce.LAI_rel.LAI_perc_CtoB >= 0) "Error in vegetation parameters: LAI must be above 0% for species '$sp'."
+                @assert all(sp_ce.DENSEF_rel .> 5) "DENSEF should not be set lower than 5% as it affects aerodynamics for species '$sp'."
+                @assert all(sp_ce.HEIGHT_rel .> 0) "Error in vegetation parameters: HEIGHT must be above 0% for species '$sp'."
+                @assert all(sp_ce.SAI_rel .> 0) "Error in vegetation parameters: SAI must be above 0% for species '$sp'."
+            end
+            _to_use_canopy_evolution = canopy_evolution
+        else
+            @assert keys(canopy_evolution) == (:DENSEF_rel, :HEIGHT_rel, :SAI_rel, :LAI_rel)
+            @assert keys(canopy_evolution.LAI_rel) == (:DOY_Bstart, :Bduration, :DOY_Cstart, :Cduration, :LAI_perc_BtoC, :LAI_perc_CtoB)
 
-        _to_use_canopy_evolution = canopy_evolution # store parameter arguments in SPAC
-        # Assert validity of vegetation values
-        @assert all(_to_use_canopy_evolution.LAI_rel.LAI_perc_BtoC >= 0) "Error in vegetation parameters: LAI must be above 0%."
-        @assert all(_to_use_canopy_evolution.LAI_rel.LAI_perc_CtoB >= 0) "Error in vegetation parameters: LAI must be above 0%."
-
-        # NOTE: that values in canopy_evolution have to be relative express in percent
-        #       Absolute values are derived in combination with:
-        #           params.DENSEF_baseline_
-        #           params.SAI_baseline_
-        #           params.AGE_baseline_yrs
-        #           params.HEIGHT_baseline_m
-        #           params.MAXLAI
+            _to_use_canopy_evolution = canopy_evolution # store parameter arguments in SPAC
+            # Assert validity of vegetation values
+            @assert all(_to_use_canopy_evolution.LAI_rel.LAI_perc_BtoC >= 0) "Error in vegetation parameters: LAI must be above 0%."
+            @assert all(_to_use_canopy_evolution.LAI_rel.LAI_perc_CtoB >= 0) "Error in vegetation parameters: LAI must be above 0%."
+            @assert all(_to_use_canopy_evolution.DENSEF_rel .> 5) "DENSEF (in meteoveg.csv or canopy_evolution argument) should not be set lower than 5% as it affects aerodynamics."
+            @assert all(_to_use_canopy_evolution.HEIGHT_rel .> 0) "Error in vegetation parameters: HEIGHT must be above 0%."
+            @assert all(_to_use_canopy_evolution.SAI_rel .> 0) "Error in vegetation parameters: SAI must be above 0%."
+        end
     end
-
-    # Assert validity of vegetation values
-    @assert all(_to_use_canopy_evolution.DENSEF_rel .> 5) "DENSEF (in meteoveg.csv or canopy_evolution argument) should not be set lower than 5% as it affects aerodynamics."
-    @assert all(_to_use_canopy_evolution.HEIGHT_rel .> 0) "Error in vegetation parameters: HEIGHT must be above 0%."
-    @assert all(_to_use_canopy_evolution.SAI_rel .> 0) "Error in vegetation parameters: SAI must be above 0%."
 
     ## Load space-varying soil data
     soil_horizons = init_soil(path_soil_horizons)
@@ -191,35 +257,31 @@ function loadSPAC(folder::String, prefix::String;
     ## Load initial conditions of scalar state variables
     if IC_scalar isa NamedTuple
         if isfile(path_initial_conditions) @warn "Requested to overwrite initial conditions. Values in $path_initial_conditions are ignored." end
-        IC_scalar =
-            DataFrame(u_GWAT_init_mm      = [IC_scalar.amount.u_GWAT_init_mm     ,IC_scalar.d18O.u_GWAT_init_permil ,IC_scalar.d2H.u_GWAT_init_permil],
-                      u_INTS_init_mm      = [IC_scalar.amount.u_INTS_init_mm     ,IC_scalar.d18O.u_INTS_init_permil ,IC_scalar.d2H.u_INTS_init_permil],
-                      u_INTR_init_mm      = [IC_scalar.amount.u_INTR_init_mm     ,IC_scalar.d18O.u_INTR_init_permil ,IC_scalar.d2H.u_INTR_init_permil],
-                      u_SNOW_init_mm      = [IC_scalar.amount.u_SNOW_init_mm     ,IC_scalar.d18O.u_SNOW_init_permil ,IC_scalar.d2H.u_SNOW_init_permil],
-                      u_CC_init_MJ_per_m2 = [IC_scalar.amount.u_CC_init_MJ_per_m2,NaN                               ,NaN                             ],
-                      u_SNOWLQ_init_mm    = [IC_scalar.amount.u_SNOWLQ_init_mm   ,NaN                               ,NaN                             ])
+        # Build DataFrame dynamically
+        ic_df = DataFrame()
+        for k in keys(IC_scalar.amount)
+            amt_val = getproperty(IC_scalar.amount, k)
+            d18O_val = hasproperty(IC_scalar, :d18O) && hasproperty(IC_scalar.d18O, Symbol(replace(string(k), "_init_mm" => "_init_permil", "_init_MJ_per_m2" => "_init_permil"))) ? getproperty(IC_scalar.d18O, Symbol(replace(string(k), "_init_mm" => "_init_permil", "_init_MJ_per_m2" => "_init_permil"))) : (k in [:u_CC_init_MJ_per_m2, :u_SNOWLQ_init_mm] ? -9999.99 : NaN)
+            d2H_val = hasproperty(IC_scalar, :d2H) && hasproperty(IC_scalar.d2H, Symbol(replace(string(k), "_init_mm" => "_init_permil", "_init_MJ_per_m2" => "_init_permil"))) ? getproperty(IC_scalar.d2H, Symbol(replace(string(k), "_init_mm" => "_init_permil", "_init_MJ_per_m2" => "_init_permil"))) : (k in [:u_CC_init_MJ_per_m2, :u_SNOWLQ_init_mm] ? -9999.99 : NaN)
+            ic_df[!, k] = [amt_val, d18O_val, d2H_val]
+        end
+        IC_scalar = ic_df
     elseif IC_scalar == "initial_conditions.csv"
-        IC_scalar = init_IC(path_initial_conditions)
+        IC_scalar = init_IC(path_initial_conditions; simulate_isotopes = simulate_isotopes, species_names = species_names)
     else
         error("Unknown format for argument `IC_scalar`: $IC_scalar")
     end
 
+    ## Check root_distribution consistency
+    if root_distribution isa NamedTuple && !isempty(species_names) && species_names != [:species1]
+        if sort(collect(keys(root_distribution))) != sort(species_names)
+            error("Species naming mismatch in root_distribution argument: Expected keys matching species names $(species_names), but received $(keys(root_distribution)).")
+        end
+    end
+
     ## Load soil discretizations either from `soil_discretizations.csv`
     ## or then use provided Δz_thickness_m which also requires IC and root distribution parameters
-
-    # Possible cases of arguments:
-    # (Δz_thickness_m="soil_discretization.csv", root_distribution="soil_discretization.csv", IC_soil="soil_discretization.csv"): load soil_discretization.csv
-    # (Δz_thickness_m="soil_discretization.csv", root_distribution="soil_discretization.csv", IC_soil=(.=, .=, .=)             ): load soil_discretization.csv + overwrite IC
-    # (Δz_thickness_m="soil_discretization.csv", root_distribution=(.=, .=, .=),              IC_soil="soil_discretization.csv"): load soil_discretization.csv                + overwrite roots
-    # (Δz_thickness_m="soil_discretization.csv", root_distribution=(.=, .=, .=),              IC_soil=(.=, .=, .=)             ): load soil_discretization.csv + overwrite IC + overwrite roots
-
-    # (Δz_thickness_m=[., .]                   , root_distribution="soil_discretization.csv", IC_soil="soil_discretization.csv"): # error: provide parametric version of root distribution and IC
-    # (Δz_thickness_m=[., .]                   , root_distribution="soil_discretization.csv", IC_soil=(.=, .=, .=)             ): # error: provide parametric version of root distribution
-    # (Δz_thickness_m=[., .]                   , root_distribution=(.=, .=, .=),              IC_soil="soil_discretization.csv"): # error: provide parametric version of                       IC
-    # (Δz_thickness_m=[., .]                   , root_distribution=(.=, .=, .=),              IC_soil=(.=, .=, .=)             ): # okay. warning: not using "soil_discretization.csv"
-
     if Δz_thickness_m isa Vector
-        # Define soil discretiztion freely
         if isfile(path_soil_discretization) @warn "loadSPAC(...; Δz_thickness_m = ...) provided. Ignoring `soil_discretization.csv`, i.e. also overwriting root distribution and initial conditions." end
         interfaces_m = -vcat(0, cumsum(Δz_thickness_m))
         soil_discretization = DataFrame(Upper_m           = interfaces_m[Not(end)],
@@ -231,68 +293,49 @@ function loadSPAC(folder::String, prefix::String;
 
         if root_distribution == "soil_discretization.csv" error("Requested to create soil discretization manually instead of using `soil_discretization.csv`, but no parametric root_distribution provided.") end
         if IC_soil           == "soil_discretization.csv" error("Requested to create soil discretization manually instead of using `soil_discretization.csv`, but no parametric soil initial conditions provided.") end
-        # _to_use_root_distribution = (beta = 0.97, z_rootMax_m = nothing)
-        # _to_use_IC_soil           = (PSIM_init_kPa = -6.3, delta18O_init_permil = -10., delta2H_init_permil = -95.)
         _to_use_Δz_thickness_m = Δz_thickness_m
 
-        # Overwrite soil_discretization with roots # TODO: make this a function to reuse if needed in setup()
         _to_use_root_distribution = root_distribution
         overwrite_rootden!(soil_discretization, _to_use_root_distribution, _to_use_Δz_thickness_m)
-        # Overwrite soil_discretization with IC # TODO: make this a function to reuse if needed in setup()
         _to_use_IC_soil = IC_soil
         overwrite_IC!(soil_discretization, _to_use_IC_soil, simulate_isotopes)
 
     elseif Δz_thickness_m == "soil_discretization.csv"
         if isfile(path_soil_discretization)
-            soil_discretization = LWFBrook90.read_path_soil_discretization(path_soil_discretization)
-            # Assert type stability by executing disallowmissing!
-            # Impose type of Float64 instead of Float64?, by defining unused variables as -9999.99
-            if !("u_delta18O_init_permil" in names(soil_discretization)) insertcols!(soil_discretization, :u_delta18O_init_permil => -9999.0) end #NaN) end
-            if !("u_delta2H_init_permil"  in names(soil_discretization)) insertcols!(soil_discretization, :u_delta2H_init_permil => -9999.0)  end #NaN) end
+            soil_discretization = LWFBrook90.read_path_soil_discretization(path_soil_discretization; species_names = species_names)
+            if !("u_delta18O_init_permil" in names(soil_discretization)) insertcols!(soil_discretization, :u_delta18O_init_permil => -9999.0) end
+            if !("u_delta2H_init_permil"  in names(soil_discretization)) insertcols!(soil_discretization, :u_delta2H_init_permil => -9999.0)  end
             if (any(ismissing.(soil_discretization.u_delta18O_init_permil)) || any(ismissing.(soil_discretization.u_delta2H_init_permil)))
                 soil_discretization.u_delta18O_init_permil .= -9999.0
                 soil_discretization.u_delta2H_init_permil  .= -9999.0
             end
-            disallowmissing!(soil_discretization, [:Rootden_, :uAux_PSIM_init_kPa, :u_delta18O_init_permil, :u_delta2H_init_permil])
+            root_cols = Symbol[Symbol("Rootden_$s") for s in species_names if Symbol("Rootden_$s") in Symbol.(names(soil_discretization))]
+            if isempty(root_cols) && :Rootden_ in Symbol.(names(soil_discretization))
+                root_cols = [:Rootden_]
+            end
+            cols_to_check = Symbol[c for c in [root_cols..., :uAux_PSIM_init_kPa, :u_delta18O_init_permil, :u_delta2H_init_permil] if c in Symbol.(names(soil_discretization))]
+            disallowmissing!(soil_discretization, cols_to_check)
 
             _to_use_Δz_thickness_m = soil_discretization.Upper_m - soil_discretization.Lower_m
             _to_use_root_distribution = root_distribution
             _to_use_IC_soil = IC_soil
 
             if root_distribution != "soil_discretization.csv"
-                # overwrite root distribution and warn about overwriting
                 overwrite_rootden!(soil_discretization, _to_use_root_distribution, _to_use_Δz_thickness_m)
                 @warn "Requested to overwrite root distribution. Root distribution defined in soil_discretization is ignored."
             end
             if IC_soil != "soil_discretization.csv"
-                # overwrite initial conditions and warn about overwriting
                 overwrite_IC!(soil_discretization, _to_use_IC_soil, simulate_isotopes)
                 @warn "Requested to overwrite initial conditions. Initial conditions defined in soil_discretization are ignored."
             end
         else
             error("No file `$path_soil_discretization` found. Either define a file `soil_discretiztions.csv` or then provide loadSPAC(...; soil_discretization = [0.04, 0.04, 0.04, 0.04, 0.04].")
-            # @warn """
-            # No file `$path_soil_discretization` found.
-            # soil_discretization is derived from layers in `$path_soil_horizons`.
-            # Consider providing either a file `soil_discretiztions.csv` or then provide loadSPAC(...; soil_discretization = [0.04, 0.04, 0.04, 0.04, 0.04])
-            # Using default initial conditions (-6.3 kPa, ... permil, ... permil) and root distribution (beta = 0.97), unless overwritten in setup().
-            # """
-            # soil_discretization = DataFrame(Upper_m                = soil_horizons.Upper_m,
-            #                             Lower_m               = soil_horizons.Lower_m,
-            #                             Rootden_              = NaN,
-            #                             uAux_PSIM_init_kPa    = NaN,
-            #                             u_delta18O_init_permil= NaN,
-            #                             u_delta2H_init_permil = NaN)
-            # # default root distribution and initial conditiosn unless otherwise defined in setup(), then they are overwritten
-            # root_distribution = (beta = 0.97, z_rootMax_m = nothing)
-            # IC_soil           = (PSIM_init_kPa = -6.3, delta18O_init_permil = -10., delta2H_init_permil = -95.)
         end
     else
         error("Unknown format for argument `Δz_thickness_m`: $Δz_thickness_m")
     end
 
     ## Extend soil horizons if needed by requested soil discretization
-    # (in such a case emit a warning)
     extended_soil_horizons = extend_lowest_horizon(soil_horizons, soil_discretization)
 
     ## Make time dependent input parameters continuous in time (interpolate)
@@ -313,7 +356,9 @@ function loadSPAC(folder::String, prefix::String;
                    meteo_iso       = meteo_iso_forcing_cont,
                    irrig_iso       = irrig_iso_forcing_cont,
                    storm_durations = storm_durations),
-        pars    = (params = params,
+        pars    = (params = loaded_params,
+                   species_names = species_names,
+                   cover_fractions = _cover_fractions,
                    root_distribution = _to_use_root_distribution,
                    IC_scalar = IC_scalar,
                    IC_soil   = _to_use_IC_soil,
@@ -687,7 +732,7 @@ function p_MONTHN(t::Float64, reference::DateTime)
     month(reference + Day(floor(t)))
 end
 
-function init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes = true, simulate_irrigation = true, storm_durations_h)
+function init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes = true, simulate_irrigation = true, storm_durations_h, species_names::Vector{Symbol} = Symbol[])
 
     # Load daily values of meteo and precipitation isotopes
     if (simulate_isotopes)
@@ -696,8 +741,8 @@ function init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes = t
     if (simulate_isotopes && simulate_irrigation)
         path_irrigiso = replace(path_meteoveg, "meteoveg" => "irrigiso")
     end
-    
-    meteo_forcing, reference_date = read_path_meteoveg(path_meteoveg)
+
+    meteo_forcing, reference_date = read_path_meteoveg(path_meteoveg; species_names = species_names)
 
     if (simulate_isotopes & simulate_irrigation)
         meteo_iso_forcing = read_path_meteoiso(
@@ -742,8 +787,8 @@ function init_forcing(path_meteoveg, path_storm_durations; simulate_isotopes = t
     return reference_date, meteo_forcing, meteo_iso_forcing, irrig_iso_forcing, storm_durations
 end
 
-function init_IC(path_initial_conditions; simulate_isotopes = true)
-    read_path_initial_conditions(path_initial_conditions)
+function init_IC(path_initial_conditions; simulate_isotopes = true, species_names::Vector{Symbol} = Symbol[])
+    read_path_initial_conditions(path_initial_conditions; species_names = species_names)
 end
 
 function init_soil(path_soil_horizons)
@@ -754,20 +799,12 @@ function init_param(path_param; simulate_isotopes = true)
     input_param, solver_opts = read_path_param(path_param; simulate_isotopes = simulate_isotopes)
 end
 
-function read_path_meteoveg(path_meteoveg)
+function read_path_meteoveg(path_meteoveg; species_names::Vector{Symbol} = Symbol[])
     f = File(path_meteoveg)
     received_colnames = f.names
-    
-    # Specify expected inputs:
-    allowed_colname_variations = [
-        # accomodate case when canopy_evolution is provided parametrically:
-        [:dates, :globrad_MJDayM2, :tmax_degC, :tmin_degC, :vappres_kPa, :windspeed_ms, :prec_mmDay],
-        [:dates, :globrad_MJDayM2, :tmax_degC, :tmin_degC, :vappres_kPa, :windspeed_ms, :prec_mmDay, :irrig_mmDay],
-        # accomodate case when canopy_evolution is provided as forcing:
-        [:dates, :globrad_MJDayM2, :tmax_degC, :tmin_degC, :vappres_kPa, :windspeed_ms, :prec_mmDay, :densef_percent, :height_percent, :lai_percent, :sai_percent],
-        [:dates, :globrad_MJDayM2, :tmax_degC, :tmin_degC, :vappres_kPa, :windspeed_ms, :prec_mmDay, :irrig_mmDay, :densef_percent, :height_percent, :lai_percent, :sai_percent]
-    ]
-    allowed_coltypes = Dict(
+
+    # Base meteorological columns:
+    base_coltypes = Dict{Symbol, Type}(
         :dates          => DateTime,
         :globrad_MJDayM2 => Float64,
         :tmax_degC       => Float64,
@@ -775,45 +812,90 @@ function read_path_meteoveg(path_meteoveg)
         :vappres_kPa     => Float64,
         :windspeed_ms    => Float64,
         :prec_mmDay      => Float64,
-        :irrig_mmDay     => Float64,
-        :densef_percent  => Float64,
-        :height_percent  => Float64,
-        :lai_percent     => Float64,
-        :sai_percent     => Float64)
-    allowed_units = Dict(
-        :dates            => "YYYY-MM-DD", 
+        :irrig_mmDay     => Float64)
+
+    base_units = Dict{Symbol, String}(
+        :dates            => "YYYY-MM-DD",
         :globrad_MJDayM2  => "MJ/Day/m2",
-        :tmax_degC        => "degree C", 
-        :tmin_degC        => "degree C", 
+        :tmax_degC        => "degree C",
+        :tmin_degC        => "degree C",
         :vappres_kPa      => "kPa",
-        :windspeed_ms     => "m per s", 
+        :windspeed_ms     => "m per s",
         :prec_mmDay       => "mm per day",
-        :irrig_mmDay      => "mm per day",
-        :densef_percent   => "percent", 
-        :height_percent   => "percent",
-        :lai_percent      => "percent", 
-        :sai_percent      => "percent")
-    allowed_renaming = Dict( # to rename to variable names in previous implementations of LWFBrook90
+        :irrig_mmDay      => "mm per day")
+
+    base_renaming = Dict{Symbol, Symbol}(
         :globrad_MJDayM2 => :GLOBRAD,
         :tmax_degC       => :TMAX,
         :tmin_degC       => :TMIN,
         :vappres_kPa     => :VAPPRES,
         :windspeed_ms    => :WIND,
         :prec_mmDay      => :PRECIN,
-        :irrig_mmDay     => :IRRIGIN,
-        :densef_percent  => :DENSEF_rel,
-        :height_percent  => :HEIGHT_rel,
-        :lai_percent     => :LAI_rel,
-        :sai_percent     => :SAI_rel)
-    
-    if (!(received_colnames ∈ allowed_colname_variations))
-        error("Invalid combinations (or wrong order) of column names provided in $(basename(path_meteoveg)) ($path_meteoveg).")
+        :irrig_mmDay     => :IRRIGIN)
+
+    allowed_coltypes = copy(base_coltypes)
+    allowed_units = copy(base_units)
+    allowed_renaming = copy(base_renaming)
+
+    # Check for single-species or multi-species phenology columns
+    has_single_species_veg = any(c in received_colnames for c in [:densef_percent, :height_percent, :lai_percent, :sai_percent])
+    veg_col_prefixes = ["densef_percent_", "height_percent_", "lai_percent_", "sai_percent_"]
+    has_multi_species_veg = any(any(startswith(String(c), p) for p in veg_col_prefixes) for c in received_colnames)
+
+    if has_multi_species_veg
+        # Multi-species phenology columns
+        for c in received_colnames
+            c_str = String(c)
+            matched_p = [p for p in veg_col_prefixes if startswith(c_str, p)]
+            if !isempty(matched_p)
+                p = matched_p[1]
+                sp_str = c_str[(length(p)+1):end]
+                sp_sym = Symbol(sp_str)
+                if !isempty(species_names) && !(sp_sym in species_names)
+                    error("Species naming mismatch in $(basename(path_meteoveg)): Column '$c' has species suffix '$sp_str' which does not match any known species in param.csv $(species_names).")
+                end
+            end
+        end
+
+        # Verify all species in species_names have complete columns
+        if !isempty(species_names) && species_names != [:species1]
+            for sp in species_names
+                for p in veg_col_prefixes
+                    expected_col = Symbol("$(p)$(sp)")
+                    if !(expected_col in received_colnames)
+                        error("Species naming mismatch in $(basename(path_meteoveg)): Missing expected vegetation column '$expected_col' for species '$sp'.")
+                    end
+                end
+            end
+        end
+
+        # Add all multi-species columns to allowed dictionaries
+        for c in received_colnames
+            c_str = String(c)
+            for (p, target_prefix) in [("densef_percent_", :DENSEF_rel_), ("height_percent_", :HEIGHT_rel_), ("lai_percent_", :LAI_rel_), ("sai_percent_", :SAI_rel_)]
+                if startswith(c_str, p)
+                    sp_str = c_str[(length(p)+1):end]
+                    allowed_coltypes[c] = Float64
+                    allowed_units[c] = "percent"
+                    allowed_renaming[c] = Symbol("$(target_prefix)$(sp_str)")
+                end
+            end
+        end
+    elseif has_single_species_veg
+        for c in [:densef_percent, :height_percent, :lai_percent, :sai_percent]
+            allowed_coltypes[c] = Float64
+            allowed_units[c] = "percent"
+        end
+        allowed_renaming[:densef_percent] = :DENSEF_rel
+        allowed_renaming[:height_percent] = :HEIGHT_rel
+        allowed_renaming[:lai_percent]    = :LAI_rel
+        allowed_renaming[:sai_percent]    = :SAI_rel
     end
 
     received_types      = Dict(k => allowed_coltypes[k] for k in received_colnames if haskey(allowed_coltypes, k))
     received_col_rename = Dict(k => allowed_renaming[k] for k in received_colnames if haskey(allowed_renaming, k))
-    
-    # Read data: 
+
+    # Read data:
     input_meteoveg = @chain begin DataFrame(File(path_meteoveg;
         skipto=3, delim=',', ignorerepeated=false,
         # Be strict about loading NA's -> error if NA present
@@ -827,15 +909,10 @@ function read_path_meteoveg(path_meteoveg)
     expected_units = DataFrame(allowed_units)
     assert_unitsHeader_as_expected(path_meteoveg, expected_units)
 
-    # Assert validity of values:
-    # ...
-
     # Assert that no gaps
     @assert all(diff(input_meteoveg.dates) .== Millisecond(86400000)) "There are gaps in the forcing file. The file ($path_meteoveg) needs to have a value for each data from start until the end."
 
     # Identify period of interest
-    # Starting date: latest among the input data
-    # Stopping date: earliest among the input data
     starting_date = maximum(minimum,[input_meteoveg[:,"dates"]])
     stopping_date = minimum(maximum,[input_meteoveg[:,"dates"]])
 
@@ -982,29 +1059,58 @@ function read_path_meteoiso(path_meteoiso,
     return input_meteoiso
 end
 
-function read_path_initial_conditions(path_initial_conditions)
-    received_types =
-        Dict(# Initial conditions (of vector states) -------
-            "u_GWAT_init_mm" => Float64,       "u_INTS_init_mm" => Float64,
-            "u_INTR_init_mm" => Float64,       "u_SNOW_init_mm" => Float64,
-            "u_CC_init_MJ_per_m2"   => Float64,       "u_SNOWLQ_init_mm" => Float64)
-    input_initial_conditions = DataFrame(File(path_initial_conditions;
-        transpose=true, drop=[1], comment = "###",
-        # Don't be strict, allow for NA as missing. Treat this later with disallowmissing!.
-        types = received_types, missingstring = "NA"))
+function read_path_initial_conditions(path_initial_conditions; species_names::Vector{Symbol} = Symbol[])
+    # Read scalar initial conditions as rows to allow species-specific columns.
+    raw_ic = DataFrame(File(path_initial_conditions; comment = "###", missingstring = "NA"))
+    param_col = strip.(String.(raw_ic[!, 1]))
 
-    expected_names = String.(keys(received_types))
-    assert_colnames_as_expected(input_initial_conditions, path_initial_conditions, expected_names)
+    result_df = DataFrame()
+    for (idx, pname) in enumerate(param_col)
+        amt = tryparse(Float64, string(raw_ic[idx, 2]))
+        amt_val = isnothing(amt) ? NaN : amt
+
+        d18O = size(raw_ic, 2) >= 3 ? tryparse(Float64, string(raw_ic[idx, 3])) : nothing
+        d18O_val = isnothing(d18O) ? -9999.99 : d18O
+
+        d2H = size(raw_ic, 2) >= 4 ? tryparse(Float64, string(raw_ic[idx, 4])) : nothing
+        d2H_val = isnothing(d2H) ? -9999.99 : d2H
+
+        result_df[!, Symbol(pname)] = [amt_val, d18O_val, d2H_val]
+    end
+
+    # For single-species compatibility, if multi-species and u_INTS_init_mm is missing, construct it from sum of species
+    if !("u_INTS_init_mm" in names(result_df))
+        ints_cols = [c for c in names(result_df) if startswith(c, "u_INTS_init_mm_")]
+        if !isempty(ints_cols)
+            sum_amt = sum(result_df[1, c] for c in ints_cols)
+            d18O_val = result_df[2, ints_cols[1]]
+            d2H_val = result_df[3, ints_cols[1]]
+            result_df[!, :u_INTS_init_mm] = [sum_amt, d18O_val, d2H_val]
+        end
+    end
+    if !("u_INTR_init_mm" in names(result_df))
+        intr_cols = [c for c in names(result_df) if startswith(c, "u_INTR_init_mm_")]
+        if !isempty(intr_cols)
+            sum_amt = sum(result_df[1, c] for c in intr_cols)
+            d18O_val = result_df[2, intr_cols[1]]
+            d2H_val = result_df[3, intr_cols[1]]
+            result_df[!, :u_INTR_init_mm] = [sum_amt, d18O_val, d2H_val]
+        end
+    end
+
+    # Impose defaults for CC and SNOWLQ d18O/d2H
+    if "u_CC_init_MJ_per_m2" in names(result_df)
+        result_df[2, "u_CC_init_MJ_per_m2"] = -9999.99
+        result_df[3, "u_CC_init_MJ_per_m2"] = -9999.99
+    end
+    if "u_SNOWLQ_init_mm" in names(result_df)
+        result_df[2, "u_SNOWLQ_init_mm"] = -9999.99
+        result_df[3, "u_SNOWLQ_init_mm"] = -9999.99
+    end
 
     # Impose type of Float64 instead of Float64?, by defining unused variables as -9999.99
-    input_initial_conditions[2, "u_CC_init_MJ_per_m2"] = -9999.99
-    input_initial_conditions[2, "u_SNOWLQ_init_mm"]    = -9999.99
-    input_initial_conditions[3, "u_CC_init_MJ_per_m2"] = -9999.99
-    input_initial_conditions[3, "u_SNOWLQ_init_mm"]    = -9999.99
-
-    disallowmissing!(input_initial_conditions)
-
-    return input_initial_conditions
+    disallowmissing!(result_df)
+    return result_df
 end
 
 """
@@ -1139,14 +1245,16 @@ default value is `NaN` must be provided with a non-`NaN` value by the user.
 function read_path_param(path_param; simulate_isotopes::Bool = false) # simulate_irrigation::Bool = false
     default_values = default_param_values()
     expected_names = [String(k) for k in keys(default_values)]
+    push!(expected_names, "COVER_FRAC")
 
     input_param_rows = DataFrame(File(path_param;
         comment = "###",
         # Be strict about loading NA's -> error if NA present
         missingstring = nothing, strict=true))
 
-    @assert size(input_param_rows, 2) == 2 """
-    Input file '$path_param' must contain exactly two columns: parameter name and value.
+    ncols = size(input_param_rows, 2)
+    @assert ncols >= 2 """
+    Input file '$path_param' must contain at least two columns.
     Received columns:
     $(names(input_param_rows))
     """
@@ -1163,8 +1271,93 @@ function read_path_param(path_param; simulate_isotopes::Bool = false) # simulate
     \nReceived unexpected: $(received_names[(!).(received_names .∈ (expected_names,))])
     """
 
+    if ncols > 2
+        # Multi-species format (column 1: param_id, column 2: site, columns 3..end: species)
+        sp_names = [Symbol(strip(String(c))) for c in names(input_param_rows)[3:end]]
+        species_names = sp_names
+
+        # Parse COVER_FRAC
+        cover_row_idx = findfirst(==("COVER_FRAC"), received_names)
+        if isnothing(cover_row_idx)
+            n_sp = length(species_names)
+            frac_vals = fill(1.0 / n_sp, n_sp)
+        else
+            frac_vals = Float64[]
+            for c_idx in 3:ncols
+                val = input_param_rows[cover_row_idx, c_idx]
+                push!(frac_vals, parse_param_value(val, "COVER_FRAC", path_param))
+            end
+            if !(abs(sum(frac_vals) - 1.0) < 1e-4)
+                error("COVER_FRAC sum across species must equal 1.0. Received sum = $(sum(frac_vals)) in '$path_param'.")
+            end
+        end
+        cover_fractions = NamedTuple{Tuple(species_names)}(Tuple(frac_vals))
+
+        # Site values
+        site_values = Dict(String(k) => v for (k, v) in pairs(default_values))
+        for i in eachindex(received_names)
+            pname = received_names[i]
+            if pname != "COVER_FRAC"
+                val = input_param_rows[i, 2]
+                if !ismissing(val) && !(val isa AbstractString && (strip(val) == "NA" || isempty(strip(val))))
+                    site_values[pname] = parse_param_value(val, pname, path_param)
+                end
+            end
+        end
+
+        # Species-specific parameter dicts
+        species_param_dict = Dict{Symbol, NamedTuple}()
+        for (s_idx, sp) in enumerate(species_names)
+            col_idx = 2 + s_idx
+            sp_values = Dict(String(k) => v for (k, v) in pairs(site_values))
+            for i in eachindex(received_names)
+                pname = received_names[i]
+                if pname != "COVER_FRAC"
+                    val = input_param_rows[i, col_idx]
+                    if !ismissing(val) && !(val isa AbstractString && (strip(val) == "NA" || isempty(strip(val))))
+                        sp_values[pname] = parse_param_value(val, pname, path_param)
+                    end
+                end
+            end
+
+            required_names = [String(name) for (name, value) in pairs(default_values) if isnan(value)]
+            unresolved_names = [name for name in required_names if isnan(sp_values[name])]
+            isempty(unresolved_names) || error("""
+            Input file '$path_param' must provide values for all parameters without defaults for species '$sp'.
+            Missing or NaN: $unresolved_names
+            """)
+
+            param_names_no_cover = [String(k) for k in keys(default_values)]
+            sp_df = DataFrame([Symbol(name) => [sp_values[name]] for name in param_names_no_cover])
+
+            sp_df[:,:FXYLEM]  = min.(sp_df[:,:FXYLEM], 0.990)
+            sp_df[:,:INITRLEN] = max.(sp_df[:,:INITRLEN], 0.010)
+            sp_df[:,:INITRDEP] = max.(sp_df[:,:INITRDEP], 0.010)
+            sp_df.BYPAR = round.(Int64, sp_df.BYPAR)
+            sp_df.NOOUTF = round.(Int64, sp_df.NOOUTF)
+
+            disallowmissing!(sp_df)
+            sp_nt = NamedTuple(sp_df[1, Not([:DTIMAX, :DSWMAX, :DPSIMAX])])
+            species_param_dict[sp] = sp_nt
+        end
+
+        param_names_no_cover = [String(k) for k in keys(default_values)]
+        site_df = DataFrame([Symbol(name) => [site_values[name]] for name in param_names_no_cover])
+        site_df.BYPAR = round.(Int64, site_df.BYPAR)
+        site_df.NOOUTF = round.(Int64, site_df.NOOUTF)
+        disallowmissing!(site_df)
+
+        site_nt = NamedTuple(site_df[1, Not([:DTIMAX, :DSWMAX, :DPSIMAX])])
+        solver_opts = NamedTuple(site_df[1, [:DTIMAX, :DSWMAX, :DPSIMAX]])
+
+        species_tuples = NamedTuple{Tuple(species_names)}(Tuple([species_param_dict[sp] for sp in species_names]))
+        input_param = merge(site_nt, species_tuples, (species_names = species_names, cover_fractions = cover_fractions))
+        return input_param, solver_opts
+    end
+
     input_values = Dict(String(k) => v for (k, v) in pairs(default_values))
     for i in eachindex(received_names)
+        received_names[i] == "COVER_FRAC" && continue
         input_values[received_names[i]] = parse_param_value(input_param_rows[i, 2], received_names[i], path_param)
     end
 
@@ -1175,7 +1368,7 @@ function read_path_param(path_param; simulate_isotopes::Bool = false) # simulate
     Missing or NaN: $unresolved_names
     """)
 
-    input_param_df = DataFrame([Symbol(name) => [input_values[name]] for name in expected_names])
+    input_param_df = DataFrame([Symbol(name) => [input_values[name]] for name in String.(keys(default_values))])
 
     # Set minimum/maximum values
     # from LWFBrook90R:PFILE.h
@@ -1218,7 +1411,7 @@ function read_path_storm_durations(path_storm_durations)
     received_types      = Dict(k => allowed_coltypes[k] for k in received_colnames if haskey(allowed_coltypes, k))
     received_col_rename = Dict(k => allowed_renaming[k] for k in received_colnames if haskey(allowed_renaming, k))
 
-    # Read data: 
+    # Read data:
     input_storm_durations = @chain begin DataFrame(File(path_storm_durations;
         comment = "###",
         # Be strict about loading NA's -> error if NA present
@@ -1246,7 +1439,7 @@ end
 function read_path_soil_horizons(path_soil_horizons)
     f = File(path_soil_horizons)
     received_colnames = f.names
-    
+
     # Specify expected inputs:
     allowed_colname_variations = [
         # accomodate Mualem Van Genuchten
@@ -1358,7 +1551,7 @@ function read_path_soil_horizons(path_soil_horizons)
         soil_horizons[!, :shp] = LWFBrook90.MualemVanGenuchtenSHP(input_soil_horizons);
     else # FLAG_MualVanGen = 0 (Clapp-Hornberger)
         error("""
-        Clapp-Hornberger currently not yet supported. 
+        Clapp-Hornberger currently not yet supported.
         Please request this from the developer by providing an example parameter set.
         Or alternatively open yourself a PR in the GitHub repo.
         """)
@@ -1367,39 +1560,55 @@ function read_path_soil_horizons(path_soil_horizons)
     return soil_horizons
 end
 
-function read_path_soil_discretization(path_soil_discretization)
+function read_path_soil_discretization(path_soil_discretization; species_names::Vector{Symbol} = Symbol[])
     f = File(path_soil_discretization)
     received_colnames = f.names
 
-    # Specify expected inputs:
-    allowed_colname_variations = [
-        #[:Upper_m, :Lower_m, :Rootden_, :uAux_PSIM_init_kPa] # NOTE: this is now allowed
-        [:Upper_m, :Lower_m, :Rootden_, :uAux_PSIM_init_kPa, :u_delta18O_init_permil, :u_delta2H_init_permil]
-    ]
-    allowed_coltypes = Dict(
+    # Specify expected inputs, extended below for species-specific root profiles.
+    allowed_coltypes = Dict{Symbol, Type}(
         :Upper_m                 => Float64,
         :Lower_m                 => Float64,
-        :Rootden_                => Float64,
         :uAux_PSIM_init_kPa      => Float64,
         :u_delta18O_init_permil  => Float64,
         :u_delta2H_init_permil   => Float64)
-    allowed_units = Dict(
+    allowed_units = Dict{Symbol, String}(
         :Upper_m                 => "m",
         :Lower_m                 => "m",
-        :Rootden_                => "-",
         :uAux_PSIM_init_kPa      => "kPa",
         :u_delta18O_init_permil  => "permil",
         :u_delta2H_init_permil   => "permil")
-    # allowed_renaming = unused
 
-    if (!(received_colnames ∈ allowed_colname_variations))
-        error("Invalid combinations (or wrong order) of column names provided in $(basename(path_soil_discretization)) ($path_soil_discretization).")
+    has_multi_species_roots = any(startswith(String(c), "Rootden_") && length(String(c)) > 8 for c in received_colnames)
+
+    if has_multi_species_roots
+        for c in received_colnames
+            c_str = String(c)
+            if startswith(c_str, "Rootden_") && length(c_str) > 8
+                sp_str = c_str[9:end]
+                sp_sym = Symbol(sp_str)
+                if !isempty(species_names) && !(sp_sym in species_names)
+                    error("Species naming mismatch in $(basename(path_soil_discretization)): Column '$c' has species suffix '$sp_str' which does not match any known species in param.csv $(species_names).")
+                end
+                allowed_coltypes[c] = Float64
+                allowed_units[c] = "-"
+            end
+        end
+        if !isempty(species_names) && species_names != [:species1]
+            for sp in species_names
+                expected_col = Symbol("Rootden_$sp")
+                if !(expected_col in received_colnames)
+                    error("Species naming mismatch in $(basename(path_soil_discretization)): Missing expected root density column '$expected_col' for species '$sp'.")
+                end
+            end
+        end
+    else
+        allowed_coltypes[:Rootden_] = Float64
+        allowed_units[:Rootden_] = "-"
     end
 
-    received_types      = Dict(k => allowed_coltypes[k] for k in received_colnames if haskey(allowed_coltypes, k))
-    # received_col_rename = unused
+    received_types = Dict(k => allowed_coltypes[k] for k in received_colnames if haskey(allowed_coltypes, k))
 
-    # Read data: 
+    # Read data:
     input_soil_discretization = @chain begin DataFrame(File(path_soil_discretization;
         skipto=3, delim=',',
         types=received_types, missingstring = "NA"))
@@ -1411,7 +1620,15 @@ function read_path_soil_discretization(path_soil_discretization)
     expected_units = DataFrame(allowed_units)
     assert_unitsHeader_as_expected(path_soil_discretization, expected_units)
 
-    # Assert validity of values:
+    # If Rootden_ missing in multi-species, set it to the first species rootden
+    if !("Rootden_" in names(input_soil_discretization)) && has_multi_species_roots
+        first_sp = isempty(species_names) ? :species1 : species_names[1]
+        first_col = Symbol("Rootden_$first_sp")
+        if String(first_col) in names(input_soil_discretization)
+            input_soil_discretization[!, :Rootden_] = input_soil_discretization[!, first_col]
+        end
+    end
+
     # Check that defined layers do not overlap
     @assert input_soil_discretization[1:end-1,"Lower_m"] == input_soil_discretization[2:end,"Upper_m"] """
         Input file '$path_soil_discretization' contains overlapping layers.

@@ -62,6 +62,22 @@ function get_states(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
     # simulation.ODESolution.u[1].CC.MJm2
     # simulation.ODESolution.u[1].SNOWLQ.mm
 
+    species_names = hasproperty(simulation.parametrizedSPAC.pars, :species_names) ? simulation.parametrizedSPAC.pars.species_names : [:species1]
+    is_multi_species = !isempty(species_names) && species_names != [:species1]
+
+    if is_multi_species
+        for sp in species_names
+            states[!, Symbol("INTS_mm_$sp")] = [simulation.ODESolution(t)[Symbol("INTS_$sp")].mm for t in timepoints]
+            states[!, Symbol("INTR_mm_$sp")] = [simulation.ODESolution(t)[Symbol("INTR_$sp")].mm for t in timepoints]
+            if simulate_isotopes
+                states[!, Symbol("INTS_d18O_$sp")] = [simulation.ODESolution(t)[Symbol("INTS_$sp")].d18O for t in timepoints]
+                states[!, Symbol("INTR_d18O_$sp")] = [simulation.ODESolution(t)[Symbol("INTR_$sp")].d18O for t in timepoints]
+                states[!, Symbol("XYLEM_d18O_$sp")] = [simulation.ODESolution(t)[Symbol("XYLEM_$sp")].d18O for t in timepoints]
+                states[!, Symbol("XYLEM_d2H_$sp")]  = [simulation.ODESolution(t)[Symbol("XYLEM_$sp")].d2H for t in timepoints]
+            end
+        end
+    end
+
     # ii) vector states
     # names(get_soil_([:θ, :ψ, :δ18O, :δ2H, :W, :SWATI, :K], simulation))
     vect_states = simulate_isotopes ? get_soil_([:θ, :ψ, :d18O, :d2H], simulation; days_to_read_out_d = timepoints) :
@@ -184,16 +200,30 @@ function get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
     # align ODE vars with other accum fluxes
     shift_vars = [:srfl,:slfl,:byfl,:dsfl,:gwfl,:vrfln,:flow,:seep]
     df_fluxes[1:(nt-1), shift_vars] .= df_fluxes[2:nt, shift_vars]
-    
+
     # filter for requested time points
     filter!(row -> row.time in timepoints, df_fluxes)
 
     # 2) scalar fluxes, signatures
+    species_names = hasproperty(simulation.parametrizedSPAC.pars, :species_names) ? simulation.parametrizedSPAC.pars.species_names : [:species1]
+    is_multi_species = !isempty(species_names) && species_names != [:species1]
+
     simulate_isotopes = simulation.parametrizedSPAC.solver_options.simulate_isotopes
     df_scalar_signatures = !simulate_isotopes ? DataFrame() : LWFBrook90.intern___get_scalars(
         [:PREC, :RWU, :PREC, :RWU],
         [:d18O, :d18O, :d2H, :d2H],
         simulation, timepoints)[:,Not(:time)]
+
+    if simulate_isotopes && is_multi_species
+        for sp in species_names
+            rwu_iso = LWFBrook90.intern___get_scalars(
+                [Symbol("RWU_$sp"), Symbol("RWU_$sp")],
+                [:d18O, :d2H],
+                simulation, timepoints)[:, Not(:time)]
+            df_scalar_signatures[!, Symbol("RWU_d18O_$sp")] = rwu_iso[!, Symbol("RWU_$(sp)_d18O")]
+            df_scalar_signatures[!, Symbol("RWU_d2H_$sp")]  = rwu_iso[!, Symbol("RWU_$(sp)_d2H")]
+        end
+    end
 
     # 3) vector fluxes, signatures
     df_vector_signatures = DataFrame() # TODO: this is currently not stored anywhere when simulating (would need to append to state vector u0)
@@ -213,7 +243,7 @@ function get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
         :cum_d_prec,:cum_d_sfal,:cum_d_sthr,:cum_d_sint,:cum_d_irrig,
         :cum_d_rfal,:cum_d_rint,:cum_d_rthr,:cum_d_rsno,:cum_d_rnet,:cum_d_smlt,
         :cum_d_irvp,:cum_d_isvp,:cum_d_snvp,:cum_d_slvp,
-        :cum_d_tran, 
+        :cum_d_tran,
         :RWU, :INTS, :INTR, :SNOW, :CC, :SNOWLQ,
 
         :RWU_d18O, :RWU_d2H,
@@ -239,11 +269,28 @@ function get_fluxes(simulation::DiscretizedSPAC; days_to_read_out_d = nothing) #
         # # simulation.ODESolution.u[1].TRANI.mmday
         r"TRANI_"
     )
+
+    extra_cols = Symbol[]
+    if is_multi_species
+        for sp in species_names
+            push!(extra_cols, Symbol("cum_d_tran_$sp"))
+            push!(extra_cols, Symbol("cum_d_irvp_$sp"))
+            push!(extra_cols, Symbol("cum_d_isvp_$sp"))
+            push!(extra_cols, Symbol("cum_d_ptran_$sp"))
+            push!(extra_cols, Symbol("cum_d_pint_$sp"))
+            if simulate_isotopes
+                push!(extra_cols, Symbol("RWU_d18O_$sp"))
+                push!(extra_cols, Symbol("RWU_d2H_$sp"))
+            end
+        end
+    end
+    cols_selected = (cols_selected..., extra_cols...)
+
     if (!simulate_isotopes)
         cols_to_drop = [
-            :RWU_d18O, :RWU_d2H, 
+            :RWU_d18O, :RWU_d2H,
             :PREC_d18O, :PREC_d2H,]
-        cols_selected = filter(x -> x ∉ cols_to_drop, cols_selected) 
+        cols_selected = filter(x -> x ∉ cols_to_drop, cols_selected)
     end
 
     select!(df_all_fluxes, cols_selected...)
@@ -1409,7 +1456,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     @assert simulate_isotopes "Provided DiscretizedSPAC() did not simulate isotopes"
 
     simulate_irrigation = solu.prob.p.simulate_irrigation
-    
+
     # Some hardcoded options:
     xlimits = RelativeDaysFloat2DateTime.(solu.prob.tspan, t_ref)
     tick_function = (x1, x2) -> PlotUtils.optimize_ticks(x1, x2; k_min = 4)
@@ -1541,7 +1588,7 @@ RWUcentroid can have values of either `:dontShowRWUcentroid` or `:showRWUcentroi
     y_extended = [-500; -350; -300; -250; -200; -150; -100; -50;         y_center;             (maxdepth .+ [50; 100; 150; 250; 300;400])]
     y_soil_ticks = tick_function(0., round(maxdepth))[1] # TODO(bernhard): how to do without loading Plots.optimize_ticks()
     y_ticks    = [-500;       -300;       -200;       -100;          y_soil_ticks;             (maxdepth .+ [    100;      250;     400])]
-    
+
     if simulate_irrigation # replace snow isotopic signature with irrigation input
         y_labels   = ["PREC";   "INTS";     "INTR";     "IRRIG";     round.(y_soil_ticks; digits=0);                                                "GWAT";    "RWU";     "XYLEM"]
         z2_extended = [row_PREC_d18O; row_NaN; row_INTS_d18O; row_NaN; row_INTR_d18O; row_NaN; row_IRRIG_d18O; row_NaN; rows_SWAT_d18O; row_NaN; row_GWAT_d18O; row_NaN; row_RWU_d18O; row_NaN; row_XYL_d18O]

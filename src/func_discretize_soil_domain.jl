@@ -407,6 +407,16 @@ function overwrite_IC!(soil_discretization_DF, _to_use_IC_soil, simulate_isotope
 end
 
 function overwrite_rootden!(soil_discretization_DF, _to_use_root_distribution, _to_use_Δz_thickness_m)
+
+    if first(values(_to_use_root_distribution)) isa NamedTuple
+        for (sp, sp_root_dist) in pairs(_to_use_root_distribution)
+            cleaned = NamedTuple([k => v for (k,v) in pairs(sp_root_dist) if !isnothing(v)])
+            soil_discretization_DF[!, Symbol("Rootden_$sp")] = LWFBrook90.Rootden_(; cleaned..., Δz_m = _to_use_Δz_thickness_m)
+        end
+        first_sp = first(keys(_to_use_root_distribution))
+        soil_discretization_DF[!, :Rootden_] = soil_discretization_DF[!, Symbol("Rootden_$first_sp")]
+        return nothing
+    end
     # remove empty arguments (i.e. nothing)
     _to_use_root_distribution = NamedTuple([k => v for (k,v) in pairs(_to_use_root_distribution) if !isnothing(v)])
 
