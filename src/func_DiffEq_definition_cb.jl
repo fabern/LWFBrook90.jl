@@ -38,21 +38,32 @@ function define_LWFB90_cb(tspan)
 
     saved_values = SavedValues(Float64, NamedTuple)
 
-    save_func(u, t, integrator) = (
+    save_func(u, t, integrator) = begin
         # Copy just the accumulator values, not the parent state behind this view.
-        accum = copy(u.accum),
-        RWU   = u.RWU.mmday,
-        INTS  = u.INTS.mm,
-        INTR  = u.INTR.mm,
-        SNOW  = u.SNOW.mm,
-        CC    = u.CC.MJm2,
-        SNOWLQ= u.SNOWLQ.mm,
-        TRANI = copy(u.TRANI.mmday)
-    )
+        res = Dict{Symbol, Any}(
+            :accum => copy(u.accum),
+            :RWU   => u.RWU.mmday,
+            :INTS  => u.INTS.mm,
+            :INTR  => u.INTR.mm,
+            :SNOW  => u.SNOW.mm,
+            :CC    => u.CC.MJm2,
+            :SNOWLQ=> u.SNOWLQ.mm,
+            :TRANI => copy(u.TRANI.mmday)
+        )
+        if hasproperty(integrator.p, :species_names) && !isempty(integrator.p.species_names) && integrator.p.species_names != [:species1]
+            for sp in integrator.p.species_names
+                trani_sp_sym = Symbol("TRANI_$sp")
+                if hasproperty(u, trani_sp_sym)
+                    res[trani_sp_sym] = copy(getproperty(u, trani_sp_sym).mmday)
+                end
+            end
+        end
+        NamedTuple(res)
+    end
 
     cb_save = SavingCallback(
-        save_func, 
-        saved_values; 
+        save_func,
+        saved_values;
         saveat=tspan[1]:1:tspan[2]);
 
     # callback for daily reset of RHS accumulators
@@ -60,7 +71,7 @@ function define_LWFB90_cb(tspan)
                                 LWFBrook90R_reset_daily!,  1.0;
                                 initial_affect = false, # we do not need to reset accumulators at the initial conditions
                                 save_positions=(false,false));
-    
+
 
     #TODO(bernhard) Implement swchek from LWFBrook90 as ContinuousCallback
     # swcheck_cb = ContinuousCallback()
@@ -168,104 +179,209 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
     LWFBrook90.KPT.derive_auxiliary_SOILVAR!(u_aux_WETNES, u_aux_PSIM, u_aux_PSITI, u_aux_θ, p_fu_KK, # NOTE: in-place variant reuses the cache arrays already unpacked above instead of allocating 5 new ones
         u_SWATI, p_soil)
 
-    # MSBSETVARS: A) get: 1) sunshine durations, 2) SFAL, 3) plant resistance (TODO: could be done before simulation)
-    # MSBSETVARS: B) get_windspeed_from_canopy_and_snowpack: (p_fu_UADTM, p_fu_UANTM) = f(...)
-    # MSBSETVARS: C) get_snowpack_evaporation_from_canopy,snowpack,atmosphere,: (p_fu_UADTM, p_fu_UANTM) = f(...)
-    p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY, p_fu_HEIGHT, p_fu_LAI, p_fu_SAI,
-        p_fu_Z0GS, p_fu_Z0C, p_fu_DISPC, p_fu_Z0, p_fu_DISP, p_fu_ZA,
-        p_fT_RXYLEM, p_fT_RROOTI, p_fT_ALPHA,
-        p_fu_SHEAT, p_fT_SOLRADC, p_fT_TA[1], p_fT_TADTM[1], p_fT_TANTM, p_fu_UADTM, p_fu_UANTM,
-        p_fT_SNOFRC, p_fu_TSNOW, p_fu_PSNVP, p_fu_ALBEDO,p_fu_RSS, p_fu_SNOEN =
-            MSBSETVARS(FLAG_MualVanGen, NLAYER, p_soil,
-                       # for SUNDS:
-                       p_LAT, p_ESLOPE, p_DOY(integrator.t), p_L1, p_L2,
-                       # for CANOPY:
-                       p_HEIGHT(integrator.t), p_LAI(integrator.t), p_SAI(integrator.t), u_SNOW, p_SNODEN, p_MXRTLN, p_MXKPL, p_DENSEF(integrator.t),
-                       #
-                       p_Z0S, p_Z0G,
-                       # for ROUGH:
-                       p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC,
-                       # for PLNTRES:
-                       p_RELDEN.(integrator.t, 1:NLAYER), p_RTRAD, p_FXYLEM,
-                       # for WEATHER:
-                       p_TMAX(integrator.t), p_TMIN(integrator.t), p_VAPPRES(integrator.t), p_WIND(integrator.t), p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_GLOBRAD(integrator.t),
-                       # for SNOFRAC:
-                       p_RSTEMP,
-                       #
-                       u_CC, p_CVICE,
-                       # for SNOVAP:
-                       p_LWIDTH, p_RHOTP, p_NN, p_KSNVP,
-                       #
-                       p_ALBSN, p_ALB,
-                       # for FRSS:
-                       p_RSSA, p_RSSB, u_aux_PSIM, #u_aux_PSIM[1]
-                       # for SNOENRGY:
-                       p_CCFAC, p_MELFAC, p_LAIMLT, p_SAIMLT)
+    species_names = hasproperty(integrator.p, :species_names) ? integrator.p.species_names : [:species1]
+    cover_fractions = hasproperty(integrator.p, :cover_fractions) ? integrator.p.cover_fractions : (species1 = 1.0,)
+    is_multi_species = !isempty(species_names) && species_names != [:species1]
 
+    tot_TRANI = zeros(NLAYER)
+    tot_SLVP = 0.0
+    tot_SINT = 0.0
+    tot_ISVP = 0.0
+    tot_RINT = 0.0
+    tot_IRVP = 0.0
+    tot_RSNO = 0.0
+    tot_SNVP = 0.0
+    tot_SMLT = 0.0
+    tot_RNET = 0.0
+    tot_STHR = 0.0
+    tot_SFAL = 0.0
+    tot_RFAL = 0.0
+    tot_PINT = 0.0
+    tot_PTRAN = 0.0
+    tot_PSLVP = 0.0
+    tot_INTS_new = 0.0
+    tot_INTR_new = 0.0
+    tot_SNOW_new = 0.0
+    tot_CC_new = 0.0
+    tot_SNOWLQ_new = 0.0
 
-    # Calculate average daily rate of potential and actual interception,
-    # evaporation, and transpiration by considering weighted average of rate
-    # during day and rate during night:
-    #* * * * *  B E G I N   D A Y - N I G H T   E T   L O O P  * * * * * * * * *
-    # Compute day and night rates
-    (p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR, p_fu_ATRI, p_fu_PGER) =
-        MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM[1], p_fu_UADTM, p_fT_TANTM, p_fu_UANTM,
-                    p_fT_I0HDAY,
-                    # for AVAILEN:
-                    p_fu_ALBEDO, p_C1, p_C2, p_C3, p_VAPPRES(integrator.t), p_fu_SHEAT, p_CR, p_fu_LAI, p_fu_SAI,
-                    # for SWGRA:
-                    p_fu_ZA, p_fu_HEIGHT, p_fu_Z0, p_fu_DISP, p_fu_Z0C, p_fu_DISPC, p_fu_Z0GS, p_LWIDTH, p_RHOTP, p_NN,
-                    # for SRSC:
-                    p_fT_TA[1], p_GLMIN, p_GLMAX, p_R5, p_CVPD, p_RM, p_TL, p_T1, p_T2, p_TH,
-                    # for SWPE:
-                    p_fu_RSS,
-                    # for TBYLAYER:
-                    p_fT_ALPHA, p_fu_KK, p_fT_RROOTI, p_fT_RXYLEM, u_aux_PSITI, NLAYER, p_PSICR, NOOUTF)
-                    # 0.000012 seconds (28 allocations: 1.938 KiB)
-    # Combine day and night rates to average daily rate
-    (p_fu_PTRAN, p_fu_GEVP, p_fu_PINT, p_fu_GIVP, aux_du_TRANI[:]) =
-        MSBDAYNIGHT_postprocess(NLAYER, p_fu_PTR, p_fu_GER, p_fu_PIR, p_fu_GIR, p_fu_ATRI, p_fT_DAYLEN)
-    #* * * * * * * *  E N D   D A Y - N I G H T   L O O P  * * * * * * * * * *
-    ####################################################################
-    # 1) Update snow accumulation/melt: u_SNOW, u_CC, u_SNOWLQ
-    #    and compute fluxes to/from interception storage
     u_SNOW_old[1] = u_SNOW
-    (# compute some fluxes as intermediate results to be used in RHS function f:
-    p_fT_SFAL, p_fT_RFAL, p_fu_RNET[1], p_fu_PTRAN,
-    # compute changes in soil water storage:
-    aux_du_TRANI[:], aux_du_SLVP_total,
-    # compute change in interception storage:
-    aux_du_SINT[1], aux_du_ISVP[1], aux_du_RINT[1], aux_du_IRVP[1],
-    # compute change in snow storage:
-    aux_du_RSNO[1], aux_du_SNVP[1], aux_du_SMLT[1], p_fu_STHR[1],
-    # compute updated states:
-    u_SNOW_MSBupdate, u_CC, u_SNOWLQ) =
-        MSBPREINT(p_PREC(integrator.t), p_DTP, p_fT_SNOFRC, p_NPINT, p_fu_PINT, p_fT_TA[1],
-               # for INTER (snow)
-               u_INTS, p_fu_LAI, p_fu_SAI, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS,
-               # for INTER (rain)
-               u_INTR, p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS,
-               # for INTER24 (snow + rain)
-               p_DURATN, p_MONTHN(integrator.t),
-               #
-               u_SNOW, p_fu_PTRAN, NLAYER, aux_du_TRANI, p_fu_GIVP, p_fu_GEVP,
-               # for SNOWPACK
-               u_CC, u_SNOWLQ, p_fu_PSNVP, p_fu_SNOEN, p_MAXLQF, p_GRDMLT,
-               # Constants
-               LWFBrook90.CONSTANTS.p_CVICE, LWFBrook90.CONSTANTS.p_LF, LWFBrook90.CONSTANTS.p_CVLQ)
-               # 0.000016 seconds (28 allocations: 3.609 KiB)
 
-    # distribute aux_du_SLVP_total onto computational soil layers. (Default in BROOK90 is only topmost soil layer.)
-    @inbounds @simd for i in eachindex(aux_du_SLVPI, p_SLVPFRAC)
-        aux_du_SLVPI[i] = aux_du_SLVP_total * p_SLVPFRAC[i]
+    # Resolve canopy and root conditions, daily ET, and interception for each species.
+    for sp in species_names
+        w_s = cover_fractions[sp]
+        sp_p = is_multi_species ? integrator.p.species_params[sp] : integrator.p
+        sp_veg = is_multi_species ? integrator.p.species_vegetation_fT[sp] : Dict(
+            "p_HEIGHT" => p_HEIGHT, "p_LAI" => p_LAI, "p_SAI" => p_SAI, "p_DENSEF" => p_DENSEF, "p_RELDEN" => p_RELDEN)
+
+        u_INTS_s = is_multi_species ? getproperty(integrator.u, Symbol("INTS_$sp")).mm : u_INTS
+        u_INTR_s = is_multi_species ? getproperty(integrator.u, Symbol("INTR_$sp")).mm : u_INTR
+        u_SNOW_s = u_SNOW
+        u_CC_s   = u_CC
+        u_SNOWLQ_s = u_SNOWLQ
+
+        sp_MXKPL  = haskey(sp_p, :MXKPL) ? sp_p[:MXKPL] : (hasproperty(sp_p, :MXKPL) ? sp_p.MXKPL : p_MXKPL)
+        sp_MXRTLN = haskey(sp_p, :MXRTLN) ? sp_p[:MXRTLN] : (hasproperty(sp_p, :MXRTLN) ? sp_p.MXRTLN : p_MXRTLN)
+        sp_LWIDTH = haskey(sp_p, :LWIDTH) ? sp_p[:LWIDTH] : (hasproperty(sp_p, :LWIDTH) ? sp_p.LWIDTH : p_LWIDTH)
+        sp_ALBSN  = haskey(sp_p, :ALBSN) ? sp_p[:ALBSN] : (hasproperty(sp_p, :ALBSN) ? sp_p.ALBSN : p_ALBSN)
+        sp_ALB    = haskey(sp_p, :ALB) ? sp_p[:ALB] : (hasproperty(sp_p, :ALB) ? sp_p.ALB : p_ALB)
+        sp_FXYLEM = haskey(sp_p, :FXYLEM) ? sp_p[:FXYLEM] : (hasproperty(sp_p, :FXYLEM) ? sp_p.FXYLEM : p_FXYLEM)
+        sp_GLMIN  = haskey(sp_p, :GLMIN) ? sp_p[:GLMIN] : (hasproperty(sp_p, :GLMIN) ? sp_p.GLMIN : p_GLMIN)
+        sp_GLMAX  = haskey(sp_p, :GLMAX) ? sp_p[:GLMAX] : (hasproperty(sp_p, :GLMAX) ? sp_p.GLMAX : p_GLMAX)
+        sp_PSICR  = haskey(sp_p, :PSICR) ? sp_p[:PSICR] : (hasproperty(sp_p, :PSICR) ? sp_p.PSICR : p_PSICR)
+        sp_CR     = haskey(sp_p, :CR) ? sp_p[:CR] : (hasproperty(sp_p, :CR) ? sp_p.CR : p_CR)
+        sp_KSNVP  = haskey(sp_p, :KSNVP) ? sp_p[:KSNVP] : (hasproperty(sp_p, :KSNVP) ? sp_p.KSNVP : p_KSNVP)
+
+        p_MXKPL_s = sp_MXKPL
+
+        # MSBSETVARS derives canopy, weather, plant resistance, and snow energy terms.
+        # MSBSETVARS: A) get: 1) sunshine durations, 2) SFAL, 3) plant resistance (TODO: could be done before simulation)
+        # MSBSETVARS: B) get_windspeed_from_canopy_and_snowpack: (p_fu_UADTM, p_fu_UANTM) = f(...)
+        # MSBSETVARS: C) get_snowpack_evaporation_from_canopy,snowpack,atmosphere,: (p_fu_UADTM, p_fu_UANTM) = f(...)
+        p_fT_DAYLEN, p_fT_I0HDAY, p_fT_SLFDAY, p_fu_HEIGHT_s, p_fu_LAI_s, p_fu_SAI_s,
+            p_fu_Z0GS_s, p_fu_Z0C_s, p_fu_DISPC_s, p_fu_Z0_s, p_fu_DISP_s, p_fu_ZA_s,
+            p_fT_RXYLEM_s, p_fT_RROOTI_s, p_fT_ALPHA_s,
+            p_fu_SHEAT_s, p_fT_SOLRADC_s_full, p_fT_TA[1], p_fT_TADTM[1], p_fT_TANTM, p_fu_UADTM_s, p_fu_UANTM_s,
+            p_fT_SNOFRC_s, p_fu_TSNOW_s, p_fu_PSNVP_s, p_fu_ALBEDO_s, p_fu_RSS_s, p_fu_SNOEN_s =
+                MSBSETVARS(FLAG_MualVanGen, NLAYER, p_soil,
+                           p_LAT, p_ESLOPE, p_DOY(integrator.t), p_L1, p_L2,
+                           sp_veg["p_HEIGHT"](integrator.t), sp_veg["p_LAI"](integrator.t), sp_veg["p_SAI"](integrator.t), u_SNOW_s, p_SNODEN, sp_MXRTLN, p_MXKPL_s, sp_veg["p_DENSEF"](integrator.t),
+                           p_Z0S, p_Z0G,
+                           p_ZMINH, p_CZS, p_CZR, p_HS, p_HR, p_LPC,
+                           sp_veg["p_RELDEN"].(integrator.t, 1:NLAYER), p_RTRAD, sp_FXYLEM,
+                           p_TMAX(integrator.t), p_TMIN(integrator.t), p_VAPPRES(integrator.t), p_WIND(integrator.t), p_WNDRAT, p_FETCH, p_Z0W, p_ZW, p_GLOBRAD(integrator.t),
+                           p_RSTEMP,
+                           u_CC_s, p_CVICE,
+                           sp_LWIDTH, p_RHOTP, p_NN, sp_KSNVP,
+                           sp_ALBSN, sp_ALB,
+                           p_RSSA, p_RSSB, u_aux_PSIM,
+                           p_CCFAC, p_MELFAC, p_LAIMLT, p_SAIMLT)
+
+        p_fT_SOLRADC_s = p_fT_SOLRADC_s_full
+        # Calculate average daily rate of potential and actual interception,
+        # evaporation, and transpiration by considering weighted average of rate
+        # during day and rate during night:
+        #* * * * *  B E G I N   D A Y - N I G H T   E T   L O O P  * * * * * * * * *
+        # Compute day and night rates
+        # Average the day and night potential and actual evaporation and transpiration rates.
+        (p_fu_PTR_s, p_fu_GER_s, p_fu_PIR_s, p_fu_GIR_s, p_fu_ATRI_s, p_fu_PGER_s) =
+            MSBDAYNIGHT(p_fT_SLFDAY, p_fT_SOLRADC_s, p_WTOMJ, p_fT_DAYLEN, p_fT_TADTM[1], p_fu_UADTM_s, p_fT_TANTM, p_fu_UANTM_s,
+                        p_fT_I0HDAY,
+                        # for AVAILEN:
+
+                        p_fu_ALBEDO_s, p_C1, p_C2, p_C3, p_VAPPRES(integrator.t), p_fu_SHEAT_s, sp_CR, p_fu_LAI_s, p_fu_SAI_s,
+                        # for SWGRA:
+                        p_fu_ZA_s, p_fu_HEIGHT_s, p_fu_Z0_s, p_fu_DISP_s, p_fu_Z0C_s, p_fu_DISPC_s, p_fu_Z0GS_s, sp_LWIDTH, p_RHOTP, p_NN,
+                        # for SRSC:
+                        p_fT_TA[1], sp_GLMIN, sp_GLMAX, p_R5, p_CVPD, p_RM, p_TL, p_T1, p_T2, p_TH,
+                        # for SWPE:
+                        p_fu_RSS_s,
+                        # for TBYLAYER:
+                        # for TBYLAYER:
+                        p_fT_ALPHA_s, p_fu_KK, p_fT_RROOTI_s, p_fT_RXYLEM_s, u_aux_PSITI, NLAYER, sp_PSICR, NOOUTF)
+        # Combine day and night rates to average daily rate
+        (p_fu_PTRAN_s, p_fu_GEVP_s, p_fu_PINT_s, p_fu_GIVP_s, TRANI_s) =
+            MSBDAYNIGHT_postprocess(NLAYER, p_fu_PTR_s, p_fu_GER_s, p_fu_PIR_s, p_fu_GIR_s, p_fu_ATRI_s, p_fT_DAYLEN)
+        #* * * * * * * *  E N D   D A Y - N I G H T   L O O P  * * * * * * * * * *
+        ####################################################################
+        # 1) Update snow accumulation/melt: u_SNOW, u_CC, u_SNOWLQ
+        #    and compute fluxes to/from interception storage
+        p_PREC_s = p_PREC(integrator.t)
+
+        # Update snow accumulation and melt, and compute fluxes to and from interception.
+        (# compute some fluxes as intermediate results to be used in RHS function f:
+        p_fT_SFAL_s, p_fT_RFAL_s, p_fu_RNET_s, p_fu_PTRAN_s_pre,
+        # compute changes in soil water storage:
+        TRANI_s_pre, aux_du_SLVP_s,
+        # compute change in interception storage:
+        aux_du_SINT_s, aux_du_ISVP_s, aux_du_RINT_s, aux_du_IRVP_s,
+        # compute change in snow storage:
+        aux_du_RSNO_s, aux_du_SNVP_s, aux_du_SMLT_s, p_fu_STHR_s,
+        # compute updated states:
+        u_SNOW_MSBupdate_s, u_CC_s_up, u_SNOWLQ_s_up) =
+            MSBPREINT(p_PREC_s, p_DTP, p_fT_SNOFRC_s, p_NPINT, p_fu_PINT_s, p_fT_TA[1],
+                # for INTER (snow)
+                u_INTS_s, p_fu_LAI_s, p_fu_SAI_s, p_FSINTL, p_FSINTS, p_CINTSL, p_CINTSS,
+                # for INTER (rain)
+                u_INTR_s, p_FRINTL, p_FRINTS, p_CINTRL, p_CINTRS,
+                # for INTER24 (snow + rain)
+                p_DURATN, p_MONTHN(integrator.t),
+                #
+                u_SNOW_s, p_fu_PTRAN_s, NLAYER, TRANI_s, p_fu_GIVP_s, p_fu_GEVP_s,
+                # for SNOWPACK
+                u_CC_s, u_SNOWLQ_s, p_fu_PSNVP_s, p_fu_SNOEN_s, p_MAXLQF, p_GRDMLT,
+                # Constants
+                LWFBrook90.CONSTANTS.p_CVICE, LWFBrook90.CONSTANTS.p_LF, LWFBrook90.CONSTANTS.p_CVLQ)
+
+        u_INTS_s_new = u_INTS_s + (aux_du_SINT_s - aux_du_ISVP_s) * p_DTP
+        u_INTR_s_new = u_INTR_s + (aux_du_RINT_s - aux_du_IRVP_s) * p_DTP
+
+        if is_multi_species
+            getproperty(integrator.u, Symbol("INTS_$sp")).mm = u_INTS_s_new
+            getproperty(integrator.u, Symbol("INTR_$sp")).mm = u_INTR_s_new
+            getproperty(integrator.u, Symbol("TRANI_$sp")).mmday .= w_s .* p_DTP .* TRANI_s_pre
+            getproperty(integrator.u, Symbol("RWU_$sp")).mmday = w_s * p_DTP * sum(TRANI_s_pre)
+            integrator.p.species_TRANI[sp] = w_s .* TRANI_s_pre
+
+            if compute_intermediate_quantities
+                integrator.u.accum[Symbol("cum_d_tran_$sp")] = w_s * p_DTP * sum(TRANI_s_pre)
+                integrator.u.accum[Symbol("cum_d_irvp_$sp")] = w_s * p_DTP * aux_du_IRVP_s
+                integrator.u.accum[Symbol("cum_d_isvp_$sp")] = w_s * p_DTP * aux_du_ISVP_s
+                integrator.u.accum[Symbol("cum_d_ptran_$sp")] = w_s * p_DTP * p_fu_PTRAN_s_pre
+                integrator.u.accum[Symbol("cum_d_pint_$sp")] = w_s * p_DTP * p_fu_PINT_s
+            end
+        end
+
+        tot_TRANI .+= w_s .* TRANI_s_pre
+        tot_SLVP += w_s * aux_du_SLVP_s
+        tot_SINT += w_s * aux_du_SINT_s
+        tot_ISVP += w_s * aux_du_ISVP_s
+        tot_RINT += w_s * aux_du_RINT_s
+        tot_IRVP += w_s * aux_du_IRVP_s
+        tot_RSNO += w_s * aux_du_RSNO_s
+        tot_SNVP += w_s * aux_du_SNVP_s
+        tot_SMLT += w_s * aux_du_SMLT_s
+        tot_RNET += w_s * p_fu_RNET_s
+        tot_STHR += w_s * p_fu_STHR_s
+        tot_SFAL += w_s * p_fT_SFAL_s
+        tot_RFAL += w_s * p_fT_RFAL_s
+        tot_PINT += w_s * p_fu_PINT_s
+        tot_PTRAN += w_s * p_fu_PTRAN_s_pre
+        tot_PSLVP += w_s * (p_fu_PGER_s[1] * p_fT_DAYLEN + p_fu_PGER_s[2] * (1 - p_fT_DAYLEN))
+        tot_INTS_new += w_s * u_INTS_s_new
+        tot_INTR_new += w_s * u_INTR_s_new
+        tot_SNOW_new += w_s * u_SNOW_MSBupdate_s
+        tot_CC_new += w_s * u_CC_s_up
+        tot_SNOWLQ_new += w_s * u_SNOWLQ_s_up
     end
+
+    aux_du_TRANI[:] = tot_TRANI
+    # distribute soil evaporation onto computational soil layers. (Default in BROOK90 is only topmost soil layer.)
+    @inbounds @simd for i in eachindex(aux_du_SLVPI, p_SLVPFRAC)
+        aux_du_SLVPI[i] = tot_SLVP * p_SLVPFRAC[i]
+    end
+    aux_du_SINT[1]  = tot_SINT
+    aux_du_ISVP[1]  = tot_ISVP
+    aux_du_RINT[1]  = tot_RINT
+    aux_du_IRVP[1]  = tot_IRVP
+    aux_du_RSNO[1]  = tot_RSNO
+    aux_du_SNVP[1]  = tot_SNVP
+    aux_du_SMLT[1]  = tot_SMLT
+    p_fu_RNET[1]    = tot_RNET
+    p_fu_STHR[1]    = tot_STHR
+    p_fT_SFAL       = tot_SFAL
+    p_fT_RFAL       = tot_RFAL
+    p_fu_PINT       = tot_PINT
+    p_fu_PTRAN      = tot_PTRAN
 
     ####################################################################
     # 2) Update states of interception storage over entire precipitation
     #    interval: u_INTS, u_INTR
-    u_INTS = u_INTS + (aux_du_SINT[1] - aux_du_ISVP[1]) * p_DTP
-    u_INTR = u_INTR + (aux_du_RINT[1] - aux_du_IRVP[1]) * p_DTP
-    u_SNOW = u_SNOW_MSBupdate
+    u_INTS = tot_INTS_new
+    u_INTR = tot_INTR_new
+    u_SNOW = tot_SNOW_new
+    u_CC   = tot_CC_new
+    u_SNOWLQ = tot_SNOWLQ_new
 
     ####################################################################
     # 3) Update soil water using substeps smaller than precipitation
@@ -274,15 +390,12 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
 
     ####################################################################
     # Return results from callback
-    # update INTS
+    # Return the aggregated storages from the daily callback.
+    # Soil water is updated by the main ODE solver between callbacks.
     integrator.u.INTS.mm = u_INTS
-
-    # update INTR
-    integrator.u.INTR.mm   = u_INTR
-
-    # update SNOW, CC, SNOWLQ
-    integrator.u.SNOW.mm   = u_SNOW
-    integrator.u.CC.MJm2   = u_CC
+    integrator.u.INTR.mm = u_INTR
+    integrator.u.SNOW.mm = u_SNOW
+    integrator.u.CC.MJm2 = u_CC
     integrator.u.SNOWLQ.mm = u_SNOWLQ
 
     p_fu_δ18O_SLFL .= NaN # NOTE: safety check to assert NaNs are directly after overwritten by callback for isotopes
@@ -298,24 +411,23 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
 
         # 1) Either set daily sum if rate is constant throughout precipitation interval: p_DTP*(...)
         # 2) or set daily sum to zero in reset_daily callback and use ODE to accumulate flow.
-        integrator.u.accum.cum_d_prec       = p_DTP * (p_fT_RFAL + p_fT_SFAL)                 # RFALD + SFALD        # cum_d_prec
-        integrator.u.accum.cum_d_rfal       = p_DTP * (p_fT_RFAL)                                                    # cum_d_rfal
-        integrator.u.accum.cum_d_sfal       = p_DTP * (p_fT_SFAL)                                                    # cum_d_sfal
-        integrator.u.accum.cum_d_rint       = p_DTP * (aux_du_RINT[1])                                                  # cum_d_rint
-        integrator.u.accum.cum_d_sint       = p_DTP * (aux_du_SINT[1])                                                  # cum_d_sint
-        integrator.u.accum.cum_d_rsno       = p_DTP * (aux_du_RSNO[1])                                                  # cum_d_rsno
-        integrator.u.accum.cum_d_rnet       = p_DTP * (p_fT_RFAL - aux_du_RINT[1] - aux_du_RSNO[1]) # cum_d_RTHR - RSNOD   # cum_d_rnet
-        integrator.u.accum.cum_d_smlt       = p_DTP * (aux_du_SMLT[1])                                                  # cum_d_smlt
-        integrator.u.accum.evap             = p_DTP * (aux_du_IRVP[1] + aux_du_ISVP[1] + aux_du_SNVP[1] + aux_du_SLVP_total + sum(aux_du_TRANI))  # evap
-        integrator.u.accum.cum_d_tran       = p_DTP * (sum(aux_du_TRANI))                                                          # cum_d_tran
-        integrator.u.accum.cum_d_irvp       = p_DTP * (aux_du_IRVP[1])                                                                # cum_d_irvp
-        integrator.u.accum.cum_d_isvp       = p_DTP * (aux_du_ISVP[1])                                                                # cum_d_isvp
-        integrator.u.accum.cum_d_slvp       = p_DTP * aux_du_SLVP_total                                                               # cum_d_slvp
-        integrator.u.accum.cum_d_snvp       = p_DTP * (aux_du_SNVP[1])                                                                # cum_d_snvp
-        integrator.u.accum.cum_d_pint       = p_DTP * (p_fu_PINT)                                                                  # cum_d_pint
-        integrator.u.accum.cum_d_ptran      = p_DTP * (p_fu_PTRAN)                                                                 # cum_d_ptran
-        p_fu_PSLVP = (p_fu_PGER[1] * p_fT_DAYLEN + p_fu_PGER[2] * (1 - p_fT_DAYLEN)) # (not needed for model computations, just for comparison with LWFBrook90R)
-        integrator.u.accum.cum_d_pslvp      = p_DTP * (p_fu_PSLVP)                                                             # cum_d_pslvp # Deactivated as p_fu_PSLVP is never used
+        integrator.u.accum.cum_d_prec       = p_DTP * (p_fT_RFAL + p_fT_SFAL)
+        integrator.u.accum.cum_d_rfal       = p_DTP * (p_fT_RFAL)
+        integrator.u.accum.cum_d_sfal       = p_DTP * (p_fT_SFAL)
+        integrator.u.accum.cum_d_rint       = p_DTP * (aux_du_RINT[1])
+        integrator.u.accum.cum_d_sint       = p_DTP * (aux_du_SINT[1])
+        integrator.u.accum.cum_d_rsno       = p_DTP * (aux_du_RSNO[1])
+        integrator.u.accum.cum_d_rnet       = p_DTP * (p_fT_RFAL - aux_du_RINT[1] - aux_du_RSNO[1])
+        integrator.u.accum.cum_d_smlt       = p_DTP * (aux_du_SMLT[1])
+        integrator.u.accum.evap             = p_DTP * (aux_du_IRVP[1] + aux_du_ISVP[1] + aux_du_SNVP[1] + tot_SLVP + sum(aux_du_TRANI))
+        integrator.u.accum.cum_d_tran       = p_DTP * (sum(aux_du_TRANI))
+        integrator.u.accum.cum_d_irvp       = p_DTP * (aux_du_IRVP[1])
+        integrator.u.accum.cum_d_isvp       = p_DTP * (aux_du_ISVP[1])
+        integrator.u.accum.cum_d_slvp       = p_DTP * (tot_SLVP)
+        integrator.u.accum.cum_d_snvp       = p_DTP * (aux_du_SNVP[1])
+        integrator.u.accum.cum_d_pint       = p_DTP * (p_fu_PINT)
+        integrator.u.accum.cum_d_ptran      = p_DTP * (p_fu_PTRAN)
+        integrator.u.accum.cum_d_pslvp      = p_DTP * tot_PSLVP
         # integrator.u.accum.flow             = 0 # flow,  updated in separate callback
         # integrator.u.accum.seep             = 0 # seep,  updated in separate callback
         # integrator.u.accum.srfl             = 0 # srfl,  updated in separate callback
@@ -324,15 +436,14 @@ function LWFBrook90R_updateAmounts_INTS_INTR_SNOW_CC_SNOWLQ!(integrator)
         # integrator.u.accum.dsfl             = 0 # dsfl,  updated in separate callback
         # integrator.u.accum.gwfl             = 0 # gwfl,  updated in separate callback
         # integrator.u.accum.vrfln            = 0 # vrfln, updated in separate callback
-        integrator.u.accum.cum_d_rthr       = p_DTP*(p_fT_RFAL - aux_du_RINT[1]) # cum_d_rthr
-        integrator.u.accum.cum_d_sthr       = p_DTP*(p_fT_SFAL - aux_du_SINT[1]) # cum_d_sthr
-        integrator.u.accum.cum_d_irrig      = p_DTP * (p_IRRIG(integrator.t)) # cum_d_irrig
+        integrator.u.accum.cum_d_rthr       = p_DTP * (p_fT_RFAL - aux_du_RINT[1])
+        integrator.u.accum.cum_d_sthr       = p_DTP * (p_fT_SFAL - aux_du_SINT[1])
+        integrator.u.accum.cum_d_irrig      = p_DTP * (p_IRRIG(integrator.t))
         # integrator.u.accum.ε_prev_t          = t              # Update in separate daily callback
         # integrator.u.accum.ε_prev_StorageSWAT  = StorageSWAT  # Update in separate daily callback
         # integrator.u.accum.ε_prev_StorageWATER = StorageWATER # Update in separate daily callback
         # integrator.u.accum.BALERD_SWAT       = BALERD_SWAT    # Update in separate daily callback
         # integrator.u.accum.BALERD_total      = BALERD_total   # Update in separate daily callback
-
     end
 
     return nothing
@@ -457,7 +568,7 @@ function LWFBrook90R_updateIsotopes_INTS_INTR_SNOW!(integrator)
             p_fu_δ18O_SLFL[1] = (u_δ18O_SNOW * aux_du_SMLT[1] + u_δ18O_PREC * p_fu_RNET[1] + u_δ18O_IRRIG * p_u_IRRIG) / (aux_du_SMLT[1] + p_fu_RNET[1] + p_u_IRRIG)
             p_fu_δ2H_SLFL[1]  = (u_δ2H_SNOW * aux_du_SMLT[1]  + u_δ2H_PREC * p_fu_RNET[1] + u_δ2H_IRRIG * p_u_IRRIG)  / (aux_du_SMLT[1] + p_fu_RNET[1] + p_u_IRRIG)
         end
-    
+
 
             # # Variant 3) trying to unwrap variant 1) by reducing allocations. Currently not working and also not faster than 1)
             # R_std_2H  = LWFBrook90.ISO.R_VSMOW²H
@@ -898,7 +1009,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
         ### Compute δ signature of evaporating flux (SLVP)
         C_¹⁸O_SLVP .= 0
         C_²H_SLVP .= 0
-        
+
         if !simulate_evaporation_fractionation
             for i in 1:p_SLVPLAYER
                 δ¹⁸O_SLVP_i = u_δ18O_SWATI[i] # permil, Non-fractionating mode (Stumpp et al., 2012)
@@ -916,7 +1027,7 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
             # (Above is an alternative to formulation in Benettin 2018 HESS eq. 1 and Gibson 2016)
             # Cᵢ_SLVP = ( (Cᵢ - ε¹⁸O_eq)/α¹⁸O_eq - h*δ¹⁸O_a - ε¹⁸O_dif ) /
             #             (1 - h + ε¹⁸O_dif/1000) # [‰]
-    
+
             # C_¹⁸O_SLVP .= 0
             # C_²H_SLVP  .= 0
             # C_¹⁸O_SLVP[1]  = LWFBrook90.ISO.δ_to_C(δ¹⁸O_SLVP, LWFBrook90.ISO.R_VSMOW¹⁸O, LWFBrook90.ISO.Mi_¹⁸O)
@@ -1348,6 +1459,40 @@ function LWFBrook90R_updateIsotopes_GWAT_SWAT_AdvecDiff!(u, t, integrator)
 
         ###
         ### end method from compute_isotope_GWAT_SWATI()
+
+
+        # 6) Compute average composition of δRWU and update Xylem
+        species_names = hasproperty(integrator.p, :species_names) ? integrator.p.species_names : [:species1]
+        is_multi_species = !isempty(species_names) && species_names != [:species1]
+
+        if is_multi_species
+            for sp in species_names
+                TRANI_sp = integrator.p.species_TRANI[sp]
+                sum_trani_sp = sum(TRANI_sp)
+                if sum_trani_sp > 0
+                    δ¹⁸O_RWU_sp = LWFBrook90.ISO.x_to_δ(mean(Cᵢ¹⁸O_TRANI, weights(TRANI_sp)), LWFBrook90.ISO.R_VSMOW¹⁸O)
+                    δ²H_RWU_sp  = LWFBrook90.ISO.x_to_δ(mean(Cᵢ²H_TRANI,  weights(TRANI_sp)), LWFBrook90.ISO.R_VSMOW²H)
+                else
+                    δ¹⁸O_RWU_sp = NaN
+                    δ²H_RWU_sp  = NaN
+                end
+
+                getproperty(integrator.u, Symbol("RWU_$sp")).d18O = δ¹⁸O_RWU_sp
+                getproperty(integrator.u, Symbol("RWU_$sp")).d2H  = δ²H_RWU_sp
+
+                sp_p = integrator.p.species_params[sp]
+                p_VXYLEM_sp = haskey(sp_p, :VXYLEM_mm) ? sp_p[:VXYLEM_mm] : (hasproperty(sp_p, :VXYLEM_mm) ? sp_p.VXYLEM_mm : p_VXYLEM)
+
+                u_δ¹⁸O_Xylem_sp = getproperty(integrator.u, Symbol("XYLEM_$sp")).d18O
+                u_δ²H_Xylem_sp  = getproperty(integrator.u, Symbol("XYLEM_$sp")).d2H
+
+                du_δ¹⁸O_Xylem_sp = ifelse(isnan(δ¹⁸O_RWU_sp), 0.0, sum_trani_sp / p_VXYLEM_sp * (δ¹⁸O_RWU_sp - u_δ¹⁸O_Xylem_sp))
+                du_δ²H_Xylem_sp  = ifelse(isnan(δ²H_RWU_sp),  0.0, sum_trani_sp / p_VXYLEM_sp * (δ²H_RWU_sp  - u_δ²H_Xylem_sp))
+
+                getproperty(integrator.u, Symbol("XYLEM_$sp")).d18O += Δt * du_δ¹⁸O_Xylem_sp
+                getproperty(integrator.u, Symbol("XYLEM_$sp")).d2H  += Δt * du_δ²H_Xylem_sp
+            end
+        end
 
 
         # 6) Compute average composition of δRWU (weighted-mean of all uptake depths)

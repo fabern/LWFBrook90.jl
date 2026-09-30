@@ -3,7 +3,7 @@
 
 Generate vector u0 needed for ODE() problem in DiffEq.jl package.
 """
-function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, NLAYER)
+function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, NLAYER, species_names::Vector{Symbol} = [:species1])
     name_states = ifelse(simulate_isotopes, (:mm,    :d18O, :d2H), (:mm,))
     name_fluxes = ifelse(simulate_isotopes, (:mmday, :d18O, :d2H), (:mmday,))
     name_aux       = (:θ,:ψ,:K)
@@ -14,9 +14,14 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
                     :cum_d_rthr, :cum_d_sthr, :cum_d_irrig,
                     :StorageSWAT,  :StorageWATER,  :BALERD_SWAT,  :BALERD_total)
 
+    if !isempty(species_names) && species_names != [:species1]
+        name_accum = (name_accum..., (Symbol("$(name)_$sp") for sp in species_names
+                                      for name in (:cum_d_tran, :cum_d_irvp, :cum_d_isvp, :cum_d_ptran, :cum_d_pint))...)
+    end
+
     variable_names = simulate_isotopes ? (d18O = 2, d2H = 3) : ()
     N_isotopes             = length(variable_names)
-    N_separate_treespecies = 1 # TODO(bernhard) currently only one species is implemented
+    N_separate_treespecies = 1 # Legacy aggregate states use one column; species states are added below # TODO: check renaming to clarify this. This refers to N_aggregated (which is by obviously 1)
     N_accum_var            = length(name_accum)
 
     u_totalRWUinit_mmday = zeros(1,  1+N_isotopes, N_separate_treespecies)
@@ -37,6 +42,18 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             aux    = zeros(NLAYER, 3), # TODO: where to store θ, ψ and K(θ) ?
             accum  = zeros(N_accum_var,1))
 
+    # Add one set of interception and hydraulic states per species.
+    species_components = Pair{Symbol, Any}[]
+    if !isempty(species_names) && species_names != [:species1]
+        for sp in species_names
+            push!(species_components, Symbol("INTS_$sp") => NamedTuple{name_states, NTuple{1+N_isotopes, Float64}}(tuple(zeros(1+N_isotopes)...)))
+            push!(species_components, Symbol("INTR_$sp") => NamedTuple{name_states, NTuple{1+N_isotopes, Float64}}(tuple(zeros(1+N_isotopes)...)))
+            push!(species_components, Symbol("RWU_$sp") => NamedTuple{name_fluxes, NTuple{1+N_isotopes, Float64}}(tuple(zeros(1+N_isotopes)...)))
+            push!(species_components, Symbol("XYLEM_$sp") => NamedTuple{name_states, NTuple{1+N_isotopes, Float64}}(tuple(zeros(1+N_isotopes)...)))
+            push!(species_components, Symbol("TRANI_$sp") => NamedTuple{name_fluxes, NTuple{1+N_isotopes, Vector{Float64}}}(tuple(fill(zeros(NLAYER), 1+N_isotopes)...)))
+        end
+    end
+
     # Give ComponentArray as u0 to DiffEq.jl
     if simulate_isotopes
         u0 = ComponentArray(
@@ -53,7 +70,8 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             TRANI = NamedTuple{name_fluxes, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:TRANI][:,:,1])...)),
 
             aux   = NamedTuple{name_aux,   NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:aux])...)),
-            accum = NamedTuple{name_accum, NTuple{N_accum_var, Float64}}((0. for i in eachindex(name_accum))))
+            accum = NamedTuple{name_accum, NTuple{N_accum_var, Float64}}((0. for i in eachindex(name_accum)));
+            species_components...)
     else
         # TODO(bernhard): check if this is bad programming if NTuple{1, ...} depends on runtime variable simulate_isotopes...
         u0 = ComponentArray(
@@ -70,7 +88,8 @@ function define_LWFB90_u0(;simulate_isotopes, compute_intermediate_quantities, N
             TRANI = NamedTuple{name_fluxes, NTuple{1, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:TRANI][:,:,1])...)),
 
             aux   = NamedTuple{name_aux, NTuple{3, Vector{Float64}}}(tuple(eachcol(u0_NamedTuple[:aux])...)),
-            accum = NamedTuple{name_accum, NTuple{N_accum_var, Float64}}((0. for i in eachindex(name_accum))))
+            accum = NamedTuple{name_accum, NTuple{N_accum_var, Float64}}((0. for i in eachindex(name_accum)));
+            species_components...)
     end
 
     # # Give ArrayPartition as u0 to DiffEq.jl
@@ -84,6 +103,8 @@ end
 function init_LWFB90_u0!(;u0::ComponentArray, parametrizedSPAC, p_soil)
 
     N_iso = ifelse(parametrizedSPAC.solver_options.simulate_isotopes, 2, 0)
+    species_names = parametrizedSPAC.pars.species_names
+    cover_fractions = parametrizedSPAC.pars.cover_fractions
 
     soil_PSIM_init = parametrizedSPAC.soil_discretization.df.uAux_PSIM_init_kPa
     soil_d18O_init = parametrizedSPAC.soil_discretization.df.u_delta18O_init_permil
@@ -105,6 +126,37 @@ function init_LWFB90_u0!(;u0::ComponentArray, parametrizedSPAC, p_soil)
         u0.SWATI.d2H  .= soil_d2H_init
     end
 
+    if !isempty(species_names) && species_names != [:species1]
+        sum_ints = 0.0
+        sum_intr = 0.0
+        for sp in species_names
+            w_s = cover_fractions[sp]
+            ints_col = "u_INTS_init_mm_$sp"
+            intr_col = "u_INTR_init_mm_$sp"
+
+            sp_ints = hasproperty(parametrizedSPAC.pars.IC_scalar, Symbol(ints_col)) ? parametrizedSPAC.pars.IC_scalar[1:(N_iso+1), ints_col] : (parametrizedSPAC.pars.IC_scalar[1:(N_iso+1), "u_INTS_init_mm"] .* [w_s; ones(N_iso)])
+            sp_intr = hasproperty(parametrizedSPAC.pars.IC_scalar, Symbol(intr_col)) ? parametrizedSPAC.pars.IC_scalar[1:(N_iso+1), intr_col] : (parametrizedSPAC.pars.IC_scalar[1:(N_iso+1), "u_INTR_init_mm"] .* [w_s; ones(N_iso)])
+
+            u0[Symbol("INTS_$sp")] .= sp_ints
+            u0[Symbol("INTR_$sp")] .= sp_intr
+            sum_ints += sp_ints[1]
+            sum_intr += sp_intr[1]
+
+            getproperty(u0, Symbol("RWU_$sp")).mmday = 0.0
+            getproperty(u0, Symbol("XYLEM_$sp")).mm = 5.0
+            getproperty(u0, Symbol("TRANI_$sp")).mmday .= zeros(nrow(parametrizedSPAC.soil_discretization.df))
+
+        end
+        u0.INTS.mm = sum_ints
+        u0.INTR.mm = sum_intr
+        if N_iso == 2
+            u0.INTS.d18O = u0[Symbol("INTS_$(species_names[1])")].d18O
+            u0.INTS.d2H  = u0[Symbol("INTS_$(species_names[1])")].d2H
+            u0.INTR.d18O = u0[Symbol("INTR_$(species_names[1])")].d18O
+            u0.INTR.d2H  = u0[Symbol("INTR_$(species_names[1])")].d2H
+        end
+    end
+
     u0.RWU.mmday   = 0
     u0.XYLEM.mm    = 5
     u0.TRANI.mmday = zeros(nrow(parametrizedSPAC.soil_discretization.df))
@@ -116,9 +168,8 @@ function init_LWFB90_u0!(;u0::ComponentArray, parametrizedSPAC, p_soil)
         u0.TRANI.d18O .= soil_d18O_init    # start out with same concentration as in       soil layer
         u0.TRANI.d2H  .= soil_d2H_init     # start out with same concentration as in       soil layer
     end
-    # # TODO(bernhard): if species-specific uptakes add here a totalRWU *PER SPECIES*
-    # # TODO(bernhard): if species-specific uptakes add here a Xylem value *PER SPECIES*
-    # # TODO(bernhard): if species-specific uptakes add here an uptake vector *PER SPECIES*
+
+    # Species-specific uptake, xylem, and layer uptake states are initialized above.
 
     # B) Define initial conditions of auxiliary soil states
     u0.aux # TODO: θ, ψ, K

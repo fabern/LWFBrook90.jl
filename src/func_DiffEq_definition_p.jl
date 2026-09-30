@@ -9,7 +9,17 @@ Generate vector p needed for ODE() problem in DiffEq.jl package.
 - `simulate_isotopes::...`: TODO argument description.
 - `soil_output_depths_m`: vector of depths at which state variables should be extractable (negative numeric values [in meter])
 """
-function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEPTH_idx, SLVPDEPTH_idx)
+function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEPTH_idx, SLVPDEPTH_idx; species_vegetation_fT = Dict(:species1 => vegetation_fT), species_params = Dict(:species1 => parametrizedSPAC.pars.params))
+
+    # The shared solver parameters use the first species as the legacy reference.
+    # Species-specific values are retained separately in species_params.
+    if !haskey(parametrizedSPAC.pars.params, :LAT_DEG)
+        parametrizedSPAC = SPAC(
+            parametrizedSPAC.reference_date, parametrizedSPAC.tspan,
+            parametrizedSPAC.solver_options, parametrizedSPAC.soil_discretization,
+            parametrizedSPAC.forcing,
+            merge(parametrizedSPAC.pars, (params = first(values(parametrizedSPAC.pars.params)),)))
+    end
 
     ########
     ## Solver algorithm options
@@ -446,7 +456,7 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
         p_QFFC        = p_QFFC,        p_IMPERV      = p_IMPERV,      p_LENGTH_SLOPE= p_LENGTH_SLOPE,
         p_DSLOPE      = p_DSLOPE,      p_RHOWG       = LWFBrook90.CONSTANTS.p_RHOWG,
         p_DPSIMAX     = p_DPSIMAX,     p_DRAIN       = p_DRAIN,       p_DTIMAX      = p_DTIMAX,
-        p_INFRAC      = p_INFRAC,      p_SLVPFRAC    = p_SLVPFRAC,    p_SLVPLAYER   = p_SLVPLAYER, 
+        p_INFRAC      = p_INFRAC,      p_SLVPFRAC    = p_SLVPFRAC,    p_SLVPLAYER   = p_SLVPLAYER,
         p_DSWMAX      = p_DSWMAX,      p_GSC         = p_GSC,
         p_GSP         = p_GSP,         p_BYPAR       = p_BYPAR,
 
@@ -598,6 +608,13 @@ function define_LWFB90_p(parametrizedSPAC::SPAC, vegetation_fT, IDEPTH_idx, QDEP
         #         #            diff¹⁸O_low, diff²H_low, qCᵢ¹⁸O_low, qCᵢ²H_low,
         #         # 4 vectors: du_Cᵢ¹⁸_SWATI, du_Cᵢ²H_SWATI, du_δ18O_SWATI, du_δ2H_SWATI
         cache_for_ADE_28        = Tuple(fill(NaN, NLAYER) for i=1:28),
+
+        # Multi-species parameters and caches
+        species_names = parametrizedSPAC.pars.species_names,
+        cover_fractions = parametrizedSPAC.pars.cover_fractions,
+        species_vegetation_fT = species_vegetation_fT,
+        species_params = species_params,
+        species_TRANI = Dict{Symbol, Vector{Float64}}(sp => zeros(NLAYER) for sp in parametrizedSPAC.pars.species_names)
     )
 
     return parameter_single_tuple

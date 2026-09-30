@@ -413,7 +413,8 @@ function setup(parametrizedSPAC::SPAC;
 
     # SLVPDEPTH_m is set to at least the thickness of the first soil layer in soil_discretization.df
     top_layer_thickness = abs(modifiedSPAC.soil_discretization.df[1, "Upper_m"] - modifiedSPAC.soil_discretization.df[1, "Lower_m"])
-    SLVPDEPTH_m = max( modifiedSPAC.pars.params[:SLVPDEPTH_m], top_layer_thickness) # legacy behavior if SLVPDEPTH_m = 0.0 or thinner than top_layer use whole top_layer as SLVPDEPTH_m
+    evaporation_params = haskey(modifiedSPAC.pars.params, :SLVPDEPTH_m) ? modifiedSPAC.pars.params : first(values(modifiedSPAC.pars.params))
+    SLVPDEPTH_m = max(evaporation_params[:SLVPDEPTH_m], top_layer_thickness) # legacy behavior if SLVPDEPTH_m = 0.0 or thinner than top_layer use whole top_layer as SLVPDEPTH_m
 
     ##########
     # a) Refine soil disretization to provide all needed output
@@ -424,14 +425,17 @@ function setup(parametrizedSPAC::SPAC;
     #         soil_output_depths_m,
     #         modifiedSPAC.pars.params[:IDEPTH_m],
     #         modifiedSPAC.pars.params[:QDEPTH_m])
+    p_IDEPTH = haskey(modifiedSPAC.pars.params, :IDEPTH_m) ? modifiedSPAC.pars.params[:IDEPTH_m] : (hasproperty(first(values(modifiedSPAC.pars.params)), :IDEPTH_m) ? first(values(modifiedSPAC.pars.params)).IDEPTH_m : 0.4)
+    p_QDEPTH = haskey(modifiedSPAC.pars.params, :QDEPTH_m) ? modifiedSPAC.pars.params[:QDEPTH_m] : (hasproperty(first(values(modifiedSPAC.pars.params)), :QDEPTH_m) ? first(values(modifiedSPAC.pars.params)).QDEPTH_m : 0.0)
+
     refined_soil_discretizationDF, IDEPTH_idx, QDEPTH_idx, SLVPDEPTH_idx =
         LWFBrook90.refine_soil_discretization(
             # modifiedSPAC.soil_discretization.Δz,
             modifiedSPAC.soil_discretization.df,
             modifiedSPAC.pars.soil_horizons,
             soil_output_depths_m,
-            modifiedSPAC.pars.params[:IDEPTH_m],
-            modifiedSPAC.pars.params[:QDEPTH_m],
+            p_IDEPTH,
+            p_QDEPTH,
             SLVPDEPTH_m;
             ε = ε)
     Δz_refined = refined_soil_discretizationDF.Upper_m - refined_soil_discretizationDF.Lower_m
@@ -469,55 +473,103 @@ function setup(parametrizedSPAC::SPAC;
 
     ####################
     ## c) Derive time evolution of aboveground vegetation based on parameter from SPAC
-    canopy_evolution_relative = generate_canopy_timeseries_relative(
-        modifiedSPAC.pars.canopy_evolution,
-        days = modifiedSPAC.forcing.meteo["p_days"],
-        reference_date = modifiedSPAC.reference_date)
-    canopy_evolutionDF = make_absolute_from_relative(
-                aboveground_relative          = canopy_evolution_relative,
-                p_MAXLAI                      = modifiedSPAC.pars.params[:MAXLAI],
-                p_SAI_baseline_               = modifiedSPAC.pars.params[:SAI_baseline_],
-                p_DENSEF_baseline_            = modifiedSPAC.pars.params[:DENSEF_baseline_],
-                p_AGE_baseline_yrs            = modifiedSPAC.pars.params[:AGE_baseline_yrs],
-                p_HEIGHT_baseline_m           = modifiedSPAC.pars.params[:HEIGHT_baseline_m])
-    ####################
-
-    ####################
     ## d) Interpolate vegetation parameter in time for use as parameters
-    # Aboveground: LAI, SAI, DENSEF, HEIGHT, AGE
-    vegetation_fT = interpolate_aboveground_veg(canopy_evolutionDF.AboveGround)
-    ## Interpolate discretized root distribution in time
-        # b) Make root growth module on final discretized soil...
-    vegetation_fT["p_RELDEN"] = LWFBrook90.HammelKennel_transient_root_density(;
-        timepoints         = modifiedSPAC.forcing.meteo["p_days"],
-        AGE_at_timepoints  = vegetation_fT["p_AGE"].(modifiedSPAC.forcing.meteo["p_days"]),
-        p_INITRDEP         = modifiedSPAC.pars.params[:INITRDEP],
-        p_INITRLEN         = modifiedSPAC.pars.params[:INITRLEN],
-        p_RGROPER_y        = modifiedSPAC.pars.params[:RGROPER],
-        p_RGRORATE_m_per_y = modifiedSPAC.pars.params[:RGRORATE],
-        p_THICK               = 1000*modifiedSPAC.soil_discretization.Δz,
-        final_Rootden_profile = modifiedSPAC.soil_discretization.df.Rootden_);
-    # TODO(bernhard): document input parameters: INITRDEP, INITRLEN, RGROPER, tini, frelden, MAXLAI, HEIGHT_baseline_m
-    # TOOD(bernhard): remove from params: IDEPTH_m, QDEPTH_m, INITRDEP, RGRORATE, INITRDEP, INITRLEN, RGROPER
-    # display(heatmap(vegetation_fT["p_RELDEN"]', ylabel = "SOIL LAYER", xlabel = "Time (days)", yflip=true, colorbar_title = "Root density"))
+    # Aboveground: LAI, SAI, DENSEF, HEIGHT, AGE; belowground: root density.
+    species_names = modifiedSPAC.pars.species_names
+    is_multi_species = !isempty(species_names) && species_names != [:species1]
+
+    species_vegetation_fT = Dict{Symbol, Any}()
+    species_params_dict = Dict{Symbol, Any}()
+
+    if is_multi_species
+        for sp in species_names
+            sp_params = getproperty(modifiedSPAC.pars.params, sp)
+            species_params_dict[sp] = sp_params
+            if modifiedSPAC.pars.canopy_evolution isa NamedTuple
+                sp_ce_input = modifiedSPAC.pars.canopy_evolution[sp]
+                sp_ce_rel = generate_canopy_timeseries_relative(
+                    sp_ce_input;
+                    days = modifiedSPAC.forcing.meteo["p_days"],
+                    reference_date = modifiedSPAC.reference_date)
+            elseif modifiedSPAC.pars.canopy_evolution isa DataFrame
+                sp_ce_rel = DataFrame(
+                    days = modifiedSPAC.pars.canopy_evolution.days,
+                    DENSEF_rel = modifiedSPAC.pars.canopy_evolution[!, Symbol("DENSEF_rel_$sp")],
+                    HEIGHT_rel = modifiedSPAC.pars.canopy_evolution[!, Symbol("HEIGHT_rel_$sp")],
+                    LAI_rel = modifiedSPAC.pars.canopy_evolution[!, Symbol("LAI_rel_$sp")],
+                    SAI_rel = modifiedSPAC.pars.canopy_evolution[!, Symbol("SAI_rel_$sp")]
+                )
+            end
+            sp_ce_abs = make_absolute_from_relative(
+                aboveground_relative = sp_ce_rel,
+                p_MAXLAI = sp_params.MAXLAI,
+                p_SAI_baseline_ = sp_params.SAI_baseline_,
+                p_DENSEF_baseline_ = sp_params.DENSEF_baseline_,
+                p_AGE_baseline_yrs = sp_params.AGE_baseline_yrs,
+                p_HEIGHT_baseline_m = sp_params.HEIGHT_baseline_m)
+            sp_veg_fT = interpolate_aboveground_veg(sp_ce_abs.AboveGround)
+
+            rootden_col = Symbol("Rootden_$sp")
+            sp_rootden = hasproperty(modifiedSPAC.soil_discretization.df, rootden_col) ? modifiedSPAC.soil_discretization.df[!, rootden_col] : modifiedSPAC.soil_discretization.df.Rootden_
+
+            sp_veg_fT["p_RELDEN"] = LWFBrook90.HammelKennel_transient_root_density(;
+                timepoints = modifiedSPAC.forcing.meteo["p_days"],
+                AGE_at_timepoints = sp_veg_fT["p_AGE"].(modifiedSPAC.forcing.meteo["p_days"]),
+                p_INITRDEP = sp_params.INITRDEP,
+                p_INITRLEN = sp_params.INITRLEN,
+                p_RGROPER_y = sp_params.RGROPER,
+                p_RGRORATE_m_per_y = sp_params.RGRORATE,
+                p_THICK = 1000 * modifiedSPAC.soil_discretization.Δz,
+                final_Rootden_profile = sp_rootden)
+            species_vegetation_fT[sp] = sp_veg_fT
+        end
+        vegetation_fT = species_vegetation_fT[species_names[1]]
+    else
+        canopy_evolution_relative = generate_canopy_timeseries_relative(
+            modifiedSPAC.pars.canopy_evolution;
+            days = modifiedSPAC.forcing.meteo["p_days"],
+            reference_date = modifiedSPAC.reference_date)
+        canopy_evolutionDF = make_absolute_from_relative(
+                    aboveground_relative          = canopy_evolution_relative,
+                    p_MAXLAI                      = modifiedSPAC.pars.params[:MAXLAI],
+                    p_SAI_baseline_               = modifiedSPAC.pars.params[:SAI_baseline_],
+                    p_DENSEF_baseline_            = modifiedSPAC.pars.params[:DENSEF_baseline_],
+                    p_AGE_baseline_yrs            = modifiedSPAC.pars.params[:AGE_baseline_yrs],
+                    p_HEIGHT_baseline_m           = modifiedSPAC.pars.params[:HEIGHT_baseline_m])
+        ####################
+        # Aboveground: LAI, SAI, DENSEF, HEIGHT, AGE
+        vegetation_fT = interpolate_aboveground_veg(canopy_evolutionDF.AboveGround)
+        ## Interpolate discretized root distribution in time
+            # b) Make root growth module on final discretized soil...
+        vegetation_fT["p_RELDEN"] = LWFBrook90.HammelKennel_transient_root_density(;
+            timepoints         = modifiedSPAC.forcing.meteo["p_days"],
+            AGE_at_timepoints  = vegetation_fT["p_AGE"].(modifiedSPAC.forcing.meteo["p_days"]),
+            p_INITRDEP         = modifiedSPAC.pars.params[:INITRDEP],
+            p_INITRLEN         = modifiedSPAC.pars.params[:INITRLEN],
+            p_RGROPER_y        = modifiedSPAC.pars.params[:RGROPER],
+            p_RGRORATE_m_per_y = modifiedSPAC.pars.params[:RGRORATE],
+            p_THICK               = 1000*modifiedSPAC.soil_discretization.Δz,
+            final_Rootden_profile = modifiedSPAC.soil_discretization.df.Rootden_);
+        # TODO(bernhard): document input parameters: INITRDEP, INITRLEN, RGROPER, tini, frelden, MAXLAI, HEIGHT_baseline_m
+        # TOOD(bernhard): remove from params: IDEPTH_m, QDEPTH_m, INITRDEP, RGRORATE, INITRDEP, INITRLEN, RGROPER
+        # display(heatmap(vegetation_fT["p_RELDEN"]', ylabel = "SOIL LAYER", xlabel = "Time (days)", yflip=true, colorbar_title = "Root density"))
+        species_vegetation_fT[:species1] = vegetation_fT
+        species_params_dict[:species1] = modifiedSPAC.pars.params
+    end
     ####################
 
     ####################
     # Define parameters for differential equation
-    p = define_LWFB90_p(modifiedSPAC, vegetation_fT, IDEPTH_idx, QDEPTH_idx, SLVPDEPTH_idx)
-    # using Plots
-    # hline([0; cumsum(p.p_soil.p_THICK)], yflip = true, xticks = false,
-    #     title = "N_layer = "*string(p.NLAYER))
-   ####################
+    p = define_LWFB90_p(modifiedSPAC, vegetation_fT, IDEPTH_idx, QDEPTH_idx, SLVPDEPTH_idx; species_vegetation_fT = species_vegetation_fT, species_params = species_params_dict)
 
     ####################
     # Define state vector u for DiffEq.jl and initial states u0
         # state vector: GWAT,INTS,INTR,SNOW,CC,SNOWLQ,SWATI
-    # a) allocation of u0
+    # a) allocation of u0; b) initialization of u0
     u0 = define_LWFB90_u0(;simulate_isotopes = modifiedSPAC.solver_options.simulate_isotopes,
                           compute_intermediate_quantities = modifiedSPAC.solver_options.compute_intermediate_quantities,
-                          NLAYER = nrow(modifiedSPAC.soil_discretization.df))
-    # b) initialization of u0
+                          NLAYER = nrow(modifiedSPAC.soil_discretization.df),
+                          species_names = species_names)
     init_LWFB90_u0!(;u0=u0, parametrizedSPAC=modifiedSPAC, p_soil=p.p_soil)
     ####################
 
